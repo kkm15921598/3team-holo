@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HOLO 시스템 아키텍처</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1530;
+    --muted: #6b6685;
+    --card: #faf7ff;
+    --border: #ece6f7;
+    --brand1: #7C3AED;
+    --brand2: #EC4899;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F0B1E;
+      --fg: #f5f2ff;
+      --muted: #b3acca;
+      --card: #181230;
+      --border: #2a2347;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.65;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: clamp(24px, 5vw, 64px); }
+  h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    background: linear-gradient(135deg, var(--brand1), var(--brand2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0 0 8px;
+  }
+  .sub { color: var(--muted); margin-bottom: 32px; }
+  h2 {
+    margin-top: 56px;
+    font-size: clamp(20px, 2.4vw, 26px);
+    border-left: 4px solid;
+    border-image: linear-gradient(180deg, var(--brand1), var(--brand2)) 1;
+    padding-left: 12px;
+  }
+  .desc { color: var(--muted); margin: -8px 0 16px; }
+  .diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, .06);
+  }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 24px;
+  }
+  .toc ol { margin: 8px 0; padding-left: 20px; }
+  .toc a { color: var(--brand1); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  footer { margin-top: 64px; color: var(--muted); font-size: 14px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--brand1), var(--brand2));
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HOLO 시스템 아키텍처</h1>
+  <p class="sub"><span class="badge">v1</span>Mermaid 다이어그램 5종 — 시스템/데이터/시퀀스/배포/보안</p>
+
+  <div class="toc">
+    <strong>목차</strong>
+    <ol>
+      <li><a href="#ctx">시스템 컨텍스트</a></li>
+      <li><a href="#er">데이터 모델 (ER)</a></li>
+      <li><a href="#seq">게시판→채팅→친구 시퀀스</a></li>
+      <li><a href="#cicd">배포 파이프라인 (CI/CD)</a></li>
+      <li><a href="#sec">보안/권한 레이어</a></li>
+      <li><a href="#room">마이룸 렌더 흐름 (보너스)</a></li>
+    </ol>
+  </div>
+
+  <h2 id="ctx">1. 시스템 컨텍스트</h2>
+  <p class="desc">사용자/관리자/외부 서비스/HOLO 핵심 시스템의 경계.</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  subgraph Clients[클라이언트]
+    U[사용자 RN App]
+    Admin[운영자 Next.js 관리자]
+    Land[방문자 랜딩 페이지]
+  end
+
+  subgraph HOLO[HOLO Core]
+    API[Supabase API<br/>PostgREST + Realtime]
+    DB[(PostgreSQL + RLS)]
+    Storage[Storage 가구PNG/프로필]
+    Edge[Edge Functions<br/>포인트·신고·UTM]
+  end
+
+  subgraph External[외부 서비스]
+    OAuth[카카오/네이버/구글 OAuth]
+    SMS[NHN Cloud / 알리고]
+    Kakao[카카오맵 SDK]
+    Push[Expo Push → FCM/APNs]
+    GA[GA4 / PostHog]
+    Sentry[Sentry]
+    Pay[토스페이먼츠 / IAP]
+  end
+
+  U -- HTTPS+JWT --> API
+  Admin -- Service Role --> API
+  Land -- anon insert --> API
+  API --> DB
+  API --> Storage
+  API --> Edge
+
+  U --> OAuth
+  U --> SMS
+  U --> Kakao
+  U --> Push
+  U --> Pay
+  U -. 이벤트 .-> GA
+  U -. 에러 .-> Sentry
+  Admin -. 에러 .-> Sentry
+  Land -. 이벤트 .-> GA
+</pre>
+  </div>
+
+  <h2 id="er">2. 데이터 모델 (ER)</h2>
+  <p class="desc">핵심 테이블 관계.</p>
+  <div class="diagram">
+<pre class="mermaid">
+erDiagram
+  PROFILES ||--o{ POSTS : writes
+  PROFILES ||--o{ COMMENTS : writes
+  PROFILES ||--o{ MESSAGES : sends
+  PROFILES ||--o{ FRIENDS : has
+  PROFILES ||--o{ REPORTS : files
+  PROFILES ||--|| MYROOM_LAYOUTS : owns
+  PROFILES ||--o{ ATTENDANCE : checks
+  PROFILES ||--o{ POINTS_LOG : earns
+
+  POSTS ||--o{ COMMENTS : has
+  CHATS ||--o{ CHAT_MEMBERS : contains
+  CHATS ||--o{ MESSAGES : holds
+  PROFILES ||--o{ CHAT_MEMBERS : joins
+
+  ITEMS ||--o{ MYROOM_LAYOUTS : "placed in"
+  REDIRECTS ||--o{ REDIRECT_CLICKS : tracked
+
+  PROFILES { uuid user_id PK }
+  POSTS { bigint id PK }
+  COMMENTS { bigint id PK }
+  CHATS { bigint id PK }
+  CHAT_MEMBERS { bigint chat_id FK }
+  MESSAGES { bigint id PK }
+  FRIENDS { uuid a FK }
+  REPORTS { bigint id PK }
+  POINTS_LOG { bigint id PK }
+  ITEMS { bigint id PK }
+  MYROOM_LAYOUTS { uuid user_id PK }
+  ATTENDANCE { uuid user_id FK }
+  WAITLIST { bigint id PK }
+  REDIRECTS { text slug PK }
+  REDIRECT_CLICKS { bigint id PK }
+</pre>
+  </div>
+
+  <h2 id="seq">3. 게시판 → 채팅 → 친구 전환 시퀀스</h2>
+  <p class="desc">서비스 KPI 직결되는 핵심 전환 플로우.</p>
+  <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor A as 사용자 A
+  actor B as 사용자 B
+  participant App as RN App
+  participant API as Supabase API
+  participant RT as Realtime
+  participant Edge as Edge Fn
+
+  A->>App: 게시글 작성
+  App->>API: insert posts
+  API->>Edge: trigger compute-points (+10P)
+  Edge->>API: update points_log
+
+  B->>App: 게시판 진입
+  App->>API: select posts (RLS 적용)
+  App-->>B: 리스트 표시
+
+  B->>App: 댓글 작성
+  App->>API: insert comments
+  API->>RT: broadcast comment
+  RT-->>A: 실시간 알림
+
+  A->>App: B 프로필 → 채팅하기
+  App->>API: insert chats + chat_members
+  API->>RT: subscribe channel
+
+  loop 메시지 교환
+    A->>App: 메시지 전송
+    App->>API: insert messages
+    API->>RT: broadcast
+    RT-->>B: 메시지 수신
+  end
+
+  A->>App: 친구 추가
+  App->>API: insert friends(pending)
+  B->>App: 알림 → 수락
+  App->>API: update friends(accepted)
+  Note over A,B: 마이룸 방문 + 재대화 채널 형성
+</pre>
+  </div>
+
+  <h2 id="cicd">4. 배포 파이프라인 (CI/CD)</h2>
+  <p class="desc">GitHub push → Actions → 각 대상 자동 배포.</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+  Dev[개발자 push] --> GH[GitHub]
+  GH --> Actions{GitHub Actions}
+
+  Actions -->|apps/mobile| EAS[EAS Build]
+  EAS -->|iOS| AppStore[App Store]
+  EAS -->|Android| Play[Google Play]
+  EAS -->|OTA| ExpoUpdate[Expo Update 핫픽스]
+
+  Actions -->|apps/admin| VercelA[Vercel 관리자]
+  Actions -->|apps/landing| VercelL[Vercel 랜딩]
+  Actions -->|supabase/| SBCli[Supabase CLI]
+  SBCli --> Migrations[DB Migrations]
+  SBCli --> Functions[Edge Functions]
+
+  Actions --> Tests[Lint + Type + Tests]
+  Tests -. 실패 시 차단 .-> Actions
+
+  AppStore --> Users[(사용자 디바이스)]
+  Play --> Users
+  ExpoUpdate --> Users
+  VercelA --> Browser1[(관리자 브라우저)]
+  VercelL --> Browser2[(방문자 브라우저)]
+</pre>
+  </div>
+
+  <h2 id="sec">5. 보안 / 권한 레이어</h2>
+  <p class="desc">RLS 중심 권한 모델, Service Role 은 서버 전용.</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+  subgraph Client[클라이언트]
+    Anon[anon key]
+    Authed[로그인 JWT]
+  end
+  subgraph Server[서버 전용]
+    SR[Service Role Key]
+  end
+  subgraph SB[Supabase]
+    AuthSvc[Auth]
+    PostgREST
+    RLS{RLS Policy}
+    Tables[(Tables)]
+  end
+
+  Anon --> AuthSvc
+  AuthSvc -->|로그인| Authed
+  Authed --> PostgREST
+  Anon --> PostgREST
+  PostgREST --> RLS
+  RLS --> Tables
+  SR -. RLS 우회 .-> Tables
+
+  subgraph Policy[정책 매트릭스]
+    P1[posts: SELECT public, INSERT auth, UPDATE/DELETE 본인]
+    P2[messages: chat 멤버만]
+    P3[friends: 관계자만]
+    P4[reports: INSERT auth, SELECT 관리자]
+    P5[waitlist: INSERT anon, SELECT 관리자]
+    P6[profiles: SELECT public, UPDATE 본인]
+  end
+  RLS --- Policy
+</pre>
+  </div>
+
+  <h2 id="room">6. 마이룸 렌더 흐름</h2>
+  <p class="desc">사전 검수된 PNG 가구만 선택 가능 — 임의 업로드 차단.</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  Layout[(myroom_layouts.layout jsonb)] --> Load[앱 시작 시 fetch]
+  Load --> Scene[r3f Scene]
+  Catalog[items 카탈로그] --> Scene
+  Storage[Storage CDN 가구 PNG] --> Scene
+  Scene --> Canvas[Canvas 렌더]
+  User[사용자 드래그] --> Update[layout 갱신]
+  Update -->|debounce 1s| Save[upsert myroom_layouts]
+</pre>
+  </div>
+
+  <footer>
+    HOLO Architecture v1 · 본 다이어그램은 Mermaid 11 (CDN) 으로 자동 렌더됩니다.
+  </footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: isDark ? 'dark' : 'default',
+    fontFamily: 'Pretendard, system-ui, sans-serif',
+    flowchart: { curve: 'basis' }
+  });
+</script>
+</body>
+</html>
