@@ -1,40 +1,30 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Splash } from './screens/Splash';
-import { Login } from './screens/Login';
-import { Terms } from './screens/Terms';
-import { Verify } from './screens/Verify';
-import { Nickname } from './screens/Nickname';
-import { Interests } from './screens/Interests';
-import { MyRoomOnboarding } from './screens/MyRoomOnboarding';
-import { Attendance } from './screens/Attendance';
-import { Home } from './screens/Home';
-import { MyRoom } from './screens/MyRoom';
-import { Stub } from './screens/Stub';
-
+/*
+  스켈레톤 상태 — 폰트 로딩 확인용 임시 화면.
+  첫 화면 시안을 받으면 이 파일을 교체합니다.
+*/
 export function App() {
   return (
-    <Routes>
-      {/* Onboarding */}
-      <Route path="/" element={<Splash />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/terms" element={<Terms />} />
-      <Route path="/verify" element={<Verify />} />
-      <Route path="/nickname" element={<Nickname />} />
-      <Route path="/interests" element={<Interests />} />
-      <Route path="/myroom-onboarding" element={<MyRoomOnboarding />} />
-      <Route path="/attendance" element={<Attendance />} />
+    <div style={{ padding: 24, lineHeight: 1.6 }}>
+      <h2 style={{ fontFamily: 'Fredoka', fontWeight: 600, margin: '0 0 4px' }}>
+        Fredoka — HOLO 1234567890
+      </h2>
+      <h2 style={{ fontFamily: 'Paperlogy', fontWeight: 700, margin: '0 0 24px' }}>
+        Paperlogy — 안녕하세요 가나다 라마바
+      </h2>
 
-      {/* Main */}
-      <Route path="/home" element={<Home />} />
-      <Route path="/myroom" element={<MyRoom />} />
+      <h4 style={{ margin: '0 0 4px', color: '#888', fontWeight: 500 }}>Fredoka 굵기</h4>
+      {[300, 400, 500, 600, 700].map(w => (
+        <div key={w} style={{ fontFamily: 'Fredoka', fontWeight: w, fontSize: 18 }}>
+          {w} — The quick brown fox 0123
+        </div>
+      ))}
 
-      {/* 다른 탭은 Stub */}
-      <Route path="/map"   element={<Stub title="지도" />} />
-      <Route path="/board" element={<Stub title="게시판" />} />
-      <Route path="/chat"  element={<Stub title="채팅" />} />
-      <Route path="/me"    element={<Stub title="마이페이지" />} />
-
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      <h4 style={{ margin: '20px 0 4px', color: '#888', fontWeight: 500 }}>Paperlogy 굵기</h4>
+      {[100, 300, 400, 500, 600, 700, 800, 900].map(w => (
+        <div key={w} style={{ fontFamily: 'Paperlogy', fontWeight: w, fontSize: 18 }}>
+          {w} — 다람쥐 헌 쳇바퀴에 타고파
+        </div>
+      ))}
+    </div>
   );
 }
