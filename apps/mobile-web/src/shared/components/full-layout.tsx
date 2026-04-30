@@ -3,6 +3,9 @@ import { ScreenHeader } from "@/shared/components/screen-header";
 
 const TITLES: Record<string, string> = {
   "/myroom": "마이룸",
+  "/me/friends": "친구",
+  "/me/checkin": "출석체크",
+  "/me/qr": "내 QR",
 };
 
 function deriveTitle(pathname: string): string {

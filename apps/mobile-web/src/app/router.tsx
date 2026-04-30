@@ -7,7 +7,10 @@ import { ChatScreen } from "@/features/chat/components/chat-screen";
 import { HomeScreen } from "@/features/home/components/home-screen";
 import { MapScreen } from "@/features/map/components/map-screen";
 import { MyRoomPlaceholder } from "@/features/myroom/components/myroom-placeholder";
+import { CheckinScreen } from "@/features/profile/components/checkin-screen";
+import { FriendsScreen } from "@/features/profile/components/friends-screen";
 import { ProfileScreen } from "@/features/profile/components/profile-screen";
+import { QrScreen } from "@/features/profile/components/qr-screen";
 import { ProtectedRoute } from "@/shared/auth/protected-route";
 import { FullLayout } from "@/shared/components/full-layout";
 import { TabLayout } from "@/shared/components/tab-layout";
@@ -30,6 +33,9 @@ export function AppRouter() {
           <Route path="/board/:id" element={<BoardDetailPlaceholder />} />
           <Route path="/chat/:id" element={<ChatRoomPlaceholder />} />
           <Route path="/myroom" element={<MyRoomPlaceholder />} />
+          <Route path="/me/friends" element={<FriendsScreen />} />
+          <Route path="/me/checkin" element={<CheckinScreen />} />
+          <Route path="/me/qr" element={<QrScreen />} />
         </Route>
       </Route>
 
