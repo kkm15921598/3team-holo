@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HOLO 전체 제작 설명서</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1530;
+    --muted: #6b6685;
+    --card: #faf7ff;
+    --code-bg: #f4eeff;
+    --border: #ece6f7;
+    --brand1: #7C3AED;
+    --brand2: #EC4899;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F0B1E;
+      --fg: #f5f2ff;
+      --muted: #b3acca;
+      --card: #181230;
+      --code-bg: #221a3f;
+      --border: #2a2347;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: clamp(20px, 5vw, 56px); }
+  h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    background: linear-gradient(135deg, var(--brand1), var(--brand2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0 0 12px;
+    letter-spacing: -0.5px;
+  }
+  h2 {
+    margin-top: 56px;
+    margin-bottom: 16px;
+    font-size: clamp(20px, 2.4vw, 26px);
+    border-left: 4px solid;
+    border-image: linear-gradient(180deg, var(--brand1), var(--brand2)) 1;
+    padding-left: 12px;
+  }
+  h3 { margin-top: 32px; font-size: 18px; }
+  h4 { margin-top: 24px; font-size: 16px; color: var(--brand1); }
+  p, li { color: var(--fg); }
+  blockquote {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-left: 4px solid var(--brand1);
+    background: var(--card);
+    border-radius: 0 12px 12px 0;
+    color: var(--muted);
+  }
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.92em;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+  pre {
+    background: var(--code-bg);
+    padding: 16px;
+    border-radius: 12px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  pre code { background: transparent; padding: 0; font-size: 0.88em; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.95em;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: var(--card);
+    font-weight: 600;
+    color: var(--brand1);
+  }
+  tr:hover td { background: var(--card); }
+  hr {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 40px 0;
+  }
+  a { color: var(--brand1); }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--brand1), var(--brand2));
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--brand1); color: var(--brand1); }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--brand1), var(--brand2));
+    color: white;
+    border: 0;
+  }
+  #content { animation: fadeIn .3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } }
+  footer { margin-top: 64px; color: var(--muted); font-size: 14px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">제작 설명서 v1</span>
+  <div class="toolbar">
+    <button class="btn primary" onclick="window.print()">PDF로 저장 / 인쇄</button>
+    <a class="btn" href="HOLO-제작설명서.md" download>원본 .md 다운로드</a>
+    <a class="btn" href="아키텍처.html">아키텍처 다이어그램 →</a>
+  </div>
+  <div id="content">로딩 중…</div>
+  <footer>© HOLO · 본 문서는 단일 HTML로 오프라인 열람 가능합니다 (최초 1회 marked.js CDN 로드).</footer>
+</div>
+
+<script id="md-source" type="text/markdown">
+# HOLO 전체 제작 설명서
+
+> 2030 1인 가구를 위한 지역 커뮤니티 앱 **HOLO** 의 기술/운영/홍보 의사결정 문서.
+> 본 문서는 "어떻게 만들 것인가" 를 결정하기 위한 단일 출처(Single Source of Truth) 입니다.
+
+---
+
+## 목차
+
+1. 제품 개요
+2. 기술 스택 (권장안)
+3. 서버 연결 아키텍처
+4. 예상 운영비 (단계별)
+5. 유지보수가 쉬운 구조
+6. 홍보 / UTM / 관리자 통계
+7. 데이터 모델 개요
+8. 보안 & 운영 체크리스트
+9. 출시 로드맵 (4 페이즈)
+10. 부록 — 의사결정 근거 요약
+
+---
+
+## 1. 제품 개요
+
+| 항목 | 내용 |
+|---|---|
+| 타깃 | 2030 1인 가구 (서울/수도권 시작) |
+| 핵심 가치 | 실용적 도움 + 정서적 연결 + 게임화된 마이룸 |
+| 핵심 기능 | 온보딩 / 홈 / 지도 / 게시판 / 채팅 / 마이페이지 / 마이룸 / 출석체크 / 포인트·레벨 |
+| 차별점 | 마이룸(PNG 가구 배치) + 동네 단위 신뢰 연결 |
+| 첫 KPI | 가입 후 7일 잔존, 게시판→채팅 전환율, 친구 추가율 |
+
+---
+
+## 2. 기술 스택 (권장안)
+
+| 영역 | 권장 | 핵심 이유 |
+|---|---|---|
+| 모바일 앱 | **React Native + Expo (TypeScript)** | iOS/Android 동시, OTA 핫픽스, 한국 RN 인력 풍부 |
+| 마이룸 렌더 | **react-three-fiber (Three.js)** + 2.5D 아이소메트릭 | PNG 투명배경 가구 그대로 사용. 3D 모델 외주 비용 절감 |
+| 백엔드 | **Supabase** (Postgres + Auth + Realtime + Storage + Edge Functions) | 채팅 Realtime, RLS 권한, 관리 콘솔 내장 → 1~3인 팀 운영 최적 |
+| 인증 | Supabase Auth + 카카오/네이버/구글 OAuth | 한국 사용자 기준 카카오/네이버 필수 |
+| 휴대폰 인증 | NHN Cloud SMS 또는 알리고 | 건당 ~9원, 국내 발송 안정성 |
+| 지도 | 카카오맵 SDK (앱) / 카카오맵 JS (웹) | 한국 POI 정확도 |
+| 푸시 | Expo Push + FCM/APNs | 무료, 연동 단순 |
+| 관리자/랜딩 | Next.js (App Router) + Tailwind CSS | SSR/SEO + Vercel 무료 배포 |
+| 분석 | GA4 + PostHog + Sentry | 행동·퍼널·에러 |
+| 결제 (마이룸 가구) | 토스페이먼츠 또는 인앱결제 | 한국 카드/간편결제 |
+| CI/CD | GitHub Actions + EAS Build | 자동 빌드/스토어 배포 |
+
+---
+
+## 3. 서버 연결 아키텍처
+
+```
+[RN 앱] ── HTTPS+JWT ──> [Supabase API]
+   │                         ├── PostgREST (CRUD)
+   │                         ├── Realtime (채팅/게시판 갱신)
+   │                         ├── Auth (JWT, RLS)
+   │                         ├── Storage (가구 PNG, 프로필)
+   │                         └── Edge Functions
+   │
+   ├── Push:  Expo Push → FCM/APNs
+   ├── Map:   카카오맵 SDK
+   ├── OAuth: 카카오 / 네이버 / 구글
+   └── SMS:   NHN Cloud / 알리고
+
+[Next.js 관리자] ── Service Role ──> Supabase (서버 컴포넌트 only)
+[랜딩 (정적 HTML)] ── anon key ──> Supabase `waitlist` 테이블
+```
+
+**핵심 원칙**
+- 모든 테이블 RLS ON, Service Role 서버 전용
+- Edge Functions 로 포인트/신고/UTM 신뢰 로직 중앙화
+- Realtime 은 채팅/게시글/댓글에만
+- Storage 임의 업로드 금지 — 미리 등록된 PNG 가구만
+
+상세 다이어그램은 [아키텍처 문서](아키텍처.html) 참고.
+
+---
+
+## 4. 예상 운영비
+
+| 단계 | 사용자 규모 | 월 비용(USD) | 월 비용(원) |
+|---|---|---|---|
+| MVP | ~1,000 MAU | $0 ~ $20 | 0 ~ 3만원 |
+| 초기 성장 | ~10,000 MAU | $80 ~ $150 | 11만 ~ 21만원 |
+| 본격 운영 | ~100,000 MAU | $900 ~ $1,800 | 130만 ~ 250만원 |
+
+1회성: Apple $99/년, Google Play $25(1회), 도메인 ~1.8만원/년.
+
+> 단계별 산식과 가정은 [운영비-시뮬레이션.md](운영비-시뮬레이션.md) 참고.
+
+---
+
+## 5. 유지보수가 쉬운 구조
+
+### 5-1. 모노레포 (`pnpm workspaces` + Turborepo)
+
+```
+3team-holo/
+├── apps/{mobile, admin, landing}
+├── packages/{ui, api, utils, config}
+└── supabase/{migrations, functions}
+```
+
+### 5-2. Feature-First 폴더
+
+각 앱 내부는 화면이 아닌 **기능 단위**로:
+`features/auth`, `features/board`, `features/chat`, `features/myroom` …
+
+### 5-3. 타입 자동 생성
+
+```bash
+supabase gen types typescript --linked > packages/api/src/database.types.ts
+```
+
+DB 컬럼 변경 즉시 컴파일 에러 → 휴먼 에러 차단.
+
+### 5-4. 디자인 토큰
+
+```css
+:root {
+  --brand-gradient: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%);
+  --radius-lg: 16px;
+}
+```
+
+`packages/ui` 한 곳에서 관리 → 앱·관리자·랜딩 동일 룩앤필.
+
+### 5-5. Feature Flag
+
+PostHog Feature Flag로 출석체크/마이룸 등 단계 출시.
+
+> 상세: [폴더구조-가이드.md](폴더구조-가이드.md)
+
+---
+
+## 6. 홍보 / UTM / 관리자 통계
+
+### 6-1. UTM 표준
+- `utm_source`: kakao, instagram, naver_blog, partner_xxx, qr_offline
+- `utm_medium`: social, cpc, organic, qr, email
+- `utm_campaign`: launch_2025q1 (날짜 포함 필수)
+- `utm_content`: banner_a / banner_b (A/B)
+
+### 6-2. 단축 URL
+관리자 페이지의 빌더로 `holo.app/r/{slug}` 생성 → Edge Function이 클릭 기록 후 utm 부착하여 302.
+
+### 6-3. 랜딩 자동 캡처
+페이지 로드 시 utm을 localStorage 저장 → 사전등록 폼에 자동 동봉.
+
+### 6-4. 관리자 대시보드 항목
+- 성장: DAU/WAU/MAU, D1·D7·D30 잔존
+- 게시판: 카테고리별 글/댓글, 모집 전환율
+- 채팅·친구: 채팅→친구 전환율
+- 홍보: UTM 소스별 가입·잔존, 단축 URL 클릭→가입
+- 운영: 신고 큐, 자동 숨김 로그
+- 매출: 가구·아이템 결제, ARPPU
+
+> 상세: [UTM-홍보관리-가이드.md](UTM-홍보관리-가이드.md)
+
+---
+
+## 7. 데이터 모델 개요
+
+핵심 테이블: `profiles`, `posts`, `comments`, `chats`, `chat_members`, `messages`, `friends`, `reports`, `points_log`, `items`, `myroom_layouts`, `attendance`, `waitlist`, `redirects`, `redirect_clicks`.
+
+ER 다이어그램은 [아키텍처.html](아키텍처.html) 의 (2) 섹션 참고.
+
+---
+
+## 8. 보안 & 운영 체크리스트
+
+- [ ] 모든 테이블 RLS ON, anon insert-only 명시
+- [ ] Service Role Key 서버 전용
+- [ ] 휴대폰 인증 IP/번호별 분당 발송 제한
+- [ ] 신고 누적 N회 시 자동 숨김 + 관리자 큐
+- [ ] 약관/개인정보처리방침 별도 페이지
+- [ ] 회원 탈퇴 시 PII 즉시 파기, 로그 익명화
+- [ ] 청소년 보호: 차단어 사전, 신고 우선 처리
+- [ ] 마이룸 PNG 임의 업로드 금지 — 카탈로그 선택만
+- [ ] Sentry 에러 PII 마스킹
+- [ ] DB 일일 백업 + 30일 보관
+
+---
+
+## 9. 출시 로드맵
+
+| 페이즈 | 기간 | 산출물 |
+|---|---|---|
+| **P0 — 사전등록** | 1~2주 | 랜딩 + UTM + waitlist |
+| **P1 — MVP** | 6~8주 | 회원가입, 게시판(자유/도와주세요), 1:1 채팅, 출석체크 |
+| **P2 — 코어** | 4~6주 | 지도, 그룹채팅, 친구, 신고, 푸시, 관리자 통계 |
+| **P3 — 차별화** | 4~6주 | 마이룸, 포인트 상점, 레벨/뱃지, 공동구매 |
+
+---
+
+## 10. 부록 — 의사결정 근거
+
+- **RN + Expo**: 코드 1벌 양 OS, OTA 핫픽스, 한국 SDK 풍부
+- **Supabase**: SQL/RLS 정밀 권한, 락인 낮음, 한 콘솔 통합
+- **모노레포**: UI/타입 공유로 디자인·DB 변경 한 번에
+- **2.5D PNG 마이룸**: 3D 외주 비용 1/10, 디자이너 직접 추가 가능
+- **카카오맵**: 한국 POI 정확도 1위
+
+---
+
+> 본 문서는 v1. 페이즈 진행에 따라 갱신.
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@13/marked.min.js"></script>
+<script>
+  const md = document.getElementById('md-source').textContent;
+  const target = document.getElementById('content');
+  if (window.marked) {
+    marked.setOptions({ breaks: false, gfm: true });
+    target.innerHTML = marked.parse(md);
+  } else {
+    // CDN 실패 시 fallback: <pre>로라도 보여주기
+    target.innerHTML = '<pre>' + md.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])) + '</pre>';
+  }
+</script>
+</body>
+</html>
