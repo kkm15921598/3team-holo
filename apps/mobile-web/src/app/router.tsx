@@ -8,6 +8,7 @@ import { SignupLayout } from "@/features/auth/components/signup-layout";
 import { SignupNicknameScreen } from "@/features/auth/components/signup-nickname-screen";
 import { SignupPhoneScreen } from "@/features/auth/components/signup-phone-screen";
 import { SignupTermsScreen } from "@/features/auth/components/signup-terms-screen";
+import { TermsDetailScreen } from "@/features/auth/components/terms-detail-screen";
 import { BoardDetailPlaceholder } from "@/features/board/components/board-detail-placeholder";
 import { BoardScreen } from "@/features/board/components/board-screen";
 import { ChatRoomPlaceholder } from "@/features/chat/components/chat-room-placeholder";
@@ -29,6 +30,7 @@ export function AppRouter() {
       <Route path="/login" element={<LoginScreen />} />
 
       <Route path="/signup" element={<SignupGuard />}>
+        <Route path="terms/:slug" element={<TermsDetailScreen />} />
         <Route element={<SignupLayout />}>
           <Route index element={<Navigate to="terms" replace />} />
           <Route path="terms" element={<SignupTermsScreen />} />

@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { SignupProvider } from "@/features/auth/signup-context";
+import { track } from "@/shared/analytics/track";
 
 const STEPS = [
   { slug: "terms", title: "약관 동의" },
@@ -12,14 +13,12 @@ const STEPS = [
 
 export function SignupLayout() {
   return (
-    <SignupProvider>
-      <div className="flex flex-1 flex-col">
-        <SignupHeader />
-        <main className="flex flex-1 flex-col overflow-y-auto bg-white">
-          <Outlet />
-        </main>
-      </div>
-    </SignupProvider>
+    <div className="flex flex-1 flex-col">
+      <SignupHeader />
+      <main className="flex flex-1 flex-col overflow-y-auto bg-white">
+        <Outlet />
+      </main>
+    </div>
   );
 }
 
@@ -31,6 +30,11 @@ function SignupHeader() {
   const current = idx >= 0 ? idx : 0;
   const step = STEPS[current] ?? STEPS[0]!;
   const isDone = step.slug === "done";
+
+  useEffect(() => {
+    if (idx < 0) return;
+    track("signup_step_view", { step: step.slug, index: current + 1 });
+  }, [idx, step.slug, current]);
 
   const handleBack = () => {
     if (current === 0) {

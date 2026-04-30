@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSignup } from "@/features/auth/signup-context";
 
 type ItemKey = "agreedAge" | "agreedTos" | "agreedPrivacy" | "agreedMarketing";
-type Item = { key: ItemKey; label: string; required: boolean };
+type Item = { key: ItemKey; slug: string; label: string; required: boolean };
 
 const ITEMS: Item[] = [
-  { key: "agreedAge", label: "만 14세 이상입니다", required: true },
-  { key: "agreedTos", label: "서비스 이용약관 동의", required: true },
-  { key: "agreedPrivacy", label: "개인정보 처리방침 동의", required: true },
-  { key: "agreedMarketing", label: "마케팅 정보 수신 동의", required: false },
+  { key: "agreedAge", slug: "age", label: "만 14세 이상입니다", required: true },
+  { key: "agreedTos", slug: "tos", label: "서비스 이용약관 동의", required: true },
+  { key: "agreedPrivacy", slug: "privacy", label: "개인정보 처리방침 동의", required: true },
+  { key: "agreedMarketing", slug: "marketing", label: "마케팅 정보 수신 동의", required: false },
 ];
 
 export function SignupTermsScreen() {
@@ -49,8 +49,8 @@ export function SignupTermsScreen() {
 
       <ul className="mt-3 flex flex-col gap-1">
         {ITEMS.map((item) => (
-          <li key={item.key}>
-            <label className="flex h-12 cursor-pointer items-center gap-3 rounded-xl px-2 active:bg-gray-50">
+          <li key={item.key} className="flex h-12 items-center gap-1 rounded-xl px-2 active:bg-gray-50">
+            <label className="flex flex-1 cursor-pointer items-center gap-3">
               <input
                 type="checkbox"
                 checked={state[item.key]}
@@ -64,18 +64,14 @@ export function SignupTermsScreen() {
                 </span>{" "}
                 {item.label}
               </span>
-              <button
-                type="button"
-                aria-label="자세히 보기"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert(`${item.label} 상세 (다음 단계에서 연결)`);
-                }}
-                className="text-gray-300"
-              >
-                ›
-              </button>
             </label>
+            <Link
+              to={`/signup/terms/${item.slug}`}
+              aria-label={`${item.label} 자세히 보기`}
+              className="flex h-10 w-10 shrink-0 items-center justify-center text-gray-300 hover:text-gray-500"
+            >
+              ›
+            </Link>
           </li>
         ))}
       </ul>

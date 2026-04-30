@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/features/auth/signup-context";
+import { track } from "@/shared/analytics/track";
 import { useAuth } from "@/shared/auth/auth-context";
 
 export function SignupDoneScreen() {
@@ -10,6 +11,12 @@ export function SignupDoneScreen() {
   const displayName = state.nickname.trim() || state.name.trim() || "이웃";
 
   const enterApp = () => {
+    track("signup_complete", {
+      hasMarketing: state.agreedMarketing,
+      hasBio: state.bio.trim().length > 0,
+      gender: state.gender || null,
+      address: state.address || null,
+    });
     signIn(state.nickname.trim() || state.name.trim() || "new-user");
     reset();
     navigate("/myroom", { replace: true });
