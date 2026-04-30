@@ -1,14 +1,23 @@
 import { useState, type FormEvent } from "react";
+import { useLocation, useNavigate, type Location } from "react-router-dom";
+import { useAuth } from "@/shared/auth/auth-context";
+
+type FromLocationState = { from?: Location };
 
 export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Supabase Auth 연결 (mock)
-    console.log("[mock login]", { email, password });
-    alert("로그인 (mock) — 다음 화면 연결 예정");
+    // TODO: Supabase Auth 연결 (현재는 mock)
+    signIn(email);
+    const state = location.state as FromLocationState | null;
+    const redirectTo = state?.from?.pathname ?? "/";
+    navigate(redirectTo, { replace: true });
   };
 
   return (
