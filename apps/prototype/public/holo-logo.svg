@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 170" role="img" aria-label="HOLO logo">
+  <defs>
+    <!-- 3D 튜브 본체 그라데이션 (밝은 보라 → 어두운 보라) -->
+    <linearGradient id="tube" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%"  stop-color="#D4B0FF"/>
+      <stop offset="45%" stop-color="#A876E5"/>
+      <stop offset="100%" stop-color="#5B2FB0"/>
+    </linearGradient>
+    <!-- 측면 하이라이트 -->
+    <linearGradient id="hl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 부드러운 그림자 -->
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+  </defs>
+
+  <!-- 왼쪽 다리: 세로 스타디움(가운데 구멍) -->
+  <path d="M 22 38
+           C 22 12, 70 12, 70 38
+           L 70 132
+           C 70 158, 22 158, 22 132 Z
+           M 38 50
+           C 38 38, 54 38, 54 50
+           L 54 120
+           C 54 132, 38 132, 38 120 Z"
+        fill="url(#tube)" fill-rule="evenodd"/>
+
+  <!-- 오른쪽 다리 -->
+  <path d="M 130 38
+           C 130 12, 178 12, 178 38
+           L 178 132
+           C 178 158, 130 158, 130 132 Z
+           M 146 50
+           C 146 38, 162 38, 162 50
+           L 162 120
+           C 162 132, 146 132, 146 120 Z"
+        fill="url(#tube)" fill-rule="evenodd"/>
+
+  <!-- 가운데 가로 바 -->
+  <rect x="54" y="74" width="92" height="22" rx="6" fill="url(#tube)"/>
+
+  <!-- 좌우 다리 좌측 하이라이트 -->
+  <path d="M 26 50 C 26 22, 46 18, 46 38 L 46 132 C 46 152, 26 148, 26 132 Z"
+        fill="url(#hl)" filter="url(#soft)"/>
+  <path d="M 134 50 C 134 22, 154 18, 154 38 L 154 132 C 154 152, 134 148, 134 132 Z"
+        fill="url(#hl)" filter="url(#soft)"/>
+</svg>

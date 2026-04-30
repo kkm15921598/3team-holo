@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { Phone } from '../components/Phone';
 import { AppHeader } from '../components/AppHeader';
 import { TabBar } from '../components/TabBar';
-import { IsoRoom } from '../components/IsoRoom';
 import { Icon } from '../components/Icon';
 import { useStore } from '../lib/store';
 import { mockRecommendations } from '../mocks/data';
@@ -17,9 +16,9 @@ export function Home() {
       <AppHeader />
 
       <div className="screen-body home">
-        {/* 마이룸 카드 */}
+        {/* 마이룸 카드 (그라데이션 배경 + 상태 메시지만) */}
         <button className="myroom-card" onClick={() => nav('/myroom')}>
-          <IsoRoom layout={user.layout} showCharacter characterEmoji={user.characterEmoji} />
+          <div className="myroom-bg" />
           <div className="status-bubble">상태 메시지</div>
         </button>
 
@@ -29,9 +28,8 @@ export function Home() {
             <div className="profile-avatar">{user.characterEmoji}</div>
             <div className="profile-meta">
               <div className="profile-top">
-                <span className="lv">Lv.{user.level}</span>
                 <span className="nick">{user.nickname}</span>
-                <span className="status-emoji">🤍 ☕</span>
+                <span className="lv">Lv.{user.level}</span>
               </div>
               <div className="profile-tags">
                 {user.tags.map(t => <span key={t}>{t}</span>)}

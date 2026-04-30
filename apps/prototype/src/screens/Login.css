@@ -15,10 +15,24 @@
   font-size: 22px;
   font-weight: 900;
   letter-spacing: -1px;
-  background: var(--brand-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #B77CFF;
+}
+
+/* 입력창 + 아이콘 */
+.input-wrap {
+  position: relative;
+  display: block;
+}
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #B77CFF;
+  pointer-events: none;
+}
+.input.has-icon {
+  padding-left: 42px;
 }
 .login-form {
   display: grid;

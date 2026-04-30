@@ -5,6 +5,9 @@
 /* 마이룸 카드 */
 .myroom-card {
   width: 100%;
+  max-width: 362px;
+  height: 447px;
+  margin: 0 auto;
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -12,6 +15,12 @@
   text-align: left;
   padding: 0;
   background: white;
+  display: block;
+}
+.myroom-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #EDE4FF 0%, #FCE7F3 60%, #F3E8FF 100%);
 }
 .status-bubble {
   position: absolute;
@@ -60,6 +69,7 @@
   margin-bottom: 6px;
 }
 .lv {
+  margin-left: auto;
   background: var(--brand-grad);
   color: white;
   font-size: 11px; font-weight: 800;
@@ -67,7 +77,6 @@
   border-radius: var(--radius-full);
 }
 .nick { font-size: 16px; font-weight: 800; }
-.status-emoji { font-size: 14px; opacity: .8; }
 .profile-tags {
   display: flex; gap: 6px; flex-wrap: wrap;
 }
