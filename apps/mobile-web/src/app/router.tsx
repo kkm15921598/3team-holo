@@ -1,5 +1,13 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { LoginScreen } from "@/features/auth/components/login-screen";
+import { SignupAddressScreen } from "@/features/auth/components/signup-address-screen";
+import { SignupDoneScreen } from "@/features/auth/components/signup-done-screen";
+import { SignupGuard } from "@/features/auth/components/signup-guard";
+import { SignupIdentityScreen } from "@/features/auth/components/signup-identity-screen";
+import { SignupLayout } from "@/features/auth/components/signup-layout";
+import { SignupNicknameScreen } from "@/features/auth/components/signup-nickname-screen";
+import { SignupPhoneScreen } from "@/features/auth/components/signup-phone-screen";
+import { SignupTermsScreen } from "@/features/auth/components/signup-terms-screen";
 import { BoardDetailPlaceholder } from "@/features/board/components/board-detail-placeholder";
 import { BoardScreen } from "@/features/board/components/board-screen";
 import { ChatRoomPlaceholder } from "@/features/chat/components/chat-room-placeholder";
@@ -19,6 +27,18 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
+
+      <Route path="/signup" element={<SignupGuard />}>
+        <Route element={<SignupLayout />}>
+          <Route index element={<Navigate to="terms" replace />} />
+          <Route path="terms" element={<SignupTermsScreen />} />
+          <Route path="identity" element={<SignupIdentityScreen />} />
+          <Route path="phone" element={<SignupPhoneScreen />} />
+          <Route path="address" element={<SignupAddressScreen />} />
+          <Route path="nickname" element={<SignupNicknameScreen />} />
+          <Route path="done" element={<SignupDoneScreen />} />
+        </Route>
+      </Route>
 
       <Route element={<ProtectedRoute />}>
         <Route element={<TabLayout />}>

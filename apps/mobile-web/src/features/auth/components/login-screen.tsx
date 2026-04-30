@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useLocation, useNavigate, type Location } from "react-router-dom";
+import { Link, useLocation, useNavigate, type Location } from "react-router-dom";
 import { useAuth } from "@/shared/auth/auth-context";
 
 type FromLocationState = { from?: Location };
@@ -71,7 +71,9 @@ export function LoginScreen() {
 
       {/* Footer */}
       <nav className="mt-auto flex items-center justify-center gap-4 pt-10 text-xs text-gray-500">
-        <FooterLink>회원가입</FooterLink>
+        <Link to="/signup" className="hover:text-gray-700">
+          회원가입
+        </Link>
         <span className="h-3 w-px bg-gray-300" />
         <FooterLink>아이디 찾기</FooterLink>
         <span className="h-3 w-px bg-gray-300" />
