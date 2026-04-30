@@ -1,0 +1,27 @@
+.tabbar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: var(--tabbar-h);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 600;
+  transition: color .15s;
+  text-decoration: none;
+}
+.tab.active {
+  color: var(--brand-purple-500);
+}
+.tab.active svg {
+  filter: drop-shadow(0 2px 4px rgba(124, 58, 237, .3));
+}

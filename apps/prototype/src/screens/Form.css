@@ -1,0 +1,93 @@
+.form-screen {
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+  position: relative;
+  height: 100%;
+}
+.form-screen .back-btn {
+  margin: 0 16px;
+}
+.form-footer {
+  margin-top: auto;
+  padding: 16px 24px 24px;
+  background: linear-gradient(180deg, transparent, rgba(255,255,255,.9) 30%);
+}
+
+/* 약관 동의 */
+.agree-all {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+.agree-all.on { background: var(--brand-grad-soft); }
+.agree-all .check {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--border);
+  color: white;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.agree-all.on .check { background: var(--brand-purple-500); }
+
+.agree-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+.agree-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 8px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.agree-row .check {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--border);
+  color: white;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.agree-row.on .check { background: var(--brand-purple-500); }
+.agree-row.on { color: var(--text-1); }
+.agree-row .row-label { flex: 1; }
+.agree-row .row-more { color: var(--text-3); }
+
+/* 입력 페이지 공통 */
+.field {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.field .input { flex: 1; }
+.help {
+  color: var(--text-3);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+.help.err { color: #E11D48; }
+.help.ok  { color: #059669; }
+
+/* 칩(태그) */
+.chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.chip {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: all .15s;
+}
+.chip.on {
+  background: var(--brand-grad-soft);
+  border-color: var(--brand-purple-500);
+  color: var(--brand-purple-500);
+}

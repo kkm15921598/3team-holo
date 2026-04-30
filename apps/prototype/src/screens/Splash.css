@@ -1,0 +1,26 @@
+.splash {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  background: var(--bg);
+}
+.splash-logo {
+  animation: pop .6s ease-out;
+}
+.splash-name {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: var(--brand-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 0;
+  animation: fade .4s .3s ease-out both;
+}
+@keyframes pop {
+  from { transform: scale(.7); opacity: 0; }
+}
+@keyframes fade { from { opacity: 0; } }

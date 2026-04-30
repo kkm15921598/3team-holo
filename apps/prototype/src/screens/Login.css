@@ -1,0 +1,58 @@
+.login {
+  padding: 40px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.login-logo {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  margin-top: 24px;
+}
+.login-brand {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: var(--brand-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.login-form {
+  display: grid;
+  gap: 10px;
+}
+.login-or {
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+  margin: 0;
+}
+.login-social {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+.social {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 18px;
+  display: grid; place-items: center;
+  color: white;
+  box-shadow: var(--shadow-card);
+}
+.social.google { background: #fff; color: #444; border: 1px solid var(--border); }
+.social.kakao  { background: #FEE500; color: #3C1E1E; }
+.social.naver  { background: #03C75A; }
+
+.login-links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.login-links a { color: var(--text-2); }
