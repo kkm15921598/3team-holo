@@ -1,0 +1,29 @@
+.splash {
+  width: 100%;
+  height: 100%;
+  background: #FFFFFF;
+  display: grid;
+  place-items: center;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.splash-logo {
+  width: 180px;
+  height: auto;
+  display: block;
+}
+
+.splash-name {
+  margin: 0;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 40px;
+  color: #B77CFF;
+  line-height: 1;
+}
