@@ -1,22 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer base {
-  html,
-  body,
-  #root {
-    height: 100%;
-  }
-  body {
-    @apply font-paperlogy text-gray-900 antialiased;
-    background: #f3f4f6;
-  }
-}
-
-@layer components {
-  /* 모바일 화면을 데스크탑 미리보기에서 둘러싼 프레임 */
-  .device-frame {
-    @apply mx-auto flex min-h-screen max-w-[420px] flex-col bg-white shadow-xl;
-  }
-}
