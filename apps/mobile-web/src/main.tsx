@@ -6,6 +6,11 @@ import { TabLayout } from "@/shared/components/tab-layout";
 import { ScreenPlaceholder } from "@/shared/components/screen-placeholder";
 import { SplashScreen } from "@/features/splash/splash-screen";
 import { LoginScreen } from "@/features/auth/login-screen";
+import { TermsScreen } from "@/features/signup/terms-screen";
+import { VerificationScreen } from "@/features/signup/verification-screen";
+import { NicknameScreen } from "@/features/signup/nickname-screen";
+import { InterestScreen } from "@/features/signup/interest-screen";
+import { RoomScreen } from "@/features/signup/room-screen";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -21,11 +26,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/login" element={<LoginScreen />} />
 
           {/* #3~#7 Signup flow */}
-          <Route path="/signup/terms" element={<ScreenPlaceholder routeNumber="#3" name="약관 동의" />} />
-          <Route path="/signup/verify" element={<ScreenPlaceholder routeNumber="#4" name="본인 인증" />} />
-          <Route path="/signup/nickname" element={<ScreenPlaceholder routeNumber="#5" name="닉네임 설정" />} />
-          <Route path="/signup/interest" element={<ScreenPlaceholder routeNumber="#6" name="관심사 선택" />} />
-          <Route path="/signup/room" element={<ScreenPlaceholder routeNumber="#7" name="마이룸 꾸미기 (온보딩)" />} />
+          <Route path="/signup/terms" element={<TermsScreen />} />
+          <Route path="/signup/verify" element={<VerificationScreen />} />
+          <Route path="/signup/nickname" element={<NicknameScreen />} />
+          <Route path="/signup/interest" element={<InterestScreen />} />
+          <Route path="/signup/room" element={<RoomScreen />} />
 
           {/* #8 Event */}
           <Route
