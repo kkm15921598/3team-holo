@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 홈</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    height: 844px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 54px 20px 12px;
+    background: #fff; z-index: 10;
+  }
+
+  .logo {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 32px; font-weight: 600;
+    color: #B77CFF; letter-spacing: 1px; line-height: 1;
+  }
+
+  .hdr-icons { display: flex; align-items: center; gap: 16px; }
+
+  .icon-btn {
+    position: relative; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #1A1A1A;
+  }
+
+  .notif-dot {
+    position: absolute; top: 0; right: 0;
+    width: 7px; height: 7px; background: #FF4343;
+    border-radius: 50%; border: 1.5px solid #fff;
+  }
+
+  /* ── Scrollable body ── */
+  .body {
+    position: absolute;
+    top: 110px; bottom: 82px;
+    left: 0; right: 0;
+    overflow-y: auto;
+  }
+  .body::-webkit-scrollbar { display: none; }
+
+  /* ── Main Visual Box ── */
+  .main-card {
+    width: 362px;
+    margin: 0 auto;
+    height: 447px;
+    background: linear-gradient(180deg, #DDC0FF 0%, #EDE0FF 40%, #F5F0FF 70%, #fff 100%);
+    border-radius: 0 0 40px 40px;
+    position: relative;
+    overflow: visible;
+  }
+
+  /* Stars decoration */
+  .star {
+    position: absolute;
+    color: #B077EE;
+    font-size: 20px;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* 3D Room in card */
+  .room-wrap {
+    position: absolute;
+    top: 10px; left: 0; right: 0;
+    display: flex; justify-content: center;
+  }
+
+  /* Speech bubble */
+  .speech-bubble {
+    position: absolute;
+    top: 148px; right: 42px;
+    background: #fff;
+    border-radius: 12px 12px 12px 4px;
+    padding: 8px 14px;
+    font-size: 15px; font-weight: 600; color: #1A1A1A;
+    box-shadow: 0 2px 10px rgba(116,72,221,0.15);
+    white-space: nowrap;
+    z-index: 5;
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px; left: 12px;
+    border: 5px solid transparent;
+    border-top-color: #fff;
+    border-bottom: none;
+  }
+
+  /* ── Profile Card ── */
+  .profile-card {
+    width: 319px;
+    height: 88px;
+    background: #FAFAFA;
+    border-radius: 20px;
+    position: absolute;
+    bottom: -44px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; align-items: center;
+    padding: 0 16px;
+    gap: 14px;
+    box-shadow: 0 4px 16px rgba(116,72,221,0.1);
+    z-index: 6;
+  }
+
+  .p-avatar-wrap {
+    position: relative; flex-shrink: 0;
+    width: 63px; height: 63px;
+  }
+
+  .p-avatar {
+    width: 63px; height: 63px; border-radius: 50%;
+    overflow: hidden;
+  }
+
+  .lv-badge {
+    position: absolute;
+    bottom: -8px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(to right, #542BB4, #E95AA4);
+    color: #fff; font-size: 12px; font-weight: 700;
+    padding: 3px 9px; border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .p-info { flex: 1; min-width: 0; }
+
+  .p-name-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .p-name { font-size: 20px; font-weight: 700; color: #1A1A1A; }
+
+  .p-badge {
+    width: 27px; height: 27px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .p-title { font-size: 15px; font-weight: 400; color: #A9A9A9; }
+
+  /* ── Recommend Section ── */
+  .recommend-section {
+    margin-top: 68px;
+    padding: 0 14px;
+  }
+
+  .rec-hint {
+    font-size: 15px; font-weight: 400; color: #8E8E8E;
+    margin-bottom: 3px;
+  }
+
+  .rec-title {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 14px;
+    font-size: 18px;
+  }
+
+  .rec-title .user-name { font-weight: 700; color: #7448DD; }
+  .rec-title .mid-text { font-weight: 500; color: #000; }
+  .rec-title .highlight { font-weight: 700; color: #7448DD; }
+
+  .refresh-btn {
+    background: none; border: none; cursor: pointer;
+    color: #7448DD; display: flex; align-items: center;
+    padding: 2px;
+  }
+
+  /* ── Cards Row ── */
+  .cards-row {
+    display: flex; gap: 12px;
+    overflow-x: auto; overflow-y: visible;
+    padding-right: 0;
+  }
+  .cards-row::-webkit-scrollbar { display: none; }
+
+  .moim-card {
+    width: 169px; height: 153px;
+    min-width: 169px;
+    background: #EBE4F5;
+    border-radius: 10px;
+    padding: 15px 14px 13px;
+    position: relative; flex-shrink: 0;
+  }
+  .moim-card:last-child { margin-right: 14px; }
+
+  .card-title { font-size: 16px; font-weight: 700; color: #1A1A1A; }
+  .card-meta { font-size: 12px; font-weight: 500; color: #7448DD; margin-top: 3px; opacity: 0.8; }
+  .card-desc {
+    font-size: 13px; color: #333; margin-top: 8px;
+    max-width: 94px; max-height: 40px;
+    overflow: hidden; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+
+  .card-arrow {
+    position: absolute; top: 13px; right: 13px;
+    width: 33px; height: 33px; border-radius: 50%;
+    background: #CCBCE0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .card-avatars {
+    position: absolute; bottom: 13px; left: 14px;
+    display: flex;
+  }
+
+  .av {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid #EBE4F5; margin-left: -6px;
+    overflow: hidden; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: #ddd;
+  }
+  .av:first-child { margin-left: 0; }
+
+  /* ── FAB ── */
+  .fab {
+    position: absolute;
+    bottom: 103px; right: 20px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #542BB4, #E95AA4);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6.9px rgba(84,43,180,0.5);
+    cursor: pointer; z-index: 20;
+    transition: transform 0.15s;
+  }
+  .fab:hover { transform: scale(1.08); }
+
+  /* ── Bottom Nav ── */
+  .bot-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 82px; background: #fff;
+    border-top: 1px solid #F0F0F0;
+    display: flex; align-items: flex-start;
+    padding-top: 10px; z-index: 10;
+  }
+
+  .nav-tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; cursor: pointer;
+  }
+
+  .nav-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #A8A8A8; }
+  .nav-tab.active .nav-icon { color: #7448DD; }
+  .nav-label { font-size: 12px; font-weight: 400; color: #A8A8A8; }
+  .nav-tab.active .nav-label { font-weight: 700; color: #7448DD; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="logo">HOLO</span>
+  <div class="hdr-icons">
+    <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/></svg><div class="notif-dot"></div></div>
+    <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="body">
+
+  <!-- Main Visual Card -->
+  <div class="main-card">
+
+    <!-- Star decorations -->
+    <div class="star" style="top:58%;left:5%">✦</div>
+    <div class="star" style="top:65%;left:12%;font-size:12px">✦</div>
+    <div class="star" style="top:72%;right:10%">✦</div>
+    <div class="star" style="top:80%;right:4%;font-size:28px;opacity:0.5">✦</div>
+    <div class="star" style="top:60%;right:22%;font-size:11px">✦</div>
+
+    <!-- 3D Isometric Room -->
+    <div class="room-wrap">
+      <svg width="360" height="360" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="flGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#C8A87A"/><stop offset="100%" stop-color="#A07848"/></linearGradient>
+          <linearGradient id="wallL" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#B090D8"/><stop offset="100%" stop-color="#C0A8EE"/></linearGradient>
+          <linearGradient id="wallB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C8AAFF"/><stop offset="100%" stop-color="#B898EE"/></linearGradient>
+        </defs>
+
+        <!-- Floor -->
+        <path d="M50 222 L180 150 L310 222 L180 294 Z" fill="url(#flGrad)" opacity="0.9"/>
+        <path d="M70 234 L196 160 M92 248 L218 172 M114 260 L240 186 M136 272 L262 198 M158 284 L284 210" stroke="#B08858" stroke-width="0.8" opacity="0.4"/>
+
+        <!-- Left wall -->
+        <path d="M50 90 L50 222 L180 294 L180 162 Z" fill="url(#wallL)"/>
+        <!-- Back wall top -->
+        <path d="M50 90 L180 162 L310 90 L180 18 Z" fill="#C8AAFF"/>
+        <!-- Right wall -->
+        <path d="M310 90 L310 222 L180 294 L180 162 Z" fill="#A888E0"/>
+
+        <!-- DESK -->
+        <path d="M62 158 L62 168 L134 204 L134 194 Z" fill="#8B6440"/>
+        <path d="M62 158 L134 194 L152 184 L80 148 Z" fill="#A07850"/>
+        <path d="M80 148 L152 184 L152 174 L80 138 Z" fill="#7A5430"/>
+        <path d="M62 168 L62 210 L134 246 L134 206 Z" fill="#7A5430"/>
+        <path d="M134 194 L152 184 L152 224 L134 234 Z" fill="#6A4420"/>
+        <rect x="62" y="210" width="5" height="24" fill="#6A4420" transform="skewY(-20)"/>
+        <rect x="128" y="232" width="5" height="22" fill="#6A4420" transform="skewY(-20)"/>
+
+        <!-- Laptop -->
+        <path d="M76 161 L108 178 L108 168 L76 151 Z" fill="#8AB8E8" opacity="0.9"/>
+        <path d="M76 161 L76 168 L108 185 L108 178 Z" fill="#6698C8"/>
+        <path d="M76 168 L66 163 L66 156 L76 161 Z" fill="#AAC8E8"/>
+
+        <!-- Lamp -->
+        <rect x="140" y="142" width="3" height="24" fill="#8888AA" transform="rotate(-5,141,150)"/>
+        <ellipse cx="141" cy="142" rx="13" ry="7" fill="#B8A8E8" opacity="0.9"/>
+
+        <!-- Chair -->
+        <path d="M92 196 L108 204 L108 194 L92 186 Z" fill="#9878CC"/>
+        <rect x="86" y="196" width="5" height="20" rx="2" fill="#7A60AA" transform="skewY(-15)"/>
+        <rect x="104" y="206" width="5" height="18" rx="2" fill="#7A60AA" transform="skewY(-15)"/>
+        <rect x="84" y="185" width="22" height="12" rx="3" fill="#8870BB"/>
+
+        <!-- BOOKSHELF -->
+        <path d="M220 122 L254 106 L254 194 L220 210 Z" fill="#8B6440"/>
+        <path d="M254 106 L272 114 L272 202 L254 194 Z" fill="#7A5430"/>
+        <path d="M220 122 L254 106 L272 114 L238 130 Z" fill="#A07850"/>
+        <line x1="220" y1="154" x2="272" y2="132" stroke="#6A4420" stroke-width="1.5"/>
+        <line x1="220" y1="176" x2="272" y2="154" stroke="#6A4420" stroke-width="1.5"/>
+        <!-- Books -->
+        <rect x="222" y="128" width="5" height="24" fill="#FF8080" transform="skewY(-30)"/>
+        <rect x="228" y="125" width="5" height="24" fill="#7448DD" transform="skewY(-30)"/>
+        <rect x="234" y="122" width="4" height="24" fill="#80C080" transform="skewY(-30)"/>
+        <!-- Plant -->
+        <ellipse cx="260" cy="104" rx="5" ry="4" fill="#60A860"/>
+        <ellipse cx="258" cy="101" rx="4" ry="5" fill="#50A050"/>
+        <rect x="258" y="104" width="4" height="5" fill="#8B6440"/>
+
+        <!-- BEAN BAG -->
+        <ellipse cx="272" cy="214" rx="32" ry="21" fill="#9070CC" opacity="0.85"/>
+        <ellipse cx="272" cy="204" rx="26" ry="20" fill="#A888DD" opacity="0.9"/>
+        <ellipse cx="272" cy="198" rx="20" ry="16" fill="#BBA0EE"/>
+
+        <!-- POSTERS -->
+        <!-- Poster left wall -->
+        <rect x="66" y="88" width="38" height="52" fill="#5A3A88" transform="skewX(5)"/>
+        <rect x="68" y="90" width="34" height="48" fill="#4A2878" transform="skewX(5)"/>
+        <text x="70" y="106" font-size="5" fill="white" font-family="sans-serif" transform="skewX(5)">SOLEIL</text>
+        <text x="70" y="112" font-size="5" fill="white" font-family="sans-serif" transform="skewX(5)">BET</text>
+        <text x="70" y="118" font-size="5" fill="white" font-family="sans-serif" transform="skewX(5)">TOGETHER</text>
+        <ellipse cx="86" cy="128" rx="11" ry="9" fill="#7448DD" opacity="0.4" transform="skewX(5)"/>
+        <!-- Poster back wall 1 -->
+        <rect x="148" y="42" width="34" height="44" fill="#3A5080" transform="skewX(-8)"/>
+        <rect x="150" y="44" width="30" height="40" fill="#2A4070" transform="skewX(-8)"/>
+        <ellipse cx="165" cy="58" rx="11" ry="9" fill="#5A6090" opacity="0.5" transform="skewX(-8)"/>
+        <!-- Poster back wall 2 -->
+        <rect x="195" y="34" width="38" height="48" fill="#8A5A3A" transform="skewX(-10)"/>
+        <rect x="197" y="36" width="34" height="44" fill="#6A4A2A" transform="skewX(-10)"/>
+        <rect x="199" y="54" width="30" height="20" fill="#CC8844" opacity="0.5" transform="skewX(-10)"/>
+
+        <!-- CHARACTER (center-right area) -->
+        <!-- Body -->
+        <path d="M162 200 L163 240 L200 240 L201 200 C201 190 163 188 162 200 Z" fill="#B898FF"/>
+        <ellipse cx="182" cy="242" rx="20" ry="12" fill="#A888EE" opacity="0.9"/>
+        <!-- Head -->
+        <ellipse cx="182" cy="184" rx="18" ry="19" fill="#FDDBA0"/>
+        <!-- Hair -->
+        <ellipse cx="182" cy="172" rx="18" ry="11" fill="#9060CC"/>
+        <ellipse cx="168" cy="176" rx="8" ry="10" fill="#9060CC"/>
+        <ellipse cx="196" cy="179" rx="7" ry="9" fill="#9060CC"/>
+        <!-- Eyes -->
+        <ellipse cx="176" cy="185" rx="3" ry="3.5" fill="#3A1A0A"/>
+        <ellipse cx="188" cy="185" rx="3" ry="3.5" fill="#3A1A0A"/>
+        <ellipse cx="177" cy="184" rx="1.2" ry="1.4" fill="white"/>
+        <ellipse cx="189" cy="184" rx="1.2" ry="1.4" fill="white"/>
+        <!-- Blush -->
+        <ellipse cx="170" cy="191" rx="5" ry="3" fill="#FFB0C0" opacity="0.6"/>
+        <ellipse cx="194" cy="191" rx="5" ry="3" fill="#FFB0C0" opacity="0.6"/>
+        <!-- Smile -->
+        <path d="M177 195 Q182 199 187 195" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <!-- Book -->
+        <rect x="174" y="205" width="22" height="16" rx="2" fill="#FF8888" transform="rotate(-5, 185, 213)"/>
+        <rect x="175" y="206" width="10" height="14" rx="1" fill="#FF6666" transform="rotate(-5, 185, 213)"/>
+        <!-- Legs -->
+        <rect x="172" y="238" width="9" height="20" rx="3" fill="#7A7A9A"/>
+        <rect x="185" y="238" width="9" height="20" rx="3" fill="#7A7A9A"/>
+        <!-- Slippers -->
+        <ellipse cx="177" cy="258" rx="9" ry="5" fill="#9878EE"/>
+        <ellipse cx="190" cy="258" rx="9" ry="5" fill="#9878EE"/>
+      </svg>
+    </div>
+
+    <!-- Speech Bubble -->
+    <div class="speech-bubble">상태 메시지</div>
+
+    <!-- Profile Card -->
+    <div class="profile-card">
+      <div class="p-avatar-wrap">
+        <div class="p-avatar">
+          <svg viewBox="0 0 63 63" xmlns="http://www.w3.org/2000/svg">
+            <rect width="63" height="63" fill="#F5E8A0"/>
+            <ellipse cx="31.5" cy="26" rx="14" ry="14" fill="#FDDBA0"/>
+            <ellipse cx="31.5" cy="15" rx="14" ry="9" fill="#1A0A00"/>
+            <circle cx="38" cy="14" r="7" fill="#1A0A00"/>
+            <ellipse cx="20" cy="24" rx="6" ry="10" fill="#1A0A00"/>
+            <ellipse cx="43" cy="24" rx="6" ry="10" fill="#1A0A00"/>
+            <ellipse cx="31.5" cy="18" rx="13" ry="8" fill="#1A0A00"/>
+            <circle cx="27" cy="27" r="2.5" fill="#2A1A0A"/>
+            <circle cx="36" cy="27" r="2.5" fill="#2A1A0A"/>
+            <circle cx="28" cy="26" rx="1" ry="1.2" fill="white"/>
+            <circle cx="37" cy="26" rx="1" ry="1.2" fill="white"/>
+            <ellipse cx="23" cy="32" rx="5" ry="3" fill="#FFBCB0" opacity="0.7"/>
+            <ellipse cx="40" cy="32" rx="5" ry="3" fill="#FFBCB0" opacity="0.7"/>
+            <path d="M27 36 Q31.5 40 36 36" stroke="#C07040" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <ellipse cx="31.5" cy="55" rx="22" ry="14" fill="#FF9999"/>
+            <rect x="14" y="44" width="35" height="14" rx="5" fill="#FF9999"/>
+          </svg>
+        </div>
+        <div class="lv-badge">Lv.24</div>
+      </div>
+      <div class="p-info">
+        <div class="p-name-row">
+          <span class="p-name">무지는 단무지</span>
+          <div class="p-badge">🦎</div>
+        </div>
+        <div class="p-title">#벌레_해결사</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommend Section -->
+  <div class="recommend-section">
+    <div class="rec-hint">어떤 모임에 들어갈지 고민되시나요?</div>
+    <div class="rec-title">
+      <span class="user-name">무지는 단무지</span>
+      <span class="mid-text">님을 위한</span>
+      <span class="highlight">추천 모임</span>
+      <button class="refresh-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M3 9C3 6.24 5.24 4 8 4C9.5 4 10.84 4.66 11.76 5.71" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M15 9C15 11.76 12.76 14 10 14C8.5 14 7.16 13.34 6.24 12.29" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M12 4.5L13 6L11 6" stroke="#7448DD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 11.5L5 13L7 13" stroke="#7448DD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards-row">
+      <div class="moim-card">
+        <div class="card-title">점심 번개</div>
+        <div class="card-meta">500m · 20분</div>
+        <div class="card-desc">오피스 단지 떡볶이 메이트!</div>
+        <div class="card-arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 11L11 3M11 3H5M11 3V9" stroke="#7448DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="card-avatars">
+          <div class="av" style="background:#F4A261">🧑</div>
+          <div class="av" style="background:#E76F51">👩</div>
+          <div class="av" style="background:#457B9D">🧔</div>
+        </div>
+      </div>
+
+      <div class="moim-card">
+        <div class="card-title">수박 소분</div>
+        <div class="card-meta">350m · 15분</div>
+        <div class="card-desc">마트에서 산 큰 수박 나눌 분~</div>
+        <div class="card-arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 11L11 3M11 3H5M11 3V9" stroke="#7448DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="card-avatars">
+          <div class="av" style="background:#E9C46A">👩</div>
+          <div class="av" style="background:#A8DADC">🧓</div>
+        </div>
+      </div>
+
+      <div class="moim-card" style="opacity:0.75">
+        <div class="card-title">편의점 야식</div>
+        <div class="card-meta">120m · 5분</div>
+        <div class="card-desc">혼자 먹긴 많아서요 ㅎㅎ</div>
+        <div class="card-arrow">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 11L11 3M11 3H5M11 3V9" stroke="#7448DD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="card-avatars">
+          <div class="av" style="background:#CDB4DB">🧑</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FAB -->
+<div class="fab">
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bot-nav">
+  <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/><circle cx="20" cy="19" r="3" fill="currentColor" fill-opacity="0.15" stroke="currentColor" stroke-width="1.2"/></svg></div><span class="nav-label">지도</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12H18M10 16H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">채팅</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+</div>
+
+</body>
+</html>

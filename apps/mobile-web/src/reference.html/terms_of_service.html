@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 이용 약관 동의</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    min-height: 100vh;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px 0;
+    height: 44px;
+  }
+  .status-time { font-size: 15px; font-weight: 600; color: #1A1A1A; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+
+  /* Back Button */
+  .back-btn {
+    position: absolute;
+    top: 83px;
+    left: 20px;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    background: none; border: none;
+    padding: 0;
+  }
+
+  /* Progress Bar */
+  .progress-wrap {
+    position: absolute;
+    top: 127px;
+    left: 0;
+    width: 390px;
+    height: 5px;
+    background: #E2E2E2;
+  }
+  .progress-fill {
+    width: 120px;
+    height: 5px;
+    background: linear-gradient(to right, #542BB4, #E95AA4);
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* Main Content */
+  .content {
+    padding: 167px 20px 120px;
+  }
+
+  /* Title */
+  .title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A1A1A;
+    line-height: 1.45;
+    margin-bottom: 36px;
+  }
+
+  /* All Agree */
+  .all-agree {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .circle-check {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid #A8A8A8;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .circle-check.checked {
+    background: #1A1A1A;
+    border-color: #1A1A1A;
+  }
+  .circle-check svg { display: none; }
+  .circle-check.checked svg { display: block; }
+  .circle-check-default { display: block; }
+  .circle-check.checked .circle-check-default { display: none; }
+  .all-agree-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  /* Divider */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: #D9D9D9;
+    margin-bottom: 6px;
+  }
+
+  /* Term Items */
+  .term-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .check-icon {
+    width: 20px; height: 20px;
+    flex-shrink: 0;
+    margin-right: 10px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.2s;
+  }
+  .check-icon svg path {
+    stroke: #A8A8A8;
+    transition: stroke 0.2s;
+  }
+  .term-item.checked .check-icon svg path { stroke: #1A1A1A; }
+  .term-item.error .check-icon svg path { stroke: #FF4343; }
+
+  .term-text {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: #1A1A1A;
+    line-height: 1.4;
+  }
+  .view-btn {
+    font-size: 14px;
+    color: #A8A8A8;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 2px 0 2px 8px;
+    background: none; border: none;
+    font-family: inherit;
+    font-weight: 400;
+    transition: color 0.15s;
+  }
+  .view-btn:hover { color: #777; }
+
+  /* Detail Box */
+  .detail-box {
+    border: 1px solid #A8A8A8;
+    border-radius: 12px;
+    padding: 14px;
+    margin: 4px 0 8px;
+    display: none;
+  }
+  .detail-box.open { display: block; }
+  .detail-box p {
+    font-size: 13px;
+    color: #7A7A7A;
+    line-height: 1.6;
+  }
+
+  /* Bottom Fixed */
+  .bottom-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    padding: 0 20px 28px;
+    background: #fff;
+  }
+  .error-msg {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+  .error-msg.show { display: flex; }
+  .error-msg span {
+    font-size: 14px;
+    color: #FF4343;
+    font-weight: 500;
+  }
+  .next-btn {
+    width: 100%;
+    height: 60px;
+    border-radius: 30px;
+    border: none;
+    background: #A8A8A8;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.25s;
+    letter-spacing: 0.02em;
+  }
+  .next-btn.active { background: #1A1A1A; cursor: pointer; }
+  .next-btn:not(.active) { cursor: default; }
+</style>
+</head>
+<body>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span class="status-time">9:41</span>
+  <div class="status-icons">
+    <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+      <rect x="0" y="3" width="3" height="9" rx="1" fill="#1A1A1A"/>
+      <rect x="4.5" y="2" width="3" height="10" rx="1" fill="#1A1A1A"/>
+      <rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#1A1A1A"/>
+      <rect x="13.5" y="0" width="3" height="12" rx="1" fill="#1A1A1A" opacity="0.3"/>
+    </svg>
+    <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+      <path d="M8 2.5C10.2 2.5 12.2 3.4 13.6 4.9L15 3.5C13.2 1.6 10.7 0.5 8 0.5C5.3 0.5 2.8 1.6 1 3.5L2.4 4.9C3.8 3.4 5.8 2.5 8 2.5Z" fill="#1A1A1A"/>
+      <path d="M8 5.5C9.4 5.5 10.7 6.1 11.6 7L13 5.6C11.7 4.3 10 3.5 8 3.5C6 3.5 4.3 4.3 3 5.6L4.4 7C5.3 6.1 6.6 5.5 8 5.5Z" fill="#1A1A1A"/>
+      <circle cx="8" cy="10" r="1.5" fill="#1A1A1A"/>
+    </svg>
+    <svg width="25" height="12" viewBox="0 0 25 12" fill="none">
+      <rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="#1A1A1A" stroke-opacity="0.35"/>
+      <rect x="2" y="2" width="17" height="8" rx="2" fill="#1A1A1A"/>
+      <path d="M23 4.5V7.5C23.8 7.2 24.5 6.5 24.5 6C24.5 5.5 23.8 4.8 23 4.5Z" fill="#1A1A1A" opacity="0.4"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Back Button -->
+<button class="back-btn" onclick="history.back()">
+  <svg width="10" height="18" viewBox="0 0 10 18" fill="none">
+    <path d="M9 1L1 9L9 17" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<!-- Progress Bar -->
+<div class="progress-wrap">
+  <div class="progress-fill"></div>
+</div>
+
+<!-- Content -->
+<div class="content">
+  <div class="title">HOLO 서비스 사용에 필요한<br>이용 약관에 동의해 주세요!</div>
+
+  <!-- All Agree -->
+  <div class="all-agree" id="allAgree" onclick="toggleAll()">
+    <div class="circle-check" id="allCircle">
+      <!-- default icon -->
+      <svg class="circle-check-default" width="14" height="11" viewBox="0 0 14 11" fill="none">
+        <path d="M1 5.5L5 9.5L13 1.5" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <!-- checked icon -->
+      <svg style="display:none" id="allCheckedIcon" width="14" height="11" viewBox="0 0 14 11" fill="none">
+        <path d="M1 5.5L5 9.5L13 1.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="all-agree-text">모두 동의 (선택 정보 포함)</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Term Items -->
+  <div id="termList">
+    <!-- 1: 만 14세 -->
+    <div class="term-item" id="term0" onclick="toggleTerm(0)">
+      <div class="check-icon">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+          <path d="M1 6L6 11L15 1" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="term-text">만 14세 이상입니다. (필수)</span>
+    </div>
+
+    <!-- 2: 서비스 이용약관 -->
+    <div class="term-item" id="term1" onclick="toggleTerm(1)">
+      <div class="check-icon">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+          <path d="M1 6L6 11L15 1" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="term-text">서비스 이용약관에 동의 (필수)</span>
+    </div>
+
+    <!-- 3: 개인정보 -->
+    <div>
+      <div class="term-item" id="term2" onclick="toggleTerm(2)">
+        <div class="check-icon">
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <path d="M1 6L6 11L15 1" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="term-text">개인정보 수집 및 이용에 동의 (필수)</span>
+        <button class="view-btn" id="viewBtn2" onclick="event.stopPropagation(); toggleDetail(2)">보기</button>
+      </div>
+      <div class="detail-box" id="detail2">
+        <p>본 약관은 HOLO 서비스 이용과 관련하여 사용자와 서비스 제공자 간의 권리, 의무 및 책임 사항을 안내하기 위한 내용입니다. 사용자는 서비스 이용 전 약관 내용을 확인하고 동의해야 하며, 개인정보 수집 및 위치 정보 활용 등 필요한 항목에 대해 선택적으로 동의할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 4: 위치 정보 -->
+    <div>
+      <div class="term-item" id="term3" onclick="toggleTerm(3)">
+        <div class="check-icon">
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <path d="M1 6L6 11L15 1" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="term-text">위치 정보 수집 및 이용에 동의 (필수)</span>
+        <button class="view-btn" id="viewBtn3" onclick="event.stopPropagation(); toggleDetail(3)">보기</button>
+      </div>
+      <div class="detail-box" id="detail3">
+        <p>본 약관은 HOLO 서비스 이용과 관련하여 사용자와 서비스 제공자 간의 권리, 의무 및 책임 사항을 안내하기 위한 내용입니다. 사용자는 서비스 이용 전 약관 내용을 확인하고 동의해야 하며, 개인정보 수집 및 위치 정보 활용 등 필요한 항목에 대해 선택적으로 동의할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 5: 리워드 -->
+    <div>
+      <div class="term-item" id="term4" onclick="toggleTerm(4)">
+        <div class="check-icon">
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <path d="M1 6L6 11L15 1" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="term-text">리워드 프로그램 참여에 동의 (선택)</span>
+        <button class="view-btn" id="viewBtn4" onclick="event.stopPropagation(); toggleDetail(4)">보기</button>
+      </div>
+      <div class="detail-box" id="detail4">
+        <p>본 약관은 HOLO 서비스 이용과 관련하여 사용자와 서비스 제공자 간의 권리, 의무 및 책임 사항을 안내하기 위한 내용입니다. 사용자는 서비스 이용 전 약관 내용을 확인하고 동의해야 하며, 개인정보 수집 및 위치 정보 활용 등 필요한 항목에 대해 선택적으로 동의할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 6: 광고 -->
+    <div>
+      <div class="term-item" id="term5" onclick="toggleTerm(5)">
+        <div class="check-icon">
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <path d="M1 6L6 11L15 1" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="term-text">광고 및 마케팅 수신에 동의 (선택)</span>
+        <button class="view-btn" id="viewBtn5" onclick="event.stopPropagation(); toggleDetail(5)">보기</button>
+      </div>
+      <div class="detail-box" id="detail5">
+        <p>본 약관은 HOLO 서비스 이용과 관련하여 사용자와 서비스 제공자 간의 권리, 의무 및 책임 사항을 안내하기 위한 내용입니다. 사용자는 서비스 이용 전 약관 내용을 확인하고 동의해야 하며, 개인정보 수집 및 위치 정보 활용 등 필요한 항목에 대해 선택적으로 동의할 수 있습니다.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Fixed -->
+<div class="bottom-fixed">
+  <div class="error-msg" id="errorMsg">
+    <span>이용 약관에 동의해 주세요.</span>
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="9" fill="#FF4343"/>
+      <path d="M9 5V10" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="9" cy="13" r="1" fill="white"/>
+    </svg>
+  </div>
+  <button class="next-btn" id="nextBtn" onclick="handleNext()">다음</button>
+</div>
+
+<script>
+  // 0~3: required, 4~5: optional
+  const checked = [false, false, false, false, false, false];
+  const required = [0, 1, 2, 3];
+
+  function updateUI() {
+    for (let i = 0; i < 6; i++) {
+      const item = document.getElementById('term' + i);
+      const paths = item.querySelectorAll('.check-icon svg path');
+      item.classList.toggle('checked', checked[i]);
+      paths.forEach(p => {
+        if (item.classList.contains('error')) return;
+        p.setAttribute('stroke', checked[i] ? '#1A1A1A' : '#A8A8A8');
+      });
+    }
+
+    const allChecked = checked.every(Boolean);
+    const allCircle = document.getElementById('allCircle');
+    const defaultIcon = allCircle.querySelector('.circle-check-default');
+    const checkedIcon = document.getElementById('allCheckedIcon');
+    allCircle.classList.toggle('checked', allChecked);
+    defaultIcon.style.display = allChecked ? 'none' : 'block';
+    checkedIcon.style.display = allChecked ? 'block' : 'none';
+
+    const requiredDone = required.every(i => checked[i]);
+    document.getElementById('nextBtn').classList.toggle('active', requiredDone);
+  }
+
+  function toggleTerm(i) {
+    checked[i] = !checked[i];
+    // clear error on interaction
+    clearErrors();
+    updateUI();
+  }
+
+  function toggleAll() {
+    const allChecked = checked.every(Boolean);
+    for (let i = 0; i < 6; i++) checked[i] = !allChecked;
+    clearErrors();
+    updateUI();
+  }
+
+  function toggleDetail(i) {
+    const box = document.getElementById('detail' + i);
+    const btn = document.getElementById('viewBtn' + i);
+    const open = box.classList.toggle('open');
+    btn.textContent = open ? '접기' : '보기';
+  }
+
+  function clearErrors() {
+    document.getElementById('errorMsg').classList.remove('show');
+    required.forEach(i => {
+      const item = document.getElementById('term' + i);
+      item.classList.remove('error');
+      if (!checked[i]) {
+        item.querySelector('.check-icon svg path').setAttribute('stroke', '#A8A8A8');
+      }
+    });
+  }
+
+  function handleNext() {
+    const requiredDone = required.every(i => checked[i]);
+    if (!requiredDone) {
+      document.getElementById('errorMsg').classList.add('show');
+      required.forEach(i => {
+        if (!checked[i]) {
+          const item = document.getElementById('term' + i);
+          item.classList.add('error');
+          item.querySelector('.check-icon svg path').setAttribute('stroke', '#FF4343');
+        }
+      });
+    } else {
+      alert('다음 단계로 이동합니다.');
+    }
+  }
+
+  updateUI();
+</script>
+</body>
+</html>

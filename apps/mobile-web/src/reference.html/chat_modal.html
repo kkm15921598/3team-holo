@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 채팅방 관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    height: 844px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ══ Background Chat Screen ══ */
+  .bg {
+    position: absolute; inset: 0;
+    background: #fff;
+  }
+
+  .bg-header {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 54px 20px 12px;
+    background: #fff;
+  }
+
+  .logo {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 32px; font-weight: 600;
+    color: #7448DD; letter-spacing: 1px; line-height: 1;
+  }
+
+  .hdr-icons { display: flex; align-items: center; gap: 16px; }
+  .icon-btn { position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #1A1A1A; }
+  .notif-dot { position: absolute; top: 0; right: 0; width: 7px; height: 7px; background: #FF4343; border-radius: 50%; border: 1.5px solid #fff; }
+
+  .bg-chat-card {
+    position: absolute; top: 110px; bottom: 82px;
+    left: 14px; right: 14px;
+    background: #fff;
+    border: 1px solid #DED9F8;
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  .bg-chat-header {
+    padding: 16px 18px 14px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid #D9D9D9;
+    flex-shrink: 0;
+  }
+
+  .bg-room-name { font-size: 17px; font-weight: 700; color: #1A1A1A; }
+  .bg-room-sub { font-size: 13px; color: #9A9A9A; margin-top: 2px; }
+
+  .bg-messages { flex: 1; padding: 16px 14px; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+
+  .bg-msg-row { display: flex; align-items: flex-start; gap: 8px; }
+  .bg-avatar { width: 40px; height: 40px; border-radius: 50%; background: #DDD; flex-shrink: 0; }
+  .bg-bubble { background: #F0ECF9; border-radius: 18px 18px 18px 4px; padding: 10px 14px; font-size: 15px; color: #1A1A1A; }
+  .bg-time { font-size: 11px; color: #ABABAB; margin-top: 4px; }
+
+  .bg-input {
+    padding: 12px 14px; flex-shrink: 0;
+    border-top: 1px solid #E8E8E8;
+  }
+
+  .bg-input-inner {
+    display: flex; align-items: center;
+    border: 1px solid #D9D9D9; border-radius: 20px;
+    padding: 8px 14px 8px 18px; gap: 8px;
+  }
+
+  .bg-input-inner span { flex: 1; font-size: 14px; color: #ABABAB; }
+
+  .bg-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 82px; background: #fff; border-top: 1px solid #F0F0F0;
+    display: flex; align-items: flex-start; padding-top: 10px;
+  }
+
+  .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .nav-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #A8A8A8; }
+  .nav-tab.active .nav-icon { color: #7448DD; }
+  .nav-label { font-size: 12px; font-weight: 400; color: #A8A8A8; }
+  .nav-tab.active .nav-label { font-weight: 700; color: #7448DD; }
+
+  /* ══ Dim Layer ══ */
+  .dim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+
+  /* ══ Main Modal ══ */
+  .main-modal {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -52%);
+    width: 362px;
+    background: #fff;
+    border-radius: 15px;
+    z-index: 20;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 26px 30px 0 30px;
+    margin-bottom: 0;
+  }
+
+  .modal-title { font-size: 18px; font-weight: 700; color: #1A1A1A; }
+
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px; color: #555;
+  }
+
+  .modal-divider { height: 1px; background: #D9D9D9; margin: 26px 0 20px; }
+
+  .modal-subheader {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; margin-bottom: 20px;
+  }
+
+  .modal-sub-label { font-size: 18px; font-weight: 700; color: #1A1A1A; }
+  .modal-count { font-size: 18px; font-weight: 700; color: #1A1A1A; }
+
+  /* Participant List Box */
+  .participants-box {
+    width: 322px;
+    margin: 0 auto;
+    background: #F2F2F2;
+    border-radius: 20px;
+    padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+
+  .participant-row {
+    display: flex; align-items: center;
+    padding: 10px 0;
+    gap: 0;
+  }
+
+  .p-avatar {
+    width: 35px; height: 35px; border-radius: 50%;
+    background: #D0D0D0; flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .p-name {
+    font-size: 15px; font-weight: 500; color: #1A1A1A;
+    margin-left: 10px; flex: 1;
+  }
+
+  .me-badge {
+    background: #000; color: #fff;
+    font-size: 10px; font-weight: 800;
+    padding: 3px 5px; border-radius: 4px;
+    margin-left: 10px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .crown-icon { margin-left: 10px; flex-shrink: 0; }
+
+  .add-friend-btn {
+    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2px; color: #7448DD; flex-shrink: 0;
+  }
+
+  /* Invite Button */
+  .invite-btn {
+    display: block;
+    width: 322px;
+    margin: 20px auto 0;
+    padding: 14px 0;
+    background: linear-gradient(to right, #7448DD, #9B6DFF);
+    color: #fff;
+    font-size: 16px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    border: none; border-radius: 30px;
+    cursor: pointer; text-align: center;
+  }
+
+  /* Action Row */
+  .action-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; padding: 20px 0 24px;
+  }
+
+  .action-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 400; color: #000;
+    font-family: 'Noto Sans KR', sans-serif;
+    padding: 0 18px;
+  }
+
+  .action-sep { width: 1px; height: 13px; background: #D9D9D9; }
+
+  /* ══ Confirm Popup ══ */
+  .confirm-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 30;
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  .confirm-overlay.show { display: flex; }
+
+  .confirm-popup {
+    width: 322px;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .confirm-msg {
+    padding: 23px 35px 18px;
+    font-size: 14px; color: #1A1A1A; line-height: 1.5;
+  }
+
+  .confirm-msg strong { font-weight: 700; }
+
+  .confirm-actions {
+    display: flex; align-items: center;
+    background: #000; height: 45px;
+  }
+
+  .confirm-btn {
+    flex: 1; background: none; border: none;
+    font-size: 14px; font-weight: 400; color: #fff;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .confirm-btn-sep {
+    width: 1px; height: 13px;
+    background: rgba(255,255,255,0.2);
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ Background Chat Screen ══ -->
+<div class="bg">
+  <div class="bg-header">
+    <span class="logo">HOLO</span>
+    <div class="hdr-icons">
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/></svg><div class="notif-dot"></div></div>
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+
+  <div class="bg-chat-card">
+    <div class="bg-chat-header">
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M9 1L1 8L9 15" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div style="flex:1; margin-left:10px">
+        <div class="bg-room-name">다같이 러닝해요</div>
+        <div class="bg-room-sub">살랄라움밥바</div>
+      </div>
+      <svg width="22" height="16" viewBox="0 0 22 16" fill="none"><path d="M2 2H20M2 8H20M2 14H20" stroke="#555" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <div class="bg-messages">
+      <div class="bg-msg-row">
+        <div class="bg-avatar" style="background:#6B9ED2"></div>
+        <div>
+          <div class="bg-bubble">안녕하세요 :D</div>
+          <div class="bg-time">15:08</div>
+        </div>
+      </div>
+      <div class="bg-msg-row">
+        <div class="bg-avatar" style="background:#E8A0B0"></div>
+        <div>
+          <div class="bg-bubble">러닝 크루 모집하시는거 맞으세요?</div>
+          <div class="bg-time">15:08</div>
+        </div>
+      </div>
+    </div>
+    <div class="bg-input">
+      <div class="bg-input-inner">
+        <span>댓글 작성하기</span>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M16 9L2 2L6 9L2 16L16 9Z" stroke="#A8A8A8" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-nav">
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12H18M10 16H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<!-- ══ Dim ══ -->
+<div class="dim"></div>
+
+<!-- ══ Main Modal ══ -->
+<div class="main-modal">
+  <div class="modal-header">
+    <span class="modal-title">다같이 러닝해요</span>
+    <button class="modal-close" onclick="closeModal()">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M3 3L17 17M17 3L3 17" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="modal-divider"></div>
+
+  <div class="modal-subheader">
+    <span class="modal-sub-label">대화상대</span>
+    <span class="modal-count">3명</span>
+  </div>
+
+  <!-- Participants Box -->
+  <div class="participants-box">
+
+    <!-- Me -->
+    <div class="participant-row">
+      <div class="p-avatar" style="background:#D8C8F0">
+        <svg viewBox="0 0 35 35" xmlns="http://www.w3.org/2000/svg" width="35" height="35">
+          <rect width="35" height="35" fill="#D8C8F0"/>
+          <ellipse cx="17.5" cy="15" rx="8" ry="8" fill="#FDDBA0"/>
+          <ellipse cx="17.5" cy="8" rx="8" ry="5" fill="#2A1A00"/>
+          <ellipse cx="11" cy="13" rx="3.5" ry="5" fill="#2A1A00"/>
+          <circle cx="14.5" cy="16" r="1.5" fill="#2A1A0A"/>
+          <circle cx="20.5" cy="16" r="1.5" fill="#2A1A0A"/>
+          <path d="M14 19Q17.5 22 21 19" stroke="#C07040" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+          <ellipse cx="17.5" cy="29" rx="11" ry="8" fill="#7448DD" opacity="0.8"/>
+        </svg>
+      </div>
+      <span class="p-name">살랄라움밥바</span>
+      <span class="me-badge">me</span>
+    </div>
+
+    <!-- Host (방장) -->
+    <div class="participant-row">
+      <div class="p-avatar" style="background:#F8C8D0">
+        <svg viewBox="0 0 35 35" xmlns="http://www.w3.org/2000/svg" width="35" height="35">
+          <rect width="35" height="35" fill="#F8C8D0"/>
+          <ellipse cx="17.5" cy="15" rx="8" ry="8" fill="#FDDBA0"/>
+          <ellipse cx="17.5" cy="8" rx="8" ry="5" fill="#3A1A0A"/>
+          <ellipse cx="24" cy="11" rx="4.5" ry="6" fill="#3A1A0A"/>
+          <circle cx="14.5" cy="16" r="1.5" fill="#2A1A0A"/>
+          <circle cx="20.5" cy="16" r="1.5" fill="#2A1A0A"/>
+          <path d="M14 19Q17.5 22 21 19" stroke="#C07040" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+          <ellipse cx="17.5" cy="29" rx="11" ry="8" fill="#E8A8B8"/>
+        </svg>
+      </div>
+      <span class="p-name">무지는단무지</span>
+      <span class="crown-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 17L6 9L12 13L18 6L21 14L3 17Z" fill="#FFCB3B"/>
+          <rect x="3" y="17" width="18" height="3" rx="1.5" fill="#FFCB3B"/>
+        </svg>
+      </span>
+      <div style="flex:1"></div>
+      <button class="add-friend-btn" onclick="showConfirm('무지는 단무지')">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="9" cy="7" r="4" stroke="#7448DD" stroke-width="1.6"/>
+          <path d="M2 19C2 15.7 5.1 13 9 13" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M16 13V19M13 16H19" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Normal participant -->
+    <div class="participant-row">
+      <div class="p-avatar" style="background:#C8E8C0">
+        <svg viewBox="0 0 35 35" xmlns="http://www.w3.org/2000/svg" width="35" height="35">
+          <rect width="35" height="35" fill="#C8E8C0"/>
+          <ellipse cx="17.5" cy="15" rx="8" ry="8" fill="#FDDBA0"/>
+          <ellipse cx="17.5" cy="8" rx="7" ry="5" fill="#2A1A00"/>
+          <ellipse cx="10" cy="11" rx="3.5" ry="5" fill="#2A1A00"/>
+          <circle cx="14.5" cy="16" r="1.5" fill="#2A1A0A"/>
+          <circle cx="20.5" cy="16" r="1.5" fill="#2A1A0A"/>
+          <path d="M14 19Q17.5 22 21 19" stroke="#C07040" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+          <ellipse cx="17.5" cy="29" rx="11" ry="8" fill="#4A7A3A"/>
+        </svg>
+      </div>
+      <span class="p-name">감자튀김</span>
+      <div style="flex:1"></div>
+      <button class="add-friend-btn" onclick="showConfirm('감자튀김')">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="9" cy="7" r="4" stroke="#7448DD" stroke-width="1.6"/>
+          <path d="M2 19C2 15.7 5.1 13 9 13" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M16 13V19M13 16H19" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Invite Button -->
+  <button class="invite-btn">초대하기</button>
+
+  <!-- Action Row -->
+  <div class="action-row">
+    <button class="action-btn">차단하기</button>
+    <div class="action-sep"></div>
+    <button class="action-btn">신고하기</button>
+    <div class="action-sep"></div>
+    <button class="action-btn">채팅방 나가기</button>
+  </div>
+
+  <!-- Confirm Popup (inside modal, z-index above) -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-popup">
+      <div class="confirm-msg" id="confirmMsg">
+        <strong>무지는 단무지</strong>님을 친구로 추가하시겠습니까?
+      </div>
+      <div class="confirm-actions">
+        <button class="confirm-btn" onclick="hideConfirm()">네</button>
+        <div class="confirm-btn-sep"></div>
+        <button class="confirm-btn" onclick="hideConfirm()">아니오</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showConfirm(name) {
+    document.getElementById('confirmMsg').innerHTML = `<strong>${name}</strong>님을 친구로 추가하시겠습니까?`;
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+  function hideConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+  }
+  function closeModal() {
+    // In demo, just hide confirm if open
+    hideConfirm();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 본인인증</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    height: 844px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px 0;
+    height: 44px;
+  }
+  .status-time { font-size: 15px; font-weight: 600; color: #1A1A1A; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+
+  /* Back Button */
+  .back-btn {
+    position: absolute;
+    top: 83px;
+    left: 20px;
+    background: none; border: none; padding: 0;
+    cursor: pointer;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Progress Bar */
+  .progress-wrap {
+    position: absolute;
+    top: 127px; left: 0;
+    width: 390px; height: 5px;
+    background: #E2E2E2;
+  }
+  .progress-fill {
+    width: 120px; height: 5px;
+    background: linear-gradient(to right, #542BB4, #E95AA4);
+  }
+
+  /* Scrollable Content */
+  .scroll-area {
+    position: absolute;
+    top: 167px; left: 0; right: 0;
+    bottom: 100px;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  .title {
+    font-size: 20px; font-weight: 700;
+    color: #1A1A1A; line-height: 1.45;
+    margin-bottom: 15px;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .subtitle {
+    font-size: 15px; font-weight: 400;
+    color: #A8A8A8; margin-bottom: 45px;
+  }
+
+  /* Fields */
+  .fields { display: flex; flex-direction: column; gap: 10px; }
+
+  .field-wrap { position: relative; }
+
+  .field {
+    width: 362px; height: 62px;
+    border: 1px solid #A8A8A8;
+    border-radius: 15px;
+    background: #fff;
+    display: flex; align-items: center;
+    padding: 0 22px;
+    cursor: text;
+    transition: border 0.2s;
+    position: relative;
+  }
+  .field.focused, .field.filled { border: 2px solid #7448DD; }
+
+  .field input {
+    border: none; outline: none;
+    font-size: 18px; font-weight: 400;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1A1A1A;
+    background: transparent;
+    width: 100%;
+  }
+  .field input::placeholder { color: #A8A8A8; }
+
+  /* Resend label */
+  .resend-label {
+    position: absolute;
+    right: 22px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px; font-weight: 400;
+    color: #191919;
+    cursor: pointer;
+    display: none;
+    background: none; border: none;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .resend-label.show { display: block; }
+
+  /* RRN field */
+  .rrn-field {
+    display: flex; align-items: center;
+    gap: 0; padding: 0 22px;
+  }
+  .rrn-front {
+    font-size: 18px; color: #1A1A1A; letter-spacing: 1px;
+    min-width: 90px;
+  }
+  .rrn-front.placeholder { color: #A8A8A8; font-size: 18px; }
+  .rrn-sep {
+    font-size: 18px; color: #A8A8A8;
+    margin: 0 14px;
+  }
+  .rrn-back {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 18px;
+  }
+  .rrn-digit { color: #1A1A1A; min-width: 14px; }
+  .rrn-mask { color: #1A1A1A; letter-spacing: 2px; }
+  .rrn-back.placeholder .rrn-digit,
+  .rrn-back.placeholder .rrn-mask { color: #A8A8A8; }
+
+  /* Hidden RRN inputs */
+  .rrn-inputs {
+    position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px;
+  }
+
+  /* Carrier field */
+  .carrier-field { padding: 0 18px; gap: 0; }
+  .carrier-selector {
+    display: flex; align-items: center; gap: 4px;
+    cursor: pointer; padding-right: 12px;
+    border-right: 1px solid #E2E2E2;
+    margin-right: 12px; min-width: 70px;
+  }
+  .carrier-name { font-size: 16px; font-weight: 500; color: #191919; }
+  .phone-input {
+    border: none; outline: none;
+    font-size: 18px; font-weight: 400;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1A1A1A; background: transparent; flex: 1;
+  }
+  .phone-input::placeholder { color: #A8A8A8; }
+
+  /* Auth code field */
+  .auth-field { padding: 0 22px; }
+  .auth-input {
+    border: none; outline: none;
+    font-size: 18px; font-weight: 400;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #1A1A1A; background: transparent; flex: 1;
+  }
+  .auth-input::placeholder { color: #A8A8A8; }
+  .timer {
+    font-size: 15px; font-weight: 500;
+    color: #FF4343; flex-shrink: 0;
+  }
+  .auth-confirm {
+    font-size: 15px; font-weight: 500;
+    color: #191919; flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  /* No SMS */
+  .no-sms {
+    text-align: center;
+    font-size: 15px; color: #5D5D5D; font-weight: 400;
+    margin-top: 30px;
+    display: none;
+  }
+  .no-sms.show { display: block; }
+
+  /* Bottom Fixed */
+  .bottom-fixed {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0 20px 28px;
+    background: #fff;
+  }
+  .verify-btn {
+    width: 362px; height: 60px;
+    border-radius: 30px; border: none;
+    background: #A8A8A8;
+    color: #fff; font-size: 20px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: default;
+    transition: background 0.25s;
+    letter-spacing: 0.02em;
+  }
+  .verify-btn.active { background: #191919; cursor: pointer; }
+
+  /* iOS Keyboard */
+  .keyboard-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #D1D5DB;
+    border-top: 1px solid #B0B5BB;
+    display: none;
+    flex-direction: column;
+    padding: 10px 4px 6px;
+    z-index: 10;
+  }
+  .keyboard-overlay.show { display: flex; }
+  .kb-row { display: flex; justify-content: center; gap: 6px; margin-bottom: 9px; }
+  .kb-key {
+    background: #fff; border-radius: 5px;
+    height: 42px; min-width: 32px; flex: 1; max-width: 36px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; color: #1A1A1A;
+    font-family: 'Noto Sans KR', sans-serif;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.35);
+    cursor: pointer; user-select: none;
+  }
+  .kb-key.wide { min-width: 42px; max-width: 48px; font-size: 14px; color: #444; background: #ADB5BD; }
+  .kb-key.action { background: #ADB5BD; }
+  .kb-key.space { flex: 3; max-width: 180px; font-size: 14px; color: #444; }
+  .kb-key.blue { background: #007AFF; color: #fff; font-size: 15px; font-weight: 600; }
+  .kb-key.num-row { max-width: 32px; }
+
+  /* Dim + Bottom Sheet */
+  .dim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 20;
+    display: none;
+  }
+  .dim.show { display: block; }
+
+  .bottom-sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #fff;
+    border-radius: 15px 15px 0 0;
+    z-index: 30;
+    padding: 12px 20px 32px;
+    display: none;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  .bottom-sheet.show {
+    display: block;
+    transform: translateY(0);
+  }
+
+  .sheet-handle {
+    width: 70px; height: 6px;
+    background: #D9D9D9; border-radius: 20px;
+    margin: 0 auto 0;
+  }
+
+  .sheet-title {
+    font-size: 20px; font-weight: 500;
+    color: #7448DD;
+    margin-top: 50px; margin-bottom: 29px;
+  }
+
+  .carrier-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .carrier-item {
+    width: 100%; height: 55px;
+    border: 1px solid #D9D9D9;
+    border-radius: 15px;
+    background: #fff;
+    display: flex; align-items: center;
+    padding: 0 22px;
+    cursor: pointer;
+    transition: border 0.15s;
+    justify-content: space-between;
+  }
+  .carrier-item.selected {
+    border: 2px solid #7448DD;
+  }
+  .carrier-item-name {
+    font-size: 20px; font-weight: 500; color: #191919;
+  }
+  .carrier-check svg path { stroke: #D9D9D9; }
+  .carrier-item.selected .carrier-check svg path { stroke: #7448DD; }
+</style>
+</head>
+<body>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <span class="status-time">9:41</span>
+  <div class="status-icons">
+    <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+      <rect x="0" y="3" width="3" height="9" rx="1" fill="#1A1A1A"/>
+      <rect x="4.5" y="2" width="3" height="10" rx="1" fill="#1A1A1A"/>
+      <rect x="9" y="0.5" width="3" height="11.5" rx="1" fill="#1A1A1A"/>
+      <rect x="13.5" y="0" width="3" height="12" rx="1" fill="#1A1A1A" opacity="0.3"/>
+    </svg>
+    <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+      <path d="M8 2.5C10.2 2.5 12.2 3.4 13.6 4.9L15 3.5C13.2 1.6 10.7 0.5 8 0.5C5.3 0.5 2.8 1.6 1 3.5L2.4 4.9C3.8 3.4 5.8 2.5 8 2.5Z" fill="#1A1A1A"/>
+      <path d="M8 5.5C9.4 5.5 10.7 6.1 11.6 7L13 5.6C11.7 4.3 10 3.5 8 3.5C6 3.5 4.3 4.3 3 5.6L4.4 7C5.3 6.1 6.6 5.5 8 5.5Z" fill="#1A1A1A"/>
+      <circle cx="8" cy="10" r="1.5" fill="#1A1A1A"/>
+    </svg>
+    <svg width="25" height="12" viewBox="0 0 25 12" fill="none">
+      <rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="#1A1A1A" stroke-opacity="0.35"/>
+      <rect x="2" y="2" width="17" height="8" rx="2" fill="#1A1A1A"/>
+      <path d="M23 4.5V7.5C23.8 7.2 24.5 6.5 24.5 6C24.5 5.5 23.8 4.8 23 4.5Z" fill="#1A1A1A" opacity="0.4"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Back -->
+<button class="back-btn"><svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+<!-- Progress -->
+<div class="progress-wrap"><div class="progress-fill"></div></div>
+
+<!-- Scroll Area -->
+<div class="scroll-area" id="scrollArea">
+  <div class="title">안전한 서비스 이용을 위해<br>본인인증을 진행해 주세요!</div>
+  <div class="subtitle">회원여부 확인 및 가입을 진행합니다.</div>
+
+  <div class="fields">
+
+    <!-- 1. Name -->
+    <div class="field-wrap">
+      <div class="field" id="nameField" onclick="focusName()">
+        <input type="text" id="nameInput" placeholder="이름 입력"
+          onfocus="setFocused('nameField')"
+          onblur="setFilled('nameField','nameInput')"
+          oninput="checkAll()"/>
+      </div>
+    </div>
+
+    <!-- 2. RRN -->
+    <div class="field-wrap">
+      <div class="field rrn-field" id="rrnField" onclick="focusRrn()">
+        <div class="rrn-front placeholder" id="rrnFront">생년월일</div>
+        <div class="rrn-sep">—</div>
+        <div class="rrn-back placeholder" id="rrnBack">
+          <span class="rrn-digit" id="rrnDigit">0</span>
+          <span class="rrn-mask" id="rrnMask">* * * * * *</span>
+        </div>
+      </div>
+      <!-- Hidden inputs -->
+      <input class="rrn-inputs" type="tel" id="rrnFrontInput" maxlength="6"
+        oninput="onRrnFront()" onblur="onRrnBlur()"/>
+      <input class="rrn-inputs" type="tel" id="rrnBackInput" maxlength="7"
+        oninput="onRrnBack()" onblur="onRrnBlur()"/>
+    </div>
+
+    <!-- 3. Carrier + Phone -->
+    <div class="field-wrap">
+      <div class="field carrier-field" id="carrierField">
+        <div class="carrier-selector" onclick="openSheet()">
+          <span class="carrier-name" id="carrierName">통신사</span>
+          <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+            <path d="M1 1L6 6.5L11 1" stroke="#191919" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <input type="tel" class="phone-input" id="phoneInput" placeholder="휴대폰 번호 입력"
+          onfocus="setFocused('carrierField')"
+          onblur="setFilled('carrierField','phoneInput')"
+          oninput="formatPhone(); checkAll()"/>
+      </div>
+      <button class="resend-label" id="resendBtn" onclick="resendCode()">재전송</button>
+    </div>
+
+    <!-- 4. Auth Code (hidden initially) -->
+    <div class="field-wrap" id="authWrap" style="display:none">
+      <div class="field auth-field" id="authField">
+        <input type="tel" class="auth-input" id="authInput" placeholder="인증번호 입력"
+          onfocus="setFocused('authField')"
+          oninput="onAuthInput()"/>
+        <span class="timer" id="timerEl" style="display:block">02:17</span>
+        <span class="auth-confirm" id="authConfirm" style="display:none" onclick="confirmAuth()">인증 확인</span>
+      </div>
+    </div>
+
+    <!-- No SMS -->
+    <div class="no-sms" id="noSms">문자가 오지 않는다면?</div>
+
+  </div>
+</div>
+
+<!-- Bottom -->
+<div class="bottom-fixed" id="bottomFixed">
+  <button class="verify-btn" id="verifyBtn" onclick="handleVerify()">인증하기</button>
+</div>
+
+<!-- iOS Keyboard -->
+<div class="keyboard-overlay" id="keyboard">
+  <div class="kb-row">
+    <div class="kb-key num-row" onclick="kbType('1')">1</div>
+    <div class="kb-key num-row" onclick="kbType('2')">2</div>
+    <div class="kb-key num-row" onclick="kbType('3')">3</div>
+    <div class="kb-key num-row" onclick="kbType('4')">4</div>
+    <div class="kb-key num-row" onclick="kbType('5')">5</div>
+    <div class="kb-key num-row" onclick="kbType('6')">6</div>
+    <div class="kb-key num-row" onclick="kbType('7')">7</div>
+    <div class="kb-key num-row" onclick="kbType('8')">8</div>
+    <div class="kb-key num-row" onclick="kbType('9')">9</div>
+    <div class="kb-key num-row" onclick="kbType('0')">0</div>
+  </div>
+  <div class="kb-row">
+    <div class="kb-key" onclick="kbKor('ㅂ')">ㅂ</div><div class="kb-key" onclick="kbKor('ㅈ')">ㅈ</div>
+    <div class="kb-key" onclick="kbKor('ㄷ')">ㄷ</div><div class="kb-key" onclick="kbKor('ㄱ')">ㄱ</div>
+    <div class="kb-key" onclick="kbKor('ㅅ')">ㅅ</div><div class="kb-key" onclick="kbKor('ㅛ')">ㅛ</div>
+    <div class="kb-key" onclick="kbKor('ㅕ')">ㅕ</div><div class="kb-key" onclick="kbKor('ㅑ')">ㅑ</div>
+    <div class="kb-key" onclick="kbKor('ㅐ')">ㅐ</div><div class="kb-key" onclick="kbKor('ㅔ')">ㅔ</div>
+  </div>
+  <div class="kb-row">
+    <div class="kb-key" onclick="kbKor('ㅁ')">ㅁ</div><div class="kb-key" onclick="kbKor('ㄴ')">ㄴ</div>
+    <div class="kb-key" onclick="kbKor('ㅇ')">ㅇ</div><div class="kb-key" onclick="kbKor('ㄹ')">ㄹ</div>
+    <div class="kb-key" onclick="kbKor('ㅎ')">ㅎ</div><div class="kb-key" onclick="kbKor('ㅗ')">ㅗ</div>
+    <div class="kb-key" onclick="kbKor('ㅓ')">ㅓ</div><div class="kb-key" onclick="kbKor('ㅏ')">ㅏ</div>
+    <div class="kb-key" onclick="kbKor('ㅣ')">ㅣ</div>
+  </div>
+  <div class="kb-row">
+    <div class="kb-key wide action">⇧</div>
+    <div class="kb-key" onclick="kbKor('ㅋ')">ㅋ</div><div class="kb-key" onclick="kbKor('ㅌ')">ㅌ</div>
+    <div class="kb-key" onclick="kbKor('ㅊ')">ㅊ</div><div class="kb-key" onclick="kbKor('ㅍ')">ㅍ</div>
+    <div class="kb-key" onclick="kbKor('ㅠ')">ㅠ</div><div class="kb-key" onclick="kbKor('ㅜ')">ㅜ</div>
+    <div class="kb-key" onclick="kbKor('ㅡ')">ㅡ</div>
+    <div class="kb-key wide action" onclick="kbDel()">⌫</div>
+  </div>
+  <div class="kb-row">
+    <div class="kb-key wide action">!#1</div>
+    <div class="kb-key wide action" style="font-size:12px">한/영</div>
+    <div class="kb-key space">한국어</div>
+    <div class="kb-key">.</div>
+    <div class="kb-key blue" onclick="closeKeyboard()">이동</div>
+  </div>
+</div>
+
+<!-- Dim -->
+<div class="dim" id="dim" onclick="closeSheet()"></div>
+
+<!-- Bottom Sheet -->
+<div class="bottom-sheet" id="bottomSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">통신사를 선택해 주세요.</div>
+  <div class="carrier-list" id="carrierList">
+    <div class="carrier-item" onclick="selectCarrier('SKT',this)">
+      <span class="carrier-item-name">SKT</span>
+      <span class="carrier-check"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1 6L6 11L15 1" stroke="#D9D9D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="carrier-item" onclick="selectCarrier('KT',this)">
+      <span class="carrier-item-name">KT</span>
+      <span class="carrier-check"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1 6L6 11L15 1" stroke="#D9D9D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="carrier-item" onclick="selectCarrier('LG',this)">
+      <span class="carrier-item-name">LG</span>
+      <span class="carrier-check"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1 6L6 11L15 1" stroke="#D9D9D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="carrier-item" onclick="selectCarrier('SKT 알뜰폰',this)">
+      <span class="carrier-item-name">SKT 알뜰폰</span>
+      <span class="carrier-check"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1 6L6 11L15 1" stroke="#D9D9D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="carrier-item" onclick="selectCarrier('KT 알뜰폰',this)">
+      <span class="carrier-item-name">KT 알뜰폰</span>
+      <span class="carrier-check"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1 6L6 11L15 1" stroke="#D9D9D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="carrier-item" onclick="selectCarrier('LG U+ 알뜰폰',this)">
+      <span class="carrier-item-name">LG U+ 알뜰폰</span>
+      <span class="carrier-check"><svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M1 6L6 11L15 1" stroke="#D9D9D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedCarrier = '';
+  let rrnFocused = false;
+  let activeKbTarget = null; // 'name' | null
+  let timerInterval = null;
+  let timerSecs = 137;
+  let codeSent = false;
+
+  // ---- Focus/Filled helpers ----
+  function setFocused(fieldId) {
+    document.getElementById(fieldId).classList.add('focused');
+  }
+  function setFilled(fieldId, inputId) {
+    const el = document.getElementById(fieldId);
+    const val = document.getElementById(inputId).value.trim();
+    el.classList.remove('focused');
+    if (val) el.classList.add('filled');
+    else el.classList.remove('filled');
+    checkAll();
+  }
+
+  // ---- Name field ----
+  function focusName() {
+    const inp = document.getElementById('nameInput');
+    inp.focus();
+    showKorKeyboard('name');
+  }
+
+  function showKorKeyboard(target) {
+    activeKbTarget = target;
+    document.getElementById('keyboard').classList.add('show');
+    document.getElementById('bottomFixed').style.display = 'none';
+  }
+
+  function closeKeyboard() {
+    document.getElementById('keyboard').classList.remove('show');
+    document.getElementById('bottomFixed').style.display = 'block';
+    activeKbTarget = null;
+    checkAll();
+  }
+
+  function kbKor(ch) {
+    if (activeKbTarget === 'name') {
+      const inp = document.getElementById('nameInput');
+      inp.value += ch;
+      setFocused('nameField');
+      checkAll();
+    }
+  }
+  function kbType(ch) { kbKor(ch); }
+  function kbDel() {
+    if (activeKbTarget === 'name') {
+      const inp = document.getElementById('nameInput');
+      inp.value = inp.value.slice(0, -1);
+      checkAll();
+    }
+  }
+
+  // ---- RRN field ----
+  function focusRrn() {
+    setFocused('rrnField');
+    const fi = document.getElementById('rrnFrontInput');
+    fi.style.position = 'fixed'; fi.style.opacity = '0';
+    fi.style.top = '200px'; fi.style.left = '0';
+    document.body.appendChild(fi);
+    fi.focus();
+    updateRrnDisplay();
+  }
+
+  function onRrnFront() {
+    const fi = document.getElementById('rrnFrontInput');
+    let v = fi.value.replace(/\D/g,'').slice(0,6);
+    fi.value = v;
+    if (v.length === 6) {
+      const bi = document.getElementById('rrnBackInput');
+      bi.style.position = 'fixed'; bi.style.opacity = '0';
+      bi.style.top = '200px'; bi.style.left = '0';
+      document.body.appendChild(bi);
+      bi.focus();
+    }
+    updateRrnDisplay();
+    checkAll();
+  }
+
+  function onRrnBack() {
+    const bi = document.getElementById('rrnBackInput');
+    let v = bi.value.replace(/\D/g,'').slice(0,7);
+    bi.value = v;
+    updateRrnDisplay();
+    checkAll();
+  }
+
+  function onRrnBlur() {
+    setTimeout(() => {
+      const fi = document.getElementById('rrnFrontInput');
+      const bi = document.getElementById('rrnBackInput');
+      if (document.activeElement !== fi && document.activeElement !== bi) {
+        const fv = fi.value; const bv = bi.value;
+        if (fv || bv) document.getElementById('rrnField').classList.add('filled');
+        else { document.getElementById('rrnField').classList.remove('filled'); document.getElementById('rrnField').classList.remove('focused'); }
+      }
+      checkAll();
+    }, 100);
+  }
+
+  function updateRrnDisplay() {
+    const fv = document.getElementById('rrnFrontInput').value;
+    const bv = document.getElementById('rrnBackInput').value;
+
+    const frontEl = document.getElementById('rrnFront');
+    const backEl = document.getElementById('rrnBack');
+    const digitEl = document.getElementById('rrnDigit');
+    const maskEl = document.getElementById('rrnMask');
+
+    if (fv) {
+      frontEl.textContent = fv;
+      frontEl.classList.remove('placeholder');
+    } else {
+      frontEl.textContent = '생년월일';
+      frontEl.classList.add('placeholder');
+    }
+
+    if (bv) {
+      backEl.classList.remove('placeholder');
+      digitEl.textContent = bv[0] || '';
+      const masked = bv.slice(1);
+      maskEl.textContent = masked ? ' ' + '* '.repeat(masked.length).trim() : ' * * * * * *';
+    } else {
+      backEl.classList.add('placeholder');
+      digitEl.textContent = '0';
+      maskEl.textContent = ' * * * * * *';
+    }
+  }
+
+  // ---- Phone formatting ----
+  function formatPhone() {
+    const inp = document.getElementById('phoneInput');
+    let v = inp.value.replace(/\D/g,'');
+    if (v.length <= 3) inp.value = v;
+    else if (v.length <= 7) inp.value = v.slice(0,3) + '-' + v.slice(3);
+    else inp.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7,11);
+    checkAll();
+  }
+
+  // ---- Check all fields ----
+  function checkAll() {
+    const name = document.getElementById('nameInput').value.trim();
+    const rrnF = document.getElementById('rrnFrontInput').value;
+    const rrnB = document.getElementById('rrnBackInput').value;
+    const phone = document.getElementById('phoneInput').value.replace(/\D/g,'');
+    const ok = name.length > 0 && rrnF.length === 6 && rrnB.length >= 1 && phone.length >= 10 && selectedCarrier;
+    const btn = document.getElementById('verifyBtn');
+    btn.classList.toggle('active', ok);
+  }
+
+  // ---- Carrier Sheet ----
+  function openSheet() {
+    document.getElementById('dim').classList.add('show');
+    const sheet = document.getElementById('bottomSheet');
+    sheet.style.display = 'block';
+    setTimeout(() => sheet.classList.add('show'), 10);
+  }
+
+  function closeSheet() {
+    document.getElementById('dim').classList.remove('show');
+    const sheet = document.getElementById('bottomSheet');
+    sheet.classList.remove('show');
+    setTimeout(() => sheet.style.display = 'none', 300);
+  }
+
+  function selectCarrier(name, el) {
+    selectedCarrier = name;
+    document.querySelectorAll('.carrier-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+    setTimeout(() => {
+      closeSheet();
+      document.getElementById('carrierName').textContent = name;
+      document.getElementById('carrierField').classList.add('filled');
+      document.getElementById('phoneInput').focus();
+      checkAll();
+    }, 200);
+  }
+
+  // ---- Verify Button ----
+  function handleVerify() {
+    if (!document.getElementById('verifyBtn').classList.contains('active')) return;
+    if (!codeSent) {
+      sendCode();
+    } else {
+      alert('인증이 완료되었습니다!');
+    }
+  }
+
+  function sendCode() {
+    codeSent = true;
+    document.getElementById('authWrap').style.display = 'block';
+    document.getElementById('resendBtn').classList.add('show');
+    document.getElementById('noSms').classList.add('show');
+    startTimer();
+    setTimeout(() => {
+      document.getElementById('scrollArea').scrollTop = 999;
+    }, 100);
+  }
+
+  function resendCode() {
+    timerSecs = 137;
+    clearInterval(timerInterval);
+    startTimer();
+    document.getElementById('authInput').value = '';
+    document.getElementById('timerEl').style.display = 'block';
+    document.getElementById('authConfirm').style.display = 'none';
+    document.getElementById('authField').classList.remove('filled','focused');
+  }
+
+  function startTimer() {
+    updateTimer();
+    timerInterval = setInterval(() => {
+      timerSecs--;
+      if (timerSecs <= 0) { clearInterval(timerInterval); timerSecs = 0; }
+      updateTimer();
+    }, 1000);
+  }
+
+  function updateTimer() {
+    const m = String(Math.floor(timerSecs / 60)).padStart(2, '0');
+    const s = String(timerSecs % 60).padStart(2, '0');
+    document.getElementById('timerEl').textContent = m + ':' + s;
+  }
+
+  function onAuthInput() {
+    const v = document.getElementById('authInput').value.trim();
+    const field = document.getElementById('authField');
+    if (v.length > 0) {
+      field.classList.add('focused');
+      document.getElementById('timerEl').style.display = 'none';
+      document.getElementById('authConfirm').style.display = 'block';
+    } else {
+      field.classList.remove('focused');
+      document.getElementById('timerEl').style.display = 'block';
+      document.getElementById('authConfirm').style.display = 'none';
+    }
+  }
+
+  function confirmAuth() {
+    document.getElementById('authField').classList.remove('focused');
+    document.getElementById('authField').classList.add('filled');
+    document.getElementById('authConfirm').style.display = 'none';
+    clearInterval(timerInterval);
+    document.getElementById('timerEl').style.display = 'none';
+  }
+
+  // Initial display
+  updateRrnDisplay();
+</script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 내가 쓴 글</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    min-height: 844px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    padding-bottom: 82px;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: fixed;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 390px; z-index: 40; background: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 54px 20px 12px;
+  }
+
+  .logo-text {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 32px; font-weight: 600;
+    color: #7448DD; letter-spacing: 1px; line-height: 1;
+  }
+
+  .header-icons { display: flex; align-items: center; gap: 16px; }
+
+  .icon-btn {
+    position: relative; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #1A1A1A;
+  }
+
+  .notif-dot {
+    position: absolute; top: 0; right: 0;
+    width: 7px; height: 7px;
+    background: #FF4343; border-radius: 50%;
+    border: 1.5px solid #fff;
+  }
+
+  /* ── Page Title ── */
+  .page-title-bar {
+    position: fixed;
+    top: 110px; left: 50%; transform: translateX(-50%);
+    width: 390px; z-index: 40; background: #fff;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid #D9D9D9;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .back-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 2px; display: flex; align-items: center;
+  }
+
+  .page-title { font-size: 20px; font-weight: 600; color: #1A1A1A; }
+
+  /* ── Body ── */
+  .body-content { margin-top: 158px; }
+
+  /* ── Control Row ── */
+  .control-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+  }
+
+  .control-label {
+    font-size: 16px; font-weight: 400; color: #1A1A1A;
+  }
+
+  .manage-btn {
+    font-size: 16px; font-weight: 400; color: #1A1A1A;
+    background: none; border: none; cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  .delete-btn {
+    font-size: 14px; font-weight: 500; color: #fff;
+    background: #7448DD; border: none; cursor: pointer;
+    border-radius: 20px; padding: 8px 21px;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .delete-btn:disabled { opacity: 0.45; cursor: default; }
+
+  /* ── Post List ── */
+  .post-list {
+    padding: 0 20px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* ── Post Card ── */
+  .post-card {
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 0 8.3px 0 #DED9F8;
+    padding: 17px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.18s;
+    user-select: none;
+  }
+
+  .post-card.selected {
+    border-color: #7448DD;
+  }
+
+  /* hide arrow in delete mode */
+  .delete-mode .post-card .arrow-btn { display: none; }
+
+  .card-inner {
+    display: flex; align-items: stretch; gap: 14px;
+  }
+
+  .category-label {
+    font-size: 16px; font-weight: 700;
+    color: #1A1A1A;
+    flex-shrink: 0;
+    min-width: 30px;
+    padding-top: 2px;
+  }
+
+  .post-info { flex: 1; min-width: 0; }
+
+  .post-row1 {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+
+  .post-title {
+    font-size: 16px; font-weight: 600; color: #000;
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .post-dist {
+    font-size: 12px; font-weight: 500; color: #857894;
+    white-space: nowrap; margin-left: 8px; flex-shrink: 0;
+  }
+
+  .post-row2 {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .post-desc {
+    font-size: 14px; font-weight: 400; color: #979797;
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .arrow-btn {
+    width: 22px; height: 22px;
+    background: #CCBCE0; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-left: 8px;
+    cursor: pointer;
+  }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 390px; height: 82px; background: #fff;
+    border-top: 1px solid #F0F0F0;
+    display: flex; align-items: flex-start;
+    padding-top: 10px; z-index: 40;
+  }
+
+  .nav-tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; cursor: pointer;
+  }
+
+  .nav-icon {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: #A8A8A8;
+  }
+  .nav-tab.active .nav-icon { color: #7448DD; }
+  .nav-label { font-size: 12px; font-weight: 400; color: #A8A8A8; }
+  .nav-tab.active .nav-label { font-weight: 700; color: #7448DD; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="logo-text">HOLO</span>
+  <div class="header-icons">
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/>
+        <path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/>
+      </svg>
+      <div class="notif-dot"></div>
+    </div>
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- Page Title -->
+<div class="page-title-bar">
+  <button class="back-btn">
+    <svg width="10" height="18" viewBox="0 0 10 18" fill="none">
+      <path d="M9 1L1 9L9 17" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <span class="page-title">내가 쓴 글</span>
+</div>
+
+<div class="body-content">
+
+  <!-- Control Row -->
+  <div class="control-row" id="controlRow">
+    <span class="control-label" id="controlLabel">내가 쓴 글</span>
+    <button class="manage-btn" id="manageBtn" onclick="toggleMode()">관리하기</button>
+  </div>
+
+  <!-- Post List -->
+  <div class="post-list" id="postList">
+
+    <div class="post-card" data-id="0" onclick="handleCardClick(this)">
+      <div class="card-inner">
+        <span class="category-label">운동</span>
+        <div class="post-info">
+          <div class="post-row1">
+            <span class="post-title">러닝 메이트 모집</span>
+            <span class="post-dist">200m · 60분</span>
+          </div>
+          <div class="post-row2">
+            <span class="post-desc">다같이 러닝해요</span>
+            <div class="arrow-btn">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M2 9L9 2M9 2H4M9 2V7" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="post-card" data-id="1" onclick="handleCardClick(this)">
+      <div class="card-inner">
+        <span class="category-label">식사</span>
+        <div class="post-info">
+          <div class="post-row1">
+            <span class="post-title">점심 번개</span>
+            <span class="post-dist">500m · 20분</span>
+          </div>
+          <div class="post-row2">
+            <span class="post-desc">오피스 단지 떡볶이 메이트!</span>
+            <div class="arrow-btn">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M2 9L9 2M9 2H4M9 2V7" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="post-card" data-id="2" onclick="handleCardClick(this)">
+      <div class="card-inner">
+        <span class="category-label">소분</span>
+        <div class="post-info">
+          <div class="post-row1">
+            <span class="post-title">수박 소분</span>
+            <span class="post-dist">350m · 15분</span>
+          </div>
+          <div class="post-row2">
+            <span class="post-desc">마트에서 산 큰 수박 나눌 분~</span>
+            <div class="arrow-btn">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M2 9L9 2M9 2H4M9 2V7" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="post-card" data-id="3" onclick="handleCardClick(this)">
+      <div class="card-inner">
+        <span class="category-label">소분</span>
+        <div class="post-info">
+          <div class="post-row1">
+            <span class="post-title">코스트코 소분</span>
+            <span class="post-dist">700m · 50분</span>
+          </div>
+          <div class="post-row2">
+            <span class="post-desc">코스트코에서 함께 장 보고 나눌 분~</span>
+            <div class="arrow-btn">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M2 9L9 2M9 2H4M9 2V7" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="post-card" data-id="4" onclick="handleCardClick(this)">
+      <div class="card-inner">
+        <span class="category-label">공구</span>
+        <div class="post-info">
+          <div class="post-row1">
+            <span class="post-title">러닝 메이트 모집</span>
+            <span class="post-dist">500m · 20분</span>
+          </div>
+          <div class="post-row2">
+            <span class="post-desc">다같이 러닝해요</span>
+            <div class="arrow-btn">
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                <path d="M2 9L9 2M9 2H4M9 2V7" stroke="#7448DD" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/><path d="M8 14H16M8 18H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div><span class="nav-label">지도</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+  <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 12H18M10 16H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">채팅</span></div>
+  <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+</div>
+
+<script>
+  let isDeleteMode = false;
+
+  function toggleMode() {
+    isDeleteMode = !isDeleteMode;
+    const label = document.getElementById('controlLabel');
+    const manageBtn = document.getElementById('manageBtn');
+    const postList = document.getElementById('postList');
+
+    if (isDeleteMode) {
+      label.textContent = '삭제할 게시글을 선택해 주세요';
+      label.style.fontSize = '14px';
+      // replace manage btn with delete btn
+      manageBtn.outerHTML = `<button class="delete-btn" id="deleteBtn" onclick="deleteSelected()" disabled>삭제하기</button>`;
+      postList.classList.add('delete-mode');
+      // deselect all
+      document.querySelectorAll('.post-card').forEach(c => c.classList.remove('selected'));
+    } else {
+      label.textContent = '내가 쓴 글';
+      label.style.fontSize = '16px';
+      const deleteBtn = document.getElementById('deleteBtn');
+      if (deleteBtn) {
+        deleteBtn.outerHTML = `<button class="manage-btn" id="manageBtn" onclick="toggleMode()">관리하기</button>`;
+      }
+      postList.classList.remove('delete-mode');
+      document.querySelectorAll('.post-card').forEach(c => c.classList.remove('selected'));
+    }
+  }
+
+  function handleCardClick(card) {
+    if (!isDeleteMode) return;
+    card.classList.toggle('selected');
+    // update delete btn state
+    const selected = document.querySelectorAll('.post-card.selected').length;
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (deleteBtn) deleteBtn.disabled = selected === 0;
+  }
+
+  function deleteSelected() {
+    const selected = document.querySelectorAll('.post-card.selected');
+    if (selected.length === 0) return;
+    selected.forEach(card => card.remove());
+    // exit delete mode
+    isDeleteMode = true; // force toggle to false
+    toggleMode();
+  }
+</script>
+</body>
+</html>

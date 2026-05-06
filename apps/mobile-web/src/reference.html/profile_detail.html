@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 프로필</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    min-height: 844px;
+    margin: 0 auto;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 54px 20px 12px;
+    background: #fff;
+  }
+
+  .logo {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 32px; font-weight: 600;
+    color: #B77CFF; letter-spacing: 1px; line-height: 1;
+  }
+
+  .hdr-icons { display: flex; align-items: center; gap: 16px; }
+  .icon-btn { position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #1A1A1A; }
+  .notif-dot { position: absolute; top: 0; right: 0; width: 7px; height: 7px; background: #FF4343; border-radius: 50%; border: 1.5px solid #fff; }
+
+  /* ── Hero / MyRoom ── */
+  .hero {
+    position: relative;
+    width: 100%;
+    min-height: 440px;
+    background: linear-gradient(160deg, #E8DEFF 0%, #C8AAFF 40%, #A07AEE 100%);
+    border-radius: 0 0 40px 40px;
+    overflow: hidden;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding-bottom: 60px;
+  }
+
+  .close-btn {
+    position: absolute; top: 16px; right: 16px;
+    background: rgba(255,255,255,0.25); border: none;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #5D5D5D; z-index: 10;
+  }
+
+  /* 3D Isometric Room */
+  .room-scene {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Profile bubble overlapping hero bottom */
+  .profile-bubble {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: #F5E8A0;
+    border: 4px solid #fff;
+    overflow: hidden;
+    z-index: 5;
+    box-shadow: 0 4px 16px rgba(116,72,221,0.2);
+  }
+
+  /* ── Profile Info ── */
+  .profile-info {
+    display: flex; flex-direction: column;
+    align-items: center;
+    margin-top: 68px;
+    padding: 0 20px;
+    gap: 0;
+  }
+
+  .level-badge {
+    display: inline-block;
+    background: linear-gradient(to right, #7448DD, #FF6CB8);
+    color: #fff; font-size: 14px; font-weight: 700;
+    padding: 4px 14px; border-radius: 20px;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .nickname {
+    font-size: 22px; font-weight: 700; color: #000;
+    margin-bottom: 6px; text-align: center;
+  }
+
+  .title-row {
+    display: flex; align-items: center; gap: 5px;
+    margin-bottom: 24px;
+    font-size: 16px; font-weight: 400; color: #333;
+  }
+
+  /* ── Stats ── */
+  .stats-row {
+    display: flex; align-items: center;
+    width: 100%; max-width: 340px;
+    margin-bottom: 24px;
+  }
+
+  .stat-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+  }
+
+  .stat-label {
+    font-size: 15px; font-weight: 400; color: #5D5D5D;
+  }
+
+  .stat-value {
+    font-size: 22px; font-weight: 900; color: #7448DD;
+    line-height: 1;
+  }
+
+  .stat-sep {
+    width: 1px; height: 36px; background: #D9D9D9;
+    flex-shrink: 0;
+  }
+
+  /* ── Friend Add Button ── */
+  .friend-add-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: #7448DD; color: #fff;
+    border: none; border-radius: 30px;
+    padding: 14px 48px;
+    font-size: 16px; font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer; margin-bottom: 24px;
+    transition: opacity 0.2s;
+  }
+  .friend-add-btn:hover { opacity: 0.9; }
+
+  /* ── Secondary Actions ── */
+  .secondary-actions {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    width: 100%; max-width: 340px;
+    padding: 0 10px;
+    margin-bottom: 30px;
+  }
+
+  .sec-action {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 15px; font-weight: 400; color: #9A9A9A;
+    cursor: pointer; background: none; border: none;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="logo">HOLO</span>
+  <div class="hdr-icons">
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/>
+        <path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/>
+      </svg>
+      <div class="notif-dot"></div>
+    </div>
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- Hero / MyRoom -->
+<div class="hero">
+  <button class="close-btn">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 2L14 14M14 2L2 14" stroke="#5D5D5D" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <!-- 3D Isometric Room SVG -->
+  <div class="room-scene">
+    <svg width="370" height="380" viewBox="0 0 370 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wallLeft" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#B99DE8"/>
+          <stop offset="100%" stop-color="#C8AAFF"/>
+        </linearGradient>
+        <linearGradient id="wallBack" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#D4BBFF"/>
+          <stop offset="100%" stop-color="#C0A0F0"/>
+        </linearGradient>
+        <linearGradient id="floorGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#C8A87A"/>
+          <stop offset="100%" stop-color="#A07848"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Floor -->
+      <path d="M60 230 L185 160 L310 230 L185 300 Z" fill="url(#floorGrad)" opacity="0.9"/>
+      <!-- Floor planks -->
+      <path d="M80 240 L200 168 M100 252 L220 178 M120 264 L240 190 M140 274 L260 202 M160 284 L280 214 M180 294 L300 224" stroke="#B08858" stroke-width="0.8" opacity="0.5"/>
+
+      <!-- Left wall -->
+      <path d="M60 100 L60 230 L185 300 L185 170 Z" fill="url(#wallLeft)"/>
+
+      <!-- Back wall -->
+      <path d="M60 100 L185 30 L310 100 L310 230 L185 160 L60 230 Z" fill="url(#wallBack)"/>
+      <!-- actually just back top face -->
+      <path d="M60 100 L185 170 L310 100 L185 30 Z" fill="#C8AAFF"/>
+
+      <!-- Right wall -->
+      <path d="M310 100 L310 230 L185 300 L185 170 Z" fill="#A888E8"/>
+
+      <!-- ── DESK (left side) ── -->
+      <!-- Desk surface top face -->
+      <path d="M72 165 L72 175 L138 208 L138 198 Z" fill="#8B6440"/>
+      <path d="M72 165 L138 198 L155 188 L90 155 Z" fill="#A07850"/>
+      <path d="M90 155 L155 188 L155 178 L90 145 Z" fill="#7A5430"/>
+      <!-- Desk front face -->
+      <path d="M72 175 L72 215 L138 248 L138 208 Z" fill="#7A5430"/>
+      <!-- Desk right face -->
+      <path d="M138 198 L155 188 L155 228 L138 238 Z" fill="#6A4420"/>
+      <!-- Desk left leg -->
+      <rect x="72" y="215" width="6" height="25" fill="#6A4420" transform="skewY(-20)"/>
+      <!-- Desk right leg -->
+      <rect x="132" y="238" width="6" height="22" fill="#6A4420" transform="skewY(-20)"/>
+
+      <!-- Laptop on desk -->
+      <path d="M85 168 L113 182 L113 172 L85 158 Z" fill="#8AB8E8" opacity="0.9"/>
+      <path d="M85 168 L85 175 L113 189 L113 182 Z" fill="#6698C8"/>
+      <path d="M85 175 L75 170 L75 163 L85 168 Z" fill="#AAC8E8"/>
+
+      <!-- Lamp -->
+      <rect x="148" y="148" width="3" height="24" fill="#8888AA" transform="rotate(-5, 149, 155)"/>
+      <ellipse cx="149" cy="148" rx="12" ry="6" fill="#B8A8E8" opacity="0.9"/>
+      <ellipse cx="149" cy="148" rx="12" ry="6" fill="#FFEEAA" opacity="0.3"/>
+
+      <!-- Pencil cup -->
+      <ellipse cx="80" cy="193" rx="5" ry="3" fill="#7448DD" opacity="0.8"/>
+      <rect x="75" y="190" width="10" height="8" fill="#7448DD" opacity="0.7"/>
+
+      <!-- ── BOOKSHELF (right back area) ── -->
+      <path d="M224 128 L254 112 L254 195 L224 210 Z" fill="#8B6440"/>
+      <path d="M254 112 L270 120 L270 203 L254 195 Z" fill="#7A5430"/>
+      <path d="M224 128 L254 112 L270 120 L240 136 Z" fill="#A07850"/>
+      <!-- Shelf dividers -->
+      <line x1="224" y1="160" x2="270" y2="138" stroke="#6A4420" stroke-width="1.5"/>
+      <line x1="224" y1="180" x2="270" y2="158" stroke="#6A4420" stroke-width="1.5"/>
+      <!-- Books -->
+      <rect x="226" y="133" width="5" height="25" fill="#FF8080" transform="skewY(-30)"/>
+      <rect x="232" y="130" width="5" height="25" fill="#7448DD" transform="skewY(-30)"/>
+      <rect x="238" y="127" width="4" height="25" fill="#80C080" transform="skewY(-30)"/>
+      <!-- Plant on shelf -->
+      <ellipse cx="260" cy="110" rx="5" ry="4" fill="#60A860"/>
+      <ellipse cx="258" cy="107" rx="4" ry="5" fill="#50A050"/>
+      <rect x="258" y="110" width="4" height="5" fill="#8B6440"/>
+
+      <!-- ── BEAN BAG CHAIR ── -->
+      <ellipse cx="268" cy="220" rx="30" ry="20" fill="#9070CC" opacity="0.85"/>
+      <ellipse cx="268" cy="210" rx="24" ry="18" fill="#A888DD" opacity="0.9"/>
+      <ellipse cx="268" cy="205" rx="18" ry="14" fill="#BBA0EE"/>
+
+      <!-- ── WALL POSTERS ── -->
+      <!-- Poster 1 -->
+      <rect x="78" y="95" width="36" height="50" fill="#5A3A88" transform="skewX(5)"/>
+      <rect x="80" y="97" width="32" height="46" fill="#4A2878" transform="skewX(5)"/>
+      <text x="82" y="112" font-size="4.5" fill="white" font-family="sans-serif" transform="skewX(5)">SOLEIL</text>
+      <text x="82" y="118" font-size="4.5" fill="white" font-family="sans-serif" transform="skewX(5)">BET</text>
+      <text x="82" y="124" font-size="4.5" fill="white" font-family="sans-serif" transform="skewX(5)">TOGETHER</text>
+      <ellipse cx="98" cy="132" rx="10" ry="8" fill="#7448DD" opacity="0.5" transform="skewX(5)"/>
+
+      <!-- Poster 2 (back wall) -->
+      <rect x="148" y="52" width="32" height="40" fill="#3A5080" transform="skewX(-8)"/>
+      <rect x="150" y="54" width="28" height="36" fill="#2A4070" transform="skewX(-8)"/>
+      <ellipse cx="164" cy="65" rx="10" ry="8" fill="#5A6090" opacity="0.6" transform="skewX(-8)"/>
+
+      <!-- Poster 3 (right of back wall) -->
+      <rect x="198" y="42" width="36" height="46" fill="#8A5A3A" transform="skewX(-10)"/>
+      <rect x="200" y="44" width="32" height="42" fill="#6A4A2A" transform="skewX(-10)"/>
+      <rect x="202" y="60" width="28" height="20" fill="#CC8844" opacity="0.6" transform="skewX(-10)"/>
+
+      <!-- ── CHARACTER ── -->
+      <!-- Body (hoodie) -->
+      <ellipse cx="185" cy="245" rx="20" ry="12" fill="#A888EE" opacity="0.9"/>
+      <path d="M167 210 L168 245 L202 245 L203 210 C203 200 168 198 167 210 Z" fill="#B898FF"/>
+      <!-- Head -->
+      <ellipse cx="185" cy="195" rx="17" ry="18" fill="#FDDBA0"/>
+      <!-- Hair -->
+      <ellipse cx="185" cy="183" rx="17" ry="10" fill="#9060CC"/>
+      <ellipse cx="172" cy="187" rx="7" ry="9" fill="#9060CC"/>
+      <ellipse cx="197" cy="190" rx="6" ry="8" fill="#9060CC"/>
+      <!-- Eyes -->
+      <ellipse cx="179" cy="196" rx="3" ry="3.5" fill="#3A1A0A"/>
+      <ellipse cx="191" cy="196" rx="3" ry="3.5" fill="#3A1A0A"/>
+      <ellipse cx="180" cy="195" rx="1.2" ry="1.4" fill="white"/>
+      <ellipse cx="192" cy="195" rx="1.2" ry="1.4" fill="white"/>
+      <!-- Blush -->
+      <ellipse cx="174" cy="202" rx="5" ry="3" fill="#FFB0C0" opacity="0.6"/>
+      <ellipse cx="196" cy="202" rx="5" ry="3" fill="#FFB0C0" opacity="0.6"/>
+      <!-- Smile -->
+      <path d="M180 206 Q185 210 190 206" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <!-- Book in hands -->
+      <rect x="177" y="215" width="20" height="15" rx="2" fill="#FF8888" transform="rotate(-5, 187, 222)"/>
+      <rect x="178" y="216" width="9" height="13" rx="1" fill="#FF6666" transform="rotate(-5, 187, 222)"/>
+      <!-- Legs -->
+      <rect x="175" y="242" width="8" height="18" rx="3" fill="#7A7A9A"/>
+      <rect x="187" y="242" width="8" height="18" rx="3" fill="#7A7A9A"/>
+      <!-- Slippers -->
+      <ellipse cx="179" cy="260" rx="8" ry="5" fill="#9878EE"/>
+      <ellipse cx="191" cy="260" rx="8" ry="5" fill="#9878EE"/>
+    </svg>
+  </div>
+
+  <!-- Profile avatar overlapping -->
+  <div class="profile-bubble">
+    <svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+      <rect width="110" height="110" fill="#F5E8A0"/>
+      <!-- Hair back -->
+      <ellipse cx="55" cy="42" rx="30" ry="25" fill="#1A0A00"/>
+      <!-- Bun -->
+      <circle cx="65" cy="25" r="12" fill="#1A0A00"/>
+      <!-- Neck -->
+      <rect x="43" y="72" width="24" height="18" rx="6" fill="#FDDBA0"/>
+      <!-- Face -->
+      <ellipse cx="55" cy="58" rx="26" ry="26" fill="#FDDBA0"/>
+      <!-- Hair front sides -->
+      <ellipse cx="30" cy="60" rx="10" ry="18" fill="#1A0A00"/>
+      <ellipse cx="80" cy="60" rx="10" ry="18" fill="#1A0A00"/>
+      <!-- Hair top -->
+      <ellipse cx="55" cy="38" rx="25" ry="14" fill="#1A0A00"/>
+      <!-- Eyes -->
+      <ellipse cx="46" cy="58" rx="4" ry="4.5" fill="#2A1A0A"/>
+      <ellipse cx="64" cy="58" rx="4" ry="4.5" fill="#2A1A0A"/>
+      <ellipse cx="47.5" cy="56.5" rx="1.6" ry="1.8" fill="white"/>
+      <ellipse cx="65.5" cy="56.5" rx="1.6" ry="1.8" fill="white"/>
+      <!-- Blush -->
+      <ellipse cx="40" cy="65" rx="7" ry="4" fill="#FFBCB0" opacity="0.7"/>
+      <ellipse cx="70" cy="65" rx="7" ry="4" fill="#FFBCB0" opacity="0.7"/>
+      <!-- Nose -->
+      <ellipse cx="55" cy="64" rx="2.5" ry="2" fill="#F0A070" opacity="0.7"/>
+      <!-- Smile -->
+      <path d="M48 70 Q55 76 62 70" stroke="#C07040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- Body -->
+      <ellipse cx="55" cy="100" rx="36" ry="20" fill="#FF9999"/>
+      <rect x="28" y="88" width="54" height="22" rx="6" fill="#FF9999"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Profile Info -->
+<div class="profile-info">
+  <div class="level-badge">Lv.12</div>
+  <div class="nickname">살랄라 움밥바</div>
+  <div class="title-row">
+    <span>#미식가</span>
+    <span style="font-size:18px">🍩</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-item">
+      <span class="stat-label">게시글</span>
+      <span class="stat-value">10</span>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <span class="stat-label">댓글</span>
+      <span class="stat-value">24</span>
+    </div>
+    <div class="stat-sep"></div>
+    <div class="stat-item">
+      <span class="stat-label">접속일수</span>
+      <span class="stat-value">12</span>
+    </div>
+  </div>
+
+  <!-- Friend Add -->
+  <button class="friend-add-btn">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="8" cy="6" r="4" stroke="white" stroke-width="1.8"/>
+      <path d="M1 17C1 13.7 4.1 11 8 11" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M14 12V18M11 15H17" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    친구추가
+  </button>
+
+  <!-- Secondary Actions -->
+  <div class="secondary-actions">
+    <button class="sec-action">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7.5" stroke="#9A9A9A" stroke-width="1.4"/>
+        <line x1="3" y1="3" x2="15" y2="15" stroke="#9A9A9A" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      차단하기
+    </button>
+    <button class="sec-action">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7.5" stroke="#9A9A9A" stroke-width="1.4"/>
+        <path d="M9 5V10" stroke="#9A9A9A" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="9" cy="12.5" r="0.9" fill="#9A9A9A"/>
+      </svg>
+      신고하기
+    </button>
+  </div>
+</div>
+
+</body>
+</html>
