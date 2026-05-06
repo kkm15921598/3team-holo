@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 게시판</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans KR',sans-serif; background:#fff; width:390px; height:844px; margin:0 auto; overflow:hidden; position:relative; }
+
+/* ── Shared ── */
+.screen { position:absolute; inset:0; display:none; flex-direction:column; }
+.screen.active { display:flex; }
+
+.logo { font-family:'Fredoka',sans-serif; font-size:32px; font-weight:600; color:#B77CFF; letter-spacing:1px; line-height:1; }
+.hdr { position:absolute; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:54px 20px 12px; background:#fff; z-index:30; }
+.hdr-icons { display:flex; align-items:center; gap:16px; }
+.icon-btn { position:relative; width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#1A1A1A; }
+.notif-dot { position:absolute; top:0; right:0; width:7px; height:7px; background:#FF4343; border-radius:50%; border:1.5px solid #fff; }
+
+.body { position:absolute; top:110px; bottom:82px; left:0; right:0; overflow-y:auto; }
+.body::-webkit-scrollbar { display:none; }
+
+.bot-nav { position:absolute; bottom:0; left:0; right:0; height:82px; background:#fff; border-top:1px solid #F0F0F0; display:flex; align-items:flex-start; padding-top:10px; z-index:30; }
+.nav-tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.nav-icon { width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:#A8A8A8; }
+.nav-tab.active .nav-icon { color:#7448DD; }
+.nav-label { font-size:12px; font-weight:400; color:#A8A8A8; }
+.nav-tab.active .nav-label { font-weight:700; color:#7448DD; }
+
+.fab { position:absolute; bottom:103px; right:20px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#542BB4,#E95AA4); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6.9px rgba(84,43,180,0.5); cursor:pointer; z-index:25; transition:transform 0.15s; }
+.fab:hover { transform:scale(1.08); }
+
+/* ═══ SCREEN 1: Board Main ═══ */
+#s1 .body { padding:0 14px 16px; display:flex; flex-direction:column; gap:12px; padding-top:12px; }
+.board-card { border-radius:20px; padding:18px 18px; position:relative; overflow:hidden; display:flex; align-items:flex-start; }
+.board-card-text { z-index:1; }
+.board-card-title { font-size:18px; font-weight:700; color:#1A1A1A; margin-bottom:11px; }
+.board-card-sub { font-size:14px; font-weight:400; }
+.card-illo { position:absolute; right:0; top:0; }
+.card1 { background:#FFE2E2; border:1px solid #FFC7C7; height:114px; }
+.card1 .board-card-sub { color:#FF6969; }
+.card2 { background:#EBE3F5; border:1px solid #C7BDFF; height:114px; }
+.card2 .board-card-sub { color:#7448DD; }
+.card3 { background:#fff; border:1px solid #E2E2E2; min-height:383px; flex-direction:column; }
+.card3-img { width:100%; display:flex; justify-content:flex-end; margin-bottom:12px; }
+.cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px 0; padding:4px 0 8px; }
+.cat-item { display:flex; align-items:center; gap:7px; font-size:15px; color:#1A1A1A; cursor:pointer; }
+.cat-item:hover { color:#7448DD; }
+
+/* ═══ SCREEN 2: Board List ═══ */
+#s2 .hdr { padding-bottom:0; }
+.category-scroll { position:absolute; top:110px; left:0; right:0; overflow-x:auto; white-space:nowrap; padding:0 14px 10px; z-index:20; background:#fff; }
+.category-scroll::-webkit-scrollbar { display:none; }
+.cat-tab { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:25px; border:1px solid #E2E2E2; font-size:14px; color:#555; cursor:pointer; margin-right:8px; background:#fff; white-space:nowrap; }
+.cat-tab.selected { background:#EBE3F5; border-color:#C7BDFF; color:#7448DD; font-weight:600; }
+
+.post-list { position:absolute; top:162px; bottom:82px; left:0; right:0; overflow-y:auto; }
+.post-list::-webkit-scrollbar { display:none; }
+.post-row { display:flex; align-items:flex-start; padding:14px 14px 0; gap:12px; cursor:pointer; }
+.post-thumb { width:64px; height:64px; border-radius:4px; background:#D9D9D9; flex-shrink:0; }
+.post-info { flex:1; min-width:0; }
+.post-row-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; gap:6px; }
+.post-title-row { display:flex; align-items:center; gap:5px; flex:1; min-width:0; overflow:hidden; }
+.badge { font-size:11px; padding:2px 9px; border-radius:4px; white-space:nowrap; flex-shrink:0; }
+.badge.recruiting { background:#CAE4B9; color:#3A7A1A; }
+.badge.done { background:#FFCFCF; color:#C03030; }
+.post-title { font-size:15px; font-weight:700; color:#1A1A1A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.post-time { font-size:13px; color:#9A9A9A; flex-shrink:0; white-space:nowrap; }
+.post-desc { font-size:14px; color:#979797; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.post-meta { display:flex; align-items:center; gap:0; }
+.meta-item { display:flex; align-items:center; gap:3px; font-size:13px; color:#555; }
+.meta-sep { width:19px; }
+.post-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+.post-chevron { color:#5D5D5D; }
+.post-divider { height:1px; background:#D9D9D9; margin:14px 14px 0; }
+
+/* ═══ SCREEN 3: Post Detail ═══ */
+#s3 .hdr { background:transparent; }
+#s3 .hdr .logo { font-size:28px; }
+.detail-container { position:absolute; top:100px; bottom:82px; left:14px; right:14px; background:#fff; border:1px solid #DED9F8; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; }
+.detail-inner { flex:1; overflow-y:auto; }
+.detail-inner::-webkit-scrollbar { display:none; }
+.detail-author { display:flex; align-items:center; gap:0; padding:17px 18px 14px; }
+.detail-back { background:none; border:none; cursor:pointer; margin-right:14px; }
+.detail-avatar { width:42px; height:42px; border-radius:50%; overflow:hidden; flex-shrink:0; }
+.level-badge { font-size:12px; font-weight:600; color:#fff; padding:3px 9px; border-radius:4px; background:linear-gradient(to right,#542BB4,#E95AA4); margin:0 10px; flex-shrink:0; }
+.detail-name { font-size:16px; font-weight:700; }
+.detail-divider { height:1px; background:#F6F6F6; margin:0 18px; }
+.detail-body { padding:18px 18px 12px; }
+.detail-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px; }
+.detail-title-row { display:flex; align-items:center; gap:5px; flex:1; }
+.detail-time { font-size:13px; color:#9A9A9A; flex-shrink:0; margin-left:8px; }
+.detail-desc { font-size:14px; color:#979797; margin-bottom:10px; }
+.detail-meta { display:flex; align-items:center; gap:0; margin-bottom:14px; }
+.detail-map { width:100%; height:125px; border-radius:10px; border:1px solid #E8E8E8; background:#F0EDE8; overflow:hidden; position:relative; margin-bottom:20px; }
+.comment-item { padding:14px 18px; border-bottom:1px solid #F6F6F6; }
+.comment-row { display:flex; justify-content:space-between; }
+.comment-nick { font-size:14px; font-weight:700; }
+.comment-time { font-size:13px; color:#9A9A9A; }
+.comment-text { font-size:14px; color:#333; margin-top:7px; }
+.detail-input { padding:10px 14px; border-top:1px solid #E8E8E8; flex-shrink:0; }
+.detail-input-inner { display:flex; align-items:center; border:1px solid #E4E4E4; border-radius:20px; padding:8px 14px 8px 16px; gap:8px; }
+.detail-input-inner input { flex:1; border:none; outline:none; font-size:14px; color:#1A1A1A; font-family:inherit; background:transparent; }
+.detail-input-inner input::placeholder { color:#979797; }
+
+/* ═══ SCREEN 4: Filter ═══ */
+#s4 .body { background:#EBE3F5; padding:20px 14px 24px; }
+.filter-search { width:100%; height:46px; background:#fff; border-radius:15px; border:1px solid #D9D9D9; padding:0 16px; font-size:15px; color:#1A1A1A; outline:none; font-family:inherit; }
+.filter-search::placeholder { color:#A8A8A8; }
+.filter-group { margin-top:20px; }
+.filter-group-title { font-size:18px; font-weight:700; color:#1A1A1A; margin-bottom:10px; }
+.chip-wrap { display:flex; flex-wrap:wrap; gap:10px; }
+.chip { position:relative; background:#fff; border:1px solid #D9D9D9; border-radius:30px; padding:8px 13px; font-size:14px; color:#1A1A1A; cursor:pointer; transition:border-color 0.15s; white-space:nowrap; font-family:inherit; }
+.chip.selected { border-color:#7448DD; border-width:1.5px; }
+.chip-x { position:absolute; top:-6px; right:-6px; width:16px; height:16px; background:#7448DD; border-radius:50%; display:none; align-items:center; justify-content:center; cursor:pointer; }
+.chip.selected .chip-x { display:flex; }
+.search-btn { width:100%; height:60px; border-radius:30px; border:none; background:#000; color:#fff; font-size:20px; font-weight:700; font-family:inherit; cursor:pointer; margin-top:30px; }
+
+/* ═══ SCREEN 5: Write ═══ */
+#s5 { background:#fff; }
+#s5 .hdr { background:transparent; justify-content:space-between; padding-top:54px; }
+.write-actions { display:flex; align-items:center; gap:0; }
+.write-action-btn { background:none; border:none; font-size:14px; font-weight:500; color:#333; cursor:pointer; font-family:inherit; padding:6px 14px; }
+.write-sep { width:1px; height:16px; background:#D9D9D9; }
+
+.write-body { position:absolute; top:106px; bottom:82px; left:14px; right:14px; background:#fff; border-radius:16px; box-shadow:0 0 12px rgba(116,72,221,0.12); overflow:hidden; display:flex; flex-direction:column; }
+.write-board-header { background:#DED9F8; padding:18px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; cursor:pointer; position:relative; }
+.write-board-name { font-size:16px; font-weight:700; color:#7448DD; }
+.board-dropdown { position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid #DED9F8; border-radius:0 0 12px 12px; z-index:10; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+.board-dropdown.open { display:block; }
+.board-option { padding:12px 24px; font-size:15px; cursor:pointer; color:#333; }
+.board-option:hover { background:#F5F0FF; color:#7448DD; }
+
+.write-content { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:0; }
+.write-content::-webkit-scrollbar { display:none; }
+.write-options { display:flex; gap:10px; margin-bottom:29px; }
+.write-pill { display:flex; align-items:center; gap:8px; border:1px solid #DED9F8; border-radius:30px; padding:8px 14px; font-size:14px; font-weight:500; color:#555; cursor:pointer; background:#fff; font-family:inherit; white-space:nowrap; }
+.write-title { width:100%; border:none; outline:none; font-size:16px; font-weight:500; color:#1A1A1A; font-family:inherit; background:transparent; }
+.write-title::placeholder { color:#979797; }
+.write-divider { height:1px; background:#D9D9D9; margin:16px 0; }
+.write-body-input { width:100%; border:none; outline:none; font-size:14px; color:#1A1A1A; font-family:inherit; background:transparent; resize:none; min-height:100px; line-height:1.6; }
+.write-body-input::placeholder { color:#979797; }
+.write-guide { font-size:12px; font-weight:300; color:#ABABAB; line-height:1.6; margin-top:12px; }
+.write-attach { display:flex; align-items:center; gap:20px; padding-top:12px; border-top:1px solid #D9D9D9; flex-shrink:0; }
+.attach-item { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:15px; font-weight:500; color:#1A1A1A; }
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: Board Main ═══ -->
+<div class="screen active" id="s1">
+  <div class="hdr">
+    <span class="logo">HOLO</span>
+    <div class="hdr-icons">
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/></svg><div class="notif-dot"></div></div>
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+  <div class="body" style="padding:12px 14px; display:flex; flex-direction:column; gap:12px;">
+    <!-- Card 1: 실시간 TOP -->
+    <div class="board-card card1">
+      <div class="board-card-text" style="padding-top:4px">
+        <div class="board-card-title">실시간 TOP</div>
+        <div class="board-card-sub">지금 이 순간 가장 뜨거운 글</div>
+      </div>
+      <div class="card-illo">
+        <svg width="148" height="91" viewBox="0 0 148 91" fill="none" opacity="0.9">
+          <!-- Clock background -->
+          <circle cx="74" cy="45" r="38" fill="#FFB3B3" opacity="0.4"/>
+          <!-- Bar chart -->
+          <rect x="20" y="60" width="16" height="22" rx="3" fill="#FF8080"/>
+          <rect x="40" y="45" width="16" height="37" rx="3" fill="#FF6060"/>
+          <rect x="60" y="32" width="16" height="50" rx="3" fill="#FF4040"/>
+          <!-- Arrow up-right -->
+          <path d="M85 30L115 10M115 10L95 10M115 10L115 30" stroke="#FF6060" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Stars -->
+          <text x="110" y="55" font-size="14">⭐</text>
+          <text x="128" y="35" font-size="10">⭐</text>
+          <text x="10" y="40" font-size="10">⭐</text>
+          <!-- NOW badge -->
+          <rect x="88" y="8" width="38" height="18" rx="4" fill="#FF6060"/>
+          <text x="98" y="21" fill="white" font-size="10" font-weight="700" font-family="sans-serif">NOW</text>
+          <!-- Person -->
+          <ellipse cx="50" cy="22" rx="7" ry="7" fill="#FFB3B3"/>
+          <path d="M38 42C38 35 43 32 50 32C57 32 62 35 62 42" fill="#FF8080"/>
+        </svg>
+      </div>
+    </div>
+    <!-- Card 2: 주간 TOP -->
+    <div class="board-card card2">
+      <div class="board-card-text" style="padding-top:4px">
+        <div class="board-card-title">주간 TOP</div>
+        <div class="board-card-sub">이번 주 가장 많이 본 글</div>
+      </div>
+      <div class="card-illo">
+        <svg width="144" height="91" viewBox="0 0 144 91" fill="none">
+          <!-- Podium -->
+          <rect x="18" y="52" width="28" height="30" rx="3" fill="#C7BDFF"/>
+          <rect x="52" y="38" width="32" height="44" rx="3" fill="#9B87F0"/>
+          <rect x="90" y="58" width="28" height="24" rx="3" fill="#C7BDFF"/>
+          <!-- Numbers -->
+          <text x="27" y="72" fill="white" font-size="13" font-weight="700" font-family="sans-serif">2</text>
+          <text x="62" y="62" fill="white" font-size="13" font-weight="700" font-family="sans-serif">1</text>
+          <text x="99" y="76" fill="white" font-size="13" font-weight="700" font-family="sans-serif">3</text>
+          <!-- Trophy -->
+          <path d="M62 10 Q68 4 74 10 Q80 4 86 10 L84 25 Q80 32 74 33 Q68 32 64 25 Z" fill="#E8C200"/>
+          <rect x="70" y="32" width="8" height="6" rx="1" fill="#E8C200"/>
+          <rect x="64" y="37" width="20" height="3" rx="1.5" fill="#C8A800"/>
+          <!-- Stars -->
+          <text x="8" y="40" font-size="12">⭐</text>
+          <text x="120" y="30" font-size="12">⭐</text>
+          <text x="130" y="55" font-size="10">✨</text>
+        </svg>
+      </div>
+    </div>
+    <!-- Card 3: 게시판 -->
+    <div class="board-card card3">
+      <div style="margin-bottom:6px">
+        <div class="board-card-title">게시판</div>
+        <div class="board-card-sub" style="color:#9A9A9A;font-size:14px">우리 동네 이야기를<br>나눠보세요</div>
+      </div>
+      <div class="card3-img">
+        <svg width="240" height="160" viewBox="0 0 240 160" fill="none">
+          <!-- Ground platform -->
+          <ellipse cx="120" cy="140" rx="110" ry="20" fill="#8BC34A" opacity="0.3"/>
+          <rect x="30" y="110" width="180" height="30" rx="4" fill="#7CB342"/>
+          <!-- Bench -->
+          <rect x="140" y="95" width="60" height="6" rx="3" fill="#8B6914"/>
+          <rect x="145" y="100" width="5" height="15" rx="2" fill="#6B4F10"/>
+          <rect x="190" y="100" width="5" height="15" rx="2" fill="#6B4F10"/>
+          <!-- Lamp posts -->
+          <rect x="42" y="50" width="5" height="65" rx="2" fill="#666"/>
+          <ellipse cx="44" cy="50" rx="12" ry="6" fill="#888"/>
+          <rect x="185" y="50" width="5" height="65" rx="2" fill="#666"/>
+          <ellipse cx="187" cy="50" rx="12" ry="6" fill="#888"/>
+          <!-- Person 1 sitting at bench -->
+          <circle cx="175" cy="90" r="10" fill="#FDDBA0"/>
+          <rect x="165" y="100" width="20" height="14" rx="4" fill="#E87A50"/>
+          <!-- Person 2 badminton -->
+          <circle cx="65" cy="75" r="10" fill="#FDDBA0"/>
+          <rect x="56" y="85" width="18" height="18" rx="4" fill="#4CAF50"/>
+          <path d="M72 80L88 60" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+          <!-- Person 3 picnic -->
+          <circle cx="115" cy="70" r="9" fill="#F5C88A"/>
+          <rect x="107" y="79" width="16" height="14" rx="3" fill="#FF9800"/>
+          <!-- Picnic mat -->
+          <rect x="95" y="95" width="50" height="20" rx="3" fill="#FF8080" opacity="0.7"/>
+          <!-- Flowers -->
+          <circle cx="80" cy="112" r="5" fill="#FF80AB"/>
+          <circle cx="90" cy="108" r="4" fill="#FF80AB"/>
+          <path d="M80 117V125M90 112V122" stroke="#66BB6A" stroke-width="2"/>
+          <!-- Game icons floating -->
+          <text x="155" y="75" font-size="12">🎮</text>
+          <text x="108" y="60" font-size="10">❤️</text>
+        </svg>
+      </div>
+      <div class="cat-grid">
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L9.5 6H14L10.5 8.5L12 13L8 10.5L4 13L5.5 8.5L2 6H6.5L8 1.5Z" stroke="#7448DD" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          자유게시판
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="2" stroke="#7448DD" stroke-width="1.3"/><path d="M5 4V3C5 2.4 5.5 2 6 2H10C10.6 2 11 2.4 11 3V4" stroke="#7448DD" stroke-width="1.3"/></svg>
+          공동구매 / 소분하기
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L9.5 6.5H14L10.3 9L11.7 13.5L8 11L4.3 13.5L5.7 9L2 6.5H6.5L8 2Z" stroke="#7448DD" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          추천해요
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="4" width="14" height="9" rx="2" stroke="#7448DD" stroke-width="1.3"/><path d="M5 8H11M5 10.5H8" stroke="#7448DD" stroke-width="1.2" stroke-linecap="round"/></svg>
+          게임파티
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="2.5" stroke="#7448DD" stroke-width="1.3"/><path d="M3 14C3 11.2 5.2 9 8 9C10.8 9 13 11.2 13 14" stroke="#7448DD" stroke-width="1.3" stroke-linecap="round"/></svg>
+          같이 운동해요
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="12" rx="2" stroke="#7448DD" stroke-width="1.3"/><path d="M5 6H11M5 9H9" stroke="#7448DD" stroke-width="1.2" stroke-linecap="round"/></svg>
+          드라마 · 영화
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2C5.2 2 3 4 3 6.5C3 10 8 14 8 14C8 14 13 10 13 6.5C13 4 10.8 2 8 2Z" stroke="#7448DD" stroke-width="1.3"/><circle cx="8" cy="6.5" r="1.5" fill="#7448DD"/></svg>
+          맛집 & 먹거리
+        </div>
+        <div class="cat-item" onclick="goTo('s2')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2V10M8 13V14" stroke="#7448DD" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="8" r="7" stroke="#7448DD" stroke-width="1.3"/></svg>
+          도와주세요!
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="fab" onclick="goTo('s5')">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </div>
+  <div class="bot-nav">
+    <div class="nav-tab" onclick="goTo('s1')"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab" onclick="goTo('s1')"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: Board List ═══ -->
+<div class="screen" id="s2">
+  <div class="hdr">
+    <span class="logo" onclick="goTo('s1')" style="cursor:pointer">HOLO</span>
+    <div class="hdr-icons">
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="icon-btn" onclick="goTo('s4')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="7" r="2" stroke="#1A1A1A" stroke-width="1.6"/><circle cx="18" cy="17" r="2" stroke="#1A1A1A" stroke-width="1.6"/><path d="M6 9V20M18 4V15M11 12H22M2 12H9" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+  <div class="category-scroll">
+    <div class="cat-tab selected">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L8.5 5.5H13L9.5 7.8L11 12L7 9.5L3 12L4.5 7.8L1 5.5H5.5L7 1Z" stroke="#7448DD" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      자유게시판
+    </div>
+    <div class="cat-tab"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="2" stroke="#555" stroke-width="1.2"/></svg> 공동구매 / 소분하기</div>
+    <div class="cat-tab"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L8.5 5.5H13L9.5 7.8L11 12L7 9.5L3 12L4.5 7.8L1 5.5H5.5L7 1Z" stroke="#555" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg> 추천해요</div>
+    <div class="cat-tab">게임파티</div>
+    <div class="cat-tab">같이 운동해요</div>
+    <div class="cat-tab">드라마 · 영화</div>
+  </div>
+  <div class="post-list">
+    <!-- Post rows -->
+    <div class="post-row" onclick="goTo('s3')">
+      <div class="post-thumb"></div>
+      <div class="post-info">
+        <div class="post-row-top">
+          <div class="post-title-row">
+            <span class="badge recruiting">모집중</span>
+            <span class="post-title">점심번개</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="post-time">33분 전</span>
+            <svg width="7" height="12" viewBox="0 0 7 12" fill="none" class="post-chevron"><path d="M1 1L6 6L1 11" stroke="#5D5D5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="post-desc">오피스 단지 떡볶이 메이트!</div>
+        <div class="post-meta">
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13C8 13 2 9.5 2 5.5C2 3.5 3.6 2 5.5 2C6.6 2 7.6 2.5 8 3.3C8.4 2.5 9.4 2 10.5 2C12.4 2 14 3.5 14 5.5C14 9.5 8 13 8 13Z" stroke="#FF9A9A" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">5</span></div>
+          <div class="meta-sep"></div>
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3H14V11C14 11.6 13.6 12 13 12H5L2 15V3Z" stroke="#C7BDFF" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">3</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="post-divider"></div>
+    <div class="post-row" onclick="goTo('s3')">
+      <div class="post-thumb"></div>
+      <div class="post-info">
+        <div class="post-row-top">
+          <div class="post-title-row"><span class="badge done">모집완료</span><span class="post-title">수박 소분</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="post-time">33분 전</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none" class="post-chevron"><path d="M1 1L6 6L1 11" stroke="#5D5D5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="post-desc">마트에서 산 큰 수박 나눌 분</div>
+        <div class="post-meta">
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13C8 13 2 9.5 2 5.5C2 3.5 3.6 2 5.5 2C6.6 2 7.6 2.5 8 3.3C8.4 2.5 9.4 2 10.5 2C12.4 2 14 3.5 14 5.5C14 9.5 8 13 8 13Z" stroke="#FF9A9A" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">12</span></div>
+          <div class="meta-sep"></div>
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3H14V11C14 11.6 13.6 12 13 12H5L2 15V3Z" stroke="#C7BDFF" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">7</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="post-divider"></div>
+    <div class="post-row" onclick="goTo('s3')">
+      <div class="post-thumb"></div>
+      <div class="post-info">
+        <div class="post-row-top">
+          <div class="post-title-row"><span class="badge recruiting">모집중</span><span class="post-title">강아지 산책친구 구해요</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="post-time">33분 전</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none" class="post-chevron"><path d="M1 1L6 6L1 11" stroke="#5D5D5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="post-desc">매주 주말 한강공원 산책</div>
+        <div class="post-meta">
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13C8 13 2 9.5 2 5.5C2 3.5 3.6 2 5.5 2C6.6 2 7.6 2.5 8 3.3C8.4 2.5 9.4 2 10.5 2C12.4 2 14 3.5 14 5.5C14 9.5 8 13 8 13Z" stroke="#FF9A9A" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">12</span></div>
+          <div class="meta-sep"></div>
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3H14V11C14 11.6 13.6 12 13 12H5L2 15V3Z" stroke="#C7BDFF" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">7</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="post-divider"></div>
+    <div class="post-row" onclick="goTo('s3')">
+      <div class="post-thumb"></div>
+      <div class="post-info">
+        <div class="post-row-top">
+          <div class="post-title-row"><span class="post-title">헬스장 등록 같이 해요</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="post-time">33분 전</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none" class="post-chevron"><path d="M1 1L6 6L1 11" stroke="#5D5D5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="post-desc">마트에서 산 큰 수박 나눌 분</div>
+        <div class="post-meta">
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13C8 13 2 9.5 2 5.5C2 3.5 3.6 2 5.5 2C6.6 2 7.6 2.5 8 3.3C8.4 2.5 9.4 2 10.5 2C12.4 2 14 3.5 14 5.5C14 9.5 8 13 8 13Z" stroke="#FF9A9A" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">12</span></div>
+          <div class="meta-sep"></div>
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3H14V11C14 11.6 13.6 12 13 12H5L2 15V3Z" stroke="#C7BDFF" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">7</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="post-divider"></div>
+    <div class="post-row" onclick="goTo('s3')">
+      <div class="post-thumb"></div>
+      <div class="post-info">
+        <div class="post-row-top">
+          <div class="post-title-row"><span class="badge recruiting">모집중</span><span class="post-title">점심번개</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="post-time">33분 전</span><svg width="7" height="12" viewBox="0 0 7 12" fill="none" class="post-chevron"><path d="M1 1L6 6L1 11" stroke="#5D5D5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="post-desc">오피스 단지 떡볶이 메이트!</div>
+        <div class="post-meta">
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13C8 13 2 9.5 2 5.5C2 3.5 3.6 2 5.5 2C6.6 2 7.6 2.5 8 3.3C8.4 2.5 9.4 2 10.5 2C12.4 2 14 3.5 14 5.5C14 9.5 8 13 8 13Z" stroke="#FF9A9A" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">5</span></div>
+          <div class="meta-sep"></div>
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3H14V11C14 11.6 13.6 12 13 12H5L2 15V3Z" stroke="#C7BDFF" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="color:#555;font-size:13px">2</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="post-divider"></div>
+  </div>
+  <div class="fab" onclick="goTo('s5')">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </div>
+  <div class="bot-nav">
+    <div class="nav-tab" onclick="goTo('s1')"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: Post Detail ═══ -->
+<div class="screen" id="s3">
+  <div class="hdr"><span class="logo" style="font-size:26px">HOLO</span></div>
+  <div class="detail-container">
+    <div class="detail-inner">
+      <div class="detail-author">
+        <button class="detail-back" onclick="goTo('s2')"><svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M9 1L1 8L9 15" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="detail-avatar">
+          <svg viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg"><rect width="42" height="42" fill="#D8C8F0"/><ellipse cx="21" cy="20" rx="11" ry="11" fill="#FDDBA0"/><ellipse cx="21" cy="12" rx="10" ry="6" fill="#2A1A00"/><ellipse cx="14" cy="17" rx="4.5" ry="6" fill="#2A1A00"/><circle cx="17.5" cy="21" r="2" fill="#2A1A0A"/><circle cx="24.5" cy="21" r="2" fill="#2A1A0A"/><circle cx="18.2" cy="20.3" r="0.8" fill="white"/><circle cx="25.2" cy="20.3" r="0.8" fill="white"/><path d="M18 25Q21 28 24 25" stroke="#C07040" stroke-width="1" fill="none" stroke-linecap="round"/><ellipse cx="21" cy="37" rx="14" ry="10" fill="#7448DD" opacity="0.8"/></svg>
+        </div>
+        <span class="level-badge">Lv.24</span>
+        <span class="detail-name">무지는 단무지</span>
+      </div>
+      <div class="detail-divider"></div>
+      <div class="detail-body">
+        <div class="detail-top">
+          <div class="detail-title-row">
+            <span class="badge recruiting">모집중</span>
+            <span style="font-size:16px;font-weight:700">점심번개</span>
+          </div>
+          <span class="detail-time">33분 전</span>
+        </div>
+        <div class="detail-desc" style="margin-bottom:10px">오피스 단지 떡볶이 메이트!</div>
+        <div class="detail-meta" style="margin-bottom:14px">
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13C8 13 2 9.5 2 5.5C2 3.5 3.6 2 5.5 2C6.6 2 7.6 2.5 8 3.3C8.4 2.5 9.4 2 10.5 2C12.4 2 14 3.5 14 5.5C14 9.5 8 13 8 13Z" stroke="#FF9A9A" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="font-size:13px;color:#555">5</span></div>
+          <div class="meta-sep"></div>
+          <div class="meta-item"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3H14V11C14 11.6 13.6 12 13 12H5L2 15V3Z" stroke="#C7BDFF" stroke-width="1.3" stroke-linejoin="round"/></svg><span style="font-size:13px;color:#555">3</span></div>
+        </div>
+        <!-- Mini map -->
+        <div class="detail-map" style="margin-bottom:20px">
+          <svg width="100%" height="125" viewBox="0 0 321 125" xmlns="http://www.w3.org/2000/svg">
+            <rect width="321" height="125" fill="#F2EFE9"/>
+            <rect x="0" y="55" width="321" height="12" fill="#FAFAF8"/>
+            <rect x="140" y="0" width="10" height="125" fill="#FAFAFA"/>
+            <rect x="0" y="20" width="321" height="7" fill="#F5F3EF"/>
+            <rect x="200" y="0" width="7" height="125" fill="#F5F3EF"/>
+            <rect x="270" y="0" width="8" height="125" fill="#E8C600" opacity="0.8"/>
+            <rect x="300" y="0" width="6" height="125" fill="#C00" opacity="0.8"/>
+            <rect x="10" y="0" width="55" height="45" rx="2" fill="#E8E0D0" stroke="#D9D0C0" stroke-width="0.5"/>
+            <rect x="70" y="0" width="65" height="35" rx="2" fill="#EDE8DF" stroke="#D9D0C0" stroke-width="0.5"/>
+            <rect x="155" y="0" width="40" height="50" rx="2" fill="#E8E0D0" stroke="#D9D0C0" stroke-width="0.5"/>
+            <rect x="10" y="70" width="125" height="50" rx="2" fill="#EDE8DF" stroke="#D9D0C0" stroke-width="0.5"/>
+            <rect x="155" y="70" width="105" height="50" rx="2" fill="#E8E0D0" stroke="#D9D0C0" stroke-width="0.5"/>
+            <text x="25" y="30" font-size="8" fill="#888" font-family="sans-serif">트리플리스</text>
+            <text x="160" y="30" font-size="7" fill="#888" font-family="sans-serif">현대아이론</text>
+            <text x="60" y="50" font-size="8" fill="#555" font-family="sans-serif">미금역</text>
+            <circle cx="140" cy="62" r="5" fill="#7448DD"/>
+            <text x="75" y="105" font-size="7" fill="#888" font-family="sans-serif">까치마을</text>
+            <text x="200" y="105" font-size="7" fill="#888" font-family="sans-serif">미금초등학교</text>
+          </svg>
+        </div>
+        <!-- Comments -->
+        <div class="comment-item" style="padding-left:0;padding-right:0">
+          <div class="comment-row"><span class="comment-nick">껍질은 달걀껍질</span><span class="comment-time">1분 전</span></div>
+          <div class="comment-text">저요! 저요!</div>
+        </div>
+        <div class="comment-item" style="padding-left:0;padding-right:0">
+          <div class="comment-row"><span class="comment-nick">감자 없는 카레</span><span class="comment-time">5분 전</span></div>
+          <div class="comment-text">오! 떡볶이 정말 좋아해요</div>
+        </div>
+        <div class="comment-item" style="padding-left:0;padding-right:0;border-bottom:none">
+          <div class="comment-row"><span class="comment-nick">멜론은 키위를 좋아해</span><span class="comment-time">7분 전</span></div>
+          <div class="comment-text">떡볶이 가게 이름이 뭐에요?</div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-input">
+      <div class="detail-input-inner">
+        <input type="text" placeholder="댓글 작성하기"/>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M16 9L2 2L6 9L2 16L16 9Z" stroke="#A8A8A8" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="bot-nav">
+    <div class="nav-tab" onclick="goTo('s1')"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: Filter ═══ -->
+<div class="screen" id="s4">
+  <div class="hdr">
+    <span class="logo" onclick="goTo('s2')" style="cursor:pointer">HOLO</span>
+    <div class="hdr-icons">
+      <div class="icon-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="icon-btn" onclick="goTo('s2')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="7" r="2" stroke="#1A1A1A" stroke-width="1.6"/><circle cx="18" cy="17" r="2" stroke="#1A1A1A" stroke-width="1.6"/><path d="M6 9V20M18 4V15M11 12H22M2 12H9" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+  <div class="body" style="background:#EBE3F5; padding:20px 14px 30px;">
+    <input class="filter-search" type="text" placeholder="검색어를 입력해 주세요."/>
+    <div class="filter-group">
+      <div class="filter-group-title">모임 유형</div>
+      <div class="chip-wrap">
+        <button class="chip" onclick="toggleChip(this)">단기성 모임<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip selected" onclick="toggleChip(this)">장기성 모임<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-group-title">게시판 유형</div>
+      <div class="chip-wrap">
+        <button class="chip" onclick="toggleChip(this)">자유게시판<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">공동구매 / 소분하기<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">추천해요<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">게임파티<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">같이 운동해요<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip selected" onclick="toggleChip(this)">드라마 · 영화<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">맛집 & 먹거리<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">도와주세요!<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-group-title">거리</div>
+      <div class="chip-wrap">
+        <button class="chip" onclick="toggleChip(this)">50m~100m<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip selected" onclick="toggleChip(this)">100m~500m<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">500m~1km<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">1km 이상<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-group-title">모임 주최자 성별</div>
+      <div class="chip-wrap">
+        <button class="chip" onclick="toggleChip(this)">남자<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip selected" onclick="toggleChip(this)">여자<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">상관없음<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-group-title">나이대</div>
+      <div class="chip-wrap">
+        <button class="chip" onclick="toggleChip(this)">10대<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip selected" onclick="toggleChip(this)">20대<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">30대<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+        <button class="chip" onclick="toggleChip(this)">40대 이상<span class="chip-x" onclick="removeChip(event,this)"><svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1L7 7M7 1L1 7" stroke="white" stroke-width="1.5"/></svg></span></button>
+      </div>
+    </div>
+    <button class="search-btn" onclick="goTo('s2')">검색하기</button>
+  </div>
+  <div class="bot-nav">
+    <div class="nav-tab" onclick="goTo('s1')"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 5: Write ═══ -->
+<div class="screen" id="s5">
+  <div class="hdr" style="background:transparent;">
+    <button onclick="goTo('s2')" style="background:none;border:none;cursor:pointer;padding:2px"><svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="#5D5D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="write-actions">
+      <button class="write-action-btn">임시 보관함</button>
+      <div class="write-sep"></div>
+      <button class="write-action-btn" onclick="goTo('s2')">등록하기</button>
+    </div>
+  </div>
+  <div class="write-body">
+    <div class="write-board-header" onclick="toggleDropdown()">
+      <span class="write-board-name" id="boardName">자유게시판</span>
+      <svg width="14" height="9" viewBox="0 0 14 9" fill="none"><path d="M1 1L7 7L13 1" stroke="#7448DD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="board-dropdown" id="boardDropdown">
+        <div class="board-option" onclick="selectBoard(event,'자유게시판')">자유게시판</div>
+        <div class="board-option" onclick="selectBoard(event,'공동구매/소분하기')">공동구매/소분하기</div>
+        <div class="board-option" onclick="selectBoard(event,'추천해요')">추천해요</div>
+        <div class="board-option" onclick="selectBoard(event,'게임파티')">게임파티</div>
+        <div class="board-option" onclick="selectBoard(event,'같이 운동해요')">같이 운동해요</div>
+        <div class="board-option" onclick="selectBoard(event,'드라마 · 영화')">드라마 · 영화</div>
+        <div class="board-option" onclick="selectBoard(event,'맛집 & 먹거리')">맛집 & 먹거리</div>
+        <div class="board-option" onclick="selectBoard(event,'도와주세요!')">도와주세요!</div>
+      </div>
+    </div>
+    <div class="write-content">
+      <div class="write-options">
+        <button class="write-pill">
+          모임유형
+          <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6.5L11 1" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="write-pill">
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="none"><rect x="1" y="3" width="14" height="14" rx="2" stroke="#555" stroke-width="1.3"/><path d="M5 1V5M11 1V5" stroke="#555" stroke-width="1.3" stroke-linecap="round"/><path d="M1 8H15" stroke="#555" stroke-width="1.3"/></svg>
+          2026-04-27
+        </button>
+      </div>
+      <input class="write-title" type="text" placeholder="제목을 입력해주세요."/>
+      <div class="write-divider"></div>
+      <textarea class="write-body-input" placeholder="작성하고 싶으신 내용을 입력해주세요" rows="4"></textarea>
+      <div class="write-guide">※ 커뮤니티 이용규칙을 꼭 지켜주세요.<br>※ 정치·사회 갈등 조장, 광고·홍보, 불법·유해 콘텐츠, 욕설·혐오 표현, 타인 비방·사생활 침해, 공포·낚시성 게시물은 제한될 수 있습니다. 모두가 편하게 소통할 수 있도록 서로 존중하는 글을 작성해주세요.</div>
+    </div>
+    <div class="write-divider" style="margin:0 24px"></div>
+    <div class="write-attach" style="padding:14px 24px">
+      <div class="attach-item">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="16" height="12" rx="2" stroke="#1A1A1A" stroke-width="1.3"/><circle cx="6" cy="8" r="2" stroke="#1A1A1A" stroke-width="1.2"/><path d="M1 13L6 9L9 12L12 9L17 14" stroke="#1A1A1A" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        사진
+      </div>
+      <div class="attach-item">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1C6 1 3.5 3.5 3.5 6.5C3.5 11 9 17 9 17C9 17 14.5 11 14.5 6.5C14.5 3.5 12 1 9 1Z" stroke="#1A1A1A" stroke-width="1.3"/><circle cx="9" cy="6.5" r="2" stroke="#1A1A1A" stroke-width="1.2"/></svg>
+        장소
+      </div>
+    </div>
+  </div>
+  <div class="bot-nav">
+    <div class="nav-tab" onclick="goTo('s1')"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<script>
+  function goTo(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+  function toggleChip(btn) {
+    btn.classList.toggle('selected');
+  }
+  function removeChip(e, xBtn) {
+    e.stopPropagation();
+    xBtn.closest('.chip').classList.remove('selected');
+  }
+  function toggleDropdown() {
+    document.getElementById('boardDropdown').classList.toggle('open');
+  }
+  function selectBoard(e, name) {
+    e.stopPropagation();
+    document.getElementById('boardName').textContent = name;
+    document.getElementById('boardDropdown').classList.remove('open');
+  }
+</script>
+</body>
+</html>
