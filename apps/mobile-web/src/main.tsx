@@ -19,6 +19,9 @@ import { BoardDetailScreen } from "@/features/board/board-detail-screen";
 import { BoardSearchScreen } from "@/features/board/board-search-screen";
 import { BoardWriteScreen } from "@/features/board/board-write-screen";
 import { AttendanceScreen } from "@/features/event/attendance-screen";
+import { ChatListScreen } from "@/features/chat/chat-list-screen";
+import { ChatRoomScreen } from "@/features/chat/chat-room-screen";
+import { ProfileDetailScreen } from "@/features/profile/profile-detail-screen";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -113,22 +116,19 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="/chat"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#12_2" name="채팅방 목록" />
+                <ChatListScreen />
               </TabLayout>
             }
           />
           <Route
             path="/chat/:id"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#12_1" name="채팅방 대화" />
+              <TabLayout showHeader={false}>
+                <ChatRoomScreen />
               </TabLayout>
             }
           />
-          <Route
-            path="/profile/:id"
-            element={<ScreenPlaceholder routeNumber="#12_5" name="타사용자 프로필" />}
-          />
+          <Route path="/profile/:id" element={<ProfileDetailScreen />} />
 
           {/* #13 Mypage */}
           <Route
