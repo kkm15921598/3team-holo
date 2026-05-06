@@ -11,6 +11,14 @@ import { VerificationScreen } from "@/features/signup/verification-screen";
 import { NicknameScreen } from "@/features/signup/nickname-screen";
 import { InterestScreen } from "@/features/signup/interest-screen";
 import { RoomScreen } from "@/features/signup/room-screen";
+import { HomeScreen } from "@/features/home/home-screen";
+import { MapScreen } from "@/features/map/map-screen";
+import { BoardMainScreen } from "@/features/board/board-main-screen";
+import { BoardListScreen } from "@/features/board/board-list-screen";
+import { BoardDetailScreen } from "@/features/board/board-detail-screen";
+import { BoardSearchScreen } from "@/features/board/board-search-screen";
+import { BoardWriteScreen } from "@/features/board/board-write-screen";
+import { AttendanceScreen } from "@/features/event/attendance-screen";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -33,21 +41,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/signup/room" element={<RoomScreen />} />
 
           {/* #8 Event */}
-          <Route
-            path="/event/attendance"
-            element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#8" name="출석체크" />
-              </TabLayout>
-            }
-          />
+          <Route path="/event/attendance" element={<AttendanceScreen />} />
 
           {/* #9 Home */}
           <Route
             path="/home"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#9" name="메인 홈" />
+                <HomeScreen />
               </TabLayout>
             }
           />
@@ -67,7 +68,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="/map"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#10" name="지도" />
+                <MapScreen />
               </TabLayout>
             }
           />
@@ -77,7 +78,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="/board"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#11_1" name="게시판 메인" />
+                <BoardMainScreen />
               </TabLayout>
             }
           />
@@ -85,7 +86,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="/board/list"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#11_2" name="게시판 목록" />
+                <BoardListScreen />
               </TabLayout>
             }
           />
@@ -93,19 +94,16 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="/board/search"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#11_4" name="게시판 검색/필터" />
+                <BoardSearchScreen />
               </TabLayout>
             }
           />
-          <Route
-            path="/board/write"
-            element={<ScreenPlaceholder routeNumber="#11_5" name="게시글 작성" />}
-          />
+          <Route path="/board/write" element={<BoardWriteScreen />} />
           <Route
             path="/board/:id"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#11_3" name="게시글 상세" />
+                <BoardDetailScreen />
               </TabLayout>
             }
           />
