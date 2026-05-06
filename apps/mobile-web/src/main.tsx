@@ -3,7 +3,6 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { DeviceFrame } from "@/shared/components/device-frame";
 import { TabLayout } from "@/shared/components/tab-layout";
-import { ScreenPlaceholder } from "@/shared/components/screen-placeholder";
 import { SplashScreen } from "@/features/splash/splash-screen";
 import { LoginScreen } from "@/features/auth/login-screen";
 import { TermsScreen } from "@/features/signup/terms-screen";
@@ -22,6 +21,16 @@ import { AttendanceScreen } from "@/features/event/attendance-screen";
 import { ChatListScreen } from "@/features/chat/chat-list-screen";
 import { ChatRoomScreen } from "@/features/chat/chat-room-screen";
 import { ProfileDetailScreen } from "@/features/profile/profile-detail-screen";
+import { MypageScreen } from "@/features/mypage/mypage-screen";
+import { ProfileEditScreen } from "@/features/mypage/profile-edit-screen";
+import { PointsScreen } from "@/features/mypage/points-screen";
+import { LikesScreen } from "@/features/mypage/likes-screen";
+import { ActivityScreen } from "@/features/mypage/activity-screen";
+import { MyPostsScreen } from "@/features/mypage/my-posts-screen";
+import { MyCommentsScreen } from "@/features/mypage/my-comments-screen";
+import { FriendsScreen } from "@/features/mypage/friends-screen";
+import { FriendsAddScreen } from "@/features/mypage/friends-add-screen";
+import { MyroomScreen } from "@/features/myroom/myroom-screen";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -60,8 +69,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route
             path="/myroom"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#9_2" name="마이룸 / 가구 상점" />
+              <TabLayout showHeader={false}>
+                <MyroomScreen />
               </TabLayout>
             }
           />
@@ -135,66 +144,60 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             path="/mypage"
             element={
               <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_1" name="마이페이지 메인" />
+                <MypageScreen />
               </TabLayout>
             }
           />
-          <Route
-            path="/mypage/edit"
-            element={<ScreenPlaceholder routeNumber="#13_2" name="프로필 편집" />}
-          />
+          <Route path="/mypage/edit" element={<ProfileEditScreen />} />
           <Route
             path="/mypage/points"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_3" name="포인트" />
+              <TabLayout showHeader={false}>
+                <PointsScreen />
               </TabLayout>
             }
           />
           <Route
             path="/mypage/likes"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_5" name="좋아요" />
+              <TabLayout showHeader={false}>
+                <LikesScreen />
               </TabLayout>
             }
           />
           <Route
             path="/mypage/activity"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_7" name="내 활동" />
+              <TabLayout showHeader={false}>
+                <ActivityScreen />
               </TabLayout>
             }
           />
           <Route
             path="/mypage/posts"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_8" name="내가 쓴 글" />
+              <TabLayout showHeader={false}>
+                <MyPostsScreen />
               </TabLayout>
             }
           />
           <Route
             path="/mypage/comments"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_9" name="내가 쓴 댓글" />
+              <TabLayout showHeader={false}>
+                <MyCommentsScreen />
               </TabLayout>
             }
           />
           <Route
             path="/mypage/friends"
             element={
-              <TabLayout>
-                <ScreenPlaceholder routeNumber="#13_10" name="내 친구" />
+              <TabLayout showHeader={false}>
+                <FriendsScreen />
               </TabLayout>
             }
           />
-          <Route
-            path="/mypage/friends/add"
-            element={<ScreenPlaceholder routeNumber="#13_13" name="친구 추가" />}
-          />
+          <Route path="/mypage/friends/add" element={<FriendsAddScreen />} />
 
           {/* Catch-all → splash */}
           <Route path="*" element={<Navigate to="/splash" replace />} />
