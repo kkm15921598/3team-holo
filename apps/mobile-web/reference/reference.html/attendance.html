@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 출석체크</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    min-height: 844px;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 80px;
+  }
+
+  /* Logo */
+  .logo-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .logo-symbol {
+    width: 72px;
+    height: 60px;
+  }
+
+  .logo-text {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: #B77CFF;
+    letter-spacing: 3px;
+  }
+
+  /* Title */
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin-top: 48px;
+    margin-bottom: 48px;
+  }
+
+  /* Grid */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 85px);
+    gap: 12px;
+    padding: 0 20px;
+  }
+
+  .card {
+    width: 85px;
+    height: 109px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 0 8.3px 0 #DED9F8, 0 2px 8px rgba(108, 73, 232, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 16px;
+    gap: 0;
+    position: relative;
+  }
+
+  .day-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1A1A1A;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .reward-text {
+    font-size: 16px;
+    font-weight: 700;
+    color: #6C49E8;
+    text-align: center;
+    position: absolute;
+    bottom: 16px;
+    left: 0; right: 0;
+  }
+
+  /* 2일차 illustration */
+  .card-img {
+    width: 52px;
+    height: 52px;
+    margin-top: 6px;
+  }
+
+  /* ALL CLEAR card */
+  .card-allclear {
+    justify-content: center;
+    padding-top: 0;
+    gap: 0;
+  }
+
+  .allclear-text {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1A1A1A;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  .allclear-reward {
+    font-size: 16px;
+    font-weight: 700;
+    color: #6C49E8;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* Bottom Button */
+  .bottom-fixed {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    padding: 0 20px;
+  }
+
+  .reward-btn {
+    width: 362px;
+    height: 60px;
+    border-radius: 30px;
+    border: none;
+    background: #000;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: opacity 0.2s;
+  }
+  .reward-btn:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="content">
+
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <svg class="logo-symbol" width="72" height="60" viewBox="0 0 72 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lg1" x1="0" y1="0" x2="36" y2="60" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#C084FC"/>
+          <stop offset="100%" stop-color="#7C3AED"/>
+        </linearGradient>
+        <linearGradient id="lg2" x1="72" y1="0" x2="36" y2="60" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#A855F7"/>
+          <stop offset="100%" stop-color="#6D28D9"/>
+        </linearGradient>
+        <filter id="ds">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#7C3AED" flood-opacity="0.25"/>
+        </filter>
+      </defs>
+      <g filter="url(#ds)">
+        <path d="M10 10 C10 4 15 1 21 1 C27 1 32 4 32 10 C32 17 27 20 21 20 C27 20 32 23 32 30 C32 37 27 40 21 40 C15 40 10 37 10 30 C10 23 15 20 21 20 C15 20 10 17 10 10 Z"
+          fill="url(#lg1)" stroke="white" stroke-width="1.5"/>
+        <path d="M40 10 C40 4 45 1 51 1 C57 1 62 4 62 10 C62 17 57 20 51 20 C57 20 62 23 62 30 C62 37 57 40 51 40 C45 40 40 37 40 30 C40 23 45 20 51 20 C45 20 40 17 40 10 Z"
+          fill="url(#lg2)" stroke="white" stroke-width="1.5"/>
+      </g>
+    </svg>
+    <span class="logo-text">HOLO</span>
+  </div>
+
+  <!-- Title -->
+  <div class="section-title">출석체크</div>
+
+  <!-- Card Grid -->
+  <div class="card-grid">
+
+    <!-- 1일차 -->
+    <div class="card">
+      <span class="day-label">1일차</span>
+      <span class="reward-text">500P</span>
+    </div>
+
+    <!-- 2일차 - illustration -->
+    <div class="card">
+      <span class="day-label">2일차</span>
+      <!-- 3D desk illustration via SVG -->
+      <svg class="card-img" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Chair legs -->
+        <rect x="19" y="38" width="3" height="10" rx="1.5" fill="#8B7355"/>
+        <rect x="30" y="38" width="3" height="10" rx="1.5" fill="#8B7355"/>
+        <!-- Chair seat -->
+        <ellipse cx="26" cy="38" rx="9" ry="3.5" fill="#A0522D"/>
+        <rect x="17" y="35" width="18" height="5" rx="2.5" fill="#C4895A"/>
+        <!-- Chair back -->
+        <rect x="22" y="22" width="8" height="14" rx="2" fill="#C4895A"/>
+        <!-- Desk surface -->
+        <rect x="6" y="28" width="40" height="5" rx="2" fill="#B8860B"/>
+        <!-- Desk top face -->
+        <rect x="6" y="24" width="40" height="6" rx="2" fill="#DAA520"/>
+        <!-- Desk legs -->
+        <rect x="9" y="32" width="3" height="14" rx="1.5" fill="#8B7355"/>
+        <rect x="40" y="32" width="3" height="14" rx="1.5" fill="#8B7355"/>
+        <!-- Monitor -->
+        <rect x="17" y="10" width="18" height="14" rx="2" fill="#4C4C6D"/>
+        <rect x="18" y="11" width="16" height="11" rx="1" fill="#7B68EE"/>
+        <!-- Monitor stand -->
+        <rect x="24" y="23" width="4" height="3" rx="1" fill="#4C4C6D"/>
+        <!-- Monitor base -->
+        <rect x="21" y="25" width="10" height="2" rx="1" fill="#4C4C6D"/>
+        <!-- Keyboard -->
+        <rect x="14" y="26" width="24" height="3" rx="1" fill="#6A6A8A"/>
+        <!-- Star sparkle -->
+        <circle cx="44" cy="10" r="2" fill="#FFD700"/>
+        <path d="M44 7.5V8.5M44 11.5V12.5M41.5 10H42.5M45.5 10H46.5" stroke="#FFD700" stroke-width="0.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <!-- 3일차 -->
+    <div class="card">
+      <span class="day-label">3일차</span>
+    </div>
+
+    <!-- 4일차 -->
+    <div class="card">
+      <span class="day-label">4일차</span>
+      <span class="reward-text">500P</span>
+    </div>
+
+    <!-- 5일차 -->
+    <div class="card">
+      <span class="day-label">5일차</span>
+    </div>
+
+    <!-- 6일차 -->
+    <div class="card">
+      <span class="day-label">6일차</span>
+    </div>
+
+    <!-- 7일차 -->
+    <div class="card">
+      <span class="day-label">7일차</span>
+      <span class="reward-text">500P</span>
+    </div>
+
+    <!-- ALL CLEAR -->
+    <div class="card card-allclear">
+      <div class="allclear-text">ALL<br>CLEAR!</div>
+      <div class="allclear-reward">1500P</div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Bottom Button -->
+<div class="bottom-fixed">
+  <button class="reward-btn" onclick="alert('보상이 지급되었습니다!')">보상받기</button>
+</div>
+
+</body>
+</html>

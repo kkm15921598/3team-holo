@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 마이페이지</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    min-height: 844px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    padding-bottom: 82px;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: fixed;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    z-index: 50;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 77px 20px 12px;
+  }
+
+  .logo-text {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: #7448DD;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+
+  .header-icons {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .icon-btn {
+    position: relative;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #1A1A1A;
+  }
+
+  .notif-dot {
+    position: absolute; top: 0; right: 0;
+    width: 7px; height: 7px;
+    background: #FF4343; border-radius: 50%;
+    border: 1.5px solid #fff;
+  }
+
+  /* Push content below fixed header */
+  .body-content { margin-top: 133px; }
+
+  /* ── Profile Section ── */
+  .profile-section {
+    width: 100%; height: 130px;
+    background: #EBE3F5;
+    padding: 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    overflow: hidden;
+  }
+
+  .profile-img-wrap {
+    width: 91px; height: 91px;
+    border-radius: 100px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #D4C5EE;
+  }
+
+  .profile-img-wrap svg {
+    width: 100%; height: 100%;
+  }
+
+  .profile-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .profile-name {
+    font-size: 22px;
+    font-weight: 400;
+    color: #1A1A1A;
+    line-height: 1;
+  }
+
+  .badge-img {
+    width: 22px; height: 22px;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .profile-title {
+    font-size: 14px;
+    font-weight: 400;
+    color: #6B6B6B;
+  }
+
+  .edit-btn {
+    position: absolute;
+    top: 15px; right: 20px;
+    width: 32px; height: 32px;
+    border-radius: 50px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    border: none;
+  }
+
+  /* ── Points Bar ── */
+  .points-bar {
+    width: 100%; height: 47px;
+    background: #7448DD;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    color: #fff;
+  }
+
+  .points-label {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .points-value {
+    font-size: 18px;
+    display: flex; align-items: baseline; gap: 1px;
+  }
+
+  .points-num { font-weight: 500; }
+  .points-p { font-weight: 700; }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    background: #fff;
+    padding: 20px 0;
+    display: flex;
+  }
+
+  .stat-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    border-right: 1px solid #EBE3F5;
+  }
+  .stat-item:last-child { border-right: none; }
+
+  .stat-label {
+    font-size: 14px;
+    font-weight: 400;
+    color: #888;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: #1A1A1A;
+    line-height: 1;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  /* ── Cards Section ── */
+  .cards-section {
+    margin: 12px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .location-card {
+    width: 100%;
+    padding: 17px;
+    border-radius: 20px;
+    box-shadow: 0 0 8.3px 0 #DED9F8;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: #fff;
+  }
+
+  .loc-icon {
+    width: 27px; height: 27px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    margin-right: 3px;
+  }
+
+  .loc-address {
+    flex: 1;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1A1A1A;
+  }
+
+  .verify-btn {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6.5px 10.5px;
+    background: #7448DD;
+    color: #fff;
+    border-radius: 15px;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  .action-cards {
+    display: flex;
+    gap: 12px;
+  }
+
+  .action-card {
+    flex: 1;
+    border-radius: 20px;
+    box-shadow: 0 0 8.3px 0 #DED9F8;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    background: #fff;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .action-card:hover { transform: scale(1.02); }
+
+  .action-icon {
+    width: 46px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    color: #7448DD;
+  }
+
+  .action-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1A1A;
+  }
+
+  /* ── Settings Section ── */
+  .settings-section {
+    margin: 20px;
+  }
+
+  .settings-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1A1A1A;
+    padding: 0 0 12px 8px;
+    border-bottom: 1px solid #D9D9D9;
+    margin-bottom: 12px;
+  }
+
+  .settings-menu {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .menu-item {
+    font-size: 14px;
+    font-weight: 400;
+    color: #1A1A1A;
+    padding: 13px 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-radius: 4px;
+  }
+  .menu-item:hover { background: #F8F5FF; }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 390px;
+    height: 82px;
+    background: #fff;
+    border-top: 1px solid #F0F0F0;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 10px;
+    z-index: 50;
+  }
+
+  .nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+
+  .nav-icon {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: #A8A8A8;
+  }
+  .nav-tab.active .nav-icon { color: #7448DD; }
+
+  .nav-label {
+    font-size: 12px; font-weight: 400; color: #A8A8A8;
+  }
+  .nav-tab.active .nav-label { font-weight: 700; color: #7448DD; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="logo-text">HOLO</span>
+  <div class="header-icons">
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/>
+        <path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/>
+      </svg>
+      <div class="notif-dot"></div>
+    </div>
+    <div class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="body-content">
+
+  <!-- Profile Section -->
+  <div class="profile-section">
+    <div class="profile-img-wrap">
+      <!-- Cute avatar SVG -->
+      <svg viewBox="0 0 91 91" xmlns="http://www.w3.org/2000/svg">
+        <rect width="91" height="91" fill="#F5C842"/>
+        <!-- Body -->
+        <ellipse cx="45.5" cy="82" rx="28" ry="22" fill="#F5C842"/>
+        <!-- Shirt -->
+        <ellipse cx="45.5" cy="85" rx="22" ry="16" fill="#FFD700"/>
+        <!-- Neck -->
+        <rect x="38" y="58" width="15" height="14" rx="4" fill="#FDDBA0"/>
+        <!-- Head -->
+        <ellipse cx="45.5" cy="46" rx="24" ry="23" fill="#FDDBA0"/>
+        <!-- Hair top - bun style -->
+        <ellipse cx="45.5" cy="26" rx="20" ry="12" fill="#3A2A1A"/>
+        <ellipse cx="55" cy="22" rx="9" ry="9" fill="#3A2A1A"/>
+        <ellipse cx="36" cy="25" rx="8" ry="7" fill="#3A2A1A"/>
+        <!-- Bun -->
+        <circle cx="55" cy="18" r="7" fill="#3A2A1A"/>
+        <!-- Ears -->
+        <circle cx="21.5" cy="46" r="5" fill="#FDDBA0"/>
+        <circle cx="69.5" cy="46" r="5" fill="#FDDBA0"/>
+        <!-- Eyes -->
+        <circle cx="38" cy="46" r="3.5" fill="#2A1A0A"/>
+        <circle cx="53" cy="46" r="3.5" fill="#2A1A0A"/>
+        <!-- Eye shine -->
+        <circle cx="39.5" cy="44.5" r="1.2" fill="white"/>
+        <circle cx="54.5" cy="44.5" r="1.2" fill="white"/>
+        <!-- Blush -->
+        <ellipse cx="33" cy="51" rx="5" ry="3" fill="#FFBCB0" opacity="0.6"/>
+        <ellipse cx="58" cy="51" rx="5" ry="3" fill="#FFBCB0" opacity="0.6"/>
+        <!-- Nose -->
+        <ellipse cx="45.5" cy="51" rx="2" ry="1.5" fill="#F0A070" opacity="0.7"/>
+        <!-- Smile -->
+        <path d="M40 55 Q45.5 60 51 55" stroke="#C07040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div class="profile-info">
+      <div class="profile-name-row">
+        <span class="profile-name">무지는 단무지</span>
+        <span class="badge-img">🍩</span>
+      </div>
+      <div class="profile-title">#벌레_해결사</div>
+    </div>
+
+    <button class="edit-btn">
+      <svg width="15" height="13" viewBox="0 0 15 13" fill="none">
+        <path d="M1 12H14" stroke="#1F1F1F" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M9.5 1.5L13 5L5.5 12H2V8.5L9.5 1.5Z" stroke="#1F1F1F" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Points Bar -->
+  <div class="points-bar">
+    <span class="points-label">나의 포인트</span>
+    <div class="points-value">
+      <span class="points-num">1264</span>
+      <span class="points-p">P</span>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-item">
+      <span class="stat-label">나의 레벨</span>
+      <span class="stat-value">24</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">나의 뱃지</span>
+      <span class="stat-value">12</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">나의 칭호</span>
+      <span class="stat-value">22</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">모임 참여</span>
+      <span class="stat-value">8</span>
+    </div>
+  </div>
+
+  <!-- Cards Section -->
+  <div class="cards-section">
+
+    <!-- Location Card -->
+    <div class="location-card">
+      <div class="loc-icon">
+        <svg width="22" height="27" viewBox="0 0 22 27" fill="none">
+          <path d="M11 1C6.03 1 2 5.03 2 10C2 16.25 11 26 11 26C11 26 20 16.25 20 10C20 5.03 15.97 1 11 1Z" fill="#7448DD" opacity="0.15" stroke="#7448DD" stroke-width="1.5"/>
+          <circle cx="11" cy="10" r="3.5" fill="#7448DD"/>
+        </svg>
+      </div>
+      <span class="loc-address">성남시 분당구</span>
+      <button class="verify-btn">인증하기</button>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="action-cards">
+      <div class="action-card">
+        <div class="action-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <rect x="5" y="3" width="26" height="30" rx="3" stroke="#7448DD" stroke-width="2"/>
+            <path d="M11 12H25M11 18H25M11 24H19" stroke="#7448DD" stroke-width="2" stroke-linecap="round"/>
+            <rect x="22" y="20" width="9" height="9" rx="2" fill="#7448DD" opacity="0.15"/>
+            <path d="M24 26L26 24L28 26" stroke="#7448DD" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="action-label">내 활동</span>
+      </div>
+      <div class="action-card">
+        <div class="action-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <path d="M18 30C18 30 5 22.5 5 13.5C5 9.36 8.36 6 12.5 6C14.74 6 16.74 6.97 18 8.5C19.26 6.97 21.26 6 23.5 6C27.64 6 31 9.36 31 13.5C31 22.5 18 30 18 30Z" stroke="#7448DD" stroke-width="2" stroke-linejoin="round" fill="#7448DD" fill-opacity="0.1"/>
+          </svg>
+        </div>
+        <span class="action-label">좋아요</span>
+      </div>
+      <div class="action-card">
+        <div class="action-icon">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <circle cx="14" cy="14" r="5" stroke="#7448DD" stroke-width="2"/>
+            <circle cx="24" cy="13" r="4" stroke="#7448DD" stroke-width="2"/>
+            <path d="M5 28C5 23.58 9.03 20 14 20C18.97 20 23 23.58 23 28" stroke="#7448DD" stroke-width="2" stroke-linecap="round"/>
+            <path d="M24 20C27.31 20 30 22.69 30 26" stroke="#7448DD" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="action-label">내 친구</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Section -->
+  <div class="settings-section">
+    <div class="settings-title">설정</div>
+    <div class="settings-menu">
+      <div class="menu-item">계정관리</div>
+      <div class="menu-item">개인정보</div>
+      <div class="menu-item">알림설정</div>
+      <div class="menu-item">모드설정하기</div>
+      <div class="menu-item">로그아웃</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <div class="nav-tab" onclick="selectNav(this)">
+    <div class="nav-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="nav-label">홈</span>
+  </div>
+  <div class="nav-tab" onclick="selectNav(this)">
+    <div class="nav-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="20" cy="19" r="3" fill="currentColor" fill-opacity="0.2" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M8 14H16M8 18H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="nav-label">지도</span>
+  </div>
+  <div class="nav-tab" onclick="selectNav(this)">
+    <div class="nav-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="nav-label">게시판</span>
+  </div>
+  <div class="nav-tab" onclick="selectNav(this)">
+    <div class="nav-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+        <path d="M10 12H18M10 16H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="nav-label">채팅</span>
+  </div>
+  <div class="nav-tab active" onclick="selectNav(this)">
+    <div class="nav-icon">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="nav-label">마이</span>
+  </div>
+</div>
+
+<script>
+  function selectNav(el) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+</script>
+</body>
+</html>

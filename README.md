@@ -9,8 +9,6 @@
 
 ```
 3team-holo/
-├── apps/
-│   └── prototype/                 # 🆕 React 클릭 프로토타입 (온보딩+홈+마이룸)
 ├── docs/                          # 제작 설명서 (의사결정 근거)
 │   ├── HOLO-제작설명서.md         # 메인 설명서
 │   ├── HOLO-제작설명서.html       # 동일 내용 HTML (오프라인 열람)
@@ -58,15 +56,6 @@ xdg-open docs/HOLO-제작설명서.html   # Linux
 ---
 
 ## 🚀 빠른 시작
-
-### 🆕 프로토타입 앱 미리보기 (React)
-```bash
-cd apps/prototype
-pnpm install
-pnpm dev    # → http://localhost:5173
-```
-디자인 시안의 **온보딩 8화면 + 홈 + 마이룸 꾸미기** 가 실제로 동작하는 클릭 프로토타입.
-자세한 안내: [`apps/prototype/README.md`](apps/prototype/README.md)
 
 ### 랜딩 로컬 미리보기
 ```bash
