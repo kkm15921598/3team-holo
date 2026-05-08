@@ -94,3 +94,13 @@
     @apply mx-auto flex min-h-screen w-full max-w-[360px] flex-col bg-white shadow-xl;
   }
 }
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
