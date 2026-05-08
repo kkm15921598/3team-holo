@@ -28,6 +28,7 @@ import { LikesScreen } from "@/features/mypage/likes-screen";
 import { ActivityScreen } from "@/features/mypage/activity-screen";
 import { MyPostsScreen } from "@/features/mypage/my-posts-screen";
 import { MyCommentsScreen } from "@/features/mypage/my-comments-screen";
+import { RecentPostsScreen } from "@/features/mypage/recent-posts-screen";
 import { FriendsScreen } from "@/features/mypage/friends-screen";
 import { FriendsAddScreen } from "@/features/mypage/friends-add-screen";
 import { MyroomScreen } from "@/features/myroom/myroom-screen";
@@ -190,6 +191,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             }
           />
           <Route
+            path="/mypage/recent"
+            element={
+              <TabLayout showHeader={false}>
+                <RecentPostsScreen />
+              </TabLayout>
+            }
+          />
+          <Route
             path="/mypage/friends"
             element={
               <TabLayout showHeader={false}>
@@ -197,7 +206,17 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               </TabLayout>
             }
           />
-          <Route path="/mypage/friends/add" element={<FriendsAddScreen />} />
+          <Route
+            path="/mypage/friends/add"
+            element={
+              <TabLayout showHeader={false}>
+                <div className="relative flex flex-1 flex-col">
+                  <FriendsScreen />
+                  <FriendsAddScreen />
+                </div>
+              </TabLayout>
+            }
+          />
 
           {/* Catch-all → splash */}
           <Route path="*" element={<Navigate to="/splash" replace />} />

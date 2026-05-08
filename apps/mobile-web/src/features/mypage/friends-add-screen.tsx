@@ -7,17 +7,19 @@ export function FriendsAddScreen() {
   const [tab, setTab] = useState<"id" | "qr">("qr");
 
   return (
-    <main className="flex flex-1 flex-col bg-black/30">
+    <main className="absolute inset-0 z-30 flex flex-col bg-black/50">
       <header className="flex h-12 shrink-0 items-center justify-between bg-white px-4">
-        <button type="button" aria-label="닫기" onClick={() => navigate(-1)}>
-          <CloseIcon />
-        </button>
-        <span className="text-[14px] font-semibold text-holo-ink">친구추가</span>
-        <div className="flex items-center gap-3 text-[13px] text-holo-ink-2">
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label="닫기" onClick={() => navigate(-1)}>
+            <CloseIcon />
+          </button>
+          <span className="text-[16px] font-semibold text-holo-ink">친구추가</span>
+        </div>
+        <div className="flex items-center gap-3 text-[14px] font-normal text-[#5d5d5d]">
           <button
             type="button"
             onClick={() => setTab("id")}
-            className={`flex items-center gap-1 ${tab === "id" ? "font-semibold text-holo-ink" : ""}`}
+            className="flex items-center gap-1"
           >
             <KeyboardIcon /> ID로 추가
           </button>
@@ -25,7 +27,7 @@ export function FriendsAddScreen() {
           <button
             type="button"
             onClick={() => setTab("qr")}
-            className={`flex items-center gap-1 ${tab === "qr" ? "font-semibold text-holo-ink" : ""}`}
+            className="flex items-center gap-1"
           >
             <QrIcon /> QR코드
           </button>
@@ -70,7 +72,7 @@ function CloseIcon() {
 }
 function KeyboardIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="2" y="6" width="20" height="12" rx="2" />
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12" />
     </svg>
@@ -78,7 +80,7 @@ function KeyboardIcon() {
 }
 function QrIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
       <rect x="3" y="3" width="7" height="7" />
       <rect x="14" y="3" width="7" height="7" />
       <rect x="3" y="14" width="7" height="7" />
