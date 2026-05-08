@@ -74,4 +74,6 @@ export function ProfileAvatar() {
       <ellipse cx="40" cy="32" rx="5" ry="3" fill="#FFBCB0" opacity="0.7" />
       <path d="M27 36 Q31.5 40 36 36" stroke="#C07040" strokeWidth="1.3" fill="none" strokeLinecap="round" />
       <ellipse cx="31.5" cy="55" rx="22" ry="14" fill="#FF9999" />
-    </s
+    </svg>
+  );
+}
