@@ -39,7 +39,7 @@ export function RoomScreen() {
   };
 
   return (
-    <SignupLayout step={5}>
+    <SignupLayout step={6}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         거의 다 왔습니다!
         <br />

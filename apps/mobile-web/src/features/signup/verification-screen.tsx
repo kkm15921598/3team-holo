@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SignupLayout } from "./signup-layout";
 
@@ -14,7 +14,9 @@ export function VerificationScreen() {
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
 
-  const baseFilled = name && idNum && carrier && phone.length >= 10;
+  const isNameValid = !!name.trim();
+
+  const baseFilled = isNameValid && idNum.length === 13 && carrier && phone.length >= 10;
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 
   const handleMain = () => {
@@ -22,7 +24,7 @@ export function VerificationScreen() {
       setCodeSent(true);
       return;
     }
-    navigate("/signup/nickname");
+    navigate("/signup/account");
   };
 
   return (
@@ -38,13 +40,16 @@ export function VerificationScreen() {
         <Input
           placeholder="이름 입력"
           value={name}
-          onChange={setName}
+          onChange={(v) => setName(v.slice(0, 20))}
+          valid={isNameValid}
+          maxLength={20}
         />
         <Input
-          placeholder="001100 - 4******"
+          placeholder="주민번호 입력"
           value={formatId(idNum)}
-          onChange={(v) => setIdNum(v.replace(/\D/g, "").slice(0, 7))}
+          onChange={(v) => setIdNum(parseIdInput(v, idNum))}
           inputMode="numeric"
+          valid={idNum.length === 13}
         />
         <button
           type="button"
@@ -61,6 +66,7 @@ export function VerificationScreen() {
           value={formatPhone(phone)}
           onChange={(v) => setPhone(v.replace(/\D/g, "").slice(0, 11))}
           inputMode="numeric"
+          valid={phone.length >= 10}
         />
         {codeSent && (
           <div className="flex flex-col gap-1">
@@ -70,6 +76,7 @@ export function VerificationScreen() {
                 value={code}
                 onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
                 inputMode="numeric"
+                valid={code.length === 6}
               />
               <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[13px] text-holo-error">
                 02:17
@@ -114,20 +121,59 @@ function Input({
   value,
   onChange,
   inputMode,
+  onBlur,
+  error,
+  valid,
+  maxLength,
 }: {
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
   inputMode?: "text" | "numeric" | "email";
+  onBlur?: () => void;
+  error?: boolean;
+  valid?: boolean;
+  maxLength?: number;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Force DOM value to match state - guards against IME composition divergence
+  useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== value) {
+      inputRef.current.value = value;
+    }
+  }, [value]);
+
+  const enforceMax = (target: HTMLInputElement) => {
+    let v = target.value;
+    if (maxLength != null && v.length > maxLength) {
+      v = v.slice(0, maxLength);
+      target.value = v;
+    }
+    return v;
+  };
+
   return (
     <input
+      ref={inputRef}
       type="text"
       inputMode={inputMode ?? "text"}
       placeholder={placeholder}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+      onChange={(e) => onChange(enforceMax(e.target))}
+      onCompositionEnd={(e) => {
+        const v = enforceMax(e.currentTarget);
+        if (v !== value) onChange(v);
+      }}
+      onBlur={onBlur}
+      maxLength={maxLength}
+      className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
+        error
+          ? "border-2 border-holo-error"
+          : valid
+            ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+            : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+      }`}
     />
   );
 }
@@ -196,8 +242,34 @@ function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
   const front = v.slice(0, 6);
-  const back = v.slice(6, 7);
-  return `${front} - ${back}******`;
+  const backDigits = v.slice(6);
+  const genderDigit = backDigits[0] ?? "";
+  const maskedRest = "*".repeat(Math.max(0, backDigits.length - 1));
+  return `${front} - ${genderDigit}${maskedRest}`;
+}
+
+function parseIdInput(displayValue: string, prevIdNum: string) {
+  // displayValue may contain digits, asterisks (already-masked digits), and formatting (- and spaces).
+  // Asterisks in the back portion correspond to digits we already have stored in prevIdNum.
+  const tokens = displayValue.replace(/[^\d*]/g, "");
+  const front = tokens.slice(0, 6).replace(/\*/g, "");
+  const back = tokens.slice(6);
+
+  // No back portion yet, or the gender (visible) digit was deleted -> treat back as cleared.
+  if (back.length === 0 || back[0] === "*") {
+    return front.slice(0, 6);
+  }
+
+  const genderChar = back[0];
+  const rest = back.slice(1);
+  const asteriskCount = (rest.match(/\*/g) || []).length;
+  const newDigits = rest.replace(/\*/g, "");
+
+  // Recover the actual digits behind the asterisks from the previous idNum.
+  const prevBack = prevIdNum.slice(6);
+  const keptMasked = prevBack.slice(1, 1 + asteriskCount);
+
+  return (front + genderChar + keptMasked + newDigits).slice(0, 13);
 }
 function formatPhone(v: string) {
   if (!v) return "";

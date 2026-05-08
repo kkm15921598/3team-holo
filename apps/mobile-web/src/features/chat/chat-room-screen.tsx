@@ -16,10 +16,7 @@ export function ChatRoomScreen() {
               <BackIcon />
             </button>
             <div>
-              <p className="text-[15px] font-semibold text-holo-ink">
-                다같이 러닝해요{" "}
-                <span className="font-normal text-holo-ink-3">{CHAT_MEMBERS.length}</span>
-              </p>
+              <p className="text-[15px] font-semibold text-holo-ink">다같이 러닝해요</p>
               <p className="text-[12px] text-holo-ink-3">샬랄라움밤바</p>
             </div>
           </div>

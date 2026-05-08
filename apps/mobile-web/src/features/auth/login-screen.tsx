@@ -8,14 +8,68 @@ export function LoginScreen() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+  const [emailErrorMessage, setEmailErrorMessage] = useState("");
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+
+  const VALID_TLDS = [
+    "com",
+    "net",
+    "org",
+    "kr",
+    "jp",
+    "io",
+    "co",
+    "edu",
+    "gov",
+    "biz",
+    "info",
+    "me",
+    "ai",
+    "app",
+    "dev",
+    "tv",
+    "us",
+    "cn",
+  ];
+  const TLD_PATTERN = new RegExp(`\\.(${VALID_TLDS.join("|")})$`, "i");
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && TLD_PATTERN.test(value);
+
+  const clearErrors = () => {
+    setEmailError(false);
+    setPasswordError(false);
+    setEmailErrorMessage("");
+    setPasswordErrorMessage("");
+  };
+
+  const handleEmailBlur = () => {
+    if (email && !isValidEmail(email)) {
+      setEmailError(true);
+      setEmailErrorMessage("이메일을 다시 입력해주세요.");
+    }
+  };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!email) {
+      setEmailError(true);
+      setPasswordError(true);
+      setPasswordErrorMessage("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setEmailError(true);
+      setEmailErrorMessage("이메일을 다시 입력해주세요.");
+      return;
+    }
     if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
       navigate("/home", { replace: true });
     } else {
-      setError(true);
+      setEmailError(false);
+      setPasswordError(true);
+      setPasswordErrorMessage("비밀번호를 다시 확인해 주세요.");
     }
   };
 
@@ -28,18 +82,31 @@ export function LoginScreen() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          placeholder="이메일 (test@gmail.com)"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setError(false);
-          }}
-          className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-        />
+        <div className="flex flex-col gap-1">
+          <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="이메일 (test@gmail.com)"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value.slice(0, 50));
+              clearErrors();
+            }}
+            onBlur={handleEmailBlur}
+            maxLength={50}
+            className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
+              emailError
+                ? "border-2 border-holo-error"
+                : email && isValidEmail(email)
+                  ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                  : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+            }`}
+          />
+          {emailErrorMessage && (
+            <p className="pl-2 text-[13px] text-holo-error">{emailErrorMessage}</p>
+          )}
+        </div>
         <div className="flex flex-col gap-1">
           <input
             type="password"
@@ -47,17 +114,20 @@ export function LoginScreen() {
             placeholder="비밀번호 (test1234)"
             value={password}
             onChange={(e) => {
-              setPassword(e.target.value);
-              setError(false);
+              setPassword(e.target.value.slice(0, 16));
+              clearErrors();
             }}
-            className={`h-[62px] rounded-holo-input border px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 ${
-              error
+            maxLength={16}
+            className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
+              passwordError
                 ? "border-2 border-holo-error"
-                : "border-holo-ink-4 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+                : password
+                  ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                  : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
             }`}
           />
-          {error && (
-            <p className="pl-2 text-[13px] text-holo-error">비밀번호를 다시 확인해 주세요.</p>
+          {passwordErrorMessage && (
+            <p className="pl-2 text-[13px] text-holo-error">{passwordErrorMessage}</p>
           )}
         </div>
 

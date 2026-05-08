@@ -12,7 +12,7 @@ export function NicknameScreen() {
   const isValid = value.length > 0 && !isInvalid;
 
   return (
-    <SignupLayout step={3}>
+    <SignupLayout step={4}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         HOLO에서 사용할
         <br />

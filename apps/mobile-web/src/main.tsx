@@ -7,6 +7,7 @@ import { SplashScreen } from "@/features/splash/splash-screen";
 import { LoginScreen } from "@/features/auth/login-screen";
 import { TermsScreen } from "@/features/signup/terms-screen";
 import { VerificationScreen } from "@/features/signup/verification-screen";
+import { AccountScreen } from "@/features/signup/account-screen";
 import { NicknameScreen } from "@/features/signup/nickname-screen";
 import { InterestScreen } from "@/features/signup/interest-screen";
 import { RoomScreen } from "@/features/signup/room-screen";
@@ -48,6 +49,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           {/* #3~#7 Signup flow */}
           <Route path="/signup/terms" element={<TermsScreen />} />
           <Route path="/signup/verify" element={<VerificationScreen />} />
+          <Route path="/signup/account" element={<AccountScreen />} />
           <Route path="/signup/nickname" element={<NicknameScreen />} />
           <Route path="/signup/interest" element={<InterestScreen />} />
           <Route path="/signup/room" element={<RoomScreen />} />

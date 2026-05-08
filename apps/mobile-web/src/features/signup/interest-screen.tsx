@@ -37,7 +37,7 @@ export function InterestScreen() {
   const canNext = selected.size > 0 || custom.trim().length > 0;
 
   return (
-    <SignupLayout step={4}>
+    <SignupLayout step={5}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         어떤 주제에
         <br />
