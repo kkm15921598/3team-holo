@@ -57,6 +57,7 @@ export const COMMENTS = [
 ];
 
 export const CHATROOMS = [
+<<<<<<< HEAD
   { id: "1", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
   { id: "2", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
   { id: "3", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
@@ -65,6 +66,16 @@ export const CHATROOMS = [
   { id: "6", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
   { id: "7", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
   { id: "8", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
+=======
+  { id: "1", name: "한강 같이 걸어요", subtitle: "러닝은처음이지", isGroup: true },
+  { id: "2", name: "오늘 성수 카페투어", subtitle: "크루아상수집가", isGroup: false },
+  { id: "3", name: "퇴근 후 보드게임", subtitle: "주사위굴려", isGroup: true },
+  { id: "4", name: "심야 드라이브 멤버 구해요", subtitle: "밤공기좋아", isGroup: false },
+  { id: "5", name: "탄천 러닝팟", subtitle: "5km만뛸게요", isGroup: true },
+  { id: "6", name: "넷플릭스 같이 볼 사람", subtitle: "집순이출몰", isGroup: false },
+  { id: "7", name: "주말 브런치 모임", subtitle: "에그베네딕트", isGroup: true },
+  { id: "8", name: "사진 산책 가실분", subtitle: "필름카메라덕후", isGroup: false },
+>>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
 ];
 
 export const CHAT_MESSAGES = [

@@ -37,7 +37,11 @@ export function InterestScreen() {
   const canNext = selected.size > 0 || custom.trim().length > 0;
 
   return (
+<<<<<<< HEAD
     <SignupLayout step={4}>
+=======
+    <SignupLayout step={5}>
+>>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         어떤 주제에
         <br />
