@@ -6,10 +6,11 @@ const NICKNAME = "무지는 단무지";
 
 const CATEGORIES = ["전체", "침대", "책상", "의자", "벽지", "바닥"];
 
-type FurnitureItem = { id: string; label: string };
+type FurnitureKind = "desk" | "shelf";
+type FurnitureItem = { id: string; label: string; kind: FurnitureKind };
 const ITEMS: FurnitureItem[] = [
-  { id: "desk", label: "원목 책상 세트" },
-  { id: "shelf", label: "원목 책장" },
+  { id: "desk", label: "원목 책상 세트", kind: "desk" },
+  { id: "shelf", label: "원목 책장", kind: "shelf" },
 ];
 
 export function RoomScreen() {
@@ -39,7 +40,7 @@ export function RoomScreen() {
   };
 
   return (
-    <SignupLayout step={6}>
+    <SignupLayout step={7}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         거의 다 왔습니다!
         <br />
@@ -49,15 +50,18 @@ export function RoomScreen() {
         취향에 맞는 가구를 골라 나만의 방을 완성해보세요.
       </p>
 
+      {/* 빈 방 미리보기 - 외부 SVG 의존성 제거하고 인라인으로 그려서 항상 동일하게 렌더링 */}
       <div className="mt-5 flex justify-center">
-        <img
-          src="/illustrations/room-empty.svg"
-          alt="빈 마이룸"
-          className="h-[260px] w-full max-w-[320px] object-contain"
-        />
+        <EmptyRoom />
       </div>
 
-      <div className="mt-4 -mx-4 overflow-x-auto px-4">
+      {/*
+        카테고리 탭: 가로 스크롤은 유지하되 시스템 스크롤바와 좌우 화살표는 숨겨서
+        손가락/트랙패드/마우스 휠로 자연스럽게 직접 스크롤되게 합니다.
+      */}
+      <div
+        className="mt-4 -mx-4 overflow-x-auto px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <div className="flex w-max gap-2">
           {CATEGORIES.map((c) => {
             const on = activeCategory === c;
@@ -66,10 +70,10 @@ export function RoomScreen() {
                 key={c}
                 type="button"
                 onClick={() => setActiveCategory(c)}
-                className={`shrink-0 rounded-[20px] px-4 py-1.5 text-[14px] ${
+                className={`h-[36px] shrink-0 rounded-[20px] border-2 px-4 text-[14px] transition ${
                   on
-                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                    : "border border-holo-line text-holo-ink"
+                    ? "border-holo-purple-mid text-holo-purple-mid"
+                    : "border-holo-line text-holo-ink"
                 }`}
               >
                 {c}
@@ -91,9 +95,8 @@ export function RoomScreen() {
                 on ? "border-2 border-holo-purple-mid" : "border-2 border-transparent"
               }`}
             >
-              <div className="flex flex-1 items-center justify-center text-[12px] text-holo-ink-3">
-                {/* 가구 일러스트 자리 (자산 받으면 교체) */}
-                <FurniturePlaceholder />
+              <div className="flex flex-1 items-center justify-center">
+                <FurnitureIcon kind={it.kind} />
               </div>
               <span className="mt-2 text-[13px] font-medium text-holo-ink">{it.label}</span>
             </button>
@@ -119,11 +122,87 @@ export function RoomScreen() {
   );
 }
 
-function FurniturePlaceholder() {
+/**
+ * 보라색 isometric 빈 방 일러스트.
+ * - 좌측 벽: 옅은 보라
+ * - 우측 벽: 진한 보라 (그림자 느낌)
+ * - 바닥: 나무 결 (수평 라인)
+ */
+function EmptyRoom() {
   return (
-    <svg width="60" height="60" viewBox="0 0 60 60" aria-hidden>
-      <rect x="6" y="20" width="48" height="28" rx="3" fill="#C4B89E" />
-      <rect x="6" y="14" width="48" height="8" rx="2" fill="#A8967A" />
+    <svg
+      viewBox="0 0 240 240"
+      className="h-[220px] w-[260px]"
+      aria-label="빈 방 미리보기"
+    >
+      {/* 좌측 벽 */}
+      <polygon
+        points="40,50 120,0 120,150 40,200"
+        fill="#C8A8E8"
+        stroke="#A88AC9"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      {/* 우측 벽 */}
+      <polygon
+        points="120,0 200,50 200,200 120,150"
+        fill="#A881D4"
+        stroke="#8A66B5"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      {/* 바닥 (나무) */}
+      <polygon
+        points="40,200 120,150 200,200 120,240"
+        fill="#D9B488"
+        stroke="#B89370"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      {/* 바닥 결 - 좌측 절반 */}
+      <line x1="60" y1="195" x2="125" y2="158" stroke="#C9A275" strokeWidth="0.6" />
+      <line x1="80" y1="205" x2="135" y2="172" stroke="#C9A275" strokeWidth="0.6" />
+      <line x1="100" y1="215" x2="145" y2="186" stroke="#C9A275" strokeWidth="0.6" />
+      {/* 바닥 결 - 우측 절반 */}
+      <line x1="180" y1="195" x2="125" y2="160" stroke="#C9A275" strokeWidth="0.6" />
+      <line x1="160" y1="205" x2="115" y2="172" stroke="#C9A275" strokeWidth="0.6" />
+      <line x1="140" y1="215" x2="105" y2="186" stroke="#C9A275" strokeWidth="0.6" />
+      {/* 코너 라인 강조 */}
+      <line x1="120" y1="0" x2="120" y2="150" stroke="#7A559E" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+/** 카드 안에 들어가는 가구 아이콘. 종류별로 모양을 분리합니다. */
+function FurnitureIcon({ kind }: { kind: FurnitureKind }) {
+  if (kind === "desk") {
+    return (
+      <svg width="72" height="56" viewBox="0 0 72 56" aria-hidden>
+        {/* 책상 상판 */}
+        <rect x="6" y="14" width="60" height="10" rx="2" fill="#C9A674" />
+        {/* 다리 */}
+        <rect x="10" y="24" width="4" height="26" fill="#B89060" />
+        <rect x="58" y="24" width="4" height="26" fill="#B89060" />
+        {/* 의자 등받이 */}
+        <rect x="32" y="6" width="20" height="4" rx="1" fill="#9C7A4E" />
+        <rect x="32" y="10" width="20" height="14" rx="1" fill="#B89060" />
+      </svg>
+    );
+  }
+  // shelf
+  return (
+    <svg width="60" height="64" viewBox="0 0 60 64" aria-hidden>
+      {/* 책장 외곽 */}
+      <rect x="6" y="6" width="48" height="52" rx="2" fill="#C9A674" />
+      {/* 칸막이 */}
+      <line x1="6" y1="22" x2="54" y2="22" stroke="#9C7A4E" strokeWidth="2" />
+      <line x1="6" y1="40" x2="54" y2="40" stroke="#9C7A4E" strokeWidth="2" />
+      {/* 책 */}
+      <rect x="10" y="11" width="3" height="9" fill="#7A6248" />
+      <rect x="14" y="11" width="3" height="9" fill="#5E4733" />
+      <rect x="18" y="11" width="3" height="9" fill="#7A6248" />
+      <rect x="10" y="29" width="6" height="9" fill="#5E4733" />
+      <rect x="44" y="45" width="6" height="11" fill="#7A6248" />
     </svg>
   );
 }

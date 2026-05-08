@@ -1,18 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useCountdown } from "@/shared/hooks/use-countdown";
+import { useSignup } from "@/shared/contexts/signup-context";
+import { PasswordToggle } from "@/shared/components/password-toggle";
 import { SignupLayout } from "./signup-layout";
 
-const CARRIERS = ["SKT", "KT", "LG U+", "SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"];
+const CARRIER_GROUPS: { label: string; items: string[] }[] = [
+  { label: "통신사", items: ["SKT", "KT", "LG U+"] },
+  { label: "알뜰폰", items: ["SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"] },
+];
+
+const MOCK_VERIFY_CODE = "123456";
+
+// === 정책 (중요): 휴대폰 번호 1개당 아이디 1개만 생성 가능 ====================
+const MOCK_REGISTERED_PHONES = ["01012345678"];
 
 export function VerificationScreen() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [idNum, setIdNum] = useState("");
-  const [carrier, setCarrier] = useState<string | null>(null);
-  const [phone, setPhone] = useState("");
+  const { data, update } = useSignup();
+
+  const name = data.name;
+  const idNum = data.idNum;
+  const carrier = data.carrier;
+  const phone = data.phone;
+
   const [showSheet, setShowSheet] = useState(false);
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+  const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
+  // 주민번호 노출 토글 — 기본은 가려진 상태
+  const [showIdNum, setShowIdNum] = useState(false);
+  const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
+    useCountdown(180, codeSent);
 
   const isNameValid = !!name.trim();
 
@@ -20,11 +40,37 @@ export function VerificationScreen() {
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 
   const handleMain = () => {
+    setVerifyError("");
+
     if (!codeSent) {
+      if (!baseFilled) return;
       setCodeSent(true);
       return;
     }
+
+    if (code.length < 6) return;
+    if (codeExpired) {
+      setVerifyError("인증 시간이 만료되었습니다. 재전송해주세요.");
+      return;
+    }
+    if (code !== MOCK_VERIFY_CODE) {
+      setVerifyError("인증번호가 일치하지 않습니다.");
+      return;
+    }
+
+    if (MOCK_REGISTERED_PHONES.includes(phone)) {
+      setShowAlreadyJoined(true);
+      return;
+    }
+
+    update("phoneVerified", true);
     navigate("/signup/account");
+  };
+
+  const handleResendCode = () => {
+    setCode("");
+    setVerifyError("");
+    restartTimer();
   };
 
   return (
@@ -35,22 +81,35 @@ export function VerificationScreen() {
         본인인증을 진행해 주세요!
       </h1>
       <p className="mt-2 text-[14px] text-holo-ink-3">회원여부 확인 및 가입을 진행합니다.</p>
+      <p className="mt-1 text-[12px] text-holo-purple-mid">
+        ※ 휴대폰 번호 1개당 아이디 1개만 만들 수 있어요. (테스트 인증번호: {MOCK_VERIFY_CODE})
+      </p>
 
       <div className="mt-7 flex flex-col gap-3">
         <Input
           placeholder="이름 입력"
           value={name}
-          onChange={(v) => setName(v.slice(0, 20))}
+          onChange={(v) => update("name", v.slice(0, 20))}
           valid={isNameValid}
           maxLength={20}
         />
-        <Input
-          placeholder="주민번호 입력"
-          value={formatId(idNum)}
-          onChange={(v) => setIdNum(parseIdInput(v, idNum))}
-          inputMode="numeric"
-          valid={idNum.length === 13}
-        />
+
+        {/* 주민번호 — 눈 토글로 마스킹 on/off */}
+        <div className="relative">
+          <Input
+            placeholder="주민번호 입력"
+            value={showIdNum ? formatIdRaw(idNum) : formatId(idNum)}
+            onChange={(v) => update("idNum", parseIdInput(v, idNum, !showIdNum))}
+            inputMode="numeric"
+            valid={idNum.length === 13}
+            paddingRight
+          />
+          <PasswordToggle
+            visible={showIdNum}
+            onClick={() => setShowIdNum((s) => !s)}
+          />
+        </div>
+
         <button
           type="button"
           onClick={() => setShowSheet(true)}
@@ -62,10 +121,11 @@ export function VerificationScreen() {
           <ChevronDownIcon />
         </button>
         <Input
-          placeholder="휴대폰 번호 입력"
+          placeholder="휴대폰 번호 입력 (010-1234-5678 입력 시 가입 차단 시연)"
           value={formatPhone(phone)}
-          onChange={(v) => setPhone(v.replace(/\D/g, "").slice(0, 11))}
+          onChange={(v) => update("phone", v.replace(/\D/g, "").slice(0, 11))}
           inputMode="numeric"
+          autoComplete="tel"
           valid={phone.length >= 10}
         />
         {codeSent && (
@@ -74,15 +134,32 @@ export function VerificationScreen() {
               <Input
                 placeholder="인증번호 입력"
                 value={code}
-                onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
+                onChange={(v) => {
+                  setCode(v.replace(/\D/g, "").slice(0, 6));
+                  setVerifyError("");
+                }}
                 inputMode="numeric"
+                autoComplete="one-time-code"
                 valid={code.length === 6}
+                error={!!verifyError}
               />
               <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[13px] text-holo-error">
-                02:17
+                {codeTimer}
               </span>
             </div>
-            <button type="button" className="self-end pr-2 pt-1 text-[12px] text-holo-ink-3 underline">
+            {verifyError && (
+              <p className="pl-2 text-[13px] text-holo-error">{verifyError}</p>
+            )}
+            {!verifyError && codeExpired && (
+              <p className="pl-2 text-[13px] text-holo-error">
+                인증 시간이 만료되었습니다. 재전송해주세요.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleResendCode}
+              className="self-end pr-2 pt-1 text-[12px] text-holo-ink-3 underline"
+            >
               문자가 오지 않는다면? 재전송
             </button>
           </div>
@@ -106,10 +183,18 @@ export function VerificationScreen() {
         <CarrierSheet
           selected={carrier}
           onSelect={(v) => {
-            setCarrier(v);
+            update("carrier", v);
             setShowSheet(false);
           }}
           onClose={() => setShowSheet(false)}
+        />
+      )}
+
+      {showAlreadyJoined && (
+        <AlreadyJoinedModal
+          onLogin={() => navigate("/login", { replace: true })}
+          onFindPassword={() => navigate("/auth/find-password", { replace: true })}
+          onClose={() => setShowAlreadyJoined(false)}
         />
       )}
     </SignupLayout>
@@ -125,6 +210,8 @@ function Input({
   error,
   valid,
   maxLength,
+  autoComplete,
+  paddingRight,
 }: {
   placeholder: string;
   value: string;
@@ -134,10 +221,11 @@ function Input({
   error?: boolean;
   valid?: boolean;
   maxLength?: number;
+  autoComplete?: string;
+  paddingRight?: boolean; // 우측에 토글 아이콘 등이 있을 때 텍스트 안 가리도록
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Force DOM value to match state - guards against IME composition divergence
   useEffect(() => {
     if (inputRef.current && inputRef.current.value !== value) {
       inputRef.current.value = value;
@@ -158,6 +246,7 @@ function Input({
       ref={inputRef}
       type="text"
       inputMode={inputMode ?? "text"}
+      autoComplete={autoComplete}
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(enforceMax(e.target))}
@@ -167,7 +256,7 @@ function Input({
       }}
       onBlur={onBlur}
       maxLength={maxLength}
-      className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
+      className={`h-[62px] w-full rounded-holo-input ${paddingRight ? "pr-12 pl-5" : "px-5"} text-[15px] outline-none ${
         error
           ? "border-2 border-holo-error"
           : valid
@@ -200,24 +289,94 @@ function CarrierSheet({
         <p className="mb-4 text-center text-[16px] font-semibold text-holo-ink">
           통신사를 선택해 주세요.
         </p>
-        <ul className="flex flex-col gap-2">
-          {CARRIERS.map((c) => (
-            <li key={c}>
-              <button
-                type="button"
-                onClick={() => onSelect(c)}
-                className={`flex h-[55px] w-full items-center justify-between rounded-holo-input border px-5 text-[15px] ${
-                  selected === c
-                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                    : "border-holo-line text-holo-ink"
-                }`}
-              >
-                <span>{c}</span>
-                {selected === c && <CheckIcon />}
-              </button>
-            </li>
+
+        <div className="flex flex-col gap-5">
+          {CARRIER_GROUPS.map((group, i) => (
+            <section key={group.label} className="flex flex-col gap-2">
+              <header className="flex items-center gap-3 px-1">
+                <span className="text-[12px] font-semibold tracking-wide text-holo-ink-3">
+                  {group.label}
+                </span>
+                <span className="h-px flex-1 bg-holo-line-2" />
+              </header>
+              <ul className="flex flex-col gap-2">
+                {group.items.map((c) => (
+                  <li key={c}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(c)}
+                      className={`flex h-[55px] w-full items-center justify-between rounded-holo-input border px-5 text-[15px] ${
+                        selected === c
+                          ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                          : "border-holo-line text-holo-ink"
+                      }`}
+                    >
+                      <span>{c}</span>
+                      {selected === c && <CheckIcon />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {i < CARRIER_GROUPS.length - 1 && (
+                <div className="mt-3 h-px w-full bg-holo-line-2" />
+              )}
+            </section>
           ))}
-        </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AlreadyJoinedModal({
+  onLogin,
+  onFindPassword,
+  onClose,
+}: {
+  onLogin: () => void;
+  onFindPassword: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-6"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[320px] rounded-[18px] bg-white p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-center text-[16px] font-semibold text-holo-ink">
+          이미 가입된 번호예요
+        </p>
+        <p className="mt-2 text-center text-[13px] leading-relaxed text-holo-ink-3">
+          휴대폰 번호 1개당 아이디 1개만 만들 수 있어요.
+          <br />
+          기존 계정으로 로그인하거나 비밀번호를 찾아보세요.
+        </p>
+        <div className="mt-5 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onLogin}
+            className="h-[48px] w-full rounded-holo-pill bg-holo-gradient text-[14px] font-semibold text-white"
+          >
+            로그인하기
+          </button>
+          <button
+            type="button"
+            onClick={onFindPassword}
+            className="h-[48px] w-full rounded-holo-pill border border-holo-purple-mid text-[14px] font-semibold text-holo-purple-mid"
+          >
+            비밀번호 찾기
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-[40px] w-full text-[13px] text-holo-ink-3"
+          >
+            다른 번호로 다시 인증
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -238,6 +397,7 @@ function CheckIcon() {
   );
 }
 
+// 마스킹된 표시: "xxxxxx - 1******"
 function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
@@ -248,29 +408,44 @@ function formatId(v: string) {
   return `${front} - ${genderDigit}${maskedRest}`;
 }
 
-function parseIdInput(displayValue: string, prevIdNum: string) {
-  // displayValue may contain digits, asterisks (already-masked digits), and formatting (- and spaces).
-  // Asterisks in the back portion correspond to digits we already have stored in prevIdNum.
+// 노출용 표시: "xxxxxx - 1234567"
+function formatIdRaw(v: string) {
+  if (!v) return "";
+  if (v.length <= 6) return v;
+  return `${v.slice(0, 6)} - ${v.slice(6)}`;
+}
+
+/**
+ * 사용자 입력에서 실제 주민번호 13자리를 추출.
+ * @param masked - 현재 input이 마스킹 모드인지 (true면 입력값에 *가 섞일 수 있음)
+ */
+function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) {
   const tokens = displayValue.replace(/[^\d*]/g, "");
   const front = tokens.slice(0, 6).replace(/\*/g, "");
   const back = tokens.slice(6);
 
-  // No back portion yet, or the gender (visible) digit was deleted -> treat back as cleared.
   if (back.length === 0 || back[0] === "*") {
     return front.slice(0, 6);
   }
 
+  // 노출 모드: *가 들어올 일 없으니 그냥 숫자 그대로
+  if (!masked) {
+    const all = (front + back).replace(/\*/g, "").slice(0, 13);
+    return all;
+  }
+
+  // 마스킹 모드: 별표 위치는 prevIdNum에서 복원
   const genderChar = back[0];
   const rest = back.slice(1);
   const asteriskCount = (rest.match(/\*/g) || []).length;
   const newDigits = rest.replace(/\*/g, "");
 
-  // Recover the actual digits behind the asterisks from the previous idNum.
   const prevBack = prevIdNum.slice(6);
   const keptMasked = prevBack.slice(1, 1 + asteriskCount);
 
   return (front + genderChar + keptMasked + newDigits).slice(0, 13);
 }
+
 function formatPhone(v: string) {
   if (!v) return "";
   if (v.length < 4) return v;
