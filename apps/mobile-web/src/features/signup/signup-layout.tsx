@@ -2,13 +2,21 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 type SignupLayoutProps = {
+<<<<<<< HEAD
   step: 1 | 2 | 3 | 4 | 5;
+=======
+  step: 1 | 2 | 3 | 4 | 5 | 6;
+>>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
   children: ReactNode;
 };
 
 export function SignupLayout({ step, children }: SignupLayoutProps) {
   const navigate = useNavigate();
+<<<<<<< HEAD
   const widthPct = (step / 5) * 100;
+=======
+  const widthPct = (step / 6) * 100;
+>>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
 
   return (
     <main className="flex flex-1 flex-col">

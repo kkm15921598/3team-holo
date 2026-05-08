@@ -12,9 +12,15 @@ export function SplashScreen() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 bg-white">
       <img
+<<<<<<< HEAD
         src="/illustrations/splash-logo.svg"
         alt=""
         className="h-32 w-32 object-contain"
+=======
+        src="/illustrations/splash-logo.png"
+        alt=""
+        className="h-[112px] w-[132px] object-contain"
+>>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
         aria-hidden
       />
       <span className="font-fredoka text-[40px] font-semibold leading-none text-holo-purple">
