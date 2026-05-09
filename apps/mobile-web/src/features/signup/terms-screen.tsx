@@ -57,13 +57,6 @@ export function TermsScreen() {
 
   return (
     <SignupLayout step={1}>
-      {/*
-        레이아웃 메모:
-        - 제목 + "모두 동의" + 구분선 + 약관 리스트 + 하단 버튼이 한 화면에 함께 들어갑니다.
-        - 약관 리스트(ul)만 flex-1 + overflow-y-auto + min-h-0 으로 자체 스크롤 영역으로
-          만들면, 항목을 펼쳐도 헤더와 "다음" 버튼 위치가 흔들리지 않습니다.
-        - SignupLayout이 children 영역을 flex flex-col flex-1 로 깔아주기 때문에 가능.
-      */}
       <h1 className="shrink-0 text-[20px] font-bold leading-snug text-holo-ink">
         HOLO 서비스 사용에 필요한
         <br />
@@ -83,10 +76,7 @@ export function TermsScreen() {
 
       <div className="my-5 h-px w-full shrink-0 bg-holo-line" />
 
-      {/* 스크롤 영역 — 펼침/접힘으로 늘어나도 헤더/버튼 위치는 고정됨 */}
-      <ul
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
+      <ul className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {ITEMS.map((it) => {
           const isRequiredFail = showError && it.required && !checked[it.id];
           return (
@@ -98,15 +88,9 @@ export function TermsScreen() {
                   className="flex items-center gap-3 text-left"
                 >
                   <Checkmark active={!!checked[it.id]} />
-                  <span
-                    className={`text-[15px] ${
-                      isRequiredFail ? "text-holo-error" : "text-holo-ink"
-                    }`}
-                  >
+                  <span className={`text-[15px] ${isRequiredFail ? "text-holo-error" : "text-holo-ink"}`}>
                     {it.label}{" "}
-                    <span
-                      className={isRequiredFail ? "text-holo-error" : "text-holo-ink-3"}
-                    >
+                    <span className={isRequiredFail ? "text-holo-error" : "text-holo-ink-3"}>
                       ({it.required ? "필수" : "선택"})
                     </span>
                   </span>
@@ -131,7 +115,6 @@ export function TermsScreen() {
         })}
       </ul>
 
-      {/* 하단 영역 — 항상 화면 하단에 고정. mt-auto가 아닌 shrink-0 + pt-6 로 스크롤 영역과 시각적 분리 */}
       <div className="flex shrink-0 flex-col gap-3 pt-6">
         {showError && (
           <p className="text-center text-[13px] text-holo-error">이용 약관에 동의해 주세요.</p>
@@ -158,17 +141,7 @@ function Checkmark({ active }: { active: boolean }) {
       }`}
     >
       {active && (
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="m4 12 6 6 10-14" />
         </svg>
       )}

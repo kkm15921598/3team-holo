@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { PasswordToggle } from "@/shared/components/password-toggle";
+import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
+import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 
 const MOCK_ID = "test1234";
 const MOCK_PASSWORD = "test1234";
 
-// 아이디 정책: 영문으로 시작 + 영문/숫자/언더스코어 4~16자
 const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/;
 const isValidId = (value: string) => ID_PATTERN.test(value);
 
@@ -18,6 +19,7 @@ export function LoginScreen() {
   const [passwordError, setPasswordError] = useState(false);
   const [idErrorMessage, setIdErrorMessage] = useState("");
   const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+  const { capsOn, capsHandlers } = useCapsLock();
 
   const clearErrors = () => {
     setIdError(false);
@@ -100,6 +102,9 @@ export function LoginScreen() {
                 setPassword(e.target.value.slice(0, 16));
                 clearErrors();
               }}
+              onKeyDown={capsHandlers.onKeyDown}
+              onKeyUp={capsHandlers.onKeyUp}
+              onBlur={capsHandlers.onBlur}
               maxLength={16}
               className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
                 passwordError
@@ -111,6 +116,7 @@ export function LoginScreen() {
             />
             <PasswordToggle visible={showPw} onClick={() => setShowPw((s) => !s)} />
           </div>
+          <CapsLockBadge visible={capsOn} />
           {passwordErrorMessage && (
             <p className="pl-2 text-[13px] text-holo-error">{passwordErrorMessage}</p>
           )}
@@ -118,7 +124,7 @@ export function LoginScreen() {
 
         <button
           type="submit"
-          className="mt-3 h-[60px] rounded-holo-pill bg-holo-gradient text-[16px] font-semibold text-white shadow-md transition active:scale-[0.99]"
+          className="h-[60px] rounded-holo-pill bg-holo-gradient text-[16px] font-semibold text-white shadow-md transition active:scale-[0.99]"
         >
           로그인
         </button>

@@ -28,7 +28,7 @@ export type PostStatus = "모집중" | "모집완료";
 
 export type Post = {
   id: string;
-  category: string; // category id
+  category: string;
   status: PostStatus;
   title: string;
   description: string;

@@ -88,7 +88,6 @@ export function InterestScreen() {
 
   return (
     <SignupLayout step={5}>
-      {/* 헤더 — 고정 */}
       <h1 className="shrink-0 text-[20px] font-bold leading-snug text-holo-ink">
         어떤 주제에
         <br />
@@ -107,12 +106,6 @@ export function InterestScreen() {
         </span>
       </div>
 
-      {/*
-        선택 미리보기 — 그리드 칩과 시각적으로 구분되도록 채움(filled) 디자인.
-        - 보라 배경 + 흰 텍스트 + 흰 X (그리드 칩은 외곽선만)
-        - 박스 자체에 max-h를 줘서 칩이 많아져도 영역이 무한히 늘어나지 않음
-        - 그 안에서 자체 스크롤
-      */}
       <div className="mt-4 flex shrink-0 flex-col gap-2 rounded-[12px] border border-holo-line-2 bg-holo-purple/5 p-3">
         <span className="text-[12px] text-holo-ink-3">선택한 관심사</span>
         {interests.length === 0 && !customTrimmed ? (
@@ -132,10 +125,6 @@ export function InterestScreen() {
         )}
       </div>
 
-      {/*
-        칩 그리드 — 자체 스크롤 영역.
-        헤더/미리보기/다음 버튼은 고정되고 이 영역만 스크롤되어 다음 버튼이 항상 보입니다.
-      */}
       <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="grid grid-cols-3 gap-3">{SHORT_TAGS.map(renderChip)}</div>
         <div className="grid grid-cols-2 gap-3">{LONG_TAGS.map(renderChip)}</div>
@@ -162,7 +151,6 @@ export function InterestScreen() {
         </div>
       </div>
 
-      {/* 하단 다음 버튼 — 항상 보임 */}
       <div className="flex shrink-0 flex-col items-center gap-2 pt-4">
         <p className="text-[12px] text-holo-ink-3">나중에 다시 수정할 수 있어요!</p>
         <button
@@ -180,10 +168,6 @@ export function InterestScreen() {
   );
 }
 
-/**
- * 미리보기에 들어가는 "채움" 칩.
- * 그리드 칩(외곽선)과 명확히 다른 디자인이라 시각적 혼동 방지.
- */
 function SelectedChip({
   label,
   onRemove,
@@ -208,17 +192,7 @@ function SelectedChip({
 
 function CloseIcon() {
   return (
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M18 6 6 18M6 6l12 12" />
     </svg>
   );

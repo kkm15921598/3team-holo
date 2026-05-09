@@ -2,12 +2,16 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { PasswordToggle } from "@/shared/components/password-toggle";
-import { PasswordStrength } from "@/shared/components/password-strength";
+import {
+  PasswordStrength,
+  passwordIncludesForbidden,
+} from "@/shared/components/password-strength";
+import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
+import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 
 const MOCK_ID = "test1234";
 const MOCK_PHONE = "01012345678";
 
-// 아이디 정책: 영문으로 시작 + 영문/숫자/언더스코어 4~16자
 const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/;
 const isValidId = (value: string) => ID_PATTERN.test(value);
 
@@ -17,7 +21,6 @@ export function FindPasswordScreen() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("verify");
 
-  // 본인확인 단계 상태
   const [userId, setUserId] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -28,23 +31,25 @@ export function FindPasswordScreen() {
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent && step === "verify");
 
-  // 비밀번호 재설정 단계 상태
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
 
+  const newPwCaps = useCapsLock();
+  const confirmPwCaps = useCapsLock();
+
   const isIdFilled = userId.length > 0 && isValidId(userId);
   const isPhoneValid = phone.length >= 10;
   const baseFilled = isIdFilled && isPhoneValid;
   const canSubmitVerify = codeSent ? code.length >= 6 : baseFilled;
 
-  // 비밀번호 정책: 8~16자, 영문/숫자 포함
   const PW_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+\-=]{8,16}$/;
   const isPwValid = PW_PATTERN.test(newPw);
   const isPwMatch = !!confirmPw && newPw === confirmPw;
-  const canSubmitReset = isPwValid && isPwMatch;
+  const newPwIncludesId = passwordIncludesForbidden(newPw, userId);
+  const canSubmitReset = isPwValid && isPwMatch && !newPwIncludesId;
 
   const handleIdBlur = () => {
     if (userId && !isValidId(userId)) {
@@ -89,6 +94,10 @@ export function FindPasswordScreen() {
       setPwError("영문, 숫자를 포함한 8~16자로 입력해주세요.");
       return;
     }
+    if (newPwIncludesId) {
+      setPwError("보안을 위해 비밀번호에 아이디를 포함하지 마세요.");
+      return;
+    }
     if (!isPwMatch) {
       setPwError("비밀번호가 일치하지 않습니다.");
       return;
@@ -96,7 +105,6 @@ export function FindPasswordScreen() {
     setStep("done");
   };
 
-  // === 완료 화면 ===
   if (step === "done") {
     return (
       <main className="flex flex-1 flex-col">
@@ -129,7 +137,6 @@ export function FindPasswordScreen() {
     );
   }
 
-  // === 비밀번호 재설정 단계 ===
   if (step === "reset") {
     return (
       <main className="flex flex-1 flex-col">
@@ -157,7 +164,6 @@ export function FindPasswordScreen() {
           </p>
 
           <div className="mt-7 flex flex-col gap-3">
-            {/* 새 비밀번호 + 강도 미터 */}
             <div className="flex flex-col gap-1">
               <div className="relative">
                 <input
@@ -168,16 +174,26 @@ export function FindPasswordScreen() {
                     setNewPw(e.target.value.slice(0, 16));
                     setPwError("");
                   }}
+                  onKeyDown={newPwCaps.capsHandlers.onKeyDown}
+                  onKeyUp={newPwCaps.capsHandlers.onKeyUp}
+                  onBlur={newPwCaps.capsHandlers.onBlur}
                   maxLength={16}
                   className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
-                    isPwValid
-                      ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                      : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+                    newPwIncludesId
+                      ? "border-2 border-holo-error"
+                      : isPwValid
+                        ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                        : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
                   }`}
                 />
                 <PasswordToggle visible={showNewPw} onClick={() => setShowNewPw((s) => !s)} />
               </div>
-              <PasswordStrength password={newPw} />
+              <CapsLockBadge visible={newPwCaps.capsOn} />
+              <PasswordStrength
+                password={newPw}
+                forbiddenSubstring={userId}
+                forbiddenLabel="아이디"
+              />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -190,6 +206,9 @@ export function FindPasswordScreen() {
                     setConfirmPw(e.target.value.slice(0, 16));
                     setPwError("");
                   }}
+                  onKeyDown={confirmPwCaps.capsHandlers.onKeyDown}
+                  onKeyUp={confirmPwCaps.capsHandlers.onKeyUp}
+                  onBlur={confirmPwCaps.capsHandlers.onBlur}
                   maxLength={16}
                   className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
                     confirmPw && !isPwMatch
@@ -204,6 +223,7 @@ export function FindPasswordScreen() {
                   onClick={() => setShowConfirmPw((s) => !s)}
                 />
               </div>
+              <CapsLockBadge visible={confirmPwCaps.capsOn} />
               {pwError && (
                 <p className="pl-2 text-[13px] text-holo-error">{pwError}</p>
               )}
@@ -231,7 +251,6 @@ export function FindPasswordScreen() {
     );
   }
 
-  // === 본인확인 단계 ===
   return (
     <main className="flex flex-1 flex-col">
       <div className="flex h-12 shrink-0 items-center px-4">
@@ -289,6 +308,7 @@ export function FindPasswordScreen() {
               setVerifyError("");
             }}
             inputMode="numeric"
+            autoComplete="tel"
             valid={isPhoneValid}
           />
 
@@ -303,6 +323,7 @@ export function FindPasswordScreen() {
                     setVerifyError("");
                   }}
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   valid={code.length === 6}
                   error={!!verifyError}
                 />
@@ -347,7 +368,6 @@ export function FindPasswordScreen() {
   );
 }
 
-// 비밀번호 외 일반 input
 function Input({
   placeholder,
   value,
@@ -356,6 +376,7 @@ function Input({
   error,
   valid,
   maxLength,
+  autoComplete,
 }: {
   placeholder: string;
   value: string;
@@ -364,11 +385,13 @@ function Input({
   error?: boolean;
   valid?: boolean;
   maxLength?: number;
+  autoComplete?: string;
 }) {
   return (
     <input
       type="text"
       inputMode={inputMode ?? "text"}
+      autoComplete={autoComplete}
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}

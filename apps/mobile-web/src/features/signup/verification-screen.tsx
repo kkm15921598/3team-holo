@@ -11,8 +11,6 @@ const CARRIER_GROUPS: { label: string; items: string[] }[] = [
 ];
 
 const MOCK_VERIFY_CODE = "123456";
-
-// === 정책 (중요): 휴대폰 번호 1개당 아이디 1개만 생성 가능 ====================
 const MOCK_REGISTERED_PHONES = ["01012345678"];
 
 export function VerificationScreen() {
@@ -29,13 +27,11 @@ export function VerificationScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [verifyError, setVerifyError] = useState("");
   const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
-  // 주민번호 노출 토글 — 기본은 가려진 상태
   const [showIdNum, setShowIdNum] = useState(false);
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent);
 
   const isNameValid = !!name.trim();
-
   const baseFilled = isNameValid && idNum.length === 13 && carrier && phone.length >= 10;
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 
@@ -94,7 +90,6 @@ export function VerificationScreen() {
           maxLength={20}
         />
 
-        {/* 주민번호 — 눈 토글로 마스킹 on/off */}
         <div className="relative">
           <Input
             placeholder="주민번호 입력"
@@ -222,7 +217,7 @@ function Input({
   valid?: boolean;
   maxLength?: number;
   autoComplete?: string;
-  paddingRight?: boolean; // 우측에 토글 아이콘 등이 있을 때 텍스트 안 가리도록
+  paddingRight?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -397,7 +392,6 @@ function CheckIcon() {
   );
 }
 
-// 마스킹된 표시: "xxxxxx - 1******"
 function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
@@ -408,17 +402,12 @@ function formatId(v: string) {
   return `${front} - ${genderDigit}${maskedRest}`;
 }
 
-// 노출용 표시: "xxxxxx - 1234567"
 function formatIdRaw(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
   return `${v.slice(0, 6)} - ${v.slice(6)}`;
 }
 
-/**
- * 사용자 입력에서 실제 주민번호 13자리를 추출.
- * @param masked - 현재 input이 마스킹 모드인지 (true면 입력값에 *가 섞일 수 있음)
- */
 function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) {
   const tokens = displayValue.replace(/[^\d*]/g, "");
   const front = tokens.slice(0, 6).replace(/\*/g, "");
@@ -428,13 +417,11 @@ function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) 
     return front.slice(0, 6);
   }
 
-  // 노출 모드: *가 들어올 일 없으니 그냥 숫자 그대로
   if (!masked) {
     const all = (front + back).replace(/\*/g, "").slice(0, 13);
     return all;
   }
 
-  // 마스킹 모드: 별표 위치는 prevIdNum에서 복원
   const genderChar = back[0];
   const rest = back.slice(1);
   const asteriskCount = (rest.match(/\*/g) || []).length;

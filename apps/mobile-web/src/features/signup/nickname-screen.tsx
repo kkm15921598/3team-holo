@@ -4,14 +4,11 @@ import { useSignup } from "@/shared/contexts/signup-context";
 import { containsProfanity } from "@/shared/utils/profanity";
 import { SignupLayout } from "./signup-layout";
 
-// 한글 + 공백 허용 (특수문자 불가)
 const KOREAN_ONLY = /^[가-힣\s]+$/;
 const MAX_LEN = 10;
 
-// 모의 차단 닉네임 (백엔드 연결 시 API로 교체)
 const MOCK_TAKEN_NICKNAMES = ["관리자", "운영자", "테스트", "단무지", "어드민"];
 
-// 추천 닉네임 자동 생성용 단어 풀
 const ADJECTIVES = [
   "행복한",
   "용감한",
@@ -48,7 +45,6 @@ function generateSuggestions(count = 4): string[] {
     const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
     const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
     const candidate = `${adj} ${noun}`;
-    // 길이 제한 + 차단 목록 + 비속어 검사 (안전망)
     if (
       candidate.length <= MAX_LEN &&
       !MOCK_TAKEN_NICKNAMES.includes(candidate) &&
@@ -65,17 +61,15 @@ export function NicknameScreen() {
   const { data, update } = useSignup();
   const value = data.nickname;
 
-  const [checked, setChecked] = useState(false); // 중복확인 통과 여부
-  const [taken, setTaken] = useState(false); // 차단 목록 매칭 여부
+  const [checked, setChecked] = useState(false);
+  const [taken, setTaken] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(() => generateSuggestions());
 
   const isFormatInvalid =
     value.length > 0 && (!KOREAN_ONLY.test(value) || value.length > MAX_LEN);
   const isFormatValid = value.length > 0 && !isFormatInvalid;
-  // 비속어 검사 — 형식이 맞는 닉네임에 대해서만 검사
   const isProfane = isFormatValid && containsProfanity(value);
 
-  // 입력값이 바뀌면 중복확인 결과 초기화
   useEffect(() => {
     if (checked || taken) {
       setChecked(false);
@@ -84,7 +78,6 @@ export function NicknameScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // 중복확인 가능 = 형식 OK + 비속어 아님 + 아직 미확인
   const canCheck = isFormatValid && !isProfane && !checked;
   const canNext = checked;
 
@@ -99,7 +92,6 @@ export function NicknameScreen() {
     }
   };
 
-  // 에러 우선순위: 형식 > 비속어 > 중복
   const errorMessage = isFormatInvalid
     ? "닉네임을 다시 확인해 주세요."
     : isProfane
@@ -125,7 +117,6 @@ export function NicknameScreen() {
       <p className="mt-2 text-[14px] text-holo-ink-3">한글 최대 10자 / 특수문자, 비속어 불가</p>
 
       <div className="mt-7 flex flex-col gap-1">
-        {/* 닉네임 input + 중복확인 버튼 */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -168,7 +159,6 @@ export function NicknameScreen() {
         )}
       </div>
 
-      {/* 추천 닉네임 — 입력 비어있을 때만 노출 */}
       {value.length === 0 && (
         <div className="mt-5 flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -216,17 +206,7 @@ export function NicknameScreen() {
 
 function RefreshIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
       <path d="M21 3v5h-5" />
     </svg>

@@ -5,13 +5,9 @@ import { useCountdown } from "@/shared/hooks/use-countdown";
 const MOCK_NAME = "홍길동";
 const MOCK_PHONE = "01012345678";
 
-// 모의 회원 정보 (백엔드 연결 시 GET /auth/find-id 응답으로 교체).
-// 참고: 이메일 기반 시절에는 결과로 마스킹된 이메일("te**@gmail.com")을 보여줬음.
-// 아이디로 전환된 후에는 마스킹 없이 풀 아이디 + 가입일을 함께 노출합니다.
-// 백업: features/_archive/find-id-screen.email-version.tsx.bak
 const MOCK_FOUND = {
   id: "test1234",
-  joinedAt: "2024.03.15", // YYYY.MM.DD
+  joinedAt: "2024.03.15",
 };
 
 export function FindIdScreen() {
@@ -150,6 +146,7 @@ export function FindIdScreen() {
               setError("");
             }}
             inputMode="numeric"
+            autoComplete="tel"
             valid={isPhoneValid}
           />
           {codeSent && (
@@ -163,6 +160,7 @@ export function FindIdScreen() {
                     setError("");
                   }}
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   valid={code.length === 6}
                   error={!!error}
                 />
@@ -213,6 +211,7 @@ function Input({
   error,
   valid,
   maxLength,
+  autoComplete,
 }: {
   placeholder: string;
   value: string;
@@ -221,11 +220,13 @@ function Input({
   error?: boolean;
   valid?: boolean;
   maxLength?: number;
+  autoComplete?: string;
 }) {
   return (
     <input
       type="text"
       inputMode={inputMode ?? "text"}
+      autoComplete={autoComplete}
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -243,17 +244,7 @@ function Input({
 
 function BackIcon() {
   return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#1A1A1A"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
     </svg>
   );
@@ -261,17 +252,7 @@ function BackIcon() {
 
 function CalendarIcon() {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#7448DD"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>

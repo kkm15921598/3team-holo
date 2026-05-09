@@ -9,18 +9,6 @@ type SignupLayoutProps = {
 
 const TOTAL_STEPS = 7;
 
-/**
- * 가입 흐름 공용 레이아웃.
- * - 상단 뒤로가기 버튼 + 진행률 바 + n/7 카운터
- * - step=1(약관)에서 뒤로가기 → 가입 흐름을 떠나는 행위이므로 isDirty가 있으면 종료 확인 모달
- * - step>=2 → 단계 사이를 자연스럽게 뒤로 이동 (Context 덕에 입력값 유지됨)
- *
- * 레이아웃 메모:
- * - main이 max-h-[100dvh] + overflow-hidden 으로 viewport에 잠겨 있어,
- *   안쪽 콘텐츠가 늘어나도 페이지 자체가 스크롤되지 않습니다.
- * - 페이지 안에서 길어질 수 있는 영역(예: terms의 약관 ul)은 자체 overflow-y-auto
- *   로 스크롤하면 됩니다.
- */
 export function SignupLayout({ step, children }: SignupLayoutProps) {
   const navigate = useNavigate();
   const { isDirty, reset } = useSignup();
@@ -72,10 +60,6 @@ export function SignupLayout({ step, children }: SignupLayoutProps) {
   );
 }
 
-/**
- * 가입 흐름 종료 확인 모달.
- * 입력한 값이 있는 상태에서 가입 흐름을 벗어나려 할 때 한 번 더 확인합니다.
- */
 function ExitConfirmModal({
   onCancel,
   onConfirm,
@@ -123,17 +107,7 @@ function ExitConfirmModal({
 
 function BackIcon() {
   return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#1A1A1A"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
     </svg>
   );
