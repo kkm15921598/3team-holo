@@ -65,10 +65,18 @@ export function StatusBubble() {
   const isSelected = mode === "selected";
   const isEditing = mode === "editing";
 
+  // 편집 모드는 form 이 252px 로 넓어지므로 우측 잘림 방지를 위해 left 클램프
+  const EDIT_W = 252;
+  const VISIBLE_RIGHT = 352; // 디바이스 폭(360) - 우측 여유 8px
+  const VISIBLE_LEFT = 4;
+  const containerLeft = isEditing
+    ? Math.max(VISIBLE_LEFT, Math.min(pos.x, VISIBLE_RIGHT - EDIT_W))
+    : pos.x;
+
   return (
     <div
-      className="absolute z-[60]"
-      style={{ left: pos.x, top: pos.y }}
+      className="absolute z-[60] transition-[left] duration-150"
+      style={{ left: containerLeft, top: pos.y }}
     >
       {isEditing ? (
         <form

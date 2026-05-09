@@ -121,7 +121,7 @@
 @layer components {
   /* 모바일 화면(360px)을 데스크탑에서 둘러싼 프레임 */
   .device-frame {
-    @apply mx-auto flex min-h-screen w-full max-w-[360px] flex-col overflow-x-hidden bg-white shadow-xl;
+    @apply mx-auto flex h-screen w-full flex-col overflow-x-hidden bg-white sm:max-w-[420px] sm:shadow-xl;
   }
 }
 

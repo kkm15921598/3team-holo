@@ -11,7 +11,7 @@ export function TabLayout({ children, showHeader = true }: TabLayoutProps) {
   return (
     <>
       {showHeader && <AppHeader />}
-      <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden">{children}</div>
+      <div className="no-scrollbar flex flex-1 flex-col overflow-y-auto overflow-x-hidden">{children}</div>
       <BottomTabBar />
     </>
   );

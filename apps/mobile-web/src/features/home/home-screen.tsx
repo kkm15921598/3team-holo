@@ -7,7 +7,7 @@ import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickRandomMeetups } from "./home-meetups-data";
 import { useStatusMessage } from "../myroom/myroom-store";
 
-const NICKNAME = "무지는 단무지";
+const NICKNAME = "무지는단무지";
 const LEVEL = 24;
 const TITLE = "#벌레_해결사";
 /** 메인 프로필에 표시할 뱃지 — 한글 이름으로 지정 */
@@ -22,7 +22,7 @@ export function HomeScreen() {
     <main className="flex flex-1 flex-col pb-6">
       <section className="relative">
         <div
-          className="relative mx-auto h-[447px] w-[calc(100%-32px)] overflow-visible rounded-b-[40px] bg-cover bg-center bg-no-repeat"
+          className="relative mx-auto h-[420px] w-[calc(100%)] overflow-visible rounded-b-[40px] bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url(/illustrations/home-hero.png)" }}
         >
           <div className="absolute left-0 right-0 top-[10px] flex justify-center">

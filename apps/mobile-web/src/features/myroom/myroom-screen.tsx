@@ -36,6 +36,15 @@ export function MyroomScreen() {
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   /** 화면 진입 시점의 방 상태 스냅샷 — "아니오" 시 복원용 */
   const [initialSnapshot] = useState<PlacedFurniture[]>(() => items);
+  /** 카탈로그 드로어 펼침 상태 — 클릭/스크롤 시 100px 위로 올라옴 */
+  const [catalogExpanded, setCatalogExpanded] = useState(false);
+  const expandCatalog = () => setCatalogExpanded(true);
+
+  /** 방 안의 가구 선택 → 드로어도 닫힘 (드로어가 가구를 가리지 않게) */
+  const handleSelectInRoom = (id: string | null) => {
+    setSelectedId(id);
+    if (id !== null) setCatalogExpanded(false);
+  };
   // 화면 진입 시점의 lastSeenLevel 을 캡쳐 → 이번 화면에서는 NEW 가 유지됨
   const [lastSeen] = useState(() => getLastSeenLevel(ME.level));
 
@@ -147,14 +156,15 @@ export function MyroomScreen() {
       setMyroomItems([...items, placed]);
       setSelectedId(placed.id);
     }
+    setCatalogExpanded(false); // 가구 선택 시 드로어 다시 내려감
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   return (
-    <main className="flex flex-1 flex-col px-4 pt-2 pb-6">
-      <header className="flex items-center justify-between pb-3">
+    <main className="flex flex-1 min-h-0 flex-col overflow-hidden px-4 pt-2">
+      <header className="flex shrink-0 items-center justify-between pb-3">
         <button type="button" aria-label="뒤로" onClick={handleBack} className="p-1">
           <BackIcon />
         </button>
@@ -167,7 +177,7 @@ export function MyroomScreen() {
         </button>
       </header>
 
-      <div className="flex items-center gap-3 pb-3">
+      <div className="flex shrink-0 items-center gap-3 pb-3">
         <img
           src={ME_PERSONA.face}
           alt={ME_PERSONA.name}
@@ -187,11 +197,18 @@ export function MyroomScreen() {
         </div>
       </div>
 
-      <div className="relative -mx-4 flex justify-center overflow-visible">
+      <div
+        onClick={() => {
+          if (catalogExpanded) setCatalogExpanded(false);
+        }}
+        className={`relative -mx-4 flex shrink-0 justify-center transition-[height] duration-300 ${
+          catalogExpanded ? "h-[260px] overflow-hidden" : "h-[360px] overflow-visible"
+        }`}
+      >
         <RoomEditorView
           items={items}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={handleSelectInRoom}
           onRemove={handleRemove}
           onFlip={handleFlip}
           onMove={handleMove}
@@ -201,7 +218,11 @@ export function MyroomScreen() {
         <StatusBubble />
       </div>
 
-      <div className="mt-4 -mx-4 overflow-x-auto px-4 no-scrollbar">
+      {/* 카테고리 칩 — 고정 영역 (스크롤되지 않음) */}
+      <div
+        onClick={expandCatalog}
+        className="no-scrollbar -mx-4 mt-2 shrink-0 overflow-x-auto px-4 py-2"
+      >
         <div className="flex w-max gap-2">
           {CATEGORIES.map((c) => {
             const on = activeCat === c.key;
@@ -223,7 +244,13 @@ export function MyroomScreen() {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
+      {/* 카탈로그 그리드 — 자기 영역 안에서만 스크롤 */}
+      <div
+        onClick={expandCatalog}
+        onScroll={expandCatalog}
+        className="no-scrollbar -mx-4 flex flex-1 min-h-0 flex-col overflow-y-auto px-4 pb-6"
+      >
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4">
         {filtered.map((it) => {
           const ownedKey = `${it.kind}:${it.variant}`;
           const isLocked = it.lockedAt !== undefined && it.lockedAt > ME.level;
@@ -232,7 +259,11 @@ export function MyroomScreen() {
           return (
           <div key={it.id} className="flex flex-col">
             <article
-              onClick={canPlace ? () => handlePlaceFromCatalog(it) : undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                // 소유한 가구만 배치 + 드로어 닫힘. 미소유는 아무 동작 안 함 (구매 버튼 별도)
+                if (canPlace) handlePlaceFromCatalog(it);
+              }}
               className={`relative flex aspect-square flex-col overflow-hidden rounded-holo-input bg-holo-surface-2 p-3 ${canPlace ? "cursor-pointer transition-shadow hover:shadow-md" : ""}`}
             >
               {isNewlyUnlocked(it.lockedAt, ME.level, lastSeen) && (
@@ -276,6 +307,7 @@ export function MyroomScreen() {
           </div>
           );
         })}
+        </div>
       </div>
 
       <ConfirmModal
