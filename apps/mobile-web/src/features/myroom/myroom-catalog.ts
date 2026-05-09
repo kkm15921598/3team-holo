@@ -1,115 +1,103 @@
 import type { CatalogItem, FurnitureKind } from "./myroom-data";
 
-/** Korean display names for each variant of each kind (index = variant - 1) */
+/**
+ * 변형(variant)별 한글 이름 — 실제 PNG 색상/형태에 맞춰 작성.
+ * index 0 = variant 01, index 1 = variant 02, ...
+ */
 const NAMES: Record<FurnitureKind, string[]> = {
-  desk: [
-    "라일락 책상 세트",
-    "노트북 책상",
-    "와이드 책상",
-    "L자 책상",
-    "미니 책상",
-    "학생 책상",
-    "게이밍 책상",
-    "원목 책상",
-    "모던 책상",
+  bed: [
+    "라일락 싱글 침대",
+    "라일락 침대",
+    "노란 원목 침대",
+    "민트 원목 침대",
+    "초록 원목 침대",
+    "초록 더블 침대",
+    "초록 벨벳 침대",
   ],
-  closet: ["베이직 옷장", "슬라이딩 옷장", "빈티지 옷장"],
   bookshelf: [
-    "베이직 책장",
-    "와이드 책장",
-    "큐브 책장",
-    "코너 책장",
-    "파스텔 책장",
-    "인더스트리얼 책장",
-  ],
-  console: [
-    "베이직 서랍장",
-    "와이드 서랍장",
-    "TV 콘솔",
-    "원목 서랍장",
-    "모던 서랍장",
-    "화이트 콘솔",
-    "빈티지 화장대",
-    "침실 협탁",
-    "슬림 콘솔",
-    "라운지 콘솔",
-    "빌트인 콘솔",
-    "모자이크 콘솔",
-    "거실 콘솔",
-    "베드사이드 테이블",
-    "콤팩트 콘솔",
-  ],
-  shelf: [
-    "벽선반",
-    "큐브 선반",
-    "코너 선반",
-    "원목 선반",
-    "화이트 선반",
-    "행잉 선반",
-    "라더 선반",
-    "미니 선반",
-    "빈티지 선반",
+    "원목 책장",
+    "원목 유리 책장",
+    "네이비 큐브 책장",
+    "분홍 큐브 책장",
+    "초록 원목 책장",
+    "네이비 와이드 책장",
   ],
   chair: [
     "라일락 빈백",
-    "원목 의자",
-    "그레이 빈백",
-    "패브릭 1인 소파",
-    "베이지 빈백",
-    "어린이 의자",
-    "핑크 라운지 체어",
-    "오피스 체어",
-    "라탄 체어",
-    "이튼 체어",
-    "모던 라운지",
-    "빈티지 의자",
-    "폼 빈백",
-    "클래식 다이닝",
-    "라운지 소파",
+    "노란 1인 소파",
+    "노란 빈티지 의자",
+    "노란 윙체어",
+    "노란 클래식 윙체어",
+    "초록 학생 의자",
+    "초록 1인 소파",
+    "올리브 리클라이너",
+    "코랄 라운지 체어",
+    "라일락 2인 소파",
+    "노란 코너 소파",
+    "코랄 3인 소파",
+    "네이비 벨벳 소파",
+    "민트 2인 소파",
+    "올리브 가죽 소파",
   ],
-  bed: [
-    "보라 원목 침대",
-    "노란 원목 침대",
-    "화이트 큐브 침대",
-    "그레이 패브릭 침대",
-    "핑크 베이비 침대",
-    "원목 클래식 침대",
-    "캐노피 공주 침대",
+  closet: ["초록 원목 옷장", "라일락 수납 옷장", "민트 수납 옷장"],
+  console: [
+    "노란 TV 콘솔",
+    "원목 TV 협탁",
+    "원목 콘솔 박스",
+    "원목 콘솔",
+    "원목 와이드 콘솔",
+    "원목 슬림 콘솔",
+    "원목 2단 서랍장",
+    "원목 콘솔",
+    "원목 미니 서랍장",
+    "원목 와이드 서랍장",
+    "초록 3단 서랍장",
+    "원목 콤팩트 서랍장",
+    "원목 협탁",
+    "원목 베드사이드",
+    "원목 콤팩트 콘솔",
+  ],
+  desk: [
+    "라일락 책상 세트",
+    "라일락 L자 책상",
+    "라일락 책상·책장 세트",
+    "원목 미니 책상",
+    "클래식 사장님 책상",
+    "민트 L자 책상",
+    "초록 L자 책상",
+    "네이비 모던 L자 책상",
+    "초록 원목 책상",
+  ],
+  lighting: [
+    "원목 스탠드 조명",
+    "베이지 모던 조명",
+    "원목 미니 스탠드",
+    "빈티지 플로어 램프",
+    "빈티지 톨 램프",
+    "빈티지 패턴 램프",
+  ],
+  mirror: ["네이비 화장대 거울", "라일락 화장대 거울", "분홍 화장대 거울", "원목 전신 거울"],
+  rug: ["라일락 원형 러그", "베이지 원형 러그", "네이비 원형 러그"],
+  shelf: [
+    "분홍 식물 선반",
+    "네이비 식물 선반",
+    "초록 식물 선반",
+    "라일락 식물 선반",
+    "노란 식물 선반",
+    "원목 미니 선반",
+    "원목 라더 선반",
+    "라일락 사다리 선반",
+    "초록 카트 선반",
   ],
   wall: [
-    "베이직 벽지",
-    "원목 벽",
-    "포스터 벽지",
-    "페인팅 벽지",
-    "패턴 벽지",
-    "라이트 벽지",
-    "다크 벽지",
+    "라일락 벌집 선반",
+    "분홍 벌집 선반",
+    "포스터 액자 세트",
+    "초록 벌집 선반",
+    "네이비 벌집 선반",
+    "민트 벌집 선반",
+    "민트 라일락 벌집 선반",
   ],
-  rug: ["원목 마루", "카펫 러그", "패턴 러그"],
-  lighting: [
-    "라일락 스탠드",
-    "플로어 램프",
-    "펜던트 조명",
-    "미니 무드등",
-    "책상 램프",
-    "천장 조명",
-  ],
-  mirror: ["원형 거울", "원목 프레임 거울", "전신 거울", "빈티지 거울"],
-};
-
-/** Per-kind base price for the "NEW · 구매" item (variant 02) */
-const PRICES: Partial<Record<FurnitureKind, number>> = {
-  bed: 500,
-  desk: 400,
-  chair: 350,
-  closet: 600,
-  bookshelf: 450,
-  console: 400,
-  shelf: 200,
-  wall: 300,
-  rug: 250,
-  lighting: 280,
-  mirror: 320,
 };
 
 /** Decide which variant of a kind is locked at what level */
@@ -121,21 +109,30 @@ function lockLevel(index: number): number | undefined {
   return 5 + (index - 2) * 2;               // beyond → 9, 11, ...
 }
 
+/**
+ * 가격 책정 — 레벨 1 = 50P 시작, 2 레벨마다 +50P
+ *  · 잠금 없음(=Lv.1) → 50P
+ *  · Lv.5  → 150P  ·  Lv.7  → 200P
+ *  · Lv.9  → 250P  ·  Lv.11 → 300P
+ *  · ... Lv.27 → 700P
+ */
+function priceFor(lockedAt: number | undefined): number {
+  const lvl = lockedAt ?? 1;
+  return 50 + Math.floor((lvl - 1) / 2) * 50;
+}
+
 function build(): CatalogItem[] {
   const items: CatalogItem[] = [];
   (Object.keys(NAMES) as FurnitureKind[]).forEach((kind) => {
     NAMES[kind].forEach((label, i) => {
       const variant = String(i + 1).padStart(2, "0");
       const lockedAt = lockLevel(i);
-      const isNew = i === 1; // 2nd item per kind is the "NEW" purchasable
-      const price = isNew ? PRICES[kind] : undefined;
       items.push({
         id: `${kind}-${i + 1}`,
         kind,
         variant,
         label,
-        ...(isNew ? { isNew: true } : {}),
-        ...(price !== undefined ? { price } : {}),
+        price: priceFor(lockedAt),
         ...(lockedAt !== undefined ? { lockedAt } : {}),
       });
     });

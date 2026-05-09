@@ -48,6 +48,7 @@ export default {
       fontFamily: {
         paperlogy: ['"Paperlogy"', "-apple-system", "BlinkMacSystemFont", "sans-serif"],
         fredoka: ['"Fredoka"', "system-ui", "sans-serif"],
+        spoqa: ['"Spoqa Han Sans Neo"', "-apple-system", "BlinkMacSystemFont", "sans-serif"],
       },
       backgroundImage: {
         "holo-gradient": "linear-gradient(90deg, #542BB4 0%, #E95AA4 100%)",

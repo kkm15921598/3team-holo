@@ -1,0 +1,56 @@
+/** Profile face icon library — paired by nickname → image path */
+const ROOT = "/illustrations/icons_face";
+const PFX = "Gemini_Generated_Image_";
+
+const enc = (folder: string, name: string) =>
+  encodeURI(`${ROOT}/${folder}/${PFX}${name}.png`);
+
+/** A nickname paired with a profile face image URL */
+export type Persona = { name: string; face: string };
+
+/** Persona library — each nickname has a fixed face */
+export const PERSONAS: Persona[] = [
+  // women / girls
+  { name: "수정", face: enc("woman/girl", "1kmbpd1kmbpd1kmb 3") },
+  { name: "지윤", face: enc("woman/girl", "4wzr754wzr754wzr 5") },
+  { name: "혜진", face: enc("woman/girl", "6fq25v6fq25v6fq2 2") },
+  { name: "민지", face: enc("woman/girl", "8zak848zak848zak 5") },
+  { name: "예린", face: enc("woman/woman", "29yowa29yowa29yo 5") },
+  { name: "서아", face: enc("woman/woman", "4wzr754wzr754wzr 4") },
+  { name: "은채", face: enc("woman/woman", "8zak848zak848zak 4") },
+  { name: "유나", face: enc("woman/woman", "ggx8izggx8izggx8 7") },
+  { name: "정희", face: enc("woman/grandma", "29yowa29yowa29yo 6") },
+  { name: "옥자", face: enc("woman/grandma", "4wzr754wzr754wzr 6") },
+  // men / boys
+  { name: "도윤", face: enc("man/boy", "1kmbpd1kmbpd1kmb 4") },
+  { name: "준호", face: enc("man/boy", "4wzr754wzr754wzr 8") },
+  { name: "지호", face: enc("man/boy", "6fq25v6fq25v6fq2 3") },
+  { name: "민호", face: enc("man/man", "29yowa29yowa29yo 7") },
+  { name: "성훈", face: enc("man/man", "2yfg492yfg492yfg 5") },
+  { name: "재민", face: enc("man/man", "4wzr754wzr754wzr 7") },
+  { name: "현우", face: enc("man/man", "8zak848zak848zak 7") },
+  { name: "태양", face: enc("man/man", "ggx8izggx8izggx8 10") },
+  { name: "철수", face: enc("man/grandfa", "29yowa29yowa29yo 8") },
+  { name: "병태", face: enc("man/grandfa", "4wzr754wzr754wzr 9") },
+];
+
+/** Lookup persona by name (returns first match or undefined) */
+export function personaByName(name: string): Persona | undefined {
+  return PERSONAS.find((p) => p.name === name);
+}
+
+/** Picks N personas deterministically from a seed */
+export function pickPersonas(seed: number, count: number): Persona[] {
+  const result: Persona[] = [];
+  const len = PERSONAS.length;
+  for (let i = 0; i < count; i++) {
+    result.push(PERSONAS[(seed * 7 + i * 11) % len]);
+  }
+  return result;
+}
+
+/** The current user's persona (for the home profile card) */
+export const ME_PERSONA: Persona = {
+  name: "무지는 단무지",
+  face: enc("woman/girl", "ggx8izggx8izggx8 8"),
+};

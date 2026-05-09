@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import type { Persona } from "./home-faces";
 
 export type Meetup = {
   id: string;
@@ -6,11 +7,19 @@ export type Meetup = {
   distance: string;
   duration: string;
   description: string;
-  avatars: { bg: string; emoji: string }[];
+  members: Persona[];
+  /** total member count — if greater than members.length, the extra is shown as "+N" */
+  totalCount?: number;
   dim?: boolean;
 };
 
+const MAX_VISIBLE_AVATARS = 4;
+
 export function MeetupCard({ m }: { m: Meetup }) {
+  const visible = m.members.slice(0, MAX_VISIBLE_AVATARS);
+  const total = m.totalCount ?? m.members.length;
+  const extra = total - visible.length;
+
   return (
     <article
       className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
@@ -33,15 +42,25 @@ export function MeetupCard({ m }: { m: Meetup }) {
         </svg>
       </Link>
       <div className="absolute bottom-[13px] left-[14px] flex">
-        {m.avatars.map((a, i) => (
-          <span
-            key={i}
-            className="flex h-[28px] w-[28px] items-center justify-center overflow-hidden rounded-full border-2 border-holo-lilac-card-2 text-[14px]"
-            style={{ background: a.bg, marginLeft: i === 0 ? 0 : -6 }}
-          >
-            {a.emoji}
-          </span>
+        {visible.map((p, i) => (
+          <img
+            key={p.name + i}
+            src={p.face}
+            alt={p.name}
+            title={p.name}
+            className="h-[28px] w-[28px] rounded-full border-2 border-holo-lilac-card-2 object-cover"
+            style={{ marginLeft: i === 0 ? 0 : -6 }}
+            draggable={false}
+          />
         ))}
+        {extra > 0 && (
+          <span
+            className="flex h-[28px] min-w-[28px] items-center justify-center rounded-full border-2 border-holo-lilac-card-2 bg-holo-purple-mid px-1 text-[11px] font-bold text-white"
+            style={{ marginLeft: -6 }}
+          >
+            +{extra}
+          </span>
+        )}
       </div>
     </article>
   );

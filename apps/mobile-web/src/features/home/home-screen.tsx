@@ -1,16 +1,22 @@
 import { useState } from "react";
-import badgeImg from "../../badge/badge_01.png";
-import { ProfileAvatar, RoomScene } from "./home-illustrations";
+import { Link } from "react-router-dom";
+import { getBadgeByName } from "../../badge";
+import { ME_PERSONA } from "./home-faces";
+import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickRandomMeetups } from "./home-meetups-data";
+import { useStatusMessage } from "../myroom/myroom-store";
 
 const NICKNAME = "무지는 단무지";
 const LEVEL = 24;
 const TITLE = "#벌레_해결사";
+/** 메인 프로필에 표시할 뱃지 — 한글 이름으로 지정 */
+const BADGE = getBadgeByName("HOLO 수호신");
 
 export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
   const handleRefresh = () => setMeetups((prev) => pickRandomMeetups(3, prev));
+  const status = useStatusMessage();
 
   return (
     <main className="flex flex-1 flex-col pb-6">
@@ -24,7 +30,7 @@ export function HomeScreen() {
           </div>
 
           <div className="absolute right-[42px] top-[148px] z-[5] whitespace-nowrap rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]">
-            상태 메시지
+            {status}
             <span
               className="absolute h-0 w-0"
               style={{
@@ -39,9 +45,12 @@ export function HomeScreen() {
 
           <div className="absolute -bottom-[44px] left-1/2 z-[6] flex h-[88px] w-[319px] -translate-x-1/2 items-center gap-[14px] rounded-[20px] bg-holo-surface px-4 shadow-[0_4px_16px_rgba(116,72,221,0.1)]">
             <div className="relative h-[63px] w-[63px] shrink-0">
-              <div className="h-[63px] w-[63px] overflow-hidden rounded-full">
-                <ProfileAvatar />
-              </div>
+              <img
+                src={ME_PERSONA.face}
+                alt={ME_PERSONA.name}
+                className="h-[63px] w-[63px] rounded-full object-cover"
+                draggable={false}
+              />
               <div
                 className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[4px] px-[9px] py-[3px] text-[12px] font-bold text-white"
                 style={{ background: "linear-gradient(to right,#542BB4,#E95AA4)" }}
@@ -52,7 +61,9 @@ export function HomeScreen() {
             <div className="min-w-0 flex-1">
               <div className="mb-[6px] flex items-center gap-2">
                 <span className="text-[20px] font-bold text-holo-ink">{NICKNAME}</span>
-                <img src={badgeImg} alt="" className="h-[27px] w-[27px] object-contain" />
+                {BADGE && (
+                  <img src={BADGE.src} alt={BADGE.name} title={BADGE.name} className="h-[27px] w-[27px] object-contain" />
+                )}
               </div>
               <div className="text-[15px] text-[#A9A9A9]">{TITLE}</div>
             </div>
@@ -82,14 +93,14 @@ export function HomeScreen() {
         </div>
       </section>
 
-      <button
-        type="button"
+      <Link
+        to="/board/write"
         aria-label="모임 만들기"
         className="fixed bottom-[103px] left-1/2 z-20 flex h-[52px] w-[52px] translate-x-[110px] items-center justify-center rounded-full text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.5)]"
         style={{ background: "linear-gradient(135deg,#542BB4,#E95AA4)" }}
       >
         <PlusIcon />
-      </button>
+      </Link>
     </main>
   );
 }
