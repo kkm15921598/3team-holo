@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export type Meetup = {
   id: string;
   title: string;
@@ -21,11 +23,15 @@ export function MeetupCard({ m }: { m: Meetup }) {
       <p className="mt-2 line-clamp-2 max-h-[40px] max-w-[94px] text-[13px] leading-[1.4] text-[#333]">
         {m.description}
       </p>
-      <div className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light">
+      <Link
+        to={`/board/${m.id}`}
+        aria-label={`${m.title} 게시글로 이동`}
+        className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light transition-colors hover:bg-holo-purple-mid"
+      >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M3 11L11 3M11 3H5M11 3V9" stroke="#7448DD" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M3 11L11 3M11 3H5M11 3V9" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      </div>
+      </Link>
       <div className="absolute bottom-[13px] left-[14px] flex">
         {m.avatars.map((a, i) => (
           <span

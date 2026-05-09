@@ -1,57 +1,29 @@
-const FURNITURE = "/illustrations/furniture";
+import { furnitureSrc, ROOM_BG_W, ROOM_H, ROOM_W } from "../myroom/myroom-data";
+import { useMyroomItems } from "../myroom/myroom-store";
 
 export function RoomScene() {
+  const items = useMyroomItems();
   return (
-    <div className="relative mx-auto h-[340px] w-[400px] shrink-0">
-      {/* Base isometric room (walls + floor) — sized larger than the card */}
+    <div className="relative mx-auto shrink-0" style={{ width: ROOM_W, height: ROOM_H }}>
       <img
         src="/illustrations/room_basic.png"
         alt=""
         className="absolute left-1/2 top-0 -translate-x-1/2 select-none max-w-none"
-        style={{ top:50, width: 370, }}
+        style={{ width: ROOM_BG_W }}
         draggable={false}
         aria-hidden
       />
-
-      {/* Wall art on the back-left wall */}
-      <img
-        src={`${FURNITURE}/wall/wall_03_left.png`}
-        alt=""
-        className="absolute select-none max-w-none"
-        style={{ top: 50, left: 70, width: 100 }}
-        draggable={false}
-        aria-hidden
-      />
-
-      {/* Bookshelf — back-center, against the back wall */}
-      <img
-        src={`${FURNITURE}/bookshelf/bookshelf_01_left.png`}
-        alt=""
-        className="absolute select-none max-w-none"
-        style={{ top: 180, left: 60, width: 65 }}
-        draggable={false}
-        aria-hidden
-      />
-
-      {/* Desk with laptop, lamp & chair — front-left */}
-      <img
-        src={`${FURNITURE}/desk/desk_01_left.png`}
-        alt=""
-        className="absolute select-none max-w-none"
-        style={{ top: 150, left: 100, width: 100 }}
-        draggable={false}
-        aria-hidden
-      />
-
-      {/* Bean-bag chair — front-right */}
-      <img
-        src={`${FURNITURE}/chair/chair_01_right.png`}
-        alt=""
-        className="absolute select-none max-w-none"
-        style={{ top: 195, right: 30, width: 95 }}
-        draggable={false}
-        aria-hidden
-      />
+      {items.map((it) => (
+        <img
+          key={it.id}
+          src={furnitureSrc(it)}
+          alt=""
+          className="absolute select-none max-w-none"
+          style={{ left: it.x, top: it.y, width: it.width }}
+          draggable={false}
+          aria-hidden
+        />
+      ))}
     </div>
   );
 }

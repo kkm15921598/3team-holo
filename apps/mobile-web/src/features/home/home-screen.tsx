@@ -1,47 +1,17 @@
+import { useState } from "react";
 import badgeImg from "../../badge/badge_01.png";
 import { ProfileAvatar, RoomScene } from "./home-illustrations";
-import { MeetupCard, PlusIcon, RefreshIcon, type Meetup } from "./home-meetup-card";
+import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
+import { pickRandomMeetups } from "./home-meetups-data";
 
 const NICKNAME = "무지는 단무지";
 const LEVEL = 24;
 const TITLE = "#벌레_해결사";
 
-const MEETUPS: Meetup[] = [
-  {
-    id: "1",
-    title: "점심 번개",
-    distance: "500m",
-    duration: "20분",
-    description: "오피스 단지 떡볶이 메이트!",
-    avatars: [
-      { bg: "#F4A261", emoji: "🧑" },
-      { bg: "#E76F51", emoji: "👩" },
-      { bg: "#457B9D", emoji: "🧔" },
-    ],
-  },
-  {
-    id: "2",
-    title: "수박 소분",
-    distance: "350m",
-    duration: "15분",
-    description: "마트에서 산 큰 수박 나눌 분~",
-    avatars: [
-      { bg: "#E9C46A", emoji: "👩" },
-      { bg: "#A8DADC", emoji: "🧓" },
-    ],
-  },
-  {
-    id: "3",
-    title: "편의점 야식",
-    distance: "120m",
-    duration: "5분",
-    description: "혼자 먹긴 많아서요 ㅎㅎ",
-    avatars: [{ bg: "#CDB4DB", emoji: "🧑" }],
-    dim: true,
-  },
-];
-
 export function HomeScreen() {
+  const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
+  const handleRefresh = () => setMeetups((prev) => pickRandomMeetups(3, prev));
+
   return (
     <main className="flex flex-1 flex-col pb-6">
       <section className="relative">
@@ -96,12 +66,17 @@ export function HomeScreen() {
           <span className="font-bold text-holo-purple-mid">{NICKNAME}</span>
           <span className="font-medium text-black">님을 위한</span>
           <span className="font-bold text-holo-purple-mid">추천 모임</span>
-          <button type="button" aria-label="새로고침" className="ml-[2px] flex items-center p-[2px] text-holo-purple-mid">
+          <button
+            type="button"
+            aria-label="새로고침"
+            onClick={handleRefresh}
+            className="ml-[2px] flex items-center rounded-full p-[6px] text-holo-purple-mid transition-colors hover:bg-holo-lilac-card-2 active:bg-holo-lilac-card"
+          >
             <RefreshIcon />
           </button>
         </div>
         <div className="no-scrollbar -mx-[14px] flex gap-3 overflow-x-auto px-[14px] pb-2">
-          {MEETUPS.map((m) => (
+          {meetups.map((m) => (
             <MeetupCard key={m.id} m={m} />
           ))}
         </div>
