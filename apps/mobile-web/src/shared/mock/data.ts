@@ -56,23 +56,59 @@ export const COMMENTS = [
   { id: "3", nickname: "멜론은 키위를 좋아해", content: "떡볶이 가게 이름이 뭐에요?", timeAgo: "7분 전" },
 ];
 
-export const CHATROOMS = [
-  { id: "1", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "2", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
-  { id: "3", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "4", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
-  { id: "5", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "6", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
-  { id: "7", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "8", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
+export type ChatRoom = {
+  id: string;
+  name: string;
+  subtitle: string;
+  isGroup: boolean;
+  lastMessage: string;
+  lastTime: string;
+  unread: number;
+  pinned?: boolean;
+  muted?: boolean;
+  online?: boolean;
+};
+
+export const CHATROOMS: ChatRoom[] = [
+  { id: "1", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true, lastMessage: "내일 7시 한강에서 만나요!", lastTime: "오후 3:15", unread: 3, pinned: true, online: true },
+  { id: "2", name: "껍질은 달걀껍질", subtitle: "1:1", isGroup: false, lastMessage: "사진 보내드렸어요 📸", lastTime: "오후 2:48", unread: 1, online: true },
+  { id: "3", name: "동네 떡볶이 모임", subtitle: "샬랄라움밤바, 외 4명", isGroup: true, lastMessage: "맛있겠다 ㅋㅋㅋ", lastTime: "오후 1:30", unread: 0, pinned: true },
+  { id: "4", name: "감자 없는 카레", subtitle: "1:1", isGroup: false, lastMessage: "넵 알겠습니다~", lastTime: "오전 11:20", unread: 0, muted: true },
+  { id: "5", name: "주말 등산 크루", subtitle: "샬랄라움밤바, 외 7명", isGroup: true, lastMessage: "이번주는 패스할게요!", lastTime: "어제", unread: 12 },
+  { id: "6", name: "멜론은 키위를 좋아해", subtitle: "1:1", isGroup: false, lastMessage: "감사합니다 :)", lastTime: "어제", unread: 0 },
+  { id: "7", name: "공구러 모임 🛒", subtitle: "샬랄라움밤바, 외 12명", isGroup: true, lastMessage: "수박 소분 마감입니다", lastTime: "5/7", unread: 0, muted: true },
+  { id: "8", name: "무지는 단무지", subtitle: "1:1", isGroup: false, lastMessage: "다음에 또 봐요!", lastTime: "5/5", unread: 0 },
 ];
 
-export const CHAT_MESSAGES = [
-  { id: "1", nickname: "닉네임", content: "안녕하세요 :D", time: "15:08", mine: false },
-  { id: "2", nickname: "닉네임", content: "러닝 크루 모집하시는거 맞으세요?", time: "15:08", mine: false },
-  { id: "3", nickname: "", content: "안녕하세요 :D", time: "15:08", mine: true },
-  { id: "4", nickname: "닉네임", content: "안녕하세요! 반가워요", time: "15:08", mine: false },
+export type ChatMessageReaction = { emoji: string; count: number; mine?: boolean };
+
+export type ChatMessage = {
+  id: string;
+  nickname: string;
+  content: string;
+  time: string;
+  mine: boolean;
+  date?: string; // YYYY-MM-DD, 첫 메시지에만
+  type?: "text" | "image" | "system";
+  imageUrl?: string;
+  read?: boolean; // 내가 보낸 메시지의 읽음 여부
+  readBy?: number; // 단톡방 안 읽은 사람 수
+  replyTo?: { nickname: string; content: string };
+  reactions?: ChatMessageReaction[];
+};
+
+export const CHAT_MESSAGES: ChatMessage[] = [
+  { id: "0", nickname: "", content: "샬랄라움밤바님이 들어왔습니다", time: "", mine: false, date: "2026-05-08", type: "system" },
+  { id: "1", nickname: "무지는 단무지", content: "안녕하세요 :D", time: "15:05", mine: false },
+  { id: "2", nickname: "무지는 단무지", content: "러닝 크루 모집하시는거 맞으세요?", time: "15:05", mine: false, reactions: [{ emoji: "👍", count: 2 }] },
+  { id: "3", nickname: "", content: "네 맞아요! 매주 화/목 7시예요 🏃‍♀️", time: "15:08", mine: true, read: true, date: "2026-05-09" },
+  { id: "4", nickname: "감자튀김", content: "오 저도 참가하고 싶어요!", time: "15:09", mine: false, replyTo: { nickname: "샬랄라움밤바", content: "네 맞아요! 매주 화/목 7시예요 🏃‍♀️" } },
+  { id: "5", nickname: "", content: "환영해요~", time: "15:10", mine: true, read: true, reactions: [{ emoji: "❤️", count: 1, mine: false }, { emoji: "🎉", count: 2, mine: true }] },
+  { id: "6", nickname: "무지는 단무지", content: "한강 어디서 모이나요?", time: "15:11", mine: false },
+  { id: "7", nickname: "", content: "반포 한강공원 8번 출구 앞이에요!", time: "15:12", mine: true, read: false, readBy: 1 },
 ];
+
+export const CHAT_QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 export const CHAT_MEMBERS = [
   { id: "self", nickname: "샬랄라움밤바", isMe: true, isHost: false },
