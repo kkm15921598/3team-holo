@@ -56,28 +56,79 @@ export const COMMENTS = [
   { id: "3", nickname: "멜론은 키위를 좋아해", content: "떡볶이 가게 이름이 뭐에요?", timeAgo: "7분 전" },
 ];
 
-export const CHATROOMS = [
-  { id: "1", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "2", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
-  { id: "3", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "4", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
-  { id: "5", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "6", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
-  { id: "7", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: true },
-  { id: "8", name: "다같이 러닝해요", subtitle: "샬랄라움밤바", isGroup: false },
+export type MeetingInfo = {
+  date: string; // 예: "5/10 (토)"
+  time: string; // 예: "오후 7:00"
+  place: string; // 예: "반포 한강공원"
+};
+
+export type ChatRoom = {
+  id: string;
+  name: string;
+  subtitle: string;
+  isGroup: boolean;
+  memberCount: number; // 1:1은 2, 그룹은 3 이상
+  memberNames?: string[]; // 그룹방의 멤버 닉네임 (자기 제외)
+  lastMessage: string;
+  lastTime: string;
+  unread: number;
+  pinned?: boolean;
+  muted?: boolean;
+  online?: boolean;
+  meeting?: MeetingInfo;
+};
+
+export const CHATROOMS: ChatRoom[] = [
+  { id: "1", name: "다같이 러닝해요", subtitle: "무지는 단무지", isGroup: true, memberCount: 6, lastMessage: "내일 7시 한강에서 만나요!", lastTime: "오후 3:15", unread: 3, pinned: true, online: true, meeting: { date: "5/10 (화)", time: "오후 7:00", place: "반포 한강공원 8번 출구" } },
+  { id: "2", name: "껍질은 달걀껍질", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "사진 보내드렸어요 📸", lastTime: "오후 2:48", unread: 1, online: true },
+  { id: "3", name: "동네 떡볶이 모임", subtitle: "무지는 단무지, 외 4명", isGroup: true, memberCount: 5, lastMessage: "맛있겠다 ㅋㅋㅋ", lastTime: "오후 1:30", unread: 0, pinned: true, meeting: { date: "5/11 (수)", time: "오후 6:30", place: "정자동 떡볶이천국" } },
+  { id: "4", name: "감자 없는 카레", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "넵 알겠습니다~", lastTime: "오전 11:20", unread: 0, muted: true },
+  { id: "5", name: "주말 등산 크루", subtitle: "무지는 단무지, 외 7명", isGroup: true, memberCount: 8, lastMessage: "이번주는 패스할게요!", lastTime: "어제", unread: 12, meeting: { date: "5/14 (토)", time: "오전 6:00", place: "관악산 사당역 입구" } },
+  { id: "6", name: "멜론은 키위를 좋아해", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "감사합니다 :)", lastTime: "어제", unread: 0 },
+  { id: "7", name: "공구러 모임 🛒", subtitle: "무지는 단무지, 외 12명", isGroup: true, memberCount: 13, lastMessage: "수박 소분 마감입니다", lastTime: "5/7", unread: 0, muted: true, meeting: { date: "5/9 (월)", time: "오후 8:00", place: "분당 정자동 마트 앞" } },
+  { id: "8", name: "토마토킹", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "다음에 또 봐요!", lastTime: "5/5", unread: 0 },
 ];
 
-export const CHAT_MESSAGES = [
-  { id: "1", nickname: "닉네임", content: "안녕하세요 :D", time: "15:08", mine: false },
-  { id: "2", nickname: "닉네임", content: "러닝 크루 모집하시는거 맞으세요?", time: "15:08", mine: false },
-  { id: "3", nickname: "", content: "안녕하세요 :D", time: "15:08", mine: true },
-  { id: "4", nickname: "닉네임", content: "안녕하세요! 반가워요", time: "15:08", mine: false },
+export type ChatMessageReaction = { emoji: string; count: number; mine?: boolean };
+
+export type ChatMessage = {
+  id: string;
+  nickname: string;
+  content: string;
+  time: string;
+  mine: boolean;
+  date?: string; // YYYY-MM-DD, 첫 메시지에만
+  type?: "text" | "image" | "system" | "file" | "location";
+  imageUrl?: string;
+  // 파일 첨부
+  fileName?: string;
+  fileSize?: number; // bytes
+  fileMime?: string;
+  // 위치 첨부
+  location?: { lat: number; lng: number; address?: string };
+  read?: boolean; // 내가 보낸 메시지의 읽음 여부
+  readBy?: number; // 단톡방 안 읽은 사람 수
+  replyTo?: { nickname: string; content: string };
+  reactions?: ChatMessageReaction[];
+};
+
+export const CHAT_MESSAGES: ChatMessage[] = [
+  { id: "0", nickname: "", content: "무지는 단무지님이 들어왔습니다", time: "", mine: false, date: "2026-05-08", type: "system" },
+  { id: "1", nickname: "무지는 단무지", content: "안녕하세요 :D", time: "15:05", mine: false },
+  { id: "2", nickname: "무지는 단무지", content: "러닝 크루 모집하시는거 맞으세요?", time: "15:05", mine: false, reactions: [{ emoji: "👍", count: 2 }] },
+  { id: "3", nickname: "", content: "네 맞아요! 매주 화/목 7시예요 🏃‍♀️", time: "15:08", mine: true, read: true, date: "2026-05-09" },
+  { id: "4", nickname: "감자튀김", content: "오 저도 참가하고 싶어요!", time: "15:09", mine: false, replyTo: { nickname: "무지는 단무지", content: "네 맞아요! 매주 화/목 7시예요 🏃‍♀️" } },
+  { id: "5", nickname: "", content: "환영해요~", time: "15:10", mine: true, read: true, reactions: [{ emoji: "❤️", count: 1, mine: false }, { emoji: "🎉", count: 2, mine: true }] },
+  { id: "6", nickname: "무지는 단무지", content: "한강 어디서 모이나요?", time: "15:11", mine: false },
+  { id: "7", nickname: "", content: "반포 한강공원 8번 출구 앞이에요!", time: "15:12", mine: true, read: false, readBy: 1 },
 ];
+
+export const CHAT_QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 export const CHAT_MEMBERS = [
-  { id: "self", nickname: "샬랄라움밤바", isMe: true, isHost: false },
-  { id: "host", nickname: "무지는단무지", isMe: false, isHost: true },
-  { id: "member", nickname: "감자튀김", isMe: false, isHost: false },
+  { id: "self", nickname: "무지는 단무지", isMe: true, isHost: false },
+  { id: "host", nickname: "감자튀김", isMe: false, isHost: true },
+  { id: "member", nickname: "껍질은 달걀껍질", isMe: false, isHost: false },
 ];
 
 export const POINT_HISTORY = [
@@ -134,18 +185,17 @@ export const BADGES = [
 ];
 
 export const FRIENDS = [
-  { id: "1", nickname: "무지는 단무지", avatarBg: "#FCEBB5" },
   { id: "2", nickname: "껍질은 달걀껍질", avatarBg: "#C7BDFF" },
   { id: "3", nickname: "감자 없는 카레", avatarBg: "#FFCFCF" },
-  { id: "4", nickname: "껍질은 달걀껍질", avatarBg: "#FCEBB5" },
-  { id: "5", nickname: "무지는 단무지", avatarBg: "#CCBCE0" },
-  { id: "6", nickname: "껍질은 달걀껍질", avatarBg: "#DDC0FF" },
-  { id: "7", nickname: "무지는 단무지", avatarBg: "#FCEBB5" },
-  { id: "8", nickname: "껍질은 달걀껍질", avatarBg: "#C7BDFF" },
-  { id: "9", nickname: "감자 없는 카레", avatarBg: "#CAE4B9" },
-  { id: "10", nickname: "껍질은 달걀껍질", avatarBg: "#FCEBB5" },
-  { id: "11", nickname: "무지는 단무지", avatarBg: "#FFCFCF" },
-  { id: "12", nickname: "껍질은 달걀껍질", avatarBg: "#DDC0FF" },
+  { id: "4", nickname: "감자튀김", avatarBg: "#FCEBB5" },
+  { id: "5", nickname: "멜론은 키위", avatarBg: "#CCBCE0" },
+  { id: "6", nickname: "토마토킹", avatarBg: "#DDC0FF" },
+  { id: "7", nickname: "당근소년", avatarBg: "#FCEBB5" },
+  { id: "8", nickname: "참치는 등푸른", avatarBg: "#C7BDFF" },
+  { id: "9", nickname: "수박나라", avatarBg: "#CAE4B9" },
+  { id: "10", nickname: "라면 한 봉지", avatarBg: "#FCEBB5" },
+  { id: "11", nickname: "치즈볶이", avatarBg: "#FFCFCF" },
+  { id: "12", nickname: "닭볶음탕수", avatarBg: "#DDC0FF" },
 ];
 
 export const ATTENDANCE_DAYS = [
