@@ -31,9 +31,9 @@ export function AppHeader({
               <span className="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-holo-error" />
             )}
           </button>
-          <button type="button" aria-label="AI 추천">
+          <Link to="/myroom" aria-label="마이룸 꾸미기">
             <WandIcon />
-          </button>
+          </Link>
         </div>
       )}
     </header>

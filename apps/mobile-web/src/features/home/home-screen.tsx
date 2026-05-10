@@ -1,142 +1,106 @@
-const NICKNAME = "무지는 단무지";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { getBadgeByName } from "../../badge";
+import { ME_PERSONA } from "./home-faces";
+import { RoomScene } from "./home-illustrations";
+import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
+import { pickRandomMeetups } from "./home-meetups-data";
+import { useStatusMessage } from "../myroom/myroom-store";
+
+const NICKNAME = "무지는단무지";
 const LEVEL = 24;
 const TITLE = "#벌레_해결사";
-
-type Meetup = {
-  id: string;
-  title: string;
-  distance: string;
-  duration: string;
-  description: string;
-};
-
-const MEETUPS: Meetup[] = [
-  { id: "1", title: "점심 번개", distance: "500m", duration: "20분", description: "오피스 단지 떡볶이 메이트!" },
-  { id: "2", title: "수박 소분", distance: "350m", duration: "15분", description: "마트에서 산 큰 수박 나눌 분~" },
-  { id: "3", title: "코스트코 소분", distance: "700m", duration: "50분", description: "코스트코에서 함께 장 보고 나눌 분~" },
-  { id: "4", title: "러닝 메이트", distance: "200m", duration: "60분", description: "다같이 러닝해요" },
-];
+/** 메인 프로필에 표시할 뱃지 — 한글 이름으로 지정 */
+const BADGE = getBadgeByName("HOLO 수호신");
 
 export function HomeScreen() {
-  return (
-    <main className="flex flex-1 flex-col">
-      {/* Hero */}
-      <section className="relative px-4 pt-2">
-        <div className="relative overflow-hidden rounded-holo-card bg-holo-hero">
-          <img
-            src="/illustrations/home-hero.png"
-            alt=""
-            className="h-[280px] w-full object-cover"
-            aria-hidden
-          />
-          {/* 상태 메시지 말풍선 */}
-          <div className="absolute right-6 top-20 rounded-full bg-white px-3 py-1.5 text-[12px] text-holo-ink shadow-md">
-            상태 메시지
-          </div>
-        </div>
+  const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
+  const handleRefresh = () => setMeetups((prev) => pickRandomMeetups(3, prev));
+  const status = useStatusMessage();
 
-        {/* Profile card overlapping */}
-        <div className="-mt-7 flex items-center gap-3 rounded-holo-card bg-holo-surface p-3 shadow-holo-card">
-          <div className="h-12 w-12 shrink-0 rounded-full bg-holo-yellow-room" />
-          <div className="flex flex-1 flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="rounded-[4px] bg-holo-gradient px-2 py-0.5 text-[11px] font-semibold text-white">
+  return (
+    <main className="flex flex-1 flex-col pb-6">
+      <section className="relative">
+        <div
+          className="relative mx-auto h-[420px] w-[calc(100%)] overflow-visible rounded-b-[40px] bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url(/illustrations/home-hero.png)" }}
+        >
+          <div className="absolute left-0 right-0 top-[10px] flex justify-center">
+            <RoomScene />
+          </div>
+
+          <div className="absolute right-[42px] top-[148px] z-[5] whitespace-nowrap rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]">
+            {status}
+            <span
+              className="absolute h-0 w-0"
+              style={{
+                bottom: "-8px",
+                left: "12px",
+                borderLeft: "5px solid transparent",
+                borderRight: "5px solid transparent",
+                borderTop: "8px solid #fff",
+              }}
+            />
+          </div>
+
+          <div className="absolute -bottom-[44px] left-1/2 z-[6] flex h-[88px] w-[319px] -translate-x-1/2 items-center gap-[14px] rounded-[20px] bg-holo-surface px-4 shadow-[0_4px_16px_rgba(116,72,221,0.1)]">
+            <div className="relative h-[63px] w-[63px] shrink-0">
+              <img
+                src={ME_PERSONA.face}
+                alt={ME_PERSONA.name}
+                className="h-[63px] w-[63px] rounded-full object-cover"
+                draggable={false}
+              />
+              <div
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[4px] px-[9px] py-[3px] text-[12px] font-bold text-white"
+                style={{ background: "linear-gradient(to right,#542BB4,#E95AA4)" }}
+              >
                 Lv.{LEVEL}
-              </span>
-              <span className="text-[15px] font-semibold text-holo-ink">{NICKNAME}</span>
+              </div>
             </div>
-            <span className="text-[12px] text-holo-ink-3">{TITLE}</span>
+            <div className="min-w-0 flex-1">
+              <div className="mb-[6px] flex items-center gap-2">
+                <span className="text-[20px] font-bold text-holo-ink">{NICKNAME}</span>
+                {BADGE && (
+                  <img src={BADGE.src} alt={BADGE.name} title={BADGE.name} className="h-[27px] w-[27px] object-contain" />
+                )}
+              </div>
+              <div className="text-[15px] text-[#A9A9A9]">{TITLE}</div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Recommendation header */}
-      <section className="px-4 pt-6">
-        <p className="text-[14px] text-holo-ink-2">어떤 모임에 들어갈지 고민되시나요?</p>
-        <div className="mt-1 flex items-center justify-between">
-          <p className="text-[15px] font-semibold text-holo-ink">
-            <span className="text-holo-purple-mid">{NICKNAME}</span> 님을 위한 <span className="text-holo-purple-mid">추천 모임</span>
-          </p>
-          <button type="button" aria-label="새로고침" className="text-holo-purple-mid">
+      <section className="mt-[68px] px-[14px]">
+        <p className="mb-[3px] text-[15px] text-[#8E8E8E]">어떤 모임에 들어갈지 고민되시나요?</p>
+        <div className="mb-[14px] flex items-center gap-[6px] text-[18px]">
+          <span className="font-bold text-holo-purple-mid">{NICKNAME}</span>
+          <span className="font-medium text-black">님을 위한</span>
+          <span className="font-bold text-holo-purple-mid">추천 모임</span>
+          <button
+            type="button"
+            aria-label="새로고침"
+            onClick={handleRefresh}
+            className="ml-[2px] flex items-center rounded-full p-[6px] text-holo-purple-mid transition-colors hover:bg-holo-lilac-card-2 active:bg-holo-lilac-card"
+          >
             <RefreshIcon />
           </button>
         </div>
-      </section>
-
-      {/* Meetup cards horizontal scroll */}
-      <section className="-mx-4 mt-3 overflow-x-auto px-4 pb-4">
-        <div className="flex w-max gap-3">
-          {MEETUPS.map((m) => (
-            <article
-              key={m.id}
-              className="flex h-[150px] w-[170px] shrink-0 flex-col justify-between rounded-holo-tile bg-holo-lilac-card p-3"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[14px] font-semibold text-holo-ink">{m.title}</p>
-                  <p className="mt-1 text-[11px] text-holo-ink-3">
-                    {m.distance} · {m.duration}
-                  </p>
-                </div>
-                <ArrowChip />
-              </div>
-              <p className="text-[12px] leading-snug text-holo-ink-2">{m.description}</p>
-              <div className="flex">
-                <AvatarStack />
-              </div>
-            </article>
+        <div className="no-scrollbar -mx-[14px] flex gap-3 overflow-x-auto px-[14px] pb-2">
+          {meetups.map((m) => (
+            <MeetupCard key={m.id} m={m} />
           ))}
         </div>
       </section>
 
-      {/* FAB */}
-      <button
-        type="button"
+      <Link
+        to="/board/write"
         aria-label="모임 만들기"
-        className="fixed bottom-[88px] right-1/2 z-10 flex h-[50px] w-[50px] translate-x-[160px] items-center justify-center rounded-full bg-holo-gradient text-white shadow-md"
+        className="fixed bottom-[103px] left-1/2 z-20 flex h-[52px] w-[52px] translate-x-[110px] items-center justify-center rounded-full text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.5)]"
+        style={{ background: "linear-gradient(135deg,#542BB4,#E95AA4)" }}
       >
         <PlusIcon />
-      </button>
+      </Link>
     </main>
-  );
-}
-
-function RefreshIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 12a9 9 0 0 1 15.5-6.4L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-15.5 6.4L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  );
-}
-function ArrowChip() {
-  return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-holo-lilac-light text-white">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M7 17 17 7" />
-        <path d="M8 7h9v9" />
-      </svg>
-    </span>
-  );
-}
-function AvatarStack() {
-  return (
-    <div className="flex -space-x-2">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-5 w-5 rounded-full border-2 border-holo-lilac-card bg-holo-yellow-room"
-        />
-      ))}
-    </div>
-  );
-}
-function PlusIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>
-      <path d="M12 5v14M5 12h14" />
-    </svg>
   );
 }
