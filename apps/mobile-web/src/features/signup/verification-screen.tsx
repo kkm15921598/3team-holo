@@ -143,11 +143,11 @@ function CarrierSheet({
 }) {
   return (
     <div
-      className="fixed inset-0 z-20 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-20 bg-black/40"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[360px] rounded-t-[15px] bg-white px-5 pb-8 pt-3"
+        className="absolute bottom-0 left-1/2 w-full -translate-x-1/2 rounded-t-[15px] bg-white px-5 pb-8 pt-3 md:max-w-[360px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-4 h-[6px] w-[70px] rounded-full bg-holo-line" />

@@ -81,6 +81,20 @@
   body,
   #root {
     height: 100%;
+    /* 가로 스크롤만 차단 (세로는 자유롭게) */
+    overflow-x: hidden;
+    /* 가로 방향 bounce/rubber-band만 차단, 세로 스크롤은 그대로 */
+    overscroll-behavior-x: none;
+    /* 세로 패닝만 허용 → 좌우 swipe 무시 */
+    touch-action: pan-y;
+    /* 데스크톱에서 우측 스크롤바 숨김 */
+    -ms-overflow-style: none; /* IE / old Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    display: none; /* Chrome / Safari / modern Edge */
   }
   body {
     @apply font-paperlogy text-holo-ink antialiased;
@@ -91,6 +105,18 @@
 @layer components {
   /* 모바일 화면(360px)을 데스크탑에서 둘러싼 프레임 */
   .device-frame {
-    @apply mx-auto flex min-h-screen w-full max-w-[360px] flex-col bg-white shadow-xl;
+    /* 모바일: 화면 풀폭, 데스크톱(md ≥ 768px): 360px 시뮬레이터 */
+    @apply mx-auto flex min-h-screen w-full flex-col bg-white shadow-xl md:max-w-[360px];
+  }
+}
+
+@layer utilities {
+  /* 스크롤바 숨김 (Chrome/Safari/Edge/Firefox/IE 모두 대응) */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE, old Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, modern Edge */
   }
 }
