@@ -54,35 +54,23 @@ export function addMembersToRoom(id: string, nicknames: string[]) {
   setRooms((prev) =>
     prev.map((r) => {
       if (r.id !== id || !r.isGroup) return r;
-      const existing = new Set(r.memberNames ?? []);
-      const newMembers = nicknames.filter((n) => !existing.has(n));
-      const updatedMemberNames = [...(r.memberNames ?? []), ...newMembers];
-      // 이름은 "첫 멤버, 외 N명" 형식 (N = 첫 멤버 제외한 나머지 + 나)
-      const totalOthersForLabel = updatedMemberNames.length; // = memberCount - 1
-      const updatedName =
-        updatedMemberNames.length > 0
-          ? `${updatedMemberNames[0]}, 외 ${totalOthersForLabel}명`
-          : r.name;
+      const existing = new Set(r.members?.map((m) => m.nickname) ?? []);
+      const newMembers = nicknames
+        .filter((n) => !existing.has(n))
+        .map((n) => ({ id: `m-${Date.now()}-${n}`, nickname: n, isMe: false, isHost: false }));
       return {
         ...r,
-        memberNames: updatedMemberNames,
-        memberCount: updatedMemberNames.length + 1, // +1 for self
-        name: updatedName,
-        subtitle: updatedMemberNames.join(", "),
+        memberCount: r.memberCount + newMembers.length,
+        members: [...(r.members ?? []), ...newMembers],
       };
     }),
   );
 }
-
-// React 컴포넌트가 store 변경을 구독하기 위한 훅
-export function useRooms(): ChatRoom[] {
+export function useRooms() {
   const [, setTick] = useState(0);
   useEffect(() => {
-    const listener = () => setTick((t) => t + 1);
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
   }, []);
-  return rooms;
+  return getRooms();
 }

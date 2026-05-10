@@ -205,6 +205,5 @@ export const ATTENDANCE_DAYS = [
   { day: 4, reward: "500P" },
   { day: 5 },
   { day: 6 },
-  { day: 7, reward: "500P" },
-  { day: 8, allClear: true, reward: "1500P" },
+  { day : 7, reward: "1000P" },
 ];

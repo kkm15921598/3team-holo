@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FRIENDS, type ChatRoom } from "@/shared/mock/data";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
+import { RoomSceneView, randomRoomFurniture } from "@/features/home/home-illustrations";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
-// 닉네임 기반 안정 해시 (avatars.ts와 동일 로직)
 function hashString(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {
@@ -19,7 +20,6 @@ const BADGE_POOL = ["🍩", "🥗", "🍰", "🌟", "🎯", "🏆"];
 
 function buildOtherUser(nickname: string) {
   const h = hashString(nickname);
-  // 닉네임 기반 일관된 임의 값 (>>> 로 unsigned 보장)
   return {
     nickname,
     level: 1 + (h % 30),
@@ -37,8 +37,49 @@ export function ProfileDetailScreen() {
   const nickname = id ? decodeURIComponent(id) : "샬랄라 움밤바";
   const user = useMemo(() => buildOtherUser(nickname), [nickname]);
   const isFriend = FRIENDS.some((f) => f.nickname === nickname);
+  const friendRoom = useMemo(() => randomRoomFurniture(nickname), [nickname]);
+  const [confirm, setConfirm] = useState<{
+    message: ReactNode;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
-  // 이 유저와의 1:1 채팅방으로 이동 (없으면 새로 생성)
+  const askBlock = () =>
+    setConfirm({
+      message: (
+        <>
+          <strong>{nickname}</strong>님을 차단하시겠습니까?
+          <br />
+          <span className="text-[13px] font-normal text-holo-ink-2">
+            차단하면 더 이상 게시글·메시지를 받을 수 없어요.
+          </span>
+        </>
+      ),
+      onConfirm: () => {
+        setConfirm(null);
+        // TODO: 실제 차단 처리 — 모의 데이터에서는 별도 동작 없음
+        navigate(-1);
+      },
+    });
+
+  const askReport = () =>
+    setConfirm({
+      message: (
+        <>
+          <strong>{nickname}</strong>님을 신고하시겠습니까?
+          <br />
+          <span className="text-[13px] font-normal text-holo-ink-2">
+            운영팀에서 검토 후 조치해드려요.
+          </span>
+        </>
+      ),
+      onConfirm: () => {
+        setConfirm(null);
+        // TODO: 실제 신고 처리
+        navigate(-1);
+      },
+    });
+
   const goToChat = () => {
     const existing = getRooms().find(
       (r) => !r.isGroup && r.name === nickname,
@@ -64,8 +105,8 @@ export function ProfileDetailScreen() {
   };
 
   return (
-    <main className="flex flex-1 flex-col">
-      <section className="relative overflow-hidden rounded-b-[28px] bg-holo-hero pb-12">
+    <main className="no-scrollbar relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <section className="relative rounded-b-[40px] bg-holo-hero pb-12">
         <button
           type="button"
           aria-label="닫기"
@@ -74,15 +115,12 @@ export function ProfileDetailScreen() {
         >
           <CloseIcon />
         </button>
-        <img
-          src="/illustrations/home-hero.png"
-          alt=""
-          className="h-[260px] w-full object-cover"
-          aria-hidden
-        />
+        <div className="flex h-[340px] w-full items-start justify-center pt-[10px]">
+          <RoomSceneView items={friendRoom} />
+        </div>
       </section>
 
-      <section className="-mt-12 flex flex-col items-center px-4">
+      <section className="absolute left-0 right-0 top-[306px] z-20 flex flex-col items-center px-4">
         <img
           src={getAvatarUrl(user.nickname)}
           alt=""
@@ -96,7 +134,7 @@ export function ProfileDetailScreen() {
           {user.title} <span>{user.badgeIcon}</span>
         </p>
 
-        <div className="mt-6 flex w-full items-center justify-around">
+        <div className="mt-6 flex w-full items-center">
           <Stat label="게시글" value={user.postsCount} />
           <span className="h-8 w-px bg-holo-line" />
           <Stat label="댓글" value={user.commentsCount} />
@@ -125,21 +163,29 @@ export function ProfileDetailScreen() {
         </div>
 
         <div className="mt-6 flex w-full items-center justify-around text-[14px] text-holo-ink-3">
-          <button type="button" className="flex items-center gap-1">
+          <button type="button" className="flex items-center gap-1" onClick={askBlock}>
             <BlockIcon /> 차단하기
           </button>
-          <button type="button" className="flex items-center gap-1">
+          <button type="button" className="flex items-center gap-1" onClick={askReport}>
             <FlagIcon /> 신고하기
           </button>
         </div>
       </section>
+
+      <ConfirmModal
+        open={confirm !== null}
+        message={confirm?.message ?? null}
+        confirmLabel={confirm?.confirmLabel}
+        onConfirm={() => confirm?.onConfirm()}
+        onCancel={() => setConfirm(null)}
+      />
     </main>
   );
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-1 flex-col items-center">
       <span className="text-[12px] text-holo-ink-2">{label}</span>
       <span className="mt-1 text-[20px] font-black text-holo-purple-mid">{value}</span>
     </div>

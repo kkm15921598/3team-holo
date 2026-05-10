@@ -197,11 +197,12 @@ function formatId(v: string) {
   if (v.length <= 6) return v;
   const front = v.slice(0, 6);
   const back = v.slice(6, 7);
-  return `${front} - ${back}******`;
+  return `${front} - ${back}***`;
 }
-function formatPhone(v: string) {
-  if (!v) return "";
-  if (v.length < 4) return v;
-  if (v.length < 8) return `${v.slice(0, 3)}-${v.slice(3)}`;
-  return `${v.slice(0, 3)}-${v.slice(3, 7)}-${v.slice(7)}`;
+
+function formatPhone(v: string): string {
+  const digits = v.replace(/\D/g, "").slice(0, 11);
+  if (digits.length < 4) return digits;
+  if (digits.length < 8) return `${digits.slice(0,3)}-${digits.slice(3)}`;
+  return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
 }

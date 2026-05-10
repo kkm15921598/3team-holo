@@ -481,7 +481,7 @@ export function ChatRoomScreen() {
 
   return (
     <main
-      className="flex flex-col overflow-hidden px-4 pt-3 pb-3"
+      className="relative flex flex-col overflow-hidden px-4 pt-3 pb-3"
       style={{ height: "calc(100dvh - 56px - 72px)" }}
     >
       {/* 첨부용 hidden file inputs */}
@@ -700,7 +700,7 @@ export function ChatRoomScreen() {
       </article>
 
       {/* 입력바: 탭바(72px) 바로 위에 fixed 고정. device-frame 폭(max 360px)에 맞춤 */}
-      <div className="fixed bottom-[72px] left-1/2 z-10 w-full md:max-w-[360px] -translate-x-1/2 border-t border-holo-line-3 bg-white">
+      <div className="absolute bottom-0 left-0 right-0 z-10 border-t border-holo-line-3 bg-white">
         {/* 답장 미리보기 */}
         {reply && (
           <div className="flex items-start gap-2 bg-holo-surface-2 px-3 py-2">
@@ -1612,43 +1612,37 @@ function InviteFriendsModal({
           ) : (
             filtered.map((f) => {
               const isSelected = selected.has(f.id);
+              const disabled = f.already;
               return (
-                <li key={f.id}>
-                  <button
-                    type="button"
-                    disabled={f.already}
-                    onClick={() => toggle(f.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 ${
-                      f.already ? "opacity-40" : "hover:bg-holo-surface-2"
+                <li
+                  key={f.id}
+                  className={`flex items-center gap-3 rounded-lg px-2 py-2 ${
+                    disabled ? "opacity-40" : "cursor-pointer hover:bg-holo-surface-2"
+                  }`}
+                  onClick={() => !disabled && toggle(f.id)}
+                >
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      isSelected
+                        ? "border-holo-purple-mid bg-holo-purple-mid text-white"
+                        : "border-holo-line"
                     }`}
                   >
-                    <img
-                      src={getAvatarUrl(f.nickname)}
-                      alt=""
-                      className="h-9 w-9 shrink-0 rounded-full object-cover"
-                      style={{ backgroundColor: f.avatarBg }}
-                    />
-                    <span className="flex-1 text-left text-[14px] text-holo-ink">
-                      {f.nickname}
-                    </span>
-                    {f.already ? (
-                      <span className="text-[10px] text-holo-ink-3">이미 참여</span>
-                    ) : (
-                      <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                          isSelected
-                            ? "border-holo-purple-mid bg-holo-purple-mid"
-                            : "border-holo-line-3"
-                        }`}
-                      >
-                        {isSelected && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m5 12 5 5 9-11" />
-                          </svg>
-                        )}
-                      </span>
+                    {isSelected && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                        <path d="m5 12 5 5 9-9" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     )}
-                  </button>
+                  </span>
+                  <img
+                    src={getAvatarUrl(f.nickname)}
+                    alt=""
+                    className="h-9 w-9 rounded-full bg-holo-yellow-room object-cover"
+                  />
+                  <span className="flex-1 truncate text-[14px] text-holo-ink">{f.nickname}</span>
+                  {disabled && (
+                    <span className="text-[11px] text-holo-ink-3">이미 참여중</span>
+                  )}
                 </li>
               );
             })
@@ -1657,6 +1651,107 @@ function InviteFriendsModal({
       </div>
     </div>
   );
+}
+
+function BackIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+function MenuIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="m6 6 12 12M6 18 18 6" />
+    </svg>
+  );
+}
+function CloseSmallIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="m6 6 12 12M6 18 18 6" />
+    </svg>
+  );
+}
+function SearchSmallIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+function PinSmallIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79L4 14h16l-3.89-1.45A2 2 0 0 1 15 10.76V5h-1a2 2 0 0 1-2-2 2 2 0 0 1-2 2H9z" />
+    </svg>
+  );
+}
+function ChevronRightSmallIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+function PlusIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function SendIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11 21 3l-8 18-2-8z" />
+    </svg>
+  );
+}
+function CrownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFCB3B" stroke="#FFCB3B" strokeWidth="1" aria-hidden>
+      <path d="m3 18 2-9 5 4 2-7 2 7 5-4 2 9z" />
+    </svg>
+  );
+}
+function UserPlusIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21c0-4 3.6-7 7-7s7 3 7 7" />
+      <path d="M19 8v6M16 11h6" />
+    </svg>
+  );
+}
+function FileIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+function formatPhone(v: string): string {
+  const digits = v.replace(/\D/g, "").slice(0, 11);
+  if (digits.length < 4) return digits;
+  if (digits.length < 8) return `${digits.slice(0,3)}-${digits.slice(3)}`;
+  return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
 }
 
 function AlertModal({
@@ -1672,147 +1767,48 @@ function AlertModal({
   onConfirm?: () => void;
   onClose: () => void;
 }) {
-  // onConfirm이 있으면 확인/취소 두 버튼, 없으면 알림용 단일 확인 버튼
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-[300px] overflow-hidden rounded-[14px] bg-white">
-        <div className="px-5 pt-5 pb-4 text-center">
-          <p className="text-[15px] font-semibold text-holo-ink">{title}</p>
-          {description && (
-            <p className="mt-1.5 text-[12px] text-holo-ink-3">{description}</p>
-          )}
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-6"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[300px] overflow-hidden rounded-[14px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+      >
+        <div className="px-5 pt-6 pb-2 text-center text-[15px] font-semibold leading-snug text-holo-ink">
+          {title}
         </div>
-        <div className="flex border-t border-holo-line">
-          {onConfirm ? (
+        {description && (
+          <div className="px-5 pb-5 text-center text-[13px] leading-snug text-holo-ink-2">
+            {description}
+          </div>
+        )}
+        <div className="flex bg-[#1A1A1A] text-white">
+          {onConfirm && (
             <>
               <button
                 type="button"
-                onClick={onClose}
-                className="flex-1 border-r border-holo-line py-3 text-[14px] text-holo-ink-2"
+                onClick={() => { onConfirm(); onClose(); }}
+                className={`flex-1 py-3 text-center text-[15px] font-medium ${danger ? "text-[#FF6B6B]" : ""}`}
               >
-                취소
+                네
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onConfirm();
-                }}
-                className={`flex-1 py-3 text-[14px] font-semibold ${
-                  danger ? "text-red-500" : "text-holo-purple-mid"
-                }`}
-              >
-                확인
-              </button>
+              <span className="w-px self-stretch bg-white/30" aria-hidden />
             </>
-          ) : (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 text-[14px] font-semibold text-holo-purple-mid"
-            >
-              확인
-            </button>
           )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3 text-center text-[15px] font-medium"
+          >
+            {onConfirm ? "아니오" : "확인"}
+          </button>
         </div>
       </div>
     </div>
-  );
-}
-
-function BackIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-function MenuIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <path d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-function CloseIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <path d="m6 6 12 12M6 18 18 6" />
-    </svg>
-  );
-}
-function SendIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 11 21 3l-8 18-2-8z" />
-    </svg>
-  );
-}
-function PlusIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-function SearchSmallIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3-3" />
-    </svg>
-  );
-}
-function FileIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function CloseSmallIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <path d="m6 6 12 12M6 18 18 6" />
-    </svg>
-  );
-}
-function PinSmallIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 22s7-7 7-13a7 7 0 0 0-14 0c0 6 7 13 7 13z" />
-      <circle cx="12" cy="9" r="2.5" />
-    </svg>
-  );
-}
-function ChevronRightSmallIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
-function CrownIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="#FFCB3B" stroke="#FFCB3B" strokeWidth="1" aria-hidden>
-      <path d="m3 18 2-9 5 4 2-7 2 7 5-4 2 9z" />
-    </svg>
-  );
-}
-function UserPlusIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="9" cy="8" r="4" />
-      <path d="M2 21c0-4 3.6-7 7-7s7 3 7 7" />
-      <path d="M19 8v6M16 11h6" />
-    </svg>
   );
 }
