@@ -9,6 +9,7 @@ import {
   toggleMuted,
   useRooms,
 } from "./rooms-store";
+import { getMessagesForRoom } from "./messages-store";
 import { getAvatarUrl } from "./avatars";
 
 type Filter = "all" | "unread" | "groups" | "meetings";
@@ -55,11 +56,24 @@ export function ChatListScreen() {
     let list = [...allRooms];
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      list = list.filter(
-        (r) =>
+      list = list.filter((r) => {
+        // 1) 방 이름이나 마지막 메시지 매칭
+        if (
           r.name.toLowerCase().includes(q) ||
-          r.lastMessage.toLowerCase().includes(q),
-      );
+          r.lastMessage.toLowerCase().includes(q)
+        ) {
+          return true;
+        }
+        // 2) 캐시된 전체 메시지 내용도 검색
+        const messages = getMessagesForRoom(r.id);
+        if (!messages) return false;
+        return messages.some(
+          (m) =>
+            (m.content ?? "").toLowerCase().includes(q) ||
+            (m.nickname ?? "").toLowerCase().includes(q) ||
+            (m.fileName ?? "").toLowerCase().includes(q),
+        );
+      });
     }
     if (filter === "unread") list = list.filter((r) => r.unread > 0);
     // "그룹"은 모임 정보 없는 일반 그룹채팅만
