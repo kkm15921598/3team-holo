@@ -8,16 +8,6 @@ export function LoginScreen() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-<<<<<<< HEAD
-  const [error, setError] = useState(false);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
-      navigate("/home", { replace: true });
-    } else {
-      setError(true);
-=======
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = useState("");
@@ -80,7 +70,6 @@ export function LoginScreen() {
       setEmailError(false);
       setPasswordError(true);
       setPasswordErrorMessage("비밀번호를 다시 확인해 주세요.");
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
     }
   };
 
@@ -93,20 +82,6 @@ export function LoginScreen() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-<<<<<<< HEAD
-        <input
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          placeholder="이메일 (test@gmail.com)"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setError(false);
-          }}
-          className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-        />
-=======
         <div className="flex flex-col gap-1">
           <input
             type="email"
@@ -132,7 +107,6 @@ export function LoginScreen() {
             <p className="pl-2 text-[13px] text-holo-error">{emailErrorMessage}</p>
           )}
         </div>
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
         <div className="flex flex-col gap-1">
           <input
             type="password"
@@ -140,19 +114,6 @@ export function LoginScreen() {
             placeholder="비밀번호 (test1234)"
             value={password}
             onChange={(e) => {
-<<<<<<< HEAD
-              setPassword(e.target.value);
-              setError(false);
-            }}
-            className={`h-[62px] rounded-holo-input border px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 ${
-              error
-                ? "border-2 border-holo-error"
-                : "border-holo-ink-4 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-            }`}
-          />
-          {error && (
-            <p className="pl-2 text-[13px] text-holo-error">비밀번호를 다시 확인해 주세요.</p>
-=======
               setPassword(e.target.value.slice(0, 16));
               clearErrors();
             }}
@@ -167,7 +128,6 @@ export function LoginScreen() {
           />
           {passwordErrorMessage && (
             <p className="pl-2 text-[13px] text-holo-error">{passwordErrorMessage}</p>
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
           )}
         </div>
 

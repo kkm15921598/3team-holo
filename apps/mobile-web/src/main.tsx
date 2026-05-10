@@ -7,10 +7,7 @@ import { SplashScreen } from "@/features/splash/splash-screen";
 import { LoginScreen } from "@/features/auth/login-screen";
 import { TermsScreen } from "@/features/signup/terms-screen";
 import { VerificationScreen } from "@/features/signup/verification-screen";
-<<<<<<< HEAD
-=======
-import { AccountScreen } from "@/features/signup/account-screen";
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
+import { AccountScreen as SignupAccountScreen } from "@/features/signup/account-screen";
 import { NicknameScreen } from "@/features/signup/nickname-screen";
 import { InterestScreen } from "@/features/signup/interest-screen";
 import { RoomScreen } from "@/features/signup/room-screen";
@@ -35,6 +32,21 @@ import { MyCommentsScreen } from "@/features/mypage/my-comments-screen";
 import { RecentPostsScreen } from "@/features/mypage/recent-posts-screen";
 import { FriendsScreen } from "@/features/mypage/friends-screen";
 import { FriendsAddScreen } from "@/features/mypage/friends-add-screen";
+import { AccountScreen as MypageAccountScreen } from "@/features/mypage/account-screen";
+import { AccountLinkScreen } from "@/features/mypage/account-link-screen";
+import { PasswordChangeScreen } from "@/features/mypage/password-change-screen";
+import { PhoneChangeScreen } from "@/features/mypage/phone-change-screen";
+import { EmailChangeScreen } from "@/features/mypage/email-change-screen";
+import { LoginHistoryScreen } from "@/features/mypage/login-history-screen";
+import { PrivacyScreen } from "@/features/mypage/privacy-screen";
+import { PrivacyPolicyScreen } from "@/features/mypage/privacy-policy-screen";
+import { TermsOfServiceScreen } from "@/features/mypage/terms-of-service-screen";
+import { DataDownloadScreen } from "@/features/mypage/data-download-screen";
+import { NotificationsScreen } from "@/features/mypage/notifications-screen";
+import { QuietHoursScreen } from "@/features/mypage/quiet-hours-screen";
+import { ModeScreen } from "@/features/mypage/mode-screen";
+import { FreePointsScreen } from "@/features/mypage/free-points-screen";
+import { VerifyRegionScreen } from "@/features/mypage/verify-region-screen";
 import { MyroomScreen } from "@/features/myroom/myroom-screen";
 import "./index.css";
 
@@ -53,10 +65,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           {/* #3~#7 Signup flow */}
           <Route path="/signup/terms" element={<TermsScreen />} />
           <Route path="/signup/verify" element={<VerificationScreen />} />
-<<<<<<< HEAD
-=======
-          <Route path="/signup/account" element={<AccountScreen />} />
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
+          <Route path="/signup/account" element={<SignupAccountScreen />} />
           <Route path="/signup/nickname" element={<NicknameScreen />} />
           <Route path="/signup/interest" element={<InterestScreen />} />
           <Route path="/signup/room" element={<RoomScreen />} />
@@ -167,6 +176,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             }
           />
           <Route
+            path="/mypage/points/free"
+            element={
+              <TabLayout showHeader={false}>
+                <FreePointsScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/verify-region"
+            element={
+              <TabLayout showHeader={false}>
+                <VerifyRegionScreen />
+              </TabLayout>
+            }
+          />
+          <Route
             path="/mypage/likes"
             element={
               <TabLayout showHeader={false}>
@@ -222,6 +247,112 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                   <FriendsScreen />
                   <FriendsAddScreen />
                 </div>
+              </TabLayout>
+            }
+          />
+
+          {/* #13 Mypage – Settings */}
+          <Route
+            path="/mypage/account"
+            element={
+              <TabLayout showHeader={false}>
+                <MypageAccountScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/account/link"
+            element={
+              <TabLayout showHeader={false}>
+                <AccountLinkScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/account/password"
+            element={
+              <TabLayout showHeader={false}>
+                <PasswordChangeScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/account/phone"
+            element={
+              <TabLayout showHeader={false}>
+                <PhoneChangeScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/account/email"
+            element={
+              <TabLayout showHeader={false}>
+                <EmailChangeScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/account/history"
+            element={
+              <TabLayout showHeader={false}>
+                <LoginHistoryScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/privacy"
+            element={
+              <TabLayout showHeader={false}>
+                <PrivacyScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/privacy/policy"
+            element={
+              <TabLayout showHeader={false}>
+                <PrivacyPolicyScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/privacy/terms"
+            element={
+              <TabLayout showHeader={false}>
+                <TermsOfServiceScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/privacy/data"
+            element={
+              <TabLayout showHeader={false}>
+                <DataDownloadScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/notifications"
+            element={
+              <TabLayout showHeader={false}>
+                <NotificationsScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/notifications/quiet"
+            element={
+              <TabLayout showHeader={false}>
+                <QuietHoursScreen />
+              </TabLayout>
+            }
+          />
+          <Route
+            path="/mypage/mode"
+            element={
+              <TabLayout showHeader={false}>
+                <ModeScreen />
               </TabLayout>
             }
           />

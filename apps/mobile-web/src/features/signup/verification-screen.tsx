@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { useState } from "react";
-=======
 import { useEffect, useRef, useState } from "react";
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
 import { useNavigate } from "react-router-dom";
 import { SignupLayout } from "./signup-layout";
 
@@ -18,13 +14,9 @@ export function VerificationScreen() {
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
 
-<<<<<<< HEAD
-  const baseFilled = name && idNum && carrier && phone.length >= 10;
-=======
   const isNameValid = !!name.trim();
 
   const baseFilled = isNameValid && idNum.length === 13 && carrier && phone.length >= 10;
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 
   const handleMain = () => {
@@ -32,11 +24,7 @@ export function VerificationScreen() {
       setCodeSent(true);
       return;
     }
-<<<<<<< HEAD
-    navigate("/signup/nickname");
-=======
     navigate("/signup/account");
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
   };
 
   return (
@@ -52,15 +40,6 @@ export function VerificationScreen() {
         <Input
           placeholder="이름 입력"
           value={name}
-<<<<<<< HEAD
-          onChange={setName}
-        />
-        <Input
-          placeholder="001100 - 4******"
-          value={formatId(idNum)}
-          onChange={(v) => setIdNum(v.replace(/\D/g, "").slice(0, 7))}
-          inputMode="numeric"
-=======
           onChange={(v) => setName(v.slice(0, 20))}
           valid={isNameValid}
           maxLength={20}
@@ -71,7 +50,6 @@ export function VerificationScreen() {
           onChange={(v) => setIdNum(parseIdInput(v, idNum))}
           inputMode="numeric"
           valid={idNum.length === 13}
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
         />
         <button
           type="button"
@@ -88,10 +66,7 @@ export function VerificationScreen() {
           value={formatPhone(phone)}
           onChange={(v) => setPhone(v.replace(/\D/g, "").slice(0, 11))}
           inputMode="numeric"
-<<<<<<< HEAD
-=======
           valid={phone.length >= 10}
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
         />
         {codeSent && (
           <div className="flex flex-col gap-1">
@@ -101,10 +76,7 @@ export function VerificationScreen() {
                 value={code}
                 onChange={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
                 inputMode="numeric"
-<<<<<<< HEAD
-=======
                 valid={code.length === 6}
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
               />
               <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[13px] text-holo-error">
                 02:17
@@ -149,23 +121,15 @@ function Input({
   value,
   onChange,
   inputMode,
-<<<<<<< HEAD
-=======
   onBlur,
   error,
   valid,
   maxLength,
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
 }: {
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
   inputMode?: "text" | "numeric" | "email";
-<<<<<<< HEAD
-}) {
-  return (
-    <input
-=======
   onBlur?: () => void;
   error?: boolean;
   valid?: boolean;
@@ -192,15 +156,10 @@ function Input({
   return (
     <input
       ref={inputRef}
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
       type="text"
       inputMode={inputMode ?? "text"}
       placeholder={placeholder}
       value={value}
-<<<<<<< HEAD
-      onChange={(e) => onChange(e.target.value)}
-      className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-=======
       onChange={(e) => onChange(enforceMax(e.target))}
       onCompositionEnd={(e) => {
         const v = enforceMax(e.currentTarget);
@@ -215,7 +174,6 @@ function Input({
             ? "border-2 border-holo-purple-mid text-holo-purple-mid"
             : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
       }`}
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
     />
   );
 }
@@ -284,10 +242,6 @@ function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
   const front = v.slice(0, 6);
-<<<<<<< HEAD
-  const back = v.slice(6, 7);
-  return `${front} - ${back}******`;
-=======
   const backDigits = v.slice(6);
   const genderDigit = backDigits[0] ?? "";
   const maskedRest = "*".repeat(Math.max(0, backDigits.length - 1));
@@ -316,7 +270,6 @@ function parseIdInput(displayValue: string, prevIdNum: string) {
   const keptMasked = prevBack.slice(1, 1 + asteriskCount);
 
   return (front + genderChar + keptMasked + newDigits).slice(0, 13);
->>>>>>> 46c84a5f3cbe41fddf3c74c072c05038e30320aa
 }
 function formatPhone(v: string) {
   if (!v) return "";

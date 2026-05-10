@@ -24,7 +24,7 @@ export function PointsScreen() {
       {/* Quick actions */}
       <section className="grid grid-cols-3 gap-2">
         <Quick label="출석체크" icon={<CalIcon />} onClick={() => navigate("/event/attendance")} />
-        <Quick label="무료포인트" icon={<PCircleIcon />} onClick={() => alert("준비 중")} />
+        <Quick label="무료포인트" icon={<PCircleIcon />} onClick={() => navigate("/mypage/points/free")} />
         <Quick label="상점" icon={<ShopIcon />} onClick={() => navigate("/myroom")} />
       </section>
 

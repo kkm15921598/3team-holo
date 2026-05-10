@@ -36,16 +36,23 @@ export function AccountScreen() {
       <section className="mt-4 px-4">
         <p className="text-[12px] text-holo-ink-3">계정 보안</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <Row label="비밀번호 변경" onClick={() => alert("비밀번호 변경 화면 (준비 중)")} />
-          <Row label="휴대폰 번호 변경" hint="010-****-1234" onClick={() => alert("휴대폰 번호 변경 (준비 중)")} />
-          <Row label="이메일 변경" hint="user@holo.app" onClick={() => alert("이메일 변경 (준비 중)")} />
+          <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
+          <Row label="휴대폰 번호 변경" hint="010-****-1234" onClick={() => navigate("/mypage/account/phone")} />
+          <Row label="이메일 변경" hint="user@holo.app" onClick={() => navigate("/mypage/account/email")} />
+        </ul>
+      </section>
+
+      <section className="mt-4 px-4">
+        <p className="text-[12px] text-holo-ink-3">계정 연동</p>
+        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+          <Row label="계정 연동" hint="1개 연동됨" onClick={() => navigate("/mypage/account/link")} />
         </ul>
       </section>
 
       <section className="mt-4 px-4">
         <p className="text-[12px] text-holo-ink-3">기타</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <Row label="로그인 기록" onClick={() => alert("로그인 기록 (준비 중)")} />
+          <Row label="로그인 기록" onClick={() => navigate("/mypage/account/history")} />
           <Row
             label="회원 탈퇴"
             danger

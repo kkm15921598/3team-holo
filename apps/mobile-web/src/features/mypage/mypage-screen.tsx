@@ -1,7 +1,10 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 
 export function MypageScreen() {
+  const navigate = useNavigate();
+  const [showLogout, setShowLogout] = useState(false);
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
       {/* Profile card + Points (connected, full-width edge-to-edge) */}
@@ -50,6 +53,7 @@ export function MypageScreen() {
         </span>
         <button
           type="button"
+          onClick={() => navigate("/mypage/verify-region")}
           className="rounded-full bg-holo-purple-mid px-3 py-1 text-[13px] font-semibold text-white"
         >
           인증하기
@@ -68,16 +72,74 @@ export function MypageScreen() {
         <p className="text-[15px] font-semibold text-holo-ink">설정</p>
         <hr className="mt-2 border-t border-holo-line-3" />
         <ul className="mt-1 flex flex-col text-[14px] text-holo-ink-2">
-          {["계정관리", "개인정보", "알림설정", "모드설정하기", "로그아웃"].map((s) => (
-            <li key={s}>
-              <button type="button" className="flex w-full items-center justify-between py-2 text-left">
-                {s}
-              </button>
-            </li>
-          ))}
+          <SettingItem label="계정관리" to="/mypage/account" />
+          <SettingItem label="개인정보" to="/mypage/privacy" />
+          <SettingItem label="알림설정" to="/mypage/notifications" />
+          <SettingItem label="모드설정하기" to="/mypage/mode" />
+          <li>
+            <button
+              type="button"
+              onClick={() => setShowLogout(true)}
+              className="flex w-full items-center justify-between py-2 text-left"
+            >
+              <span>로그아웃</span>
+              <ChevronRightIcon />
+            </button>
+          </li>
         </ul>
       </section>
+
+      {showLogout && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
+            <p className="text-[14px] font-semibold text-holo-ink">로그아웃 하시겠어요?</p>
+            <p className="mt-2 text-[12px] text-holo-ink-3">
+              다시 로그인해야 서비스를 이용할 수 있어요.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLogout(false)}
+                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogout(false);
+                  navigate("/login");
+                }}
+                className="h-10 flex-1 rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+function SettingItem({ label, to }: { label: string; to: string }) {
+  return (
+    <li>
+      <Link
+        to={to}
+        className="flex w-full items-center justify-between py-2 text-left"
+      >
+        <span>{label}</span>
+        <ChevronRightIcon />
+      </Link>
+    </li>
+  );
+}
+function ChevronRightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
   );
 }
 
