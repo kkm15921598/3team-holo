@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { PasswordToggle } from "@/shared/components/password-toggle";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
@@ -14,19 +14,13 @@ export function LoginScreen() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
-      navigate("/home", { replace: true });
-    } else {
-      setError(true);
   const [showPw, setShowPw] = useState(false);
+  
   const [idError, setIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [idErrorMessage, setIdErrorMessage] = useState("");
   const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+  
   const { capsOn, capsHandlers } = useCapsLock();
 
   const clearErrors = () => {
@@ -45,17 +39,20 @@ export function LoginScreen() {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
     if (!userId) {
       setIdError(true);
       setPasswordError(true);
       setPasswordErrorMessage("아이디와 비밀번호를 입력해주세요.");
       return;
     }
+    
     if (!isValidId(userId)) {
       setIdError(true);
       setIdErrorMessage("아이디를 다시 입력해주세요.");
       return;
     }
+
     if (userId === MOCK_ID && password === MOCK_PASSWORD) {
       navigate("/home", { replace: true });
     } else {
@@ -74,36 +71,7 @@ export function LoginScreen() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          placeholder="이메일 (test@gmail.com)"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            setError(false);
-          }}
-          className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-        />
-        <div className="flex flex-col gap-1">
-          <input
-            type="password"
-            autoComplete="current-password"
-            placeholder="비밀번호 (test1234)"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError(false);
-            }}
-            className={`h-[62px] rounded-holo-input border px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 ${
-              error
-                ? "border-2 border-holo-error"
-                : "border-holo-ink-4 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-            }`}
-          />
-          {error && (
-            <p className="pl-2 text-[13px] text-holo-error">비밀번호를 다시 확인해 주세요.</p>
+        {/* 아이디 입력 영역 */}
         <div className="flex flex-col gap-1">
           <input
             type="text"
@@ -117,7 +85,7 @@ export function LoginScreen() {
             }}
             onBlur={handleIdBlur}
             maxLength={16}
-            className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
+            className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none transition ${
               idError
                 ? "border-2 border-holo-error"
                 : userId && isValidId(userId)
@@ -129,6 +97,8 @@ export function LoginScreen() {
             <p className="pl-2 text-[13px] text-holo-error">{idErrorMessage}</p>
           )}
         </div>
+
+        {/* 비밀번호 입력 영역 */}
         <div className="flex flex-col gap-1">
           <div className="relative">
             <input
@@ -144,7 +114,7 @@ export function LoginScreen() {
               onKeyUp={capsHandlers.onKeyUp}
               onBlur={capsHandlers.onBlur}
               maxLength={16}
-              className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
+              className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none transition ${
                 passwordError
                   ? "border-2 border-holo-error"
                   : password
