@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { SignupLayout } from "./signup-layout";
 
 const NICKNAME = "무지는 단무지";
-
 const CATEGORIES = ["전체", "침대", "책상", "의자", "벽지", "바닥"];
 
 type FurnitureKind = "desk" | "shelf";
 type FurnitureItem = { id: string; label: string; kind: FurnitureKind };
+
 const ITEMS: FurnitureItem[] = [
   { id: "desk", label: "원목 책상 세트", kind: "desk" },
   { id: "shelf", label: "원목 책장", kind: "shelf" },
@@ -40,7 +40,6 @@ export function RoomScreen() {
   };
 
   return (
-    <SignupLayout step={5}>
     <SignupLayout step={7}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         거의 다 왔습니다!
