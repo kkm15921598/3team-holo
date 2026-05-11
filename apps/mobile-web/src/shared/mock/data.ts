@@ -26,9 +26,19 @@ export const BOARD_CATEGORIES = [
 
 export type PostStatus = "모집중" | "모집완료";
 
+export type PostLocation = {
+  lat: number;
+  lng: number;
+  placeName?: string;
+};
+
+export type ParticipantAvatar = {
+  avatarBg: string;
+};
+
 export type Post = {
   id: string;
-  category: string; // category id
+  category: string;
   status: PostStatus;
   title: string;
   description: string;
@@ -39,15 +49,145 @@ export type Post = {
   timeAgo: string;
   authorNickname: string;
   authorLevel: number;
+  location?: PostLocation;
+  /** 현재 참여자. 4명 이상이면 카드에 +N 표시. */
+  participants: ParticipantAvatar[];
 };
 
+// 사용자(나)의 현재 위치 — 분당 미금역 부근 더미값.
+export const MY_LOCATION: PostLocation = {
+  // 분당구 구미동 미금역 (신분당선 / 수인분당선) — 37°21'00"N 127°06'32"E
+  lat: 37.3500,
+  lng: 127.1089,
+  placeName: "미금역",
+};
+
+// 미금역 반경 ~500m 내 더미 게시물 위치.
 export const POSTS: Post[] = [
-  { id: "1", category: "food", status: "모집중", title: "점심 번개", description: "오피스 단지 떡볶이 메이트!", distance: "500m", duration: "20분", likes: 5, comments: 3, timeAgo: "33분 전", authorNickname: "무지는 단무지", authorLevel: 24 },
-  { id: "2", category: "share", status: "모집완료", title: "수박 소분", description: "마트에서 산 큰 수박 나눌 분~", distance: "350m", duration: "15분", likes: 12, comments: 7, timeAgo: "33분 전", authorNickname: "무지는 단무지", authorLevel: 24 },
-  { id: "3", category: "sport", status: "모집중", title: "강아지 산책친구 구해요", description: "매주 주말 한강공원 산책", distance: "200m", duration: "60분", likes: 12, comments: 7, timeAgo: "33분 전", authorNickname: "무지는 단무지", authorLevel: 24 },
-  { id: "4", category: "sport", status: "모집중", title: "헬스장 등록 같이 해요", description: "마트에서 산 큰 수박 나눌 분", distance: "200m", duration: "60분", likes: 12, comments: 7, timeAgo: "33분 전", authorNickname: "무지는 단무지", authorLevel: 24 },
-  { id: "5", category: "food", status: "모집중", title: "점심 번개", description: "오피스 단지 떡볶이 메이트!", distance: "500m", duration: "20분", likes: 5, comments: 2, timeAgo: "33분 전", authorNickname: "무지는 단무지", authorLevel: 24 },
-  { id: "6", category: "share", status: "모집완료", title: "수박 소분", description: "마트에서 산 큰 수박 나눌 분", distance: "350m", duration: "15분", likes: 12, comments: 7, timeAgo: "33분 전", authorNickname: "무지는 단무지", authorLevel: 24 },
+  {
+    id: "1",
+    category: "food",
+    status: "모집중",
+    title: "점심 번개",
+    description: "오피스 단지 떡볶이 메이트!",
+    distance: "120m",
+    duration: "20분",
+    likes: 5,
+    comments: 3,
+    timeAgo: "33분 전",
+    authorNickname: "무지는 단무지",
+    authorLevel: 24,
+    location: { lat: 37.3504, lng: 127.1094, placeName: "미금역 1번 출구" },
+    participants: [
+      { avatarBg: "#FCEBB5" },
+      { avatarBg: "#C7BDFF" },
+      { avatarBg: "#FFCFCF" },
+    ],
+  },
+  {
+    id: "2",
+    category: "share",
+    status: "모집완료",
+    title: "수박 소분",
+    description: "마트에서 산 큰 수박 나눌 분~",
+    distance: "300m",
+    duration: "15분",
+    likes: 12,
+    comments: 7,
+    timeAgo: "33분 전",
+    authorNickname: "무지는 단무지",
+    authorLevel: 24,
+    location: { lat: 37.3486, lng: 127.1077, placeName: "도깨비 식자재마트" },
+    participants: [
+      { avatarBg: "#FCEBB5" },
+      { avatarBg: "#C7BDFF" },
+      { avatarBg: "#FFCFCF" },
+      { avatarBg: "#CCBCE0" },
+      { avatarBg: "#DDC0FF" },
+      { avatarBg: "#CAE4B9" },
+      { avatarBg: "#F4A261" },
+    ],
+  },
+  {
+    id: "3",
+    category: "sport",
+    status: "모집중",
+    title: "강아지 산책친구 구해요",
+    description: "매주 주말 한강공원 산책",
+    distance: "250m",
+    duration: "60분",
+    likes: 12,
+    comments: 7,
+    timeAgo: "33분 전",
+    authorNickname: "무지는 단무지",
+    authorLevel: 24,
+    location: { lat: 37.3520, lng: 127.1085, placeName: "정자일로 공원" },
+    participants: [
+      { avatarBg: "#FCEBB5" },
+      { avatarBg: "#C7BDFF" },
+    ],
+  },
+  {
+    id: "4",
+    category: "sport",
+    status: "모집중",
+    title: "헬스장 등록 같이 해요",
+    description: "꾸준히 같이 가실 분 구해요",
+    distance: "400m",
+    duration: "60분",
+    likes: 12,
+    comments: 7,
+    timeAgo: "33분 전",
+    authorNickname: "무지는 단무지",
+    authorLevel: 24,
+    location: { lat: 37.3482, lng: 127.1112, placeName: "분당 엠코헤리츠 상가" },
+    participants: [
+      { avatarBg: "#FCEBB5" },
+      { avatarBg: "#C7BDFF" },
+      { avatarBg: "#FFCFCF" },
+      { avatarBg: "#CCBCE0" },
+      { avatarBg: "#DDC0FF" },
+    ],
+  },
+  {
+    id: "5",
+    category: "food",
+    status: "모집중",
+    title: "점심 번개",
+    description: "오피스 단지 떡볶이 메이트!",
+    distance: "180m",
+    duration: "20분",
+    likes: 5,
+    comments: 2,
+    timeAgo: "33분 전",
+    authorNickname: "무지는 단무지",
+    authorLevel: 24,
+    location: { lat: 37.3517, lng: 127.1102, placeName: "투썸플레이스" },
+    participants: [
+      { avatarBg: "#FCEBB5" },
+      { avatarBg: "#C7BDFF" },
+      { avatarBg: "#FFCFCF" },
+      { avatarBg: "#CCBCE0" },
+    ],
+  },
+  {
+    id: "6",
+    category: "share",
+    status: "모집완료",
+    title: "수박 소분",
+    description: "마트에서 산 큰 수박 나눌 분",
+    distance: "350m",
+    duration: "15분",
+    likes: 12,
+    comments: 7,
+    timeAgo: "33분 전",
+    authorNickname: "무지는 단무지",
+    authorLevel: 24,
+    location: { lat: 37.3484, lng: 127.1072, placeName: "지구촌 평생교육원" },
+    participants: [
+      { avatarBg: "#FCEBB5" },
+    ],
+  },
 ];
 
 export const COMMENTS = [

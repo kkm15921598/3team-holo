@@ -1,3 +1,6 @@
+/* === Leaflet 기본 스타일 (@import는 다른 statement보다 먼저) === */
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -139,3 +142,93 @@ body {
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+@layer components {
+  /* 모바일 화면(360px)을 데스크탑에서 둘러싼 프레임 */
+  .device-frame {
+    @apply relative mx-auto flex min-h-screen w-full max-w-[360px] flex-col overflow-x-clip bg-white shadow-xl;
+  }
+}
+
+/* 스크롤바 숨김 유틸 */
+.holo-no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.holo-no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ==========================================================
+   Leaflet 커스텀 마커 (지도 탭) — SVG 시안 매핑
+   사용자 위치: r=100/80/60 동심원 (보라톤 0.5 알파)
+   ========================================================== */
+.holo-user-marker {
+  background: transparent;
+  border: 0;
+}
+/* 정확도 링: 더 옅게 */
+.holo-user-glow-outer {
+  width: 80px;
+  height: 80px;
+  border-radius: 9999px;
+  background: rgba(116, 72, 221, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 위치 점: 단색 보라 + 흰 보더 + 옅은 그림자 */
+.holo-user-glow-inner {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #7448dd;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(116, 72, 221, 0.30);
+}
+
+/* preview 모드: 미리보기 지도에선 좀 더 작게 */
+.holo-user-marker.holo-preview .holo-user-glow-outer {
+  width: 48px;
+  height: 48px;
+}
+.holo-user-marker.holo-preview .holo-user-glow-inner {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+
+/* 게시물 핀: 작은 글로우 + 점, selected는 핑크 그라데이션 */
+.holo-post-marker {
+  background: transparent;
+  border: 0;
+}
+.holo-post-glow {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: rgba(174, 158, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.holo-post-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: rgba(116, 72, 221, 0.85);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(116, 72, 221, 0.25);
+}
+
+/* attribution 컨트롤을 작고 은은하게 */
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 9px;
+  padding: 1px 4px;
+  color: #979797;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: #7448dd;
+}
