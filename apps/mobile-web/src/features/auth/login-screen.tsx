@@ -14,7 +14,6 @@ export function LoginScreen() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
-<<<<<<< HEAD
   const [error, setError] = useState(false);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -23,7 +22,6 @@ export function LoginScreen() {
       navigate("/home", { replace: true });
     } else {
       setError(true);
-=======
   const [showPw, setShowPw] = useState(false);
   const [idError, setIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
@@ -64,7 +62,6 @@ export function LoginScreen() {
       setIdError(false);
       setPasswordError(true);
       setPasswordErrorMessage("비밀번호를 다시 확인해 주세요.");
->>>>>>> feat/auth-onboarding-2
     }
   };
 
@@ -77,7 +74,6 @@ export function LoginScreen() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-<<<<<<< HEAD
         <input
           type="email"
           inputMode="email"
@@ -108,7 +104,6 @@ export function LoginScreen() {
           />
           {error && (
             <p className="pl-2 text-[13px] text-holo-error">비밀번호를 다시 확인해 주세요.</p>
-=======
         <div className="flex flex-col gap-1">
           <input
             type="text"
@@ -162,7 +157,6 @@ export function LoginScreen() {
           <CapsLockBadge visible={capsOn} />
           {passwordErrorMessage && (
             <p className="pl-2 text-[13px] text-holo-error">{passwordErrorMessage}</p>
->>>>>>> feat/auth-onboarding-2
           )}
         </div>
 
