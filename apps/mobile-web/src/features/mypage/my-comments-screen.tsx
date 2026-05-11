@@ -6,6 +6,7 @@ import { ManagedList } from "./managed-list";
 export function MyCommentsScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
+  const [comments, setComments] = useState(() => POSTS.slice(0, 5));
   return (
     <main className="flex flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center px-4">
@@ -18,7 +19,8 @@ export function MyCommentsScreen() {
         title="내가 쓴 댓글"
         manage={manage}
         onToggleManage={() => setManage((v) => !v)}
-        items={POSTS.slice(0, 5)}
+        items={comments}
+        onDelete={(ids) => setComments((prev) => prev.filter((p) => !ids.includes(p.id)))}
       />
     </main>
   );

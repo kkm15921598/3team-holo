@@ -2,77 +2,317 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FRIENDS, ME } from "@/shared/mock/data";
 
+type Friend = (typeof FRIENDS)[number];
+type Mode = "view" | "block" | "report";
+
 export function FriendsScreen() {
   const navigate = useNavigate();
-  const [manage, setManage] = useState(false);
   const [showEmpty, setShowEmpty] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [mode, setMode] = useState<Mode>("view");
+  const [friends, setFriends] = useState<Friend[]>(FRIENDS);
+  const [blocked, setBlocked] = useState<Friend[]>([]);
+  const [showBlockedView, setShowBlockedView] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState<Friend | null>(null);
+  const [reportTarget, setReportTarget] = useState<Friend | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1800);
+  };
+
+  const handleBlock = () => {
+    if (!confirmBlock) return;
+    setBlocked((prev) => [...prev, confirmBlock]);
+    setFriends((prev) => prev.filter((f) => f.id !== confirmBlock.id));
+    setConfirmBlock(null);
+    showToast("차단되었습니다.");
+  };
+
+  const handleUnblock = (id: string) => {
+    const f = blocked.find((b) => b.id === id);
+    if (!f) return;
+    setFriends((prev) => [...prev, f]);
+    setBlocked((prev) => prev.filter((b) => b.id !== id));
+    showToast("차단이 해제되었습니다.");
+  };
+
+  const handleSubmitReport = () => {
+    if (!reportTarget || !reportReason.trim()) return;
+    const targetId = reportTarget.id;
+    setFriends((prev) => prev.filter((f) => f.id !== targetId));
+    setReportTarget(null);
+    setReportReason("");
+    showToast("신고가 접수되었습니다.");
+  };
+
+  const visibleFriends = showEmpty ? [] : friends;
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="relative flex flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
-            <BackIcon />
-          </button>
-          <span className="text-[16px] font-semibold text-holo-ink">내 친구</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/mypage/friends/add" aria-label="친구 추가">
-            <PlusIcon />
-          </Link>
-          <button type="button" aria-label="더보기" onClick={() => setManage((v) => !v)}>
-            <MoreIcon />
-          </button>
           <button
             type="button"
-            onClick={() => setShowEmpty((v) => !v)}
-            className="text-[11px] text-holo-ink-3 underline"
+            aria-label="뒤로"
+            onClick={() => (mode === "view" ? navigate(-1) : setMode("view"))}
           >
-            {showEmpty ? "데모" : "빈상태"}
+            <BackIcon />
           </button>
+          <span className="text-[16px] font-semibold text-holo-ink">
+            {mode === "block" ? "차단하기" : mode === "report" ? "신고하기" : "내 친구"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {mode === "view" && (
+            <>
+              <Link to="/mypage/friends/add" aria-label="친구 추가">
+                <PlusIcon />
+              </Link>
+              <button type="button" aria-label="더보기" onClick={() => setShowMenu(true)}>
+                <MoreIcon />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEmpty((v) => !v)}
+                className="text-[11px] text-holo-ink-3 underline"
+              >
+                {showEmpty ? "데모" : "빈상태"}
+              </button>
+            </>
+          )}
         </div>
       </header>
 
       <div className="flex items-center justify-between px-4 pb-3 pt-1">
         <span className="flex items-center gap-2 text-[14px] text-holo-ink">
-          <PeopleIcon /> 친구목록
+          <PeopleIcon />
+          {mode === "block"
+            ? "차단할 친구를 선택해 주세요"
+            : mode === "report"
+              ? "신고할 친구를 선택해 주세요"
+              : "친구목록"}
         </span>
-        <span className="text-[12px] text-holo-ink-3">내 ID : {ME.friendCode}</span>
+        {mode === "view" && (
+          <span className="text-[12px] text-holo-ink-3">내 ID : {ME.friendCode}</span>
+        )}
       </div>
 
-      {showEmpty ? (
+      {visibleFriends.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center text-[14px] text-holo-ink-3">
-          친구를 추가 해보세요
+          {mode === "view" ? "친구를 추가 해보세요" : "친구 목록이 없습니다"}
         </div>
       ) : (
         <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto px-4 pb-3">
-          {FRIENDS.map((f) => (
-            <li key={f.id} className="flex items-center gap-2">
-              <span className="relative">
-                <span
-                  className="block h-12 w-12 rounded-full"
-                  style={{ background: f.avatarBg }}
-                />
-                {manage && (
-                  <span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-holo-error text-white">
-                    <MinusIcon />
-                  </span>
-                )}
-              </span>
-              <span className="flex-1 text-[12px] text-holo-ink">{f.nickname}</span>
+          {visibleFriends.map((f) => (
+            <li key={f.id}>
+              <button
+                type="button"
+                disabled={mode === "view"}
+                onClick={() => {
+                  if (mode === "block") setConfirmBlock(f);
+                  else if (mode === "report") setReportTarget(f);
+                }}
+                className="flex w-full items-center gap-2 text-left disabled:cursor-default"
+              >
+                <span className="relative">
+                  <span
+                    className="block h-12 w-12 rounded-full"
+                    style={{ background: f.avatarBg }}
+                  />
+                  {mode === "block" && (
+                    <span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-holo-error text-white">
+                      <MinusIcon />
+                    </span>
+                  )}
+                  {mode === "report" && (
+                    <span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-holo-purple-mid text-white">
+                      <FlagMini />
+                    </span>
+                  )}
+                </span>
+                <span className="flex-1 text-[12px] text-holo-ink">{f.nickname}</span>
+              </button>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-holo-line-3 p-4 text-[14px] text-holo-ink">
-        <button type="button" className="flex items-center gap-2">
-          <BlockIcon /> 차단한 친구
-        </button>
-        <button type="button" className="flex items-center gap-2">
-          <FlagIcon /> 신고하기
-        </button>
-      </div>
+      {/* Bottom sheet: more menu */}
+      {showMenu && (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/40"
+          onClick={() => setShowMenu(false)}
+        >
+          <div
+            className="w-full max-w-[360px] rounded-t-[16px] bg-white px-4 pb-6 pt-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-holo-line" />
+            <button
+              type="button"
+              onClick={() => {
+                setMode("block");
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center gap-2 py-3 text-[14px] text-holo-ink"
+            >
+              <BlockIcon /> 차단하기
+            </button>
+            <div className="h-px bg-holo-line-3" />
+            <button
+              type="button"
+              onClick={() => {
+                setMode("report");
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center gap-2 py-3 text-[14px] text-holo-ink"
+            >
+              <FlagIcon /> 신고하기
+            </button>
+            <div className="h-px bg-holo-line-3" />
+            <button
+              type="button"
+              onClick={() => {
+                setShowBlockedView(true);
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center justify-between gap-2 py-3 text-[14px] text-holo-ink"
+            >
+              <span className="flex items-center gap-2">
+                <BlockIcon /> 차단한 친구
+              </span>
+              <span className="text-[12px] text-holo-ink-3">{blocked.length}명</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm block */}
+      {confirmBlock && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
+            <p className="text-[14px] text-holo-ink">
+              <span className="font-semibold">{confirmBlock.nickname}</span> 님을
+              <br />
+              차단하시겠습니까?
+            </p>
+            <p className="mt-2 text-[12px] text-holo-ink-3">
+              차단된 친구는 친구 목록에서 사라집니다.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmBlock(null)}
+                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleBlock}
+                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
+              >
+                차단
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report modal */}
+      {reportTarget && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-[320px] rounded-[14px] bg-white p-5">
+            <p className="text-[14px] font-semibold text-holo-ink">
+              {reportTarget.nickname} 님 신고
+            </p>
+            <p className="mt-1 text-[12px] text-holo-ink-3">신고 사유를 입력해 주세요.</p>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="예: 욕설, 스팸, 부적절한 내용..."
+              rows={4}
+              className="mt-3 w-full resize-none rounded-[10px] border border-holo-line p-3 text-[13px] outline-none placeholder:text-holo-ink-3 focus:border-holo-purple-mid"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setReportTarget(null);
+                  setReportReason("");
+                }}
+                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitReport}
+                disabled={!reportReason.trim()}
+                className={`h-10 flex-1 rounded-full text-[13px] font-semibold text-white ${
+                  reportReason.trim() ? "bg-holo-purple-mid" : "bg-holo-ink-4"
+                }`}
+              >
+                신고
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked friends view */}
+      {showBlockedView && (
+        <div className="fixed inset-0 z-40 flex flex-col bg-white">
+          <header className="flex h-12 shrink-0 items-center justify-between px-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="뒤로"
+                onClick={() => setShowBlockedView(false)}
+              >
+                <BackIcon />
+              </button>
+              <span className="text-[16px] font-semibold text-holo-ink">차단한 친구</span>
+            </div>
+          </header>
+          {blocked.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center text-[14px] text-holo-ink-3">
+              차단한 친구가 없습니다
+            </div>
+          ) : (
+            <ul className="flex flex-1 flex-col divide-y divide-holo-line-3 overflow-y-auto px-4">
+              {blocked.map((f) => (
+                <li key={f.id} className="flex items-center gap-3 py-3">
+                  <span
+                    className="block h-10 w-10 rounded-full"
+                    style={{ background: f.avatarBg }}
+                  />
+                  <span className="flex-1 text-[14px] text-holo-ink">{f.nickname}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleUnblock(f.id)}
+                    className="rounded-full border border-holo-purple-mid px-3 py-1 text-[12px] font-semibold text-holo-purple-mid"
+                  >
+                    차단해제
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-6">
+          <div className="rounded-full bg-black/80 px-4 py-2 text-[13px] text-white">
+            {toast}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -104,6 +344,13 @@ function MinusIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" aria-hidden>
       <path d="M5 12h14" />
+    </svg>
+  );
+}
+function FlagMini() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 21V4l14 4-7 3 7 4z" />
     </svg>
   );
 }

@@ -3,28 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { POSTS } from "@/shared/mock/data";
 import { ManagedList } from "./managed-list";
 
-export function MyPostsScreen() {
+export function RecentPostsScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
-  const [posts, setPosts] = useState(() => POSTS.slice(0, 5));
+  const [recent, setRecent] = useState(() => POSTS.slice(0, 5));
   return (
     <main className="flex flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
-        <span className="ml-2 text-[16px] font-semibold text-holo-ink">내가 쓴 글</span>
+        <span className="ml-2 text-[16px] font-semibold text-holo-ink">최근 본 글</span>
       </header>
       <ManagedList
-        title="내가 쓴 글"
+        title="최근 본 글"
         manage={manage}
         onToggleManage={() => setManage((v) => !v)}
-        items={posts}
-        onDelete={(ids) => setPosts((prev) => prev.filter((p) => !ids.includes(p.id)))}
+        items={recent}
+        onDelete={(ids) => setRecent((prev) => prev.filter((p) => !ids.includes(p.id)))}
       />
     </main>
   );
 }
+
 function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

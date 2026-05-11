@@ -23,7 +23,7 @@ export function ActivityScreen() {
       <ul className="mt-3 flex flex-col text-[14px] text-holo-ink">
         <ListLink to="/mypage/posts">내가 쓴 글</ListLink>
         <ListLink to="/mypage/comments">내가 쓴 댓글</ListLink>
-        <ListLink to="/board">최근 본 글</ListLink>
+        <ListLink to="/mypage/recent">최근 본 글</ListLink>
       </ul>
 
       <Link
@@ -31,17 +31,17 @@ export function ActivityScreen() {
         className="mt-auto flex items-center gap-3 rounded-holo-card bg-holo-lilac-card-2 p-4"
       >
         <div className="flex flex-1 flex-col">
-          <p className="text-[14px] font-semibold text-holo-ink">
+          <p className="text-[16px] font-semibold text-[#000000]">
             나와 닮은 이웃의
             <br />
             방으로 놀러가볼까요?
           </p>
-          <p className="mt-1 text-[12px] text-holo-ink-3">
+          <p className="mt-1 text-[14px] font-normal text-holo-ink-3">
             게시판에서 다양한 사람들의
             <br />
             이야기를 만나보세요!
           </p>
-          <span className="mt-3 self-start rounded-full bg-holo-purple-mid px-3 py-1 text-[12px] font-semibold text-white">
+          <span className="mt-6 self-start rounded-full bg-holo-purple-mid px-3 py-1 text-[12px] font-semibold text-white">
             이웃찾기 ›
           </span>
         </div>
