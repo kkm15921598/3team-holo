@@ -3,27 +3,9 @@ import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 
 const SHORT_TAGS = [
-  "공동구매",
-  "소분",
-  "나눔",
-  "도움",
-  "맛집",
-  "먹거리",
-  "카페",
-  "운동",
-  "산책",
-  "게임",
-  "OTT",
-  "영화",
-  "드라마",
-  "음악",
-  "여행",
-  "사진",
-  "공부",
-  "스터디",
-  "반려동물",
-  "자취",
-  "소통",
+  "공동구매", "소분", "나눔", "도움", "맛집", "먹거리", "카페", 
+  "운동", "산책", "게임", "OTT", "영화", "드라마", "음악", 
+  "여행", "사진", "공부", "스터디", "반려동물", "자취", "소통",
 ];
 
 const LONG_TAGS = ["단기성 소모임", "장기성 소모임"];
@@ -39,7 +21,6 @@ export function InterestScreen() {
   const { data, update } = useSignup();
   const interests = data.interests;
   const custom = data.customInterest;
-  const customActive = custom.length > 0;
   const customTrimmed = custom.trim();
 
   const selected = new Set(interests);
@@ -87,8 +68,6 @@ export function InterestScreen() {
   };
 
   return (
-    <SignupLayout step={4}>
-      <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
     <SignupLayout step={5}>
       <h1 className="shrink-0 text-[20px] font-bold leading-snug text-holo-ink">
         어떤 주제에
@@ -131,7 +110,7 @@ export function InterestScreen() {
         <div className="grid grid-cols-3 gap-3">{SHORT_TAGS.map(renderChip)}</div>
         <div className="grid grid-cols-2 gap-3">{LONG_TAGS.map(renderChip)}</div>
         <div>
-          {customActive ? (
+          {custom.length > 0 ? (
             <input
               autoFocus
               value={custom}
@@ -170,13 +149,7 @@ export function InterestScreen() {
   );
 }
 
-function SelectedChip({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
+function SelectedChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="flex h-[26px] shrink-0 items-center gap-1 rounded-full bg-holo-purple-mid pl-3 pr-1 text-[12px] font-medium text-white">
       {label}
