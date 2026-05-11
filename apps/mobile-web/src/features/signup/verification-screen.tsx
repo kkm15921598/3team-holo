@@ -31,12 +31,9 @@ export function VerificationScreen() {
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent);
 
-<<<<<<< HEAD
   const baseFilled = name && idNum && carrier && phone.length >= 10;
-=======
   const isNameValid = !!name.trim();
   const baseFilled = isNameValid && idNum.length === 13 && carrier && phone.length >= 10;
->>>>>>> feat/auth-onboarding-2
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 
   const handleMain = () => {
@@ -47,9 +44,7 @@ export function VerificationScreen() {
       setCodeSent(true);
       return;
     }
-<<<<<<< HEAD
     navigate("/signup/nickname");
-=======
 
     if (code.length < 6) return;
     if (codeExpired) {
@@ -68,7 +63,6 @@ export function VerificationScreen() {
 
     update("phoneVerified", true);
     navigate("/signup/account");
->>>>>>> feat/auth-onboarding-2
   };
 
   const handleResendCode = () => {
@@ -93,7 +87,6 @@ export function VerificationScreen() {
         <Input
           placeholder="이름 입력"
           value={name}
-<<<<<<< HEAD
           onChange={setName}
         />
         <Input
@@ -102,7 +95,6 @@ export function VerificationScreen() {
           onChange={(v) => setIdNum(v.replace(/\D/g, "").slice(0, 7))}
           inputMode="numeric"
         />
-=======
           onChange={(v) => update("name", v.slice(0, 20))}
           valid={isNameValid}
           maxLength={20}
@@ -123,7 +115,6 @@ export function VerificationScreen() {
           />
         </div>
 
->>>>>>> feat/auth-onboarding-2
         <button
           type="button"
           onClick={() => setShowSheet(true)}
@@ -139,11 +130,8 @@ export function VerificationScreen() {
           value={formatPhone(phone)}
           onChange={(v) => update("phone", v.replace(/\D/g, "").slice(0, 11))}
           inputMode="numeric"
-<<<<<<< HEAD
-=======
           autoComplete="tel"
           valid={phone.length >= 10}
->>>>>>> feat/auth-onboarding-2
         />
         {codeSent && (
           <div className="flex flex-col gap-1">
@@ -156,12 +144,9 @@ export function VerificationScreen() {
                   setVerifyError("");
                 }}
                 inputMode="numeric"
-<<<<<<< HEAD
-=======
                 autoComplete="one-time-code"
                 valid={code.length === 6}
                 error={!!verifyError}
->>>>>>> feat/auth-onboarding-2
               />
               <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[13px] text-holo-error">
                 {codeTimer}
@@ -226,23 +211,18 @@ function Input({
   value,
   onChange,
   inputMode,
-<<<<<<< HEAD
-=======
   onBlur,
   error,
   valid,
   maxLength,
   autoComplete,
   paddingRight,
->>>>>>> feat/auth-onboarding-2
 }: {
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
   inputMode?: "text" | "numeric" | "email";
-<<<<<<< HEAD
 }) {
-=======
   onBlur?: () => void;
   error?: boolean;
   valid?: boolean;
@@ -267,7 +247,6 @@ function Input({
     return v;
   };
 
->>>>>>> feat/auth-onboarding-2
   return (
     <input
       type="text"
@@ -275,10 +254,8 @@ function Input({
       autoComplete={autoComplete}
       placeholder={placeholder}
       value={value}
-<<<<<<< HEAD
       onChange={(e) => onChange(e.target.value)}
       className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-=======
       onChange={(e) => onChange(enforceMax(e.target))}
       onCompositionEnd={(e) => {
         const v = enforceMax(e.currentTarget);
@@ -293,7 +270,6 @@ function Input({
             ? "border-2 border-holo-purple-mid text-holo-purple-mid"
             : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
       }`}
->>>>>>> feat/auth-onboarding-2
     />
   );
 }
@@ -436,13 +412,11 @@ function formatId(v: string) {
   return `${front} - ${back}***`;
 }
 
-<<<<<<< HEAD
 function formatPhone(v: string): string {
   const digits = v.replace(/\D/g, "").slice(0, 11);
   if (digits.length < 4) return digits;
   if (digits.length < 8) return `${digits.slice(0,3)}-${digits.slice(3)}`;
   return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
-=======
 function formatIdRaw(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
@@ -479,5 +453,4 @@ function formatPhone(v: string) {
   if (v.length < 4) return v;
   if (v.length < 8) return `${v.slice(0, 3)}-${v.slice(3)}`;
   return `${v.slice(0, 3)}-${v.slice(3, 7)}-${v.slice(7)}`;
->>>>>>> feat/auth-onboarding-2
 }
