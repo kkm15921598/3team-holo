@@ -28,7 +28,7 @@ export function ProfileEditScreen() {
   };
 
   return (
-    <main className="flex flex-1 flex-col overflow-y-auto pb-8">
+    <main className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <header className="flex h-12 shrink-0 items-center justify-between px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
@@ -48,8 +48,12 @@ export function ProfileEditScreen() {
         <div className="mt-2 flex items-center gap-2 rounded-holo-pill border border-holo-line bg-white pl-4 pr-1">
           <input
             value={nickname}
+            maxLength={10}
             onChange={(e) => {
-              setNickname(e.target.value);
+              const filtered = e.target.value
+                .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣ ]/g, "")
+                .slice(0, 10);
+              setNickname(filtered);
               setCheck(null);
             }}
             className="h-[44px] flex-1 text-[14px] text-holo-ink outline-none"
@@ -62,7 +66,7 @@ export function ProfileEditScreen() {
             중복확인
           </button>
         </div>
-        <p className="mt-1 text-[12px] text-holo-ink-3">한글 최대 10자 / 공백, 특수문자 불가</p>
+        <p className="mt-1 text-[12px] text-holo-ink-3">한글과 공백 최대 10자, 특수문자 불가</p>
         {check === "ok" && <p className="mt-1 text-[13px] text-holo-purple-mid">사용할 수 있는 닉네임입니다!</p>}
         {check === "fail" && <p className="mt-1 text-[13px] text-holo-error">사용할 수 없는 닉네임입니다!</p>}
       </section>
@@ -128,7 +132,7 @@ export function ProfileEditScreen() {
           <p className="text-[14px] font-semibold text-holo-ink">나의 뱃지</p>
           <span className="text-[12px] text-holo-ink-3">총 {BADGES.length}개</span>
         </div>
-        <div className="-mx-4 mt-3 overflow-x-auto px-4">
+        <div className="-mx-4 mt-3 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex w-max gap-3">
             {BADGES.map((b) => {
               const on = badge === b.id;
@@ -174,10 +178,10 @@ export function ProfileEditScreen() {
                 key={t}
                 type="button"
                 onClick={() => setTitleIdx(i)}
-                className={`rounded-[20px] px-3 py-1.5 text-[13px] ${
+                className={`rounded-[20px] border border-holo-line px-3 py-1.5 text-[13px] ${
                   on
-                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                    : "border border-holo-line text-holo-ink"
+                    ? "border-holo-purple-mid text-holo-purple-mid shadow-[inset_0_0_0_1px_#7448DD]"
+                    : "text-holo-ink"
                 }`}
               >
                 {t}

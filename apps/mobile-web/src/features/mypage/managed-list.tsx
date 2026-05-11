@@ -17,11 +17,13 @@ export function ManagedList({
   manage,
   onToggleManage,
   items,
+  onDelete,
 }: {
   title: string;
   manage: boolean;
   onToggleManage: () => void;
   items: Post[];
+  onDelete: (ids: string[]) => void;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -35,6 +37,8 @@ export function ManagedList({
   };
 
   const handleDelete = () => {
+    if (selected.size === 0) return;
+    onDelete(Array.from(selected));
     setSelected(new Set());
     onToggleManage();
   };
@@ -63,38 +67,46 @@ export function ManagedList({
         )}
       </div>
 
-      <ul className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
-        {items.map((p) => {
-          const on = selected.has(p.id);
-          return (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => (manage ? toggle(p.id) : null)}
-                className={`flex w-full items-start gap-3 rounded-holo-card bg-white p-4 text-left shadow-holo-card ${
-                  manage && on ? "border border-holo-purple-mid" : ""
-                }`}
-              >
-                <span className="text-[13px] font-semibold text-holo-ink-2">
-                  {CATEGORY_LABEL[p.category] ?? "기타"}
-                </span>
-                <div className="flex flex-1 flex-col">
-                  <span className="text-[14px] font-semibold text-holo-ink">{p.title}</span>
-                  <span className="mt-1 text-[12px] text-holo-ink-3">{p.description}</span>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[11px] text-holo-ink-3">
-                    {p.distance} · {p.duration}
+      {items.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center text-[14px] text-holo-ink-3">
+          목록이 비어있습니다
+        </div>
+      ) : (
+        <ul className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+          {items.map((p) => {
+            const on = selected.has(p.id);
+            return (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onClick={() => (manage ? toggle(p.id) : null)}
+                  className={`relative flex w-full items-start gap-3 rounded-holo-card bg-white p-4 text-left shadow-holo-card ${
+                    manage && on ? "ring-2 ring-holo-purple-mid" : ""
+                  }`}
+                >
+                  <span className="text-[16px] font-semibold text-[#000000]">
+                    {CATEGORY_LABEL[p.category] ?? "기타"}
                   </span>
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-holo-lilac-light text-white">
-                    <ArrowChip />
-                  </span>
-                </div>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                  <div className="flex flex-1 flex-col">
+                    <span className="text-[16px] font-normal text-[#000000]">{p.title}</span>
+                    <span className="mt-1 text-[14px] font-normal text-[#979797]">{p.description}</span>
+                  </div>
+                  <div className="flex flex-col items-end justify-between self-stretch">
+                    <span className="text-[12px] font-medium text-[#857894]">
+                      {p.distance} · {p.duration}
+                    </span>
+                    {!manage && (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-holo-lilac-light text-white">
+                        <ArrowChip />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </>
   );
 }

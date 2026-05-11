@@ -1,34 +1,39 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 
 export function MypageScreen() {
+  const navigate = useNavigate();
+  const [showLogout, setShowLogout] = useState(false);
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
-      {/* Profile card */}
-      <section className="rounded-holo-card bg-holo-lilac-card-2 p-4">
-        <div className="flex items-center gap-3">
-          <span className="h-14 w-14 rounded-full bg-holo-yellow-room" />
-          <div className="flex flex-1 flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-[16px] font-semibold text-holo-ink">{ME.nickname}</span>
-              <span>{ME.badgeIcon}</span>
+      {/* Profile card + Points (connected, full-width edge-to-edge) */}
+      <section className="-mx-4">
+        <div className="bg-holo-lilac-card-2 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-holo-yellow-room text-[32px] leading-none">
+              <span aria-hidden>👧</span>
+            </span>
+            <div className="flex flex-1 flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-[16px] font-semibold text-holo-ink">{ME.nickname}</span>
+                <span>{ME.badgeIcon}</span>
+              </div>
+              <span className="text-[12px] text-holo-ink-3">{ME.title}</span>
             </div>
-            <span className="text-[12px] text-holo-ink-3">{ME.title}</span>
+            <Link to="/mypage/edit" aria-label="프로필 편집">
+              <EditIcon />
+            </Link>
           </div>
-          <Link to="/mypage/edit" aria-label="프로필 편집">
-            <EditIcon />
-          </Link>
         </div>
+        <Link
+          to="/mypage/points"
+          className="flex items-center justify-between bg-holo-purple-mid px-4 py-3 text-white"
+        >
+          <span className="text-[14px] font-semibold">나의 포인트</span>
+          <span className="text-[16px] font-bold">{ME.points}P</span>
+        </Link>
       </section>
-
-      {/* Points */}
-      <Link
-        to="/mypage/points"
-        className="flex items-center justify-between rounded-holo-input bg-holo-purple-mid px-4 py-3 text-white"
-      >
-        <span className="text-[14px] font-semibold">나의 포인트</span>
-        <span className="text-[16px] font-bold">{ME.points}P</span>
-      </Link>
 
       {/* Stats */}
       <section className="flex justify-around rounded-holo-input bg-white p-3">
@@ -42,12 +47,13 @@ export function MypageScreen() {
       </section>
 
       {/* Region verify */}
-      <section className="flex items-center justify-between rounded-holo-input border border-holo-line bg-white px-4 py-3">
+      <section className="flex items-center justify-between rounded-holo-input bg-white px-4 py-3 shadow-holo-card">
         <span className="flex items-center gap-2 text-[14px] text-holo-ink">
           <PinIcon /> {ME.region}
         </span>
         <button
           type="button"
+          onClick={() => navigate("/mypage/verify-region")}
           className="rounded-full bg-holo-purple-mid px-3 py-1 text-[13px] font-semibold text-white"
         >
           인증하기
@@ -64,17 +70,76 @@ export function MypageScreen() {
       {/* Settings */}
       <section className="mt-2">
         <p className="text-[15px] font-semibold text-holo-ink">설정</p>
-        <ul className="mt-3 flex flex-col divide-y divide-holo-line-3 text-[14px] text-holo-ink-2">
-          {["계정관리", "개인정보", "알림설정", "모드설정하기", "로그아웃"].map((s) => (
-            <li key={s}>
-              <button type="button" className="flex w-full items-center justify-between py-3 text-left">
-                {s}
-              </button>
-            </li>
-          ))}
+        <hr className="mt-2 border-t border-holo-line-3" />
+        <ul className="mt-1 flex flex-col text-[14px] text-holo-ink-2">
+          <SettingItem label="계정관리" to="/mypage/account" />
+          <SettingItem label="개인정보" to="/mypage/privacy" />
+          <SettingItem label="알림설정" to="/mypage/notifications" />
+          <SettingItem label="모드설정하기" to="/mypage/mode" />
+          <li>
+            <button
+              type="button"
+              onClick={() => setShowLogout(true)}
+              className="flex w-full items-center justify-between py-2 text-left"
+            >
+              <span>로그아웃</span>
+              <ChevronRightIcon />
+            </button>
+          </li>
         </ul>
       </section>
+
+      {showLogout && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
+            <p className="text-[14px] font-semibold text-holo-ink">로그아웃 하시겠어요?</p>
+            <p className="mt-2 text-[12px] text-holo-ink-3">
+              다시 로그인해야 서비스를 이용할 수 있어요.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLogout(false)}
+                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogout(false);
+                  navigate("/login");
+                }}
+                className="h-10 flex-1 rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+function SettingItem({ label, to }: { label: string; to: string }) {
+  return (
+    <li>
+      <Link
+        to={to}
+        className="flex w-full items-center justify-between py-2 text-left"
+      >
+        <span>{label}</span>
+        <ChevronRightIcon />
+      </Link>
+    </li>
+  );
+}
+function ChevronRightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
   );
 }
 
@@ -90,7 +155,7 @@ function Quick({ to, label, icon }: { to: string; label: string; icon: React.Rea
   return (
     <Link
       to={to}
-      className="flex h-[80px] flex-col items-center justify-center gap-2 rounded-holo-input bg-white shadow-holo-card"
+      className="flex h-[80px] flex-col items-center justify-center gap-1 rounded-holo-input bg-white shadow-holo-card"
     >
       <span className="text-holo-purple-mid">{icon}</span>
       <span className="text-[13px] text-holo-ink">{label}</span>
@@ -114,7 +179,7 @@ function PinIcon() {
 }
 function NoteIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="5" y="3" width="14" height="18" rx="2" />
       <path d="M9 7h6M9 11h6M9 15h4" />
     </svg>
@@ -122,14 +187,14 @@ function NoteIcon() {
 }
 function HeartIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
 }
 function PeopleIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <circle cx="9" cy="8" r="3.5" />
       <circle cx="17" cy="9" r="2.5" />
       <path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6M14 14c2.5 0 7 1.5 7 5" />
