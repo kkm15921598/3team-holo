@@ -40,11 +40,8 @@ export function RoomScreen() {
   };
 
   return (
-<<<<<<< HEAD
     <SignupLayout step={5}>
-=======
     <SignupLayout step={7}>
->>>>>>> feat/auth-onboarding-2
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         거의 다 왔습니다!
         <br />

@@ -3,11 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/shared/contexts/signup-context";
 
 type SignupLayoutProps = {
-<<<<<<< HEAD
   step: 1 | 2 | 3 | 4 | 5;
-=======
   step: 1 | 2 | 3 | 4 | 5 | 6 | 7;
->>>>>>> feat/auth-onboarding-2
   children: ReactNode;
 };
 
@@ -15,9 +12,7 @@ const TOTAL_STEPS = 7;
 
 export function SignupLayout({ step, children }: SignupLayoutProps) {
   const navigate = useNavigate();
-<<<<<<< HEAD
   const widthPct = (step / 5) * 100;
-=======
   const { isDirty, reset } = useSignup();
   const [showExit, setShowExit] = useState(false);
 
@@ -36,7 +31,6 @@ export function SignupLayout({ step, children }: SignupLayoutProps) {
     setShowExit(false);
     navigate(-1);
   };
->>>>>>> feat/auth-onboarding-2
 
   return (
     <main className="flex max-h-[100dvh] flex-1 flex-col overflow-hidden">

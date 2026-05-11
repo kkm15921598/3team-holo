@@ -87,13 +87,10 @@ export function InterestScreen() {
   };
 
   return (
-<<<<<<< HEAD
     <SignupLayout step={4}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
-=======
     <SignupLayout step={5}>
       <h1 className="shrink-0 text-[20px] font-bold leading-snug text-holo-ink">
->>>>>>> feat/auth-onboarding-2
         어떤 주제에
         <br />
         관심이 있으신가요?

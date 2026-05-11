@@ -6,7 +6,6 @@ export function SplashScreen() {
   const goToLogin = () => navigate("/login", { replace: true });
 
   return (
-<<<<<<< HEAD
     <main className="flex flex-1 flex-col items-center justify-center gap-3 bg-white">
       <img
         src="/illustrations/splash-logo.svg"
@@ -16,7 +15,6 @@ export function SplashScreen() {
       />
       <span className="font-fredoka text-[40px] font-semibold leading-none text-holo-purple">
         HOLO
-=======
     <main
       role="button"
       tabIndex={0}
@@ -48,7 +46,6 @@ export function SplashScreen() {
 
       <span className="mb-20 mt-auto animate-pulse text-sm text-holo-purple/60">
         화면을 터치하세요
->>>>>>> feat/auth-onboarding-2
       </span>
     </main>
   );
