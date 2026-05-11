@@ -1,50 +1,44 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PasswordToggle } from "@/shared/components/password-toggle";
+import {
+  PasswordStrength,
+  passwordIncludesForbidden,
+} from "@/shared/components/password-strength";
+import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
+import { useCapsLock } from "@/shared/hooks/use-caps-lock";
+import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 
-const VALID_TLDS = [
-  "com",
-  "net",
-  "org",
-  "kr",
-  "jp",
-  "io",
-  "co",
-  "edu",
-  "gov",
-  "biz",
-  "info",
-  "me",
-  "ai",
-  "app",
-  "dev",
-  "tv",
-  "us",
-  "cn",
-];
-const TLD_PATTERN = new RegExp(`\\.(${VALID_TLDS.join("|")})$`, "i");
-const isValidEmail = (v: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) && TLD_PATTERN.test(v);
+const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/;
+const isValidId = (v: string) => ID_PATTERN.test(v);
 
-const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/; // 영문 + 숫자 포함 8~16자
+const MOCK_TAKEN_IDS = ["admin", "test", "user", "holo", "test1234"];
+
+const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/;
 
 export function AccountScreen() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [password, setPassword] = useState("");
+  const { data, update } = useSignup();
+
+  const userId = data.userId;
+  const password = data.password;
+
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [idChecked, setIdChecked] = useState(false);
+  const [idTaken, setIdTaken] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showPwConfirm, setShowPwConfirm] = useState(false);
 
-  const emailFormatValid = isValidEmail(email);
-  const emailFormatInvalid = email.length > 0 && !emailFormatValid;
+  const pwCaps = useCapsLock();
+  const pwConfirmCaps = useCapsLock();
 
-  const codeFormatValid = code.length === 6;
-  const codeInvalid = codeSent && code.length > 0 && code.length < 6;
+  const idFormatValid = isValidId(userId);
+  const idFormatInvalid = userId.length > 0 && !idFormatValid;
 
   const passwordValid = PASSWORD_PATTERN.test(password);
   const passwordInvalid = password.length > 0 && !passwordValid;
+  const passwordIncludesId = passwordIncludesForbidden(password, userId);
   const passwordMatch =
     password.length > 0 &&
     passwordConfirm.length > 0 &&
@@ -52,18 +46,18 @@ export function AccountScreen() {
   const passwordMismatch =
     passwordConfirm.length > 0 && password !== passwordConfirm;
 
-  const canSubmit = emailVerified && passwordValid && passwordMatch;
+  const canSubmit =
+    idChecked && passwordValid && passwordMatch && !passwordIncludesId;
 
-  const handleSendCode = () => {
-    if (emailFormatValid) {
-      setCodeSent(true);
-      setCode("");
-      setEmailVerified(false);
+  const handleCheckId = () => {
+    if (!idFormatValid) return;
+    if (MOCK_TAKEN_IDS.includes(userId.toLowerCase())) {
+      setIdChecked(false);
+      setIdTaken(true);
+    } else {
+      setIdChecked(true);
+      setIdTaken(false);
     }
-  };
-
-  const handleVerifyCode = () => {
-    if (codeFormatValid) setEmailVerified(true);
   };
 
   return (
@@ -71,159 +65,136 @@ export function AccountScreen() {
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         로그인에 사용할
         <br />
-        이메일과 비밀번호를 만들어 주세요!
+        아이디와 비밀번호를 만들어 주세요!
       </h1>
       <p className="mt-2 text-[14px] text-holo-ink-3">
-        이메일은 가입 후에 변경할 수 없어요.
+        아이디는 가입 후에 변경할 수 없어요.
       </p>
 
       <div className="mt-7 flex flex-col gap-4">
-        {/* Email + Send Code button */}
         <div className="flex flex-col gap-1">
           <div className="flex gap-2">
             <input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder="이메일 입력"
-              value={email}
+              type="text"
+              inputMode="text"
+              autoComplete="username"
+              placeholder="아이디 입력 (영문+숫자 4~16자)"
+              value={userId}
               onChange={(e) => {
-                setEmail(e.target.value.slice(0, 50));
-                if (codeSent) {
-                  setCodeSent(false);
-                  setCode("");
-                  setEmailVerified(false);
+                update("userId", e.target.value.slice(0, 16));
+                if (idChecked || idTaken) {
+                  setIdChecked(false);
+                  setIdTaken(false);
                 }
               }}
-              disabled={emailVerified}
-              maxLength={50}
+              disabled={idChecked}
+              maxLength={16}
               className={`h-[62px] flex-1 rounded-holo-input px-5 text-[15px] outline-none ${
-                emailFormatInvalid
+                idFormatInvalid || idTaken
                   ? "border-2 border-holo-error"
-                  : emailFormatValid
+                  : idFormatValid
                     ? "border-2 border-holo-purple-mid text-holo-purple-mid"
                     : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-              } ${emailVerified ? "bg-holo-line-2/50" : ""}`}
+              } ${idChecked ? "bg-holo-line-2/50" : ""}`}
             />
             <button
               type="button"
-              onClick={handleSendCode}
-              disabled={!emailFormatValid || emailVerified}
+              onClick={handleCheckId}
+              disabled={!idFormatValid || idChecked}
               className={`h-[62px] shrink-0 rounded-holo-input px-4 text-[14px] font-semibold transition ${
-                emailVerified
-                  ? "bg-holo-ink-4 text-white"
-                  : emailFormatValid
+                idChecked
+                  ? "bg-holo-purple-mid text-white"
+                  : idFormatValid
                     ? "bg-holo-ink text-white active:scale-[0.98]"
                     : "bg-holo-ink-4 text-white"
               }`}
             >
-              {codeSent && !emailVerified ? "재전송" : "인증요청"}
+              {idChecked ? "확인 완료" : "중복확인"}
             </button>
           </div>
-          {emailFormatInvalid && (
+          {idFormatInvalid && (
             <p className="pl-2 text-[13px] text-holo-error">
-              올바른 이메일 형식으로 입력해 주세요.
+              영문으로 시작하는 4~16자(영문/숫자/_)로 입력해 주세요.
+            </p>
+          )}
+          {idTaken && (
+            <p className="pl-2 text-[13px] text-holo-error">
+              이미 사용 중인 아이디예요.
+            </p>
+          )}
+          {idChecked && (
+            <p className="pl-2 text-[13px] text-holo-purple-mid">
+              사용 가능한 아이디예요.
             </p>
           )}
         </div>
 
-        {/* Verification code (only shown after sending) */}
-        {codeSent && (
-          <div className="flex flex-col gap-1">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="인증번호 6자리 입력"
-                  value={code}
-                  onChange={(e) =>
-                    setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  disabled={emailVerified}
-                  className={`h-[62px] w-full rounded-holo-input px-5 pr-14 text-[15px] outline-none ${
-                    emailVerified
-                      ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                      : codeInvalid
-                        ? "border-2 border-holo-error"
-                        : codeFormatValid
-                          ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                          : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-                  }`}
-                />
-                {!emailVerified && (
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[13px] text-holo-error">
-                    02:59
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleVerifyCode}
-                disabled={!codeFormatValid || emailVerified}
-                className={`h-[62px] shrink-0 rounded-holo-input px-4 text-[14px] font-semibold transition ${
-                  emailVerified
-                    ? "bg-holo-purple-mid text-white"
-                    : codeFormatValid
-                      ? "bg-holo-ink text-white active:scale-[0.98]"
-                      : "bg-holo-ink-4 text-white"
-                }`}
-              >
-                {emailVerified ? "인증 완료" : "인증"}
-              </button>
-            </div>
-            {emailVerified && (
-              <p className="pl-2 text-[13px] text-holo-purple-mid">
-                이메일 인증이 완료되었어요.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Password */}
         <div className="flex flex-col gap-1">
-          <input
-            type="password"
-            autoComplete="new-password"
-            placeholder="비밀번호 (영문 + 숫자 8~16자)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            maxLength={16}
-            className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
-              passwordInvalid
-                ? "border-2 border-holo-error"
-                : passwordValid
-                  ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                  : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-            }`}
-          />
+          <div className="relative">
+            <input
+              type={showPw ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="비밀번호 (영문 + 숫자 8~16자)"
+              value={password}
+              onChange={(e) => update("password", e.target.value.slice(0, 16))}
+              onKeyDown={pwCaps.capsHandlers.onKeyDown}
+              onKeyUp={pwCaps.capsHandlers.onKeyUp}
+              onBlur={pwCaps.capsHandlers.onBlur}
+              maxLength={16}
+              className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
+                passwordInvalid || passwordIncludesId
+                  ? "border-2 border-holo-error"
+                  : passwordValid
+                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                    : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+              }`}
+            />
+            <PasswordToggle visible={showPw} onClick={() => setShowPw((s) => !s)} />
+          </div>
+          <CapsLockBadge visible={pwCaps.capsOn} />
           {passwordInvalid && (
             <p className="pl-2 text-[13px] text-holo-error">
               영문과 숫자를 모두 포함해 8~16자로 입력해 주세요.
             </p>
           )}
+          <PasswordStrength
+            password={password}
+            forbiddenSubstring={userId}
+            forbiddenLabel="아이디"
+          />
         </div>
 
-        {/* Password Confirm */}
         <div className="flex flex-col gap-1">
-          <input
-            type="password"
-            autoComplete="new-password"
-            placeholder="비밀번호 확인"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            maxLength={16}
-            className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
-              passwordMismatch
-                ? "border-2 border-holo-error"
-                : passwordMatch
-                  ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                  : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-            }`}
-          />
+          <div className="relative">
+            <input
+              type={showPwConfirm ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="비밀번호 확인"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              onKeyDown={pwConfirmCaps.capsHandlers.onKeyDown}
+              onKeyUp={pwConfirmCaps.capsHandlers.onKeyUp}
+              onBlur={pwConfirmCaps.capsHandlers.onBlur}
+              maxLength={16}
+              className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
+                passwordMismatch
+                  ? "border-2 border-holo-error"
+                  : passwordMatch
+                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                    : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+              }`}
+            />
+            <PasswordToggle visible={showPwConfirm} onClick={() => setShowPwConfirm((s) => !s)} />
+          </div>
+          <CapsLockBadge visible={pwConfirmCaps.capsOn} />
           {passwordMismatch && (
             <p className="pl-2 text-[13px] text-holo-error">
               비밀번호가 일치하지 않아요.
+            </p>
+          )}
+          {passwordMatch && (
+            <p className="pl-2 text-[13px] text-holo-purple-mid">
+              비밀번호가 일치해요.
             </p>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 
 type TermItem = {
@@ -23,7 +24,9 @@ const DETAIL_TEXT =
 
 export function TermsScreen() {
   const navigate = useNavigate();
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const { data, update } = useSignup();
+  const checked = data.agreedTerms;
+  const setChecked = (next: Record<string, boolean>) => update("agreedTerms", next);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showError, setShowError] = useState(false);
 
@@ -39,7 +42,7 @@ export function TermsScreen() {
     setShowError(false);
   };
   const toggleOne = (id: string) => {
-    setChecked((c) => ({ ...c, [id]: !c[id] }));
+    setChecked({ ...checked, [id]: !checked[id] });
     setShowError(false);
   };
   const toggleExpand = (id: string) => setExpanded((e) => ({ ...e, [id]: !e[id] }));
@@ -54,7 +57,7 @@ export function TermsScreen() {
 
   return (
     <SignupLayout step={1}>
-      <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
+      <h1 className="shrink-0 text-[20px] font-bold leading-snug text-holo-ink">
         HOLO 서비스 사용에 필요한
         <br />
         이용 약관에 동의해 주세요!
@@ -63,7 +66,7 @@ export function TermsScreen() {
       <button
         type="button"
         onClick={toggleAll}
-        className="mt-7 flex items-center gap-3 text-left"
+        className="mt-7 flex shrink-0 items-center gap-3 text-left"
       >
         <Checkmark active={allChecked} />
         <span className="text-[16px] font-semibold text-holo-ink">
@@ -71,9 +74,9 @@ export function TermsScreen() {
         </span>
       </button>
 
-      <div className="my-5 h-px w-full bg-holo-line" />
+      <div className="my-5 h-px w-full shrink-0 bg-holo-line" />
 
-      <ul className="flex flex-col gap-4">
+      <ul className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {ITEMS.map((it) => {
           const isRequiredFail = showError && it.required && !checked[it.id];
           return (
@@ -85,9 +88,7 @@ export function TermsScreen() {
                   className="flex items-center gap-3 text-left"
                 >
                   <Checkmark active={!!checked[it.id]} />
-                  <span
-                    className={`text-[15px] ${isRequiredFail ? "text-holo-error" : "text-holo-ink"}`}
-                  >
+                  <span className={`text-[15px] ${isRequiredFail ? "text-holo-error" : "text-holo-ink"}`}>
                     {it.label}{" "}
                     <span className={isRequiredFail ? "text-holo-error" : "text-holo-ink-3"}>
                       ({it.required ? "필수" : "선택"})
@@ -114,7 +115,7 @@ export function TermsScreen() {
         })}
       </ul>
 
-      <div className="mt-auto flex flex-col gap-3 pt-6">
+      <div className="flex shrink-0 flex-col gap-3 pt-6">
         {showError && (
           <p className="text-center text-[13px] text-holo-error">이용 약관에 동의해 주세요.</p>
         )}
