@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { useSignup } from "@/shared/contexts/signup-context";
@@ -17,10 +17,7 @@ export function VerificationScreen() {
   const navigate = useNavigate();
   const { data, update } = useSignup();
 
-  const name = data.name;
-  const idNum = data.idNum;
-  const carrier = data.carrier;
-  const phone = data.phone;
+  const { name, idNum, carrier, phone } = data;
 
   const [showSheet, setShowSheet] = useState(false);
   const [code, setCode] = useState("");
@@ -28,13 +25,16 @@ export function VerificationScreen() {
   const [verifyError, setVerifyError] = useState("");
   const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
   const [showIdNum, setShowIdNum] = useState(false);
+  
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent);
 
-  const baseFilled = name && idNum && carrier && phone.length >= 10;
-  const isNameValid = !!name.trim();
-  const baseFilled = isNameValid && idNum.length === 13 && carrier && phone.length >= 10;
-  const canSubmit = codeSent ? code.length >= 6 : baseFilled;
+  const isNameValid = name.trim().length > 0;
+  const isIdValid = idNum.length === 13;
+  const isPhoneValid = phone.length >= 10;
+  
+  const baseFilled = isNameValid && isIdValid && carrier && isPhoneValid;
+  const canSubmit = codeSent ? code.length === 6 : baseFilled;
 
   const handleMain = () => {
     setVerifyError("");
@@ -44,7 +44,6 @@ export function VerificationScreen() {
       setCodeSent(true);
       return;
     }
-    navigate("/signup/nickname");
 
     if (code.length < 6) return;
     if (codeExpired) {
@@ -87,14 +86,6 @@ export function VerificationScreen() {
         <Input
           placeholder="이름 입력"
           value={name}
-          onChange={setName}
-        />
-        <Input
-          placeholder="001100 - 4******"
-          value={formatId(idNum)}
-          onChange={(v) => setIdNum(v.replace(/\D/g, "").slice(0, 7))}
-          inputMode="numeric"
-        />
           onChange={(v) => update("name", v.slice(0, 20))}
           valid={isNameValid}
           maxLength={20}
@@ -106,7 +97,7 @@ export function VerificationScreen() {
             value={showIdNum ? formatIdRaw(idNum) : formatId(idNum)}
             onChange={(v) => update("idNum", parseIdInput(v, idNum, !showIdNum))}
             inputMode="numeric"
-            valid={idNum.length === 13}
+            valid={isIdValid}
             paddingRight
           />
           <PasswordToggle
@@ -125,14 +116,16 @@ export function VerificationScreen() {
           <span>{carrier ?? "통신사 선택"}</span>
           <ChevronDownIcon />
         </button>
+
         <Input
-          placeholder="휴대폰 번호 입력 (010-1234-5678 입력 시 가입 차단 시연)"
+          placeholder="휴대폰 번호 입력"
           value={formatPhone(phone)}
           onChange={(v) => update("phone", v.replace(/\D/g, "").slice(0, 11))}
           inputMode="numeric"
           autoComplete="tel"
-          valid={phone.length >= 10}
+          valid={isPhoneValid}
         />
+
         {codeSent && (
           <div className="flex flex-col gap-1">
             <div className="relative">
@@ -222,7 +215,6 @@ function Input({
   value: string;
   onChange: (v: string) => void;
   inputMode?: "text" | "numeric" | "email";
-}) {
   onBlur?: () => void;
   error?: boolean;
   valid?: boolean;
@@ -231,12 +223,6 @@ function Input({
   paddingRight?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (inputRef.current && inputRef.current.value !== value) {
-      inputRef.current.value = value;
-    }
-  }, [value]);
 
   const enforceMax = (target: HTMLInputElement) => {
     let v = target.value;
@@ -249,20 +235,18 @@ function Input({
 
   return (
     <input
+      ref={inputRef}
       type="text"
       inputMode={inputMode ?? "text"}
       autoComplete={autoComplete}
       placeholder={placeholder}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-[62px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
       onChange={(e) => onChange(enforceMax(e.target))}
       onCompositionEnd={(e) => {
         const v = enforceMax(e.currentTarget);
         if (v !== value) onChange(v);
       }}
       onBlur={onBlur}
-      maxLength={maxLength}
       className={`h-[62px] w-full rounded-holo-input ${paddingRight ? "pr-12 pl-5" : "px-5"} text-[15px] outline-none ${
         error
           ? "border-2 border-holo-error"
@@ -274,59 +258,29 @@ function Input({
   );
 }
 
-function CarrierSheet({
-  selected,
-  onSelect,
-  onClose,
-}: {
-  selected: string | null;
-  onSelect: (v: string) => void;
-  onClose: () => void;
-}) {
+function CarrierSheet({ selected, onSelect, onClose }: any) {
   return (
-    <div
-      className="fixed inset-0 z-20 bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="absolute bottom-0 left-1/2 w-full -translate-x-1/2 rounded-t-[15px] bg-white px-5 pb-8 pt-3 md:max-w-[360px]"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-20 bg-black/40" onClick={onClose}>
+      <div className="absolute bottom-0 left-1/2 w-full -translate-x-1/2 rounded-t-[15px] bg-white px-5 pb-8 pt-3 md:max-w-[360px]" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mb-4 h-[6px] w-[70px] rounded-full bg-holo-line" />
-        <p className="mb-4 text-center text-[16px] font-semibold text-holo-ink">
-          통신사를 선택해 주세요.
-        </p>
-
+        <p className="mb-4 text-center text-[16px] font-semibold text-holo-ink">통신사를 선택해 주세요.</p>
         <div className="flex flex-col gap-5">
           {CARRIER_GROUPS.map((group, i) => (
             <section key={group.label} className="flex flex-col gap-2">
               <header className="flex items-center gap-3 px-1">
-                <span className="text-[12px] font-semibold tracking-wide text-holo-ink-3">
-                  {group.label}
-                </span>
+                <span className="text-[12px] font-semibold tracking-wide text-holo-ink-3">{group.label}</span>
                 <span className="h-px flex-1 bg-holo-line-2" />
               </header>
               <ul className="flex flex-col gap-2">
                 {group.items.map((c) => (
                   <li key={c}>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(c)}
-                      className={`flex h-[55px] w-full items-center justify-between rounded-holo-input border px-5 text-[15px] ${
-                        selected === c
-                          ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                          : "border-holo-line text-holo-ink"
-                      }`}
-                    >
+                    <button type="button" onClick={() => onSelect(c)} className={`flex h-[55px] w-full items-center justify-between rounded-holo-input border px-5 text-[15px] ${selected === c ? "border-2 border-holo-purple-mid text-holo-purple-mid" : "border-holo-line text-holo-ink"}`}>
                       <span>{c}</span>
                       {selected === c && <CheckIcon />}
                     </button>
                   </li>
                 ))}
               </ul>
-              {i < CARRIER_GROUPS.length - 1 && (
-                <div className="mt-3 h-px w-full bg-holo-line-2" />
-              )}
             </section>
           ))}
         </div>
@@ -335,88 +289,31 @@ function CarrierSheet({
   );
 }
 
-function AlreadyJoinedModal({
-  onLogin,
-  onFindPassword,
-  onClose,
-}: {
-  onLogin: () => void;
-  onFindPassword: () => void;
-  onClose: () => void;
-}) {
+function AlreadyJoinedModal({ onLogin, onFindPassword, onClose }: any) {
   return (
-    <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-6"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-[320px] rounded-[18px] bg-white p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="text-center text-[16px] font-semibold text-holo-ink">
-          이미 가입된 번호예요
-        </p>
-        <p className="mt-2 text-center text-[13px] leading-relaxed text-holo-ink-3">
-          휴대폰 번호 1개당 아이디 1개만 만들 수 있어요.
-          <br />
-          기존 계정으로 로그인하거나 비밀번호를 찾아보세요.
-        </p>
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-6" onClick={onClose}>
+      <div className="w-full max-w-[320px] rounded-[18px] bg-white p-6" onClick={(e) => e.stopPropagation()}>
+        <p className="text-center text-[16px] font-semibold text-holo-ink">이미 가입된 번호예요</p>
+        <p className="mt-2 text-center text-[13px] leading-relaxed text-holo-ink-3">휴대폰 번호 1개당 아이디 1개만 만들 수 있어요.<br />기존 계정으로 로그인하거나 비밀번호를 찾아보세요.</p>
         <div className="mt-5 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={onLogin}
-            className="h-[48px] w-full rounded-holo-pill bg-holo-gradient text-[14px] font-semibold text-white"
-          >
-            로그인하기
-          </button>
-          <button
-            type="button"
-            onClick={onFindPassword}
-            className="h-[48px] w-full rounded-holo-pill border border-holo-purple-mid text-[14px] font-semibold text-holo-purple-mid"
-          >
-            비밀번호 찾기
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-[40px] w-full text-[13px] text-holo-ink-3"
-          >
-            다른 번호로 다시 인증
-          </button>
+          <button type="button" onClick={onLogin} className="h-[48px] w-full rounded-holo-pill bg-holo-gradient text-[14px] font-semibold text-white">로그인하기</button>
+          <button type="button" onClick={onFindPassword} className="h-[48px] w-full rounded-holo-pill border border-holo-purple-mid text-[14px] font-semibold text-holo-purple-mid">비밀번호 찾기</button>
+          <button type="button" onClick={onClose} className="h-[40px] w-full text-[13px] text-holo-ink-3">다른 번호로 다시 인증</button>
         </div>
       </div>
     </div>
   );
 }
 
-function ChevronDownIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-function CheckIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m4 12 6 6 10-14" />
-    </svg>
-  );
-}
+function ChevronDownIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>; }
+function CheckIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m4 12 6 6 10-14" /></svg>; }
 
 function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
-  const front = v.slice(0, 6);
-  const back = v.slice(6, 7);
-  return `${front} - ${back}***`;
+  return `${v.slice(0, 6)} - ${v.slice(6, 7)}******`;
 }
 
-function formatPhone(v: string): string {
-  const digits = v.replace(/\D/g, "").slice(0, 11);
-  if (digits.length < 4) return digits;
-  if (digits.length < 8) return `${digits.slice(0,3)}-${digits.slice(3)}`;
-  return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
 function formatIdRaw(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
@@ -424,33 +321,14 @@ function formatIdRaw(v: string) {
 }
 
 function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) {
-  const tokens = displayValue.replace(/[^\d*]/g, "");
-  const front = tokens.slice(0, 6).replace(/\*/g, "");
-  const back = tokens.slice(6);
-
-  if (back.length === 0 || back[0] === "*") {
-    return front.slice(0, 6);
-  }
-
-  if (!masked) {
-    const all = (front + back).replace(/\*/g, "").slice(0, 13);
-    return all;
-  }
-
-  const genderChar = back[0];
-  const rest = back.slice(1);
-  const asteriskCount = (rest.match(/\*/g) || []).length;
-  const newDigits = rest.replace(/\*/g, "");
-
-  const prevBack = prevIdNum.slice(6);
-  const keptMasked = prevBack.slice(1, 1 + asteriskCount);
-
-  return (front + genderChar + keptMasked + newDigits).slice(0, 13);
+  const digits = displayValue.replace(/[^\d]/g, "");
+  return digits.slice(0, 13);
 }
 
 function formatPhone(v: string) {
   if (!v) return "";
-  if (v.length < 4) return v;
-  if (v.length < 8) return `${v.slice(0, 3)}-${v.slice(3)}`;
-  return `${v.slice(0, 3)}-${v.slice(3, 7)}-${v.slice(7)}`;
+  const digits = v.replace(/\D/g, "");
+  if (digits.length < 4) return digits;
+  if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
 }
