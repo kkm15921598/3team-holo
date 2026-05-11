@@ -15,6 +15,7 @@ import { InterestScreen } from "@/features/signup/interest-screen";
 import { ReviewScreen } from "@/features/signup/review-screen";
 import { RoomScreen } from "@/features/signup/room-screen";
 import { HomeScreen } from "@/features/home/home-screen";
+import { AccountScreen } from "@/features/signup/account-screen";
 import { MapScreen } from "@/features/map/map-screen";
 import { BoardMainScreen } from "@/features/board/board-main-screen";
 import { BoardListScreen } from "@/features/board/board-list-screen";
