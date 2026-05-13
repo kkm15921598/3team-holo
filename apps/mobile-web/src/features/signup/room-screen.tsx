@@ -16,7 +16,7 @@ import { CATALOG } from "../myroom/myroom-catalog";
 import { getPlacementWidth } from "../myroom/myroom-dimensions";
 import { RoomEditorView } from "../myroom/myroom-room-view";
 import { setMe } from "@/shared/me-store";
-import { setMyroomItems } from "../myroom/myroom-store";
+import { setMyroomItems, setStatusMessage } from "../myroom/myroom-store";
 
 const MAX_BUY_COUNT = 2;
 const TUTORIAL_LEVEL = 1;
@@ -189,6 +189,11 @@ export function RoomScreen() {
     );
 
     // me-store 에 가입한 정보 반영 — 새 유저는 레벨 1, 포인트 0 부터 시작
+    // 관심사도 함께 저장해서 홈 화면 추천 모임에 사용
+    const allInterests = [
+      ...data.interests,
+      ...(data.customInterest.trim() ? [data.customInterest.trim()] : []),
+    ];
     setMe({
       nickname: data.nickname || "회원",
       level: 1,
@@ -197,11 +202,15 @@ export function RoomScreen() {
       postsCount: 0,
       commentsCount: 0,
       daysActive: 1,
+      interests: allInterests,
     });
 
     // 회원가입 마지막 단계에서 배치/구매한 가구 2 개를 마이룸 기본 가구로 저장
     // (홈 화면의 RoomScene 은 useMyroomItems 로 이 값을 구독)
     setMyroomItems(items);
+
+    // 새 유저의 상태 메시지는 입력 안내 문구로 시작
+    setStatusMessage("상태메세지를 입력해주세요");
 
     navigate("/home", { replace: true });
   };

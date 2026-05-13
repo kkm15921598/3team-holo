@@ -11,6 +11,7 @@ export const ME = {
   postsCount: 10,
   commentsCount: 24,
   daysActive: 12,
+  interests: ["맛집", "먹거리", "카페", "산책", "운동"] as string[],
 };
 
 export const BOARD_CATEGORIES = [
@@ -354,7 +355,8 @@ export const ATTENDANCE_DAYS: AttendanceDay[] = [
   { day: 4, points: 5,  checked: false, isToday: false },
   { day: 5, points: 25, checked: false, isToday: false },
   { day: 6, points: 5,  checked: false, isToday: false },
-  { day: 7, points: 55, checked: false, isToday: false, label: "전체보너스" },
+  { day: 7, points: 55, checked: false, isToday: false, label: "전체 보상" },
 ];
 
-export const ATTENDANCE_STREAK = 20; // 연속 출석일 수
+/** 연속 출석 일수 */
+export const ATTENDANCE_STREAK = 20;

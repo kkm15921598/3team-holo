@@ -4,7 +4,7 @@ import { getBadgeByName } from "../../badge";
 import { ME_PERSONA } from "./home-faces";
 import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
-import { pickRandomMeetups } from "./home-meetups-data";
+import { pickRecommendedMeetups } from "./home-meetups-data";
 import { useStatusMessage } from "../myroom/myroom-store";
 import { useMe } from "@/shared/me-store";
 
@@ -16,8 +16,12 @@ export function HomeScreen() {
   const NICKNAME = me.nickname;
   const LEVEL = me.level;
   const TITLE = me.title;
-  const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
-  const handleRefresh = () => setMeetups((prev) => pickRandomMeetups(3, prev));
+  const interests = me.interests ?? [];
+  const [meetups, setMeetups] = useState(() =>
+    pickRecommendedMeetups(interests, 3),
+  );
+  const handleRefresh = () =>
+    setMeetups((prev) => pickRecommendedMeetups(interests, 3, prev));
   const status = useStatusMessage();
 
   return (

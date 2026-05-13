@@ -4,7 +4,7 @@ import { PasswordToggle } from "@/shared/components/password-toggle";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 import { resetMe } from "@/shared/me-store";
-import { resetMyroomItems } from "@/features/myroom/myroom-store";
+import { resetMyroomItems, setStatusMessage } from "@/features/myroom/myroom-store";
 
 const MOCK_ID = "test1234";
 const MOCK_PASSWORD = "test1234";
@@ -59,6 +59,7 @@ export function LoginScreen() {
       // test1234 계정 = 기본 데모 유저 "무지는단무지" 로 복원
       resetMe();
       resetMyroomItems();
+      setStatusMessage("안녕? 무지는 단무지야!");
       navigate("/home", { replace: true });
     } else {
       setIdError(false);

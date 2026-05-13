@@ -11,6 +11,8 @@ export type Meetup = {
   /** total member count — if greater than members.length, the extra is shown as "+N" */
   totalCount?: number;
   dim?: boolean;
+  /** 관심사 태그 — InterestScreen 의 SHORT_TAGS / LONG_TAGS 와 동일 어휘 */
+  tags?: string[];
 };
 
 const MAX_VISIBLE_AVATARS = 4;

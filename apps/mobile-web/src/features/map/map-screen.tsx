@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import L from "leaflet";
 import { MY_LOCATION, POSTS, type Post } from "@/shared/mock/data";
+import { pickPersonas } from "@/features/home/home-faces";
 
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -286,53 +287,58 @@ export function MapScreen() {
                   goToPost(p.id);
                 }
               }}
-              className="relative flex h-[153px] w-[158px] shrink-0 cursor-pointer flex-col rounded-holo-tile bg-[#EBE4F5] p-[12px]"
+              className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 cursor-pointer rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
             >
-              <p className="line-clamp-1 break-keep pr-[30px] text-[16px] font-bold leading-tight text-holo-ink">
+              <div className="line-clamp-1 break-keep pr-[40px] text-[16px] font-bold leading-tight text-holo-ink">
                 {p.title}
-              </p>
-              <p className="mt-[3px] pr-[30px] text-[12px] text-holo-purple-mid/80">
+              </div>
+              <div className="mt-[3px] text-[12px] font-medium text-holo-purple-mid opacity-80">
                 {p.distance} · {p.duration}
-              </p>
-              {p.location?.placeName && (
-                <p className="mt-[2px] truncate pr-[30px] text-[11px] text-holo-ink-3">
-                  📍 {p.location.placeName}
-                </p>
-              )}
-              <p className="mt-2 line-clamp-1 text-[13px] leading-snug text-holo-ink-2">
+              </div>
+              <p className="mt-2 line-clamp-2 max-h-[40px] max-w-[120px] text-[13px] leading-[1.4] text-[#333]">
                 {p.description}
               </p>
-              <span
-                className="absolute right-[8px] top-[8px] flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#CCBCE0]"
-                aria-hidden="true"
-              >
-                <ArrowOutIcon stroke="#7448DD" />
-              </span>
 
-              {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 */}
-              {p.participants.length > 0 && (
-                <div className="mt-auto flex items-center">
-                  {p.participants.slice(0, 3).map((pa, i) => (
-                    <span
-                      key={i}
-                      className="block h-[26px] w-[26px] rounded-full border-2 border-[#EBE4F5]"
-                      style={{
-                        backgroundColor: pa.avatarBg,
-                        marginLeft: i === 0 ? 0 : -6,
-                      }}
-                      aria-hidden="true"
-                    />
-                  ))}
-                  {p.participants.length > 3 && (
-                    <span
-                      className="ml-[-6px] flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-[#EBE4F5] bg-[#CCBCE0] text-[10px] font-bold text-holo-purple-deep"
-                      aria-label={"외 " + (p.participants.length - 3) + "명 더"}
-                    >
-                      +{p.participants.length - 3}
-                    </span>
-                  )}
-                </div>
-              )}
+              <Link
+                to={`/board/${p.id}`}
+                aria-label={`${p.title} 게시글로 이동`}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light transition-colors hover:bg-holo-purple-mid"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                  <path d="M3 11L11 3M11 3H5M11 3V9" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+
+              {/* 참여자 아바타 — 페르소나 얼굴 사진 사용 (홈 카드와 동일) */}
+              {p.participants.length > 0 && (() => {
+                const personas = pickPersonas(parseInt(p.id, 10) || 1, p.participants.length);
+                const visible = personas.slice(0, 4);
+                const extra = p.participants.length - visible.length;
+                return (
+                  <div className="absolute bottom-[13px] left-[14px] flex">
+                    {visible.map((pa, i) => (
+                      <img
+                        key={pa.name + i}
+                        src={pa.face}
+                        alt={pa.name}
+                        title={pa.name}
+                        className="h-[28px] w-[28px] rounded-full border-2 border-holo-lilac-card-2 object-cover"
+                        style={{ marginLeft: i === 0 ? 0 : -6 }}
+                        draggable={false}
+                      />
+                    ))}
+                    {extra > 0 && (
+                      <span
+                        className="ml-[-6px] flex h-[28px] min-w-[28px] items-center justify-center rounded-full border-2 border-holo-lilac-card-2 bg-holo-purple-mid px-1 text-[11px] font-bold text-white"
+                        aria-label={"외 " + extra + "명 더"}
+                      >
+                        +{extra}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </article>
           ))}
         </div>
