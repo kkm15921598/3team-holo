@@ -75,7 +75,6 @@ export function MypageScreen() {
           <SettingItem label="계정관리" to="/mypage/account" />
           <SettingItem label="개인정보" to="/mypage/privacy" />
           <SettingItem label="알림설정" to="/mypage/notifications" />
-          <SettingItem label="모드설정하기" to="/mypage/mode" />
           <li>
             <button
               type="button"

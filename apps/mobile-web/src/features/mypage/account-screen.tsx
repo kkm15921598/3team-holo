@@ -36,9 +36,9 @@ export function AccountScreen() {
       <section className="mt-4 px-4">
         <p className="text-[12px] text-holo-ink-3">계정 보안</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+          <Row label="이메일 변경" hint="user@holo.app" onClick={() => navigate("/mypage/account/email")} />
           <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
           <Row label="휴대폰 번호 변경" hint="010-****-1234" onClick={() => navigate("/mypage/account/phone")} />
-          <Row label="이메일 변경" hint="user@holo.app" onClick={() => navigate("/mypage/account/email")} />
         </ul>
       </section>
 

@@ -59,7 +59,7 @@ export function VerifyRegionScreen() {
 
           <ul className="mt-6 flex w-full flex-col gap-2 text-left text-[12px] text-holo-ink-2">
             <Bullet>대략적인 행정동까지만 사용해요 (정확한 좌표 X)</Bullet>
-            <Bullet>인증은 30일에 한 번 갱신해주시면 돼요</Bullet>
+            <Bullet>인증은 3개월에 한 번 갱신해주시면 돼요</Bullet>
             <Bullet>인증 완료 시 +10P가 지급돼요</Bullet>
           </ul>
 
@@ -154,7 +154,7 @@ export function VerifyRegionScreen() {
 
           <p className="mt-4 text-[11px] leading-5 text-holo-ink-3">
             · 거짓으로 인증하면 서비스 이용이 제한될 수 있어요.
-            <br />· 등록한 동네는 30일 뒤 다시 인증해주세요.
+            <br />· 등록한 동네는 3개월 뒤 다시 인증해주세요.
           </p>
 
           <div className="mt-auto pb-4 pt-6">
@@ -206,7 +206,7 @@ export function VerifyRegionScreen() {
 
 function nextRenewDate() {
   const d = new Date();
-  d.setDate(d.getDate() + 30);
+  d.setMonth(d.getMonth() + 3);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
     d.getDate(),
   ).padStart(2, "0")}`;

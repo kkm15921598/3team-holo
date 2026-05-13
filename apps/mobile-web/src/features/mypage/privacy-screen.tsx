@@ -4,9 +4,7 @@ import { useNavigate } from "react-router-dom";
 export function PrivacyScreen() {
   const navigate = useNavigate();
   const [shareLocation, setShareLocation] = useState(true);
-  const [showActivity, setShowActivity] = useState(true);
   const [allowFriendRequest, setAllowFriendRequest] = useState(true);
-  const [allowSearchByPhone, setAllowSearchByPhone] = useState(false);
   const [marketing, setMarketing] = useState(false);
 
   return (
@@ -28,20 +26,9 @@ export function PrivacyScreen() {
             onChange={setShareLocation}
           />
           <ToggleRow
-            label="내 활동 공개"
-            hint="다른 사용자가 내 글·댓글을 볼 수 있어요"
-            value={showActivity}
-            onChange={setShowActivity}
-          />
-          <ToggleRow
             label="친구 요청 허용"
             value={allowFriendRequest}
             onChange={setAllowFriendRequest}
-          />
-          <ToggleRow
-            label="휴대폰 번호로 나 찾기"
-            value={allowSearchByPhone}
-            onChange={setAllowSearchByPhone}
           />
         </ul>
       </section>
@@ -63,7 +50,6 @@ export function PrivacyScreen() {
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
           <LinkRow label="개인정보 처리방침" onClick={() => navigate("/mypage/privacy/policy")} />
           <LinkRow label="서비스 이용약관" onClick={() => navigate("/mypage/privacy/terms")} />
-          <LinkRow label="내 데이터 다운로드 요청" onClick={() => navigate("/mypage/privacy/data")} />
         </ul>
       </section>
 

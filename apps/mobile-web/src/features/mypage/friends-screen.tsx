@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FRIENDS, ME } from "@/shared/mock/data";
 
 type Friend = (typeof FRIENDS)[number];
-type Mode = "view" | "block" | "report";
+type Mode = "view" | "block" | "report" | "delete";
 
 export function FriendsScreen() {
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ export function FriendsScreen() {
   const [blocked, setBlocked] = useState<Friend[]>([]);
   const [showBlockedView, setShowBlockedView] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState<Friend | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Friend | null>(null);
   const [reportTarget, setReportTarget] = useState<Friend | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [toast, setToast] = useState<string | null>(null);
@@ -29,6 +30,13 @@ export function FriendsScreen() {
     setFriends((prev) => prev.filter((f) => f.id !== confirmBlock.id));
     setConfirmBlock(null);
     showToast("차단되었습니다.");
+  };
+
+  const handleDelete = () => {
+    if (!confirmDelete) return;
+    setFriends((prev) => prev.filter((f) => f.id !== confirmDelete.id));
+    setConfirmDelete(null);
+    showToast("친구가 삭제되었습니다.");
   };
 
   const handleUnblock = (id: string) => {
@@ -62,7 +70,13 @@ export function FriendsScreen() {
             <BackIcon />
           </button>
           <span className="text-[16px] font-semibold text-holo-ink">
-            {mode === "block" ? "차단하기" : mode === "report" ? "신고하기" : "내 친구"}
+            {mode === "block"
+              ? "차단하기"
+              : mode === "report"
+                ? "신고하기"
+                : mode === "delete"
+                  ? "삭제하기"
+                  : "내 친구"}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -93,7 +107,9 @@ export function FriendsScreen() {
             ? "차단할 친구를 선택해 주세요"
             : mode === "report"
               ? "신고할 친구를 선택해 주세요"
-              : "친구목록"}
+              : mode === "delete"
+                ? "삭제할 친구를 선택해 주세요"
+                : "친구목록"}
         </span>
         {mode === "view" && (
           <span className="text-[12px] text-holo-ink-3">내 ID : {ME.friendCode}</span>
@@ -105,7 +121,7 @@ export function FriendsScreen() {
           {mode === "view" ? "친구를 추가 해보세요" : "친구 목록이 없습니다"}
         </div>
       ) : (
-        <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto px-4 pb-3">
+        <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-[12px] overflow-y-auto px-4 pb-3">
           {visibleFriends.map((f) => (
             <li key={f.id}>
               <button
@@ -114,6 +130,7 @@ export function FriendsScreen() {
                 onClick={() => {
                   if (mode === "block") setConfirmBlock(f);
                   else if (mode === "report") setReportTarget(f);
+                  else if (mode === "delete") setConfirmDelete(f);
                 }}
                 className="flex w-full items-center gap-2 text-left disabled:cursor-default"
               >
@@ -130,6 +147,11 @@ export function FriendsScreen() {
                   {mode === "report" && (
                     <span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-holo-purple-mid text-white">
                       <FlagMini />
+                    </span>
+                  )}
+                  {mode === "delete" && (
+                    <span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-holo-error text-white">
+                      <MinusIcon />
                     </span>
                   )}
                 </span>
@@ -151,6 +173,17 @@ export function FriendsScreen() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-holo-line" />
+            <button
+              type="button"
+              onClick={() => {
+                setMode("delete");
+                setShowMenu(false);
+              }}
+              className="flex w-full items-center gap-2 py-3 text-[14px] text-holo-ink"
+            >
+              <TrashIcon /> 삭제하기
+            </button>
+            <div className="h-px bg-holo-line-3" />
             <button
               type="button"
               onClick={() => {
@@ -186,6 +219,38 @@ export function FriendsScreen() {
               </span>
               <span className="text-[12px] text-holo-ink-3">{blocked.length}명</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
+          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
+            <p className="text-[14px] text-holo-ink">
+              <span className="font-semibold">{confirmDelete.nickname}</span> 님을
+              <br />
+              친구 목록에서 삭제할까요?
+            </p>
+            <p className="mt-2 text-[12px] text-holo-ink-3">
+              삭제하면 친구 목록에서 사라집니다.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
+              >
+                삭제
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -375,6 +440,14 @@ function FlagIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M4 21V4l14 4-7 3 7 4z" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
+      <path d="M10 11v6M14 11v6" />
     </svg>
   );
 }
