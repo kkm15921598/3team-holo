@@ -1,10 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { ME, POINT_HISTORY, POINT_GUIDE_ONCE, POINT_GUIDE_REPEAT } from "@/shared/mock/data";
+import { ME, POINT_HISTORY } from "@/shared/mock/data";
 
 export function PointsScreen() {
   const navigate = useNavigate();
-  const [showGuide, setShowGuide] = useState(false);
 
   return (
     <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-2 pb-4">
@@ -27,14 +25,6 @@ export function PointsScreen() {
         <Quick label="무료포인트" icon={<PCircleIcon />} onClick={() => navigate("/mypage/points/free")} />
         <Quick label="상점" icon={<ShopIcon />} onClick={() => navigate("/myroom")} />
       </section>
-
-      <button
-        type="button"
-        onClick={() => setShowGuide(true)}
-        className="self-end text-[12px] text-holo-ink-3 underline"
-      >
-        ⓘ 포인트 획득 가이드
-      </button>
 
       {/* History */}
       <section>
@@ -62,7 +52,6 @@ export function PointsScreen() {
         </ul>
       </section>
 
-      {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
     </main>
   );
 }
@@ -88,70 +77,10 @@ function Quick({
   );
 }
 
-function GuideModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-5"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-[320px] rounded-[15px] bg-white p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="mb-4 flex items-center justify-between">
-          <span className="text-[16px] font-semibold text-holo-ink">포인트 획득 가이드</span>
-          <button type="button" aria-label="닫기" onClick={onClose}>
-            <CloseIcon />
-          </button>
-        </header>
-
-        <Section title="일회성 적립" rows={POINT_GUIDE_ONCE} />
-        <Section title="여러번 적립" rows={POINT_GUIDE_REPEAT} />
-
-        <p className="mt-3 text-[11px] text-holo-ink-3">
-          · 글쓰기를 통한 적립은 하루 30p 제한 있습니다.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: { label: string; value: number }[];
-}) {
-  return (
-    <div className="mb-3">
-      <p className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-holo-ink">
-        <span className="h-3 w-1 bg-holo-purple-mid" />
-        {title}
-      </p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-holo-input bg-holo-surface-2 p-3">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between text-[13px] text-holo-ink">
-            <span>{r.label}</span>
-            <span className="font-semibold text-holo-purple-mid">{r.value}P</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-function CloseIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <path d="m6 6 12 12M6 18 18 6" />
     </svg>
   );
 }

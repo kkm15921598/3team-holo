@@ -66,7 +66,7 @@ export function ProfileEditScreen() {
             중복확인
           </button>
         </div>
-        <p className="mt-1 text-[12px] text-holo-ink-3">한글과 공백 최대 10자, 특수문자 불가</p>
+        <p className="mt-1 text-[12px] text-holo-ink-3">한글과 공백 포함 최대 10자, 영어와 특수문자 불가.</p>
         {check === "ok" && <p className="mt-1 text-[13px] text-holo-purple-mid">사용할 수 있는 닉네임입니다!</p>}
         {check === "fail" && <p className="mt-1 text-[13px] text-holo-error">사용할 수 없는 닉네임입니다!</p>}
       </section>

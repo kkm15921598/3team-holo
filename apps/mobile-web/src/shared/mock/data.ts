@@ -338,12 +338,23 @@ export const FRIENDS = [
   { id: "12", nickname: "닭볶음탕수", avatarBg: "#DDC0FF" },
 ];
 
-export const ATTENDANCE_DAYS = [
-  { day: 1, reward: "500P" },
-  { day: 2, illustration: true },
-  { day: 3 },
-  { day: 4, reward: "500P" },
-  { day: 5 },
-  { day: 6 },
-  { day : 7, reward: "1000P" },
+export type AttendanceDay = {
+  day: number;       // 1~7
+  points: number;    // 지급 포인트
+  checked: boolean;  // 출석 완료 여부
+  isToday: boolean;  // 오늘 여부
+  label?: string;    // 특별 라벨 (예: "연속보너스", "전체보너스")
+};
+
+// 현재 사용자 기준: 오늘은 2일차, 1일차 출석 완료, 연속 20일 스트릭
+export const ATTENDANCE_DAYS: AttendanceDay[] = [
+  { day: 1, points: 5,  checked: true,  isToday: false },
+  { day: 2, points: 5,  checked: false, isToday: true  },
+  { day: 3, points: 15, checked: false, isToday: false, label: "연속보너스" },
+  { day: 4, points: 5,  checked: false, isToday: false },
+  { day: 5, points: 25, checked: false, isToday: false },
+  { day: 6, points: 5,  checked: false, isToday: false },
+  { day: 7, points: 55, checked: false, isToday: false, label: "전체보너스" },
 ];
+
+export const ATTENDANCE_STREAK = 20; // 연속 출석일 수
