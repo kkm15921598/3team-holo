@@ -1109,10 +1109,7 @@ function MessageItem({
 
   if (message.mine) {
     return (
-      <li className="flex flex-col items-end gap-1">
-        {reactions.length > 0 && (
-          <ReactionList reactions={reactions} onClick={onReact} align="end" />
-        )}
+      <li className="flex flex-col items-end">
         <div className="flex items-end gap-2">
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-[10px] text-holo-ink-3">
@@ -1126,12 +1123,17 @@ function MessageItem({
             {showReactionPicker && <ReactionPicker onPick={onPickEmoji} align="end" />}
           </div>
         </div>
+        {reactions.length > 0 && (
+          <div className="relative z-20 -mt-1 mr-2">
+            <ReactionList reactions={reactions} onClick={onReact} align="end" />
+          </div>
+        )}
       </li>
     );
   }
 
   return (
-    <li className="flex flex-col items-start gap-1">
+    <li className="flex flex-col items-start">
       <div className="flex items-start gap-2">
         <button
           type="button"
@@ -1161,11 +1163,13 @@ function MessageItem({
             </div>
             <span className="text-[10px] text-holo-ink-3">{message.time}</span>
           </div>
+          {reactions.length > 0 && (
+            <div className="relative z-20 -mt-1 ml-2">
+              <ReactionList reactions={reactions} onClick={onReact} align="start" />
+            </div>
+          )}
         </div>
       </div>
-      {reactions.length > 0 && (
-        <ReactionList reactions={reactions} onClick={onReact} align="start" />
-      )}
     </li>
   );
 }
@@ -1222,9 +1226,7 @@ function ReactionList({
 }) {
   return (
     <div
-      className={`flex flex-wrap gap-1 ${align === "end" ? "justify-end" : "justify-start"} ${
-        align === "start" ? "ml-11" : ""
-      }`}
+      className={`flex flex-wrap gap-1 ${align === "end" ? "justify-end" : "justify-start"}`}
     >
       {reactions.map((r) => (
         <button
