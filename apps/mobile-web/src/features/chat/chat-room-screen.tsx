@@ -256,7 +256,6 @@ export function ChatRoomScreen() {
   }, [id, messages]);
   const [text, setText] = useState("");
   const [reply, setReply] = useState<ReplyTarget>(null);
-  const [typing, setTyping] = useState(false);
 
   const scrollRef = useRef<HTMLUListElement>(null);
   // 파일 input refs (각각 다른 accept/capture 옵션)
@@ -269,13 +268,6 @@ export function ChatRoomScreen() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
-
-  // typing 가짜 인디케이터 (3초 후 자동 OFF)
-  useEffect(() => {
-    if (!typing) return;
-    const t = setTimeout(() => setTyping(false), 3000);
-    return () => clearTimeout(t);
-  }, [typing]);
 
   const send = () => {
     const v = text.trim();
@@ -300,8 +292,6 @@ export function ChatRoomScreen() {
     ]);
     setText("");
     setReply(null);
-    // 가짜 답장 인디케이터
-    setTimeout(() => setTyping(true), 600);
   };
 
   const addReaction = (id: string, emoji: string) => {
@@ -481,8 +471,8 @@ export function ChatRoomScreen() {
 
   return (
     <main
-      className="relative flex flex-col overflow-hidden px-4 pt-3 pb-3"
-      style={{ height: "calc(100dvh - 56px - 72px)" }}
+      className="relative flex flex-col overflow-hidden px-4 pt-3"
+      style={{ height: "calc(100dvh - 72px)" }}
     >
       {/* 첨부용 hidden file inputs */}
       <input
@@ -517,7 +507,7 @@ export function ChatRoomScreen() {
         }}
       />
 
-      <article className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-holo-card bg-white shadow-holo-card">
+      <article className="relative mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-holo-card bg-white shadow-holo-card">
         {searchOpen ? (
           <header className="flex shrink-0 items-center gap-2 border-b border-holo-line bg-white px-3 py-2.5">
             <button
@@ -671,7 +661,7 @@ export function ChatRoomScreen() {
               <MessageItem
                 key={m.id}
                 message={m}
-                onLongPress={(target) => setActionTarget(target)}
+                onLongPress={(target) => setReactionTarget(target.id)}
                 onReact={() => setReactionTarget(m.id)}
                 showReactionPicker={reactionTarget === m.id}
                 onPickEmoji={(e) => addReaction(m.id, e)}
@@ -682,25 +672,11 @@ export function ChatRoomScreen() {
             );
           })}
 
-          {typing && (
-            <li className="flex items-end gap-2">
-              <img
-                src={getAvatarUrl(room?.isGroup ? "typing" : room?.name)}
-                alt=""
-                className="h-9 w-9 shrink-0 rounded-full bg-holo-yellow-room object-cover"
-              />
-              <div className="flex items-center gap-1 rounded-2xl bg-white px-3 py-2 shadow-sm">
-                <Dot />
-                <Dot delay="150ms" />
-                <Dot delay="300ms" />
-              </div>
-            </li>
-          )}
         </ul>
       </article>
 
-      {/* 입력바: 탭바(72px) 바로 위에 fixed 고정. device-frame 폭(max 360px)에 맞춤 */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 border-t border-holo-line-3 bg-white">
+      {/* 입력바: article 바로 아래 flex 흐름. main의 px-4를 상쇄해 전폭 표시 */}
+      <div className="-mx-4 shrink-0 border-t border-holo-line-3 bg-white">
         {/* 답장 미리보기 */}
         {reply && (
           <div className="flex items-start gap-2 bg-holo-surface-2 px-3 py-2">
@@ -965,13 +941,25 @@ function MessageItem({
   onProfileClick: (nickname: string) => void;
 }) {
   const longPressTimer = useRef<number | null>(null);
+  const longPressFired = useRef(false);
   const startPress = () => {
-    longPressTimer.current = window.setTimeout(() => onLongPress(message), 450);
+    longPressFired.current = false;
+    longPressTimer.current = window.setTimeout(() => {
+      longPressFired.current = true;
+      onLongPress(message);
+    }, 450);
   };
   const cancelPress = () => {
     if (longPressTimer.current) {
       window.clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+    }
+  };
+  // long press 직후 따라오는 click이 ul까지 버블링되어 피커를 즉시 닫는 것을 방지
+  const handleClick = (e: React.MouseEvent) => {
+    if (longPressFired.current) {
+      e.stopPropagation();
+      longPressFired.current = false;
     }
   };
 
@@ -987,6 +975,7 @@ function MessageItem({
     onMouseLeave: cancelPress,
     onTouchStart: startPress,
     onTouchEnd: cancelPress,
+    onClick: handleClick,
   };
 
   const renderBody = (mine: boolean) => {
@@ -1069,6 +1058,9 @@ function MessageItem({
   if (message.mine) {
     return (
       <li className="flex flex-col items-end gap-1">
+        {reactions.length > 0 && (
+          <ReactionList reactions={reactions} onClick={onReact} align="end" />
+        )}
         <div className="flex items-end gap-2">
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-[10px] text-holo-ink-3">
@@ -1079,12 +1071,9 @@ function MessageItem({
           <div className="relative">
             {message.replyTo && <ReplyPreview reply={message.replyTo} />}
             {renderBody(true)}
-            {showReactionPicker && <ReactionPicker onPick={onPickEmoji} />}
+            {showReactionPicker && <ReactionPicker onPick={onPickEmoji} align="end" />}
           </div>
         </div>
-        {reactions.length > 0 && (
-          <ReactionList reactions={reactions} onClick={onReact} align="end" />
-        )}
       </li>
     );
   }
@@ -1141,18 +1130,27 @@ function ReplyPreview({ reply }: { reply: { nickname: string; content: string } 
   );
 }
 
-function ReactionPicker({ onPick }: { onPick: (e: string) => void }) {
+function ReactionPicker({
+  onPick,
+  align = "start",
+}: {
+  onPick: (e: string) => void;
+  align?: "start" | "end";
+}) {
   return (
     <div
-      className="absolute -top-9 left-0 z-10 flex items-center gap-1 rounded-full bg-white px-2 py-1 shadow-md"
+      className={`absolute -top-11 ${align === "end" ? "right-0" : "left-0"} z-[60] flex items-center gap-1 rounded-full border border-holo-line-3 bg-white px-2 py-1 shadow-lg`}
       onClick={(e) => e.stopPropagation()}
     >
       {CHAT_QUICK_EMOJIS.map((e) => (
         <button
           key={e}
           type="button"
-          className="text-[16px] hover:scale-125"
-          onClick={() => onPick(e)}
+          className="text-[18px] transition-transform hover:scale-125"
+          onClick={(e2) => {
+            e2.stopPropagation();
+            onPick(e);
+          }}
         >
           {e}
         </button>
@@ -1180,7 +1178,10 @@ function ReactionList({
         <button
           key={r.emoji}
           type="button"
-          onClick={onClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
           className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] ${
             r.mine
               ? "border-holo-purple-mid bg-holo-lilac-soft text-holo-purple-mid"
@@ -1204,15 +1205,6 @@ function DateDivider({ dateStr }: { dateStr: string }) {
         {label}
       </span>
     </li>
-  );
-}
-
-function Dot({ delay }: { delay?: string }) {
-  return (
-    <span
-      className="h-1.5 w-1.5 animate-bounce rounded-full bg-holo-ink-3"
-      style={{ animationDelay: delay }}
-    />
   );
 }
 

@@ -1,106 +1,289 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SignupLayout } from "./signup-layout";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { useSignup } from "@/shared/contexts/signup-context";
+import {
+  CATEGORIES,
+  clampPlacement,
+  DEFAULT_PLACEMENT,
+  furnitureSrc,
+  type CategoryKey,
+  type PlacedFurniture,
+} from "../myroom/myroom-data";
+import type { CatalogItem } from "../myroom/myroom-data";
+import { CATALOG } from "../myroom/myroom-catalog";
+import { getPlacementWidth } from "../myroom/myroom-dimensions";
+import { RoomEditorView } from "../myroom/myroom-room-view";
 
-const NICKNAME = "무지는 단무지";
-const CATEGORIES = ["전체", "침대", "책상", "의자", "벽지", "바닥"];
-
-type FurnitureKind = "desk" | "shelf";
-type FurnitureItem = { id: string; label: string; kind: FurnitureKind };
-
-const ITEMS: FurnitureItem[] = [
-  { id: "desk", label: "원목 책상 세트", kind: "desk" },
-  { id: "shelf", label: "원목 책장", kind: "shelf" },
-];
+const MAX_BUY_COUNT = 2;
+const TUTORIAL_LEVEL = 1;
 
 export function RoomScreen() {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState<string>("전체");
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const { data } = useSignup();
+
+  const displayName = data.nickname || data.userId || "회원";
+
+  const [activeCat, setActiveCat] = useState<CategoryKey>("all");
+  const [items, setItems] = useState<PlacedFurniture[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [ownedKeys, setOwnedKeys] = useState<Set<string>>(new Set());
+  const [pendingPurchase, setPendingPurchase] = useState<CatalogItem | null>(null);
+  const [limitAlertOpen, setLimitAlertOpen] = useState(false);
   const [showError, setShowError] = useState(false);
 
-  const togglePick = (id: string) => {
-    setPicked((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const filtered = useMemo(() => {
+    const levelOneItems = CATALOG.filter(
+      (item) => item.lockedAt === undefined || item.lockedAt <= TUTORIAL_LEVEL
+    );
+
+    if (activeCat === "all") return levelOneItems;
+
+    return levelOneItems.filter((item) => item.kind === activeCat);
+  }, [activeCat]);
+
+  const canNext = items.length >= MAX_BUY_COUNT;
+
+  const handleSelectInRoom = (id: string | null) => {
+    setSelectedId(id);
+  };
+
+  const handleRemove = (id: string) => {
+    const removed = items.find((i) => i.id === id);
+
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    setSelectedId(null);
+
+    if (removed) {
+      const ownedKey = `${removed.kind}:${removed.variant}`;
+      setOwnedKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(ownedKey);
+        return next;
+      });
+    }
+
     setShowError(false);
   };
 
-  const canNext = picked.size >= 2;
+  const handleFlip = (id: string) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, flipped: !i.flipped } : i))
+    );
+  };
 
-  const handleNext = () => {
-    if (!canNext) {
-      setShowError(true);
+  const handleMove = (id: string, x: number, y: number) => {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id ? { ...i, ...clampPlacement(x, y, i.width) } : i
+      )
+    );
+  };
+
+  const handleBringForward = (id: string) => {
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx === -1 || idx === items.length - 1) return;
+
+    const next = [...items];
+    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+    setItems(next);
+  };
+
+  const handleSendBackward = (id: string) => {
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx <= 0) return;
+
+    const next = [...items];
+    [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+    setItems(next);
+  };
+
+  const handleRequestPurchase = (item: CatalogItem) => {
+    const isLocked = item.lockedAt !== undefined && item.lockedAt > TUTORIAL_LEVEL;
+    if (isLocked) return;
+
+    const ownedKey = `${item.kind}:${item.variant}`;
+    const alreadyOwned = ownedKeys.has(ownedKey);
+
+    if (alreadyOwned) return;
+
+    if (ownedKeys.size >= MAX_BUY_COUNT) {
+      setLimitAlertOpen(true);
       return;
     }
-    navigate("/home", { replace: true });
+
+    setPendingPurchase(item);
   };
+
+  const confirmTutorialPurchase = () => {
+    if (!pendingPurchase) return;
+
+    const item = pendingPurchase;
+    const ownedKey = `${item.kind}:${item.variant}`;
+    const alreadyOwned = ownedKeys.has(ownedKey);
+
+    if (!alreadyOwned && ownedKeys.size >= MAX_BUY_COUNT) {
+      setLimitAlertOpen(true);
+      setPendingPurchase(null);
+      return;
+    }
+
+    if (!alreadyOwned) {
+      setOwnedKeys((prev) => {
+        const next = new Set(prev);
+        next.add(ownedKey);
+        return next;
+      });
+    }
+
+    const existing = items.find(
+      (i) => i.kind === item.kind && i.variant === item.variant
+    );
+
+    if (existing) {
+      setSelectedId(existing.id);
+      setPendingPurchase(null);
+      return;
+    }
+
+    const d = DEFAULT_PLACEMENT[item.kind];
+    const width = getPlacementWidth(item.kind, item.variant);
+    const safe = clampPlacement(d.x, d.y, width);
+
+    const placed: PlacedFurniture = {
+      id: `${item.kind}-${item.variant}-${Date.now()}`,
+      kind: item.kind,
+      variant: item.variant,
+      flipped: d.flipped ?? false,
+      x: safe.x,
+      y: safe.y,
+      width,
+    };
+
+    setItems((prev) => [...prev, placed]);
+    setSelectedId(placed.id);
+    setShowError(false);
+    setPendingPurchase(null);
+  };
+
+  const handleNext = () => {
+  if (!canNext) {
+    setShowError(true);
+    return;
+  }
+
+  localStorage.setItem(
+    "holoUser",
+    JSON.stringify({
+      userId: data.userId,
+      nickname: data.nickname,
+      name: data.name,
+      phone: data.phone,
+      interests: data.interests,
+      customInterest: data.customInterest,
+    })
+  );
+
+  navigate("/home", { replace: true });
+};
 
   return (
     <SignupLayout step={7}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         거의 다 왔습니다!
         <br />
-        <span className="text-holo-purple-mid">{NICKNAME}</span> 님의 방을 꾸며보세요!
+        <span className="text-holo-purple-mid">{displayName}</span> 님의 방을 꾸며보세요!
       </h1>
+
       <p className="mt-2 text-[14px] text-holo-ink-3">
-        취향에 맞는 가구를 골라 나만의 방을 완성해보세요.
+        마음에 드는 가구 2개를 구매하고 방에 배치해보세요.
       </p>
 
-      <div className="mt-5 flex justify-center">
-        <EmptyRoom />
+      <div className="relative -mx-4 mt-4 flex h-[340px] shrink-0 justify-center overflow-hidden">
+        <RoomEditorView
+          items={items}
+          selectedId={selectedId}
+          onSelect={handleSelectInRoom}
+          onRemove={handleRemove}
+          onFlip={handleFlip}
+          onMove={handleMove}
+          onBringForward={handleBringForward}
+          onSendBackward={handleSendBackward}
+        />
       </div>
 
-      <div className="mt-4 -mx-4 overflow-x-auto px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="no-scrollbar -mx-4 mt-2 shrink-0 overflow-x-auto px-4 py-2">
         <div className="flex w-max gap-2">
           {CATEGORIES.map((c) => {
-            const on = activeCategory === c;
+            const on = activeCat === c.key;
+
             return (
               <button
-                key={c}
+                key={c.key}
                 type="button"
-                onClick={() => setActiveCategory(c)}
-                className={`h-[36px] shrink-0 rounded-[20px] border-2 px-4 text-[14px] transition ${
+                onClick={() => setActiveCat(c.key)}
+                className={`shrink-0 rounded-[20px] px-4 py-1.5 text-[14px] ${
                   on
-                    ? "border-holo-purple-mid text-holo-purple-mid"
-                    : "border-holo-line text-holo-ink"
+                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                    : "border border-holo-line text-holo-ink"
                 }`}
               >
-                {c}
+                {c.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        {ITEMS.map((it) => {
-          const on = picked.has(it.id);
-          return (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => togglePick(it.id)}
-              className={`flex aspect-square flex-col rounded-holo-input bg-holo-surface-2 p-3 ${
-                on ? "border-2 border-holo-purple-mid" : "border-2 border-transparent"
-              }`}
-            >
-              <div className="flex flex-1 items-center justify-center">
-                <FurnitureIcon kind={it.kind} />
+      <div className="no-scrollbar -mx-4 flex flex-1 min-h-0 flex-col overflow-y-auto px-4 pb-2">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+          {filtered.map((it) => {
+            const ownedKey = `${it.kind}:${it.variant}`;
+            const alreadyOwned = ownedKeys.has(ownedKey);
+
+            return (
+              <div key={it.id} className="flex flex-col">
+                <article className="relative flex aspect-square flex-col overflow-hidden rounded-holo-input bg-holo-surface-2 p-3">
+                  <div className="flex flex-1 items-center justify-center overflow-hidden">
+                    <img
+                      src={furnitureSrc({
+                        kind: it.kind,
+                        variant: it.variant,
+                        flipped: false,
+                      })}
+                      alt={it.label}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+
+                  {!alreadyOwned && (
+                    <button
+                      type="button"
+                      onClick={() => handleRequestPurchase(it)}
+                      className="absolute bottom-3 left-3 right-3 z-10 rounded-full bg-[#FF6CB8] py-[6px] text-center text-[13px] tracking-tight text-white shadow-[0_3px_8px_rgba(255,108,184,0.35)]"
+                    >
+                      구매하기
+                    </button>
+                  )}
+                </article>
+
+                <span className="mt-2 text-center text-[13px] font-medium text-holo-ink">
+                  {it.label}
+                </span>
               </div>
-              <span className="mt-2 text-[13px] font-medium text-holo-ink">{it.label}</span>
-            </button>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      <div className="mt-auto flex flex-col items-center gap-2 pt-6">
+      <div className="mt-auto flex flex-col items-center gap-2 pt-4">
         {showError && (
-          <p className="text-[13px] text-holo-error">튜토리얼을 진행해주세요!</p>
+          <p className="text-[13px] text-holo-error">
+            가구 2개를 구매하고 배치해주세요!
+          </p>
         )}
+
         <button
           type="button"
           onClick={handleNext}
@@ -111,71 +294,58 @@ export function RoomScreen() {
           다음
         </button>
       </div>
+
+      <ConfirmModal
+        open={pendingPurchase !== null}
+        message={
+          pendingPurchase ? (
+            <>
+              <span className="font-bold text-holo-purple-mid">
+                {pendingPurchase.label}
+              </span>
+              {"을(를) 구매하고 방에 배치해볼까요?"}
+            </>
+          ) : null
+        }
+        onConfirm={confirmTutorialPurchase}
+        onCancel={() => setPendingPurchase(null)}
+      />
+
+      <TutorialAlertModal
+        open={limitAlertOpen}
+        message="이미 2개를 구매하셨습니다."
+        onClose={() => setLimitAlertOpen(false)}
+      />
     </SignupLayout>
   );
 }
 
-function EmptyRoom() {
-  return (
-    <svg
-      viewBox="0 0 240 240"
-      className="h-[220px] w-[260px]"
-      aria-label="빈 방 미리보기"
-    >
-      <polygon
-        points="40,50 120,0 120,150 40,200"
-        fill="#C8A8E8"
-        stroke="#A88AC9"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <polygon
-        points="120,0 200,50 200,200 120,150"
-        fill="#A881D4"
-        stroke="#8A66B5"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <polygon
-        points="40,200 120,150 200,200 120,240"
-        fill="#D9B488"
-        stroke="#B89370"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <line x1="60" y1="195" x2="125" y2="158" stroke="#C9A275" strokeWidth="0.6" />
-      <line x1="80" y1="205" x2="135" y2="172" stroke="#C9A275" strokeWidth="0.6" />
-      <line x1="100" y1="215" x2="145" y2="186" stroke="#C9A275" strokeWidth="0.6" />
-      <line x1="180" y1="195" x2="125" y2="160" stroke="#C9A275" strokeWidth="0.6" />
-      <line x1="160" y1="205" x2="115" y2="172" stroke="#C9A275" strokeWidth="0.6" />
-      <line x1="140" y1="215" x2="105" y2="186" stroke="#C9A275" strokeWidth="0.6" />
-      <line x1="120" y1="0" x2="120" y2="150" stroke="#7A559E" strokeWidth="1.2" />
-    </svg>
-  );
-}
+function TutorialAlertModal({
+  open,
+  message,
+  onClose,
+}: {
+  open: boolean;
+  message: string;
+  onClose: () => void;
+}) {
+  if (!open) return null;
 
-function FurnitureIcon({ kind }: { kind: FurnitureKind }) {
-  if (kind === "desk") {
-    return (
-      <svg width="72" height="56" viewBox="0 0 72 56" aria-hidden>
-        <rect x="6" y="14" width="60" height="10" rx="2" fill="#C9A674" />
-        <rect x="10" y="24" width="4" height="26" fill="#B89060" />
-        <rect x="58" y="24" width="4" height="26" fill="#B89060" />
-        <rect x="32" y="6" width="20" height="4" rx="1" fill="#9C7A4E" />
-        <rect x="32" y="10" width="20" height="14" rx="1" fill="#B89060" />
-      </svg>
-    );
-  }
   return (
-    <svg width="60" height="64" viewBox="0 0 60 64" aria-hidden>
-      <rect x="6" y="6" width="48" height="52" rx="2" fill="#C9A674" />
-      <line x1="6" y1="22" x2="54" y2="22" stroke="#9C7A4E" strokeWidth="2" />
-      <line x1="6" y1="40" x2="54" y2="40" stroke="#9C7A4E" strokeWidth="2" />
-      <rect x="10" y="11" width="3" height="9" fill="#7A6248" />
-      <rect x="14" y="11" width="3" height="9" fill="#5E4733" />
-      <rect x="18" y="11" width="3" height="9" fill="#7A6248" />
-      <rect x="10" y="29" width="6" height="9" fill="#5E4733" />
-      <rect x="44" y="45" width="6" height="11" fill="#7A6248" />
-    </svg>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
+      <div className="w-full max-w-[320px] rounded-[24px] bg-white px-5 py-6 shadow-lg">
+        <p className="text-center text-[15px] font-medium leading-relaxed text-holo-ink">
+          {message}
+        </p>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 h-[44px] w-full rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white"
+        >
+          확인
+        </button>
+      </div>
+    </div>
   );
 }
