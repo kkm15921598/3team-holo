@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390px, initial-scale=1.0">
+<title>HOLO - 친구추가</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #fff;
+    width: 390px;
+    height: 844px;
+    margin: 0 auto;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ══════════════════════════
+     Background: My Friends screen
+  ══════════════════════════ */
+  .bg-screen {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+  }
+
+  /* Header */
+  .bg-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 54px 20px 12px;
+    background: #fff;
+  }
+
+  .logo-text {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 32px; font-weight: 600;
+    color: #7448DD; letter-spacing: 1px; line-height: 1;
+  }
+
+  .bg-hdr-icons { display: flex; align-items: center; gap: 16px; }
+  .bg-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #1A1A1A; position: relative; }
+  .notif-dot { position: absolute; top: 0; right: 0; width: 7px; height: 7px; background: #FF4343; border-radius: 50%; border: 1.5px solid #fff; }
+
+  /* Title bar */
+  .bg-title-bar {
+    position: absolute; top: 110px; left: 0; right: 0;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid #D9D9D9;
+    display: flex; align-items: center; background: #fff;
+  }
+
+  .bg-back { background: none; border: none; padding: 2px; margin-right: 8px; display: flex; align-items: center; }
+  .bg-title { font-size: 20px; font-weight: 700; color: #000; flex: 1; }
+  .bg-title-actions { display: flex; align-items: center; gap: 14px; }
+  .bg-action-btn { background: none; border: none; display: flex; align-items: center; padding: 2px; }
+
+  /* Friends info row */
+  .bg-info-row {
+    position: absolute; top: 158px; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 20px 14px;
+  }
+  .bg-info-left { display: flex; align-items: center; gap: 6px; font-size: 16px; color: #000; }
+  .bg-info-right { font-size: 16px; color: #000; }
+
+  /* Friend Grid */
+  .bg-friend-grid {
+    position: absolute; top: 216px; left: 0; right: 0;
+    display: grid; grid-template-columns: 1fr 1fr;
+    padding: 0 10px;
+  }
+
+  .bg-friend-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 10px;
+  }
+
+  .bg-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    overflow: hidden; flex-shrink: 0;
+  }
+
+  .bg-friend-name { font-size: 14px; color: #404040; }
+
+  /* More btn */
+  .bg-more {
+    position: absolute; top: 430px; left: 0; right: 0;
+    display: flex; justify-content: center;
+    font-size: 15px; color: #555;
+  }
+
+  /* Bottom menus */
+  .bg-menus {
+    position: absolute; top: 480px; left: 20px; right: 20px;
+  }
+  .bg-menu-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 0; font-size: 16px; color: #000;
+  }
+
+  /* Bottom Nav */
+  .bg-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 82px; background: #fff;
+    border-top: 1px solid #F0F0F0;
+    display: flex; align-items: flex-start; padding-top: 10px;
+  }
+  .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .nav-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; color: #A8A8A8; }
+  .nav-tab.active .nav-icon { color: #7448DD; }
+  .nav-label { font-size: 12px; font-weight: 400; color: #A8A8A8; }
+  .nav-tab.active .nav-label { font-weight: 700; color: #7448DD; }
+
+  /* ══════════════════════════
+     Overlay Layer
+  ══════════════════════════ */
+
+  /* DIM */
+  .dim {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+
+  /* Top bar (above dim) */
+  .overlay-topbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    background: #fff;
+    z-index: 20;
+    display: flex; align-items: center;
+    padding: 54px 16px 14px;
+    gap: 0;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+  }
+
+  .close-btn {
+    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px; margin-right: 10px;
+  }
+
+  .overlay-title {
+    font-size: 20px; font-weight: 700; color: #000;
+    flex: 1;
+  }
+
+  .tab-group {
+    display: flex; align-items: center; gap: 0;
+  }
+
+  .overlay-tab {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 14px; font-weight: 400; color: #5D5D5D;
+    padding: 4px 10px; cursor: pointer; background: none; border: none;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  .tab-divider {
+    width: 1px; height: 16px; background: #A8A8A8; margin: 0 2px;
+  }
+
+  /* Modal Card */
+  .modal-card {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -48%);
+    width: 234px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 22px 18px 20px;
+    z-index: 20;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  }
+
+  .modal-nickname {
+    font-size: 20px; font-weight: 700; color: #000;
+    align-self: flex-start;
+  }
+
+  .modal-id {
+    font-size: 16px; font-weight: 400; color: #000;
+    align-self: flex-start; margin-bottom: 8px;
+  }
+
+  .qr-box {
+    width: 198px; height: 198px;
+    background: #B3B3B3;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* QR code SVG pattern */
+  .qr-code {
+    width: 136px; height: 136px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ Background: My Friends Screen ══ -->
+<div class="bg-screen">
+
+  <!-- Header -->
+  <div class="bg-header">
+    <span class="logo-text">HOLO</span>
+    <div class="bg-hdr-icons">
+      <div class="bg-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#1A1A1A" stroke-width="2"/><path d="M15.5 15.5L21 21" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="bg-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 10C6 7 8.7 4 12 4C15.3 4 18 7 18 10V15L20 17H4L6 15V10Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M10 17C10 18.1 10.9 19 12 19C13.1 19 14 18.1 14 17" stroke="#1A1A1A" stroke-width="1.5"/></svg><div class="notif-dot"></div></div>
+      <div class="bg-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 3L21 9L9 21L3 15L15 3Z" stroke="#1A1A1A" stroke-width="2" stroke-linejoin="round"/><path d="M6 6L7 7M18 14L19 15M3 3L4 4M20 20L21 21M14 6L15 5" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+
+  <!-- Title Bar -->
+  <div class="bg-title-bar">
+    <button class="bg-back"><svg width="10" height="18" viewBox="0 0 10 18" fill="none"><path d="M9 1L1 9L9 17" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="bg-title">내 친구</span>
+    <div class="bg-title-actions">
+      <button class="bg-action-btn"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 4V18M4 11H18" stroke="#A8A8A8" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button class="bg-action-btn"><svg width="4" height="18" viewBox="0 0 4 18" fill="none"><circle cx="2" cy="2" r="2" fill="#555"/><circle cx="2" cy="9" r="2" fill="#555"/><circle cx="2" cy="16" r="2" fill="#555"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Info Row -->
+  <div class="bg-info-row">
+    <div class="bg-info-left">
+      <svg width="20" height="18" viewBox="0 0 20 18" fill="none"><circle cx="7" cy="6" r="3.5" stroke="#1A1A1A" stroke-width="1.5"/><circle cx="14" cy="5" r="2.8" stroke="#1A1A1A" stroke-width="1.5"/><path d="M1 16C1 12.7 3.7 10 7 10C10.3 10 13 12.7 13 16" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/><path d="M14 10C16.8 10 19 12.2 19 15" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/></svg>
+      친구목록
+    </div>
+    <span class="bg-info-right">내 ID : ajhd5</span>
+  </div>
+
+  <!-- Friend Grid -->
+  <div class="bg-friend-grid">
+    <div class="bg-friend-item">
+      <div class="bg-avatar">
+        <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" fill="#F8C8D0"/><ellipse cx="26" cy="23" rx="13" ry="13" fill="#FDDBA0"/><ellipse cx="26" cy="13" rx="12" ry="8" fill="#3A1A0A"/><ellipse cx="36" cy="17" rx="7" ry="9" fill="#3A1A0A"/><circle cx="21" cy="24" r="2.2" fill="#2A1A0A"/><circle cx="31" cy="24" r="2.2" fill="#2A1A0A"/><path d="M22 30 Q26 33 30 30" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="42" rx="16" ry="12" fill="#E8A8B8"/></svg>
+      </div>
+      <span class="bg-friend-name">무지는 단무지</span>
+    </div>
+    <div class="bg-friend-item">
+      <div class="bg-avatar">
+        <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" fill="#A8C8E8"/><ellipse cx="26" cy="23" rx="13" ry="13" fill="#FDDBA0"/><ellipse cx="26" cy="12" rx="12" ry="7" fill="#1A0800"/><ellipse cx="20" cy="10" rx="5" ry="5" fill="#1A0800"/><ellipse cx="32" cy="10" rx="5" ry="5" fill="#1A0800"/><circle cx="21" cy="24" r="2.2" fill="#2A1A0A"/><circle cx="31" cy="24" r="2.2" fill="#2A1A0A"/><path d="M22 30 Q26 33 30 30" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="44" rx="16" ry="12" fill="#3A5A7A"/></svg>
+      </div>
+      <span class="bg-friend-name">껍질은 달걀껍질</span>
+    </div>
+    <div class="bg-friend-item">
+      <div class="bg-avatar">
+        <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" fill="#C8E8C0"/><ellipse cx="26" cy="23" rx="13" ry="13" fill="#FDDBA0"/><ellipse cx="26" cy="13" rx="11" ry="7" fill="#2A1A00"/><ellipse cx="16" cy="16" rx="5" ry="6" fill="#2A1A00"/><circle cx="21" cy="24" r="2.2" fill="#2A1A0A"/><circle cx="31" cy="24" r="2.2" fill="#2A1A0A"/><path d="M22 30 Q26 33 30 30" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="44" rx="16" ry="12" fill="#4A7A3A"/></svg>
+      </div>
+      <span class="bg-friend-name">감자 없는 카레</span>
+    </div>
+    <div class="bg-friend-item">
+      <div class="bg-avatar">
+        <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" fill="#F8D8A0"/><ellipse cx="26" cy="23" rx="13" ry="13" fill="#F5C88A"/><ellipse cx="26" cy="13" rx="11" ry="7" fill="#5A2A00"/><ellipse cx="36" cy="10" rx="5" ry="9" fill="#5A2A00"/><circle cx="21" cy="24" r="2.2" fill="#2A1A0A"/><circle cx="31" cy="24" r="2.2" fill="#2A1A0A"/><path d="M22 30 Q26 33 30 30" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="44" rx="16" ry="12" fill="#E87A50"/></svg>
+      </div>
+      <span class="bg-friend-name">껍질은 달걀껍질</span>
+    </div>
+    <div class="bg-friend-item">
+      <div class="bg-avatar">
+        <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" fill="#D8C8F0"/><ellipse cx="26" cy="23" rx="13" ry="13" fill="#FDDBA0"/><ellipse cx="26" cy="14" rx="12" ry="8" fill="#2A1A00"/><ellipse cx="16" cy="20" rx="5" ry="8" fill="#2A1A00"/><ellipse cx="36" cy="20" rx="5" ry="8" fill="#2A1A00"/><circle cx="21" cy="24" r="2.2" fill="#2A1A0A"/><circle cx="31" cy="24" r="2.2" fill="#2A1A0A"/><path d="M22 30 Q26 33 30 30" stroke="#C07040" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="44" rx="16" ry="12" fill="#7448DD" opacity="0.85"/></svg>
+      </div>
+      <span class="bg-friend-name">무지는 단무지</span>
+    </div>
+    <div class="bg-friend-item">
+      <div class="bg-avatar">
+        <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" fill="#B8D8E8"/><ellipse cx="26" cy="23" rx="13" ry="13" fill="#F0D8B8"/><ellipse cx="26" cy="13" rx="12" ry="7" fill="#A0A0A0"/><circle cx="21" cy="24" r="2.2" fill="#2A1A0A"/><circle cx="31" cy="24" r="2.2" fill="#2A1A0A"/><path d="M22 30 Q26 33 30 30" stroke="#A07050" stroke-width="1.2" fill="none" stroke-linecap="round"/><ellipse cx="26" cy="44" rx="16" ry="12" fill="#5A7890"/></svg>
+      </div>
+      <span class="bg-friend-name">껍질은 달걀껍질</span>
+    </div>
+  </div>
+
+  <!-- More -->
+  <div class="bg-more">더보기 ∨</div>
+
+  <!-- Bottom Menus -->
+  <div class="bg-menus">
+    <div class="bg-menu-item">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="#1A1A1A" stroke-width="1.6"/><line x1="4" y1="4" x2="18" y2="18" stroke="#1A1A1A" stroke-width="1.6" stroke-linecap="round"/></svg>
+      차단한 친구
+    </div>
+    <div class="bg-menu-item">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M5 9C5 6 7.7 3 11 3C14.3 3 17 6 17 9V14L19 16H3L5 14V9Z" stroke="#1A1A1A" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 16C9 17.1 9.9 18 11 18C12.1 18 13 17.1 13 16" stroke="#1A1A1A" stroke-width="1.4"/><circle cx="16" cy="4" r="3" fill="#FF4343"/></svg>
+      신고하기
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bg-nav">
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 12.5L14 4L23 12.5V23H17V17H11V23H5V12.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">홈</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="4" y="6" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H24" stroke="currentColor" stroke-width="1.5"/></svg></div><span class="nav-label">지도</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="5" y="4" width="18" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10H19M9 14H19M9 18H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><span class="nav-label">게시판</span></div>
+    <div class="nav-tab"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M5 6H23V19C23 19.6 22.6 20 22 20H9L5 24V6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><span class="nav-label">채팅</span></div>
+    <div class="nav-tab active"><div class="nav-icon"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="10" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M6 24C6 20.1 9.6 17 14 17C18.4 17 22 20.1 22 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><span class="nav-label">마이</span></div>
+  </div>
+</div>
+
+<!-- ══ DIM ══ -->
+<div class="dim"></div>
+
+<!-- ══ Overlay Top Bar ══ -->
+<div class="overlay-topbar">
+  <button class="close-btn">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 2L16 16M16 2L2 16" stroke="#5D5D5D" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <span class="overlay-title">친구추가</span>
+  <div class="tab-group">
+    <button class="overlay-tab">
+      <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+        <rect x="1" y="1" width="14" height="12" rx="2" stroke="#5D5D5D" stroke-width="1.3"/>
+        <path d="M4 5H12M4 8H9" stroke="#5D5D5D" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      ID로 추가
+    </button>
+    <div class="tab-divider"></div>
+    <button class="overlay-tab">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="1" width="6" height="6" rx="1" stroke="#5D5D5D" stroke-width="1.3"/>
+        <rect x="9" y="1" width="6" height="6" rx="1" stroke="#5D5D5D" stroke-width="1.3"/>
+        <rect x="1" y="9" width="6" height="6" rx="1" stroke="#5D5D5D" stroke-width="1.3"/>
+        <rect x="3" y="3" width="2" height="2" fill="#5D5D5D"/>
+        <rect x="11" y="3" width="2" height="2" fill="#5D5D5D"/>
+        <rect x="3" y="11" width="2" height="2" fill="#5D5D5D"/>
+        <path d="M9 9H11V11H9V9ZM11 11H13V13H11V11ZM13 9H15V11H13V9ZM9 13H11V15H9V13Z" fill="#5D5D5D"/>
+      </svg>
+      QR코드
+    </button>
+  </div>
+</div>
+
+<!-- ══ QR Modal Card ══ -->
+<div class="modal-card">
+  <div class="modal-nickname">닉네임</div>
+  <div class="modal-id">ID : ajhd5</div>
+  <div class="qr-box">
+    <!-- QR Code SVG pattern -->
+    <svg class="qr-code" viewBox="0 0 136 136" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Top-left finder pattern -->
+      <rect x="4" y="4" width="40" height="40" rx="4" fill="#111"/>
+      <rect x="10" y="10" width="28" height="28" rx="2" fill="#B3B3B3"/>
+      <rect x="16" y="16" width="16" height="16" rx="1" fill="#111"/>
+
+      <!-- Top-right finder pattern -->
+      <rect x="92" y="4" width="40" height="40" rx="4" fill="#111"/>
+      <rect x="98" y="10" width="28" height="28" rx="2" fill="#B3B3B3"/>
+      <rect x="104" y="16" width="16" height="16" rx="1" fill="#111"/>
+
+      <!-- Bottom-left finder pattern -->
+      <rect x="4" y="92" width="40" height="40" rx="4" fill="#111"/>
+      <rect x="10" y="98" width="28" height="28" rx="2" fill="#B3B3B3"/>
+      <rect x="16" y="104" width="16" height="16" rx="1" fill="#111"/>
+
+      <!-- Data modules (random-looking pattern) -->
+      <!-- Row 1 area (between finders) -->
+      <rect x="50" y="4" width="8" height="8" fill="#111"/>
+      <rect x="62" y="4" width="8" height="8" fill="#111"/>
+      <rect x="74" y="4" width="8" height="8" fill="#111"/>
+      <rect x="56" y="14" width="8" height="8" fill="#111"/>
+      <rect x="74" y="14" width="8" height="8" fill="#111"/>
+      <rect x="50" y="24" width="8" height="8" fill="#111"/>
+      <rect x="68" y="24" width="8" height="8" fill="#111"/>
+      <rect x="56" y="34" width="8" height="8" fill="#111"/>
+      <rect x="74" y="34" width="8" height="8" fill="#111"/>
+
+      <!-- Left side modules -->
+      <rect x="4" y="50" width="8" height="8" fill="#111"/>
+      <rect x="14" y="50" width="8" height="8" fill="#111"/>
+      <rect x="28" y="50" width="8" height="8" fill="#111"/>
+      <rect x="4" y="62" width="8" height="8" fill="#111"/>
+      <rect x="22" y="62" width="8" height="8" fill="#111"/>
+      <rect x="34" y="62" width="8" height="8" fill="#111"/>
+      <rect x="4" y="74" width="8" height="8" fill="#111"/>
+      <rect x="18" y="74" width="8" height="8" fill="#111"/>
+      <rect x="32" y="74" width="8" height="8" fill="#111"/>
+      <rect x="8" y="80" width="8" height="8" fill="#111"/>
+      <rect x="28" y="80" width="8" height="8" fill="#111"/>
+
+      <!-- Center area modules -->
+      <rect x="50" y="50" width="8" height="8" fill="#111"/>
+      <rect x="64" y="50" width="8" height="8" fill="#111"/>
+      <rect x="78" y="50" width="8" height="8" fill="#111"/>
+      <rect x="54" y="60" width="8" height="8" fill="#111"/>
+      <rect x="70" y="60" width="8" height="8" fill="#111"/>
+      <rect x="82" y="60" width="8" height="8" fill="#111"/>
+      <rect x="50" y="70" width="8" height="8" fill="#111"/>
+      <rect x="66" y="70" width="8" height="8" fill="#111"/>
+      <rect x="56" y="80" width="8" height="8" fill="#111"/>
+      <rect x="74" y="80" width="8" height="8" fill="#111"/>
+
+      <!-- Right side modules -->
+      <rect x="100" y="50" width="8" height="8" fill="#111"/>
+      <rect x="114" y="50" width="8" height="8" fill="#111"/>
+      <rect x="124" y="50" width="8" height="8" fill="#111"/>
+      <rect x="106" y="62" width="8" height="8" fill="#111"/>
+      <rect x="120" y="62" width="8" height="8" fill="#111"/>
+      <rect x="98" y="72" width="8" height="8" fill="#111"/>
+      <rect x="114" y="72" width="8" height="8" fill="#111"/>
+      <rect x="124" y="72" width="8" height="8" fill="#111"/>
+      <rect x="102" y="82" width="8" height="8" fill="#111"/>
+      <rect x="118" y="82" width="8" height="8" fill="#111"/>
+
+      <!-- Bottom area modules -->
+      <rect x="50" y="96" width="8" height="8" fill="#111"/>
+      <rect x="64" y="96" width="8" height="8" fill="#111"/>
+      <rect x="80" y="96" width="8" height="8" fill="#111"/>
+      <rect x="56" y="108" width="8" height="8" fill="#111"/>
+      <rect x="72" y="108" width="8" height="8" fill="#111"/>
+      <rect x="84" y="108" width="8" height="8" fill="#111"/>
+      <rect x="50" y="118" width="8" height="8" fill="#111"/>
+      <rect x="66" y="118" width="8" height="8" fill="#111"/>
+      <rect x="78" y="120" width="8" height="8" fill="#111"/>
+
+      <!-- Bottom-right modules -->
+      <rect x="98" y="96" width="8" height="8" fill="#111"/>
+      <rect x="112" y="96" width="8" height="8" fill="#111"/>
+      <rect x="124" y="96" width="8" height="8" fill="#111"/>
+      <rect x="104" y="108" width="8" height="8" fill="#111"/>
+      <rect x="118" y="108" width="8" height="8" fill="#111"/>
+      <rect x="98" y="120" width="8" height="8" fill="#111"/>
+      <rect x="116" y="120" width="8" height="8" fill="#111"/>
+      <rect x="126" y="120" width="8" height="8" fill="#111"/>
+    </svg>
+  </div>
+</div>
+
+</body>
+</html>
