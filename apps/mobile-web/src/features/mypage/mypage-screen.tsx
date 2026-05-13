@@ -1,9 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
+import { useMe } from "@/shared/me-store";
+import { ME_PERSONA } from "@/features/home/home-faces";
+import { getBadgeByName } from "@/badge";
+
+const HOME_BADGE = getBadgeByName("HOLO 수호신");
 
 export function MypageScreen() {
   const navigate = useNavigate();
+  const ME = useMe();
   const [showLogout, setShowLogout] = useState(false);
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
@@ -11,13 +16,23 @@ export function MypageScreen() {
       <section className="-mx-4">
         <div className="bg-holo-lilac-card-2 p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-holo-yellow-room text-[32px] leading-none">
-              <span aria-hidden>👧</span>
-            </span>
+            <img
+              src={ME_PERSONA.face}
+              alt={ME_PERSONA.name}
+              className="h-14 w-14 rounded-full bg-holo-yellow-room object-cover"
+              draggable={false}
+            />
             <div className="flex flex-1 flex-col">
               <div className="flex items-center gap-2">
                 <span className="text-[16px] font-semibold text-holo-ink">{ME.nickname}</span>
-                <span>{ME.badgeIcon}</span>
+                {HOME_BADGE && (
+                  <img
+                    src={HOME_BADGE.src}
+                    alt={HOME_BADGE.name}
+                    title={HOME_BADGE.name}
+                    className="h-[22px] w-[22px] object-contain"
+                  />
+                )}
               </div>
               <span className="text-[12px] text-holo-ink-3">{ME.title}</span>
             </div>
@@ -194,9 +209,10 @@ function HeartIcon() {
 function PeopleIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="9" cy="8" r="3.5" />
-      <circle cx="17" cy="9" r="2.5" />
-      <path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6M14 14c2.5 0 7 1.5 7 5" />
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
 }

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_ROOM, type PlacedFurniture } from "./myroom-data";
+import { getMe, setMe, useMe } from "@/shared/me-store";
 
 const STORAGE_KEY = "holo:myroom:v1";
 
@@ -160,62 +161,23 @@ export function useOwnedSet(): Set<string> {
   return useSyncExternalStore(ownedSubscribe, ownedSnapshot, ownedSnapshot);
 }
 
-// ─── 포인트 (구매 시 차감) ───────────────────────────────
-const POINTS_KEY = "holo:myroom:points";
-const DEFAULT_POINTS = 1264; // ME.points 와 동일
-
-function loadPoints(): number {
-  if (typeof window === "undefined") return DEFAULT_POINTS;
-  try {
-    const v = window.localStorage.getItem(POINTS_KEY);
-    if (v !== null && v !== "") return Number(v);
-  } catch {
-    // ignore
-  }
-  return DEFAULT_POINTS;
-}
-
-let pointsState: number = loadPoints();
-const pointsListeners = new Set<() => void>();
-
-function persistPoints() {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(POINTS_KEY, String(pointsState));
-  } catch {
-    // ignore
-  }
-}
-
-function emitPoints() {
-  pointsListeners.forEach((l) => l());
-}
-
-/** 포인트 차감 (음수 방지). 부족하면 false 리턴 */
+// ─── 포인트 (me-store 와 연동) ───────────────────────────
+/** 포인트 차감 (음수 방지). me-store 의 points 를 갱신. 부족하면 false 리턴 */
 export function spendPoints(amount: number): boolean {
-  if (pointsState < amount) return false;
-  pointsState -= amount;
-  persistPoints();
-  emitPoints();
+  const cur = getMe().points;
+  if (cur < amount) return false;
+  setMe({ points: cur - amount });
   return true;
 }
 
 /** 현재 포인트 (구독 안 함) */
 export function getPoints(): number {
-  return pointsState;
+  return getMe().points;
 }
 
-const pointsSubscribe = (cb: () => void) => {
-  pointsListeners.add(cb);
-  return () => {
-    pointsListeners.delete(cb);
-  };
-};
-const pointsSnapshot = () => pointsState;
-
-/** 포인트를 React 컴포넌트에서 구독 */
+/** 포인트를 React 컴포넌트에서 구독 — me-store 변경에 자동 반응 */
 export function usePoints(): number {
-  return useSyncExternalStore(pointsSubscribe, pointsSnapshot, pointsSnapshot);
+  return useMe().points;
 }
 
 // ─── 상태 메시지 ─────────────────────────────────────────

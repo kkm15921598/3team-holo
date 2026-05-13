@@ -15,6 +15,8 @@ import type { CatalogItem } from "../myroom/myroom-data";
 import { CATALOG } from "../myroom/myroom-catalog";
 import { getPlacementWidth } from "../myroom/myroom-dimensions";
 import { RoomEditorView } from "../myroom/myroom-room-view";
+import { setMe } from "@/shared/me-store";
+import { setMyroomItems } from "../myroom/myroom-store";
 
 const MAX_BUY_COUNT = 2;
 const TUTORIAL_LEVEL = 1;
@@ -168,25 +170,41 @@ export function RoomScreen() {
   };
 
   const handleNext = () => {
-  if (!canNext) {
-    setShowError(true);
-    return;
-  }
+    if (!canNext) {
+      setShowError(true);
+      return;
+    }
 
-  localStorage.setItem(
-    "holoUser",
-    JSON.stringify({
-      userId: data.userId,
-      nickname: data.nickname,
-      name: data.name,
-      phone: data.phone,
-      interests: data.interests,
-      customInterest: data.customInterest,
-    })
-  );
+    // 가입 정보 영구 보관 (디버그 / 추후 API 연동용)
+    localStorage.setItem(
+      "holoUser",
+      JSON.stringify({
+        userId: data.userId,
+        nickname: data.nickname,
+        name: data.name,
+        phone: data.phone,
+        interests: data.interests,
+        customInterest: data.customInterest,
+      }),
+    );
 
-  navigate("/home", { replace: true });
-};
+    // me-store 에 가입한 정보 반영 — 새 유저는 레벨 1, 포인트 0 부터 시작
+    setMe({
+      nickname: data.nickname || "회원",
+      level: 1,
+      points: 0,
+      title: "",
+      postsCount: 0,
+      commentsCount: 0,
+      daysActive: 1,
+    });
+
+    // 회원가입 마지막 단계에서 배치/구매한 가구 2 개를 마이룸 기본 가구로 저장
+    // (홈 화면의 RoomScene 은 useMyroomItems 로 이 값을 구독)
+    setMyroomItems(items);
+
+    navigate("/home", { replace: true });
+  };
 
   return (
     <SignupLayout step={7}>

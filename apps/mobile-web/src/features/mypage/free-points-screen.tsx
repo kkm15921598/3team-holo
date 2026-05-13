@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { earnPoints, useMe } from "@/shared/me-store";
 
 type Mission = {
   id: string;
@@ -40,6 +41,7 @@ const DAILY_PROGRESS: Record<string, { done: number; cap: number }> = {
 
 export function FreePointsScreen() {
   const navigate = useNavigate();
+  const me = useMe();
   const [claimedToday, setClaimedToday] = useState<Record<string, boolean>>({
     login: true, // 자동 적립됨
   });
@@ -72,6 +74,7 @@ export function FreePointsScreen() {
         if (prev.remaining <= 1) {
           clearInterval(interval);
           DAILY_PROGRESS.ad.done += 1;
+          earnPoints(5);
           showToast("광고 시청 완료! +5P 적립");
           return null;
         }
@@ -87,6 +90,7 @@ export function FreePointsScreen() {
     }
     setClaimedToday((prev) => ({ ...prev, survey: true }));
     DAILY_PROGRESS.survey.done = 1;
+    earnPoints(20);
     showToast("설문 완료! +20P 적립");
   };
 
@@ -96,6 +100,7 @@ export function FreePointsScreen() {
       return;
     }
     setCompleted((prev) => ({ ...prev, verify: true }));
+    earnPoints(10);
     showToast("동네 인증 완료! +10P 적립");
   };
 
@@ -138,7 +143,12 @@ export function FreePointsScreen() {
 
       {/* 헤더 카드 */}
       <section className="mx-4 mt-2 rounded-holo-card bg-holo-gradient-soft p-4 text-white">
-        <p className="text-[12px] opacity-90">오늘 모을 수 있는 포인트</p>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[12px] opacity-90">오늘 모을 수 있는 포인트</p>
+          <p className="text-[12px] opacity-90">
+            보유 <span className="font-semibold">{me.points}P</span>
+          </p>
+        </div>
         <p className="mt-1 text-[28px] font-bold">최대 95P</p>
         <p className="mt-1 text-[12px] opacity-90">
           미션을 완료하고 포인트를 받아가세요!
@@ -156,6 +166,7 @@ export function FreePointsScreen() {
             onClick={() => {
               if (!claimedToday.login) {
                 setClaimedToday((p) => ({ ...p, login: true }));
+                earnPoints(5);
                 showToast("출석 보상 +5P 적립");
               } else {
                 showToast("이미 적립됐어요!");
@@ -340,7 +351,7 @@ function MissionRow({
         className={`h-8 shrink-0 rounded-full px-3 text-[12px] font-semibold transition ${
           done
             ? "bg-holo-line-3 text-holo-ink-3"
-            : "bg-holo-purple-mid text-white active:scale-[0.98]"
+            : "bg-holo-purple-mid text-white"
         }`}
       >
         {label}
@@ -348,6 +359,7 @@ function MissionRow({
     </li>
   );
 }
+
 
 function BackIcon() {
   return (

@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { ME, POINT_HISTORY } from "@/shared/mock/data";
+import { POINT_HISTORY } from "@/shared/mock/data";
+import { useMe } from "@/shared/me-store";
 
 export function PointsScreen() {
   const navigate = useNavigate();
+  const ME = useMe();
 
   return (
     <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-2 pb-4">

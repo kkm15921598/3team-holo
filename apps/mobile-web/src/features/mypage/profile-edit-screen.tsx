@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ME, BADGES, TITLES } from "@/shared/mock/data";
+import { BADGES, TITLES } from "@/shared/mock/data";
+import { setMe, useMe } from "@/shared/me-store";
 
 const HAIR_COUNT = 6;
 const BG_COLORS = [
@@ -16,15 +17,26 @@ const BG_COLORS = [
 
 export function ProfileEditScreen() {
   const navigate = useNavigate();
-  const [nickname, setNickname] = useState(ME.nickname);
+  const me = useMe();
+  const [nickname, setNickname] = useState(me.nickname);
   const [check, setCheck] = useState<"ok" | "fail" | null>(null);
   const [hair, setHair] = useState(2);
   const [bg, setBg] = useState(1);
   const [badge, setBadge] = useState(1);
-  const [titleIdx, setTitleIdx] = useState(0);
+  const [titleIdx, setTitleIdx] = useState(() =>
+    Math.max(0, TITLES.findIndex((t) => t === me.title)),
+  );
 
   const handleCheck = () => {
     setCheck(nickname === "감자는 감자" ? "fail" : "ok");
+  };
+
+  const handleSave = () => {
+    setMe({
+      nickname: nickname.trim() || me.nickname,
+      title: TITLES[titleIdx] ?? me.title,
+    });
+    navigate(-1);
   };
 
   return (
@@ -35,7 +47,7 @@ export function ProfileEditScreen() {
         </button>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={handleSave}
           className="text-[14px] font-semibold text-holo-ink"
         >
           완료

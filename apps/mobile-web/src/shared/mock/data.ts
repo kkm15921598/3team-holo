@@ -1,7 +1,7 @@
 // 시안에서 추출한 mock 데이터 — Phase D에서 Supabase로 교체 예정
 
 export const ME = {
-  nickname: "무지는 단무지",
+  nickname: "무지는단무지",
   level: 24,
   points: 1264,
   title: "#벌레_해결사",

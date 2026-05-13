@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { PasswordToggle } from "@/shared/components/password-toggle";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
+import { resetMe } from "@/shared/me-store";
+import { resetMyroomItems } from "@/features/myroom/myroom-store";
 
 const MOCK_ID = "test1234";
 const MOCK_PASSWORD = "test1234";
@@ -54,6 +56,9 @@ export function LoginScreen() {
     }
 
     if (userId === MOCK_ID && password === MOCK_PASSWORD) {
+      // test1234 계정 = 기본 데모 유저 "무지는단무지" 로 복원
+      resetMe();
+      resetMyroomItems();
       navigate("/home", { replace: true });
     } else {
       setIdError(false);
