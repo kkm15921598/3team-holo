@@ -36,13 +36,58 @@ export function ProfileDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const nickname = id ? decodeURIComponent(id) : "샬랄라 움밤바";
   const user = useMemo(() => buildOtherUser(nickname), [nickname]);
-  const isFriend = FRIENDS.some((f) => f.nickname === nickname);
+
+  const initialIsFriend = useMemo(
+    () => FRIENDS.some((f) => f.nickname === nickname),
+    [nickname],
+  );
+
+  const [isFriend, setIsFriend] = useState(initialIsFriend);
+
   const friendRoom = useMemo(() => randomRoomFurniture(nickname), [nickname]);
+
   const [confirm, setConfirm] = useState<{
     message: ReactNode;
     confirmLabel?: string;
     onConfirm: () => void;
   } | null>(null);
+
+  const askAddFriend = () =>
+    setConfirm({
+      message: (
+        <>
+          <strong>{nickname}</strong>님을 친구로 추가하시겠습니까?
+        </>
+      ),
+      confirmLabel: "추가",
+      onConfirm: () => {
+        setIsFriend(true);
+        setConfirm(null);
+      },
+    });
+
+  const askRemoveFriend = () =>
+    setConfirm({
+      message: (
+        <>
+          <strong>{nickname}</strong>님을 친구 목록에서 삭제하시겠습니까?
+        </>
+      ),
+      confirmLabel: "삭제",
+      onConfirm: () => {
+        setIsFriend(false);
+        setConfirm(null);
+      },
+    });
+
+  const handleFriendButton = () => {
+    if (isFriend) {
+      askRemoveFriend();
+      return;
+    }
+
+    askAddFriend();
+  };
 
   const askBlock = () =>
     setConfirm({
@@ -84,11 +129,14 @@ export function ProfileDetailScreen() {
     const existing = getRooms().find(
       (r) => !r.isGroup && r.name === nickname,
     );
+
     if (existing) {
       navigate(`/chat/${existing.id}`);
       return;
     }
+
     const newId = `dm-${Date.now()}`;
+
     const newRoom: ChatRoom = {
       id: newId,
       name: nickname,
@@ -100,6 +148,7 @@ export function ProfileDetailScreen() {
       unread: 0,
       online: false,
     };
+
     addRoom(newRoom);
     navigate(`/chat/${newId}`);
   };
@@ -115,6 +164,7 @@ export function ProfileDetailScreen() {
         >
           <CloseIcon />
         </button>
+
         <div className="flex h-[340px] w-full items-start justify-center pt-[10px]">
           <RoomSceneView items={friendRoom} />
         </div>
@@ -126,10 +176,15 @@ export function ProfileDetailScreen() {
           alt=""
           className="h-[88px] w-[88px] rounded-full border-4 border-white bg-holo-yellow-room object-cover"
         />
+
         <span className="mt-3 rounded-[4px] bg-holo-gradient-soft px-2 py-0.5 text-[12px] font-semibold text-white">
           Lv.{user.level}
         </span>
-        <p className="mt-2 text-[20px] font-semibold text-holo-ink">{user.nickname}</p>
+
+        <p className="mt-2 text-[20px] font-semibold text-holo-ink">
+          {user.nickname}
+        </p>
+
         <p className="mt-1 text-[14px] text-holo-ink-2">
           {user.title} <span>{user.badgeIcon}</span>
         </p>
@@ -145,13 +200,15 @@ export function ProfileDetailScreen() {
         <div className="mt-7 flex w-full gap-2">
           <button
             type="button"
-            disabled={isFriend}
+            onClick={handleFriendButton}
             className={`flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill text-[15px] font-semibold text-white ${
-              isFriend ? "bg-holo-ink-3" : "bg-holo-purple-mid"
+              isFriend ? "bg-[#E95AA4]" : "bg-holo-purple-mid"
             }`}
           >
-            <UserPlusIcon /> {isFriend ? "이미 친구" : "친구추가"}
+            {isFriend ? <UserMinusIcon /> : <UserPlusIcon />}
+            {isFriend ? "친구 삭제" : "친구추가"}
           </button>
+
           <button
             type="button"
             onClick={goToChat}
@@ -162,11 +219,20 @@ export function ProfileDetailScreen() {
           </button>
         </div>
 
-        <div className="mt-6 flex w-full items-center justify-around text-[14px] text-holo-ink-3">
-          <button type="button" className="flex items-center gap-1" onClick={askBlock}>
+        <div className="mt-6 flex w-full items-center justify-around pb-5 text-[14px] text-holo-ink-3">
+          <button
+            type="button"
+            className="flex items-center gap-1"
+            onClick={askBlock}
+          >
             <BlockIcon /> 차단하기
           </button>
-          <button type="button" className="flex items-center gap-1" onClick={askReport}>
+
+          <button
+            type="button"
+            className="flex items-center gap-1"
+            onClick={askReport}
+          >
             <FlagIcon /> 신고하기
           </button>
         </div>
@@ -187,44 +253,119 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex flex-1 flex-col items-center">
       <span className="text-[12px] text-holo-ink-2">{label}</span>
-      <span className="mt-1 text-[20px] font-black text-holo-purple-mid">{value}</span>
+      <span className="mt-1 text-[20px] font-black text-holo-purple-mid">
+        {value}
+      </span>
     </div>
   );
 }
+
 function CloseIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
       <path d="m6 6 12 12M6 18 18 6" />
     </svg>
   );
 }
+
 function UserPlusIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <circle cx="9" cy="8" r="4" />
       <path d="M2 21c0-4 3.6-7 7-7s7 3 7 7" />
       <path d="M19 8v6M16 11h6" />
     </svg>
   );
 }
+
+function UserMinusIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21c0-4 3.6-7 7-7s7 3 7 7" />
+      <path d="M16 11h6" />
+    </svg>
+  );
+}
+
 function ChatBubbleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
+
 function BlockIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
       <circle cx="12" cy="12" r="10" />
       <path d="m4.93 4.93 14.14 14.14" />
     </svg>
   );
 }
+
 function FlagIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M4 21V4l14 4-7 3 7 4z" />
     </svg>
   );

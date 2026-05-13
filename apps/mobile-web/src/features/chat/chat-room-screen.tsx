@@ -216,6 +216,7 @@ export function ChatRoomScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState<string | null>(null);
   const [showAttach, setShowAttach] = useState(false);
+  const [addedFriends, setAddedFriends] = useState<string[]>([]);
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
   const [actionTarget, setActionTarget] = useState<ChatMessage | null>(null);
@@ -292,6 +293,8 @@ export function ChatRoomScreen() {
     ]);
     setText("");
     setReply(null);
+    setShowEmoji(false);
+    setShowAttach(false);
   };
 
   const addReaction = (id: string, emoji: string) => {
@@ -353,6 +356,33 @@ export function ChatRoomScreen() {
   }, [messages, searchQuery]);
 
   const nowTime = () => {
+    const members = useMemo(() => {
+  if (!room) return [];
+
+  const baseMembers = buildMembersFor(room);
+
+  const extraMembers: Member[] = addedFriends.map((nickname, i) => ({
+    id: `added-${i}-${nickname}`,
+    nickname,
+    isMe: false,
+    isHost: false,
+    isFriend: true,
+  }));
+
+  return [...baseMembers, ...extraMembers];
+}, [room, addedFriends]);
+
+const displayRoomName = useMemo(() => {
+  if (!room) return "채팅방";
+
+  if (!room.isGroup && addedFriends.length > 0) {
+    return `${room.name} 외 ${addedFriends.length}명`;
+  }
+
+  return room.name;
+}, [room, addedFriends]);
+
+const displayMemberCount = members.length;
     const now = new Date();
     return `${now.getHours().toString().padStart(2, "0")}:${now
       .getMinutes()
@@ -582,8 +612,8 @@ export function ChatRoomScreen() {
               </p>
               <p className="text-[11px] text-holo-ink-3">
                 {room
-                  ? room.isGroup
-                    ? `멤버 ${room.memberCount}명${room.online ? " · 활동 중" : ""}`
+                  ? room.isGroup || addedFriends.length > 0
+                    ? `멤버 ${displayMemberCount}명${room.online ? " · 활동 중" : ""}`
                     : room.online
                       ? "활동 중"
                       : "오프라인"
@@ -676,7 +706,7 @@ export function ChatRoomScreen() {
       </article>
 
       {/* 입력바: article 바로 아래 flex 흐름. main의 px-4를 상쇄해 전폭 표시 */}
-      <div className="-mx-4 shrink-0 border-t border-holo-line-3 bg-white">
+      <div className="-mx-4 shrink-0 border-t border-holo-line-3 bg-white ">
         {/* 답장 미리보기 */}
         {reply && (
           <div className="flex items-start gap-2 bg-holo-surface-2 px-3 py-2">
@@ -698,8 +728,8 @@ export function ChatRoomScreen() {
             e.preventDefault();
             send();
           }}
-          className="flex items-center gap-2 px-5 py-2"
-        >
+          className="flex items-center gap-2 px-2 py-2"
+          >
           <button
             type="button"
             aria-label="첨부"
