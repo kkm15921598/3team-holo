@@ -1124,7 +1124,7 @@ function MessageItem({
           </div>
         </div>
         {reactions.length > 0 && (
-          <div className="relative z-20 -mt-1 mr-2">
+          <div className="relative z-20 mt-0 mr-2">
             <ReactionList reactions={reactions} onClick={onReact} align="end" />
           </div>
         )}
@@ -1164,7 +1164,7 @@ function MessageItem({
             <span className="text-[10px] text-holo-ink-3">{message.time}</span>
           </div>
           {reactions.length > 0 && (
-            <div className="relative z-20 -mt-1 ml-2">
+            <div className="relative z-20 mt-0 ml-2">
               <ReactionList reactions={reactions} onClick={onReact} align="start" />
             </div>
           )}
