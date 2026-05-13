@@ -355,34 +355,35 @@ export function ChatRoomScreen() {
     }).length;
   }, [messages, searchQuery]);
 
+  const members = useMemo(() => {
+    if (!room) return [];
+
+    const baseMembers = buildMembersFor(room);
+
+    const extraMembers: Member[] = addedFriends.map((nickname, i) => ({
+      id: `added-${i}-${nickname}`,
+      nickname,
+      isMe: false,
+      isHost: false,
+      isFriend: true,
+    }));
+
+    return [...baseMembers, ...extraMembers];
+  }, [room, addedFriends]);
+
+  const displayRoomName = useMemo(() => {
+    if (!room) return "채팅방";
+
+    if (!room.isGroup && addedFriends.length > 0) {
+      return `${room.name} 외 ${addedFriends.length}명`;
+    }
+
+    return room.name;
+  }, [room, addedFriends]);
+
+  const displayMemberCount = members.length;
+
   const nowTime = () => {
-    const members = useMemo(() => {
-  if (!room) return [];
-
-  const baseMembers = buildMembersFor(room);
-
-  const extraMembers: Member[] = addedFriends.map((nickname, i) => ({
-    id: `added-${i}-${nickname}`,
-    nickname,
-    isMe: false,
-    isHost: false,
-    isFriend: true,
-  }));
-
-  return [...baseMembers, ...extraMembers];
-}, [room, addedFriends]);
-
-const displayRoomName = useMemo(() => {
-  if (!room) return "채팅방";
-
-  if (!room.isGroup && addedFriends.length > 0) {
-    return `${room.name} 외 ${addedFriends.length}명`;
-  }
-
-  return room.name;
-}, [room, addedFriends]);
-
-const displayMemberCount = members.length;
     const now = new Date();
     return `${now.getHours().toString().padStart(2, "0")}:${now
       .getMinutes()
@@ -608,7 +609,7 @@ const displayMemberCount = members.length;
             </div>
             <div>
               <p className="text-[15px] font-semibold text-holo-ink">
-                {room?.name ?? "채팅방"}
+                {displayRoomName}
               </p>
               <p className="text-[11px] text-holo-ink-3">
                 {room
@@ -812,8 +813,8 @@ const displayMemberCount = members.length;
 
       {showInfo && room && (
         <ChatInfoModal
-          roomName={room.name}
-          members={buildMembersFor(room)}
+          roomName={displayRoomName}
+          members={members}
           onClose={() => setShowInfo(false)}
           onAddFriend={(nickname) => setShowAddFriend(nickname)}
           onInvite={() => {
@@ -867,9 +868,9 @@ const displayMemberCount = members.length;
 
       {showMeeting && room?.meeting && (
         <MeetingInfoModal
-          roomName={room.name}
+          roomName={displayRoomName}
           meeting={room.meeting}
-          members={buildMembersFor(room)}
+          members={members}
           onClose={() => setShowMeeting(false)}
           onProfileClick={(nickname) => {
             setShowMeeting(false);
@@ -880,8 +881,8 @@ const displayMemberCount = members.length;
 
       {showInvite && room && (
         <InviteFriendsModal
-          roomName={room.name}
-          existingNicknames={buildMembersFor(room).map((m) => m.nickname)}
+          roomName={displayRoomName}
+          existingNicknames={members.map((m) => m.nickname)}
           onClose={() => setShowInvite(false)}
           onInvite={(nicks) => {
             setShowInvite(false);
@@ -925,7 +926,28 @@ const displayMemberCount = members.length;
               <strong>{showAddFriend}</strong>님을 친구로 추가하시겠습니까?
             </>
           }
-          onYes={() => setShowAddFriend(null)}
+          onYes={() => {
+            const friendName = showAddFriend;
+
+            setAddedFriends((prev) => {
+              if (prev.includes(friendName)) return prev;
+              return [...prev, friendName];
+            });
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `friend-added-${Date.now()}`,
+                nickname: "",
+                content: `${friendName}님이 대화상대에 추가되었습니다`,
+                time: "",
+                mine: false,
+                type: "system",
+              },
+            ]);
+
+            setShowAddFriend(null);
+          }}
           onNo={() => setShowAddFriend(null)}
         />
       )}
