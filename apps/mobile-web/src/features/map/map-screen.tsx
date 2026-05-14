@@ -141,72 +141,72 @@ export function MapScreen() {
       >
         <div className="flex w-max gap-3">
           {visiblePosts.length === 0 && (
-            <div className="flex h-[153px] w-[280px] items-center justify-center rounded-holo-tile bg-[#EBE4F5] text-[13px] text-holo-ink-3">
+            <div className="flex h-[153px] w-[280px] items-center justify-center rounded-[10px] bg-holo-lilac-card-2 text-[13px] text-holo-ink-3">
               해당 필터에 표시할 모임이 없어요
             </div>
           )}
-          {visiblePosts.map((p) => (
-            <article
-              key={p.id}
-              data-post-card={p.id}
-              onClick={() => handleCardClick(p)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  goToPost(p.id);
-                }
-              }}
-              className="relative flex h-[153px] w-[158px] shrink-0 cursor-pointer flex-col rounded-holo-tile bg-[#EBE4F5] p-[12px]"
-            >
-              <p className="line-clamp-1 break-keep pr-[30px] text-[16px] font-bold leading-tight text-holo-ink">
-                {p.title}
-              </p>
-              <p className="mt-[3px] pr-[30px] text-[12px] text-holo-purple-mid/80">
-                {p.distance} · {p.duration}
-              </p>
-              {p.location?.placeName && (
-                <p className="mt-[2px] truncate pr-[30px] text-[11px] text-holo-ink-3">
-                  📍 {p.location.placeName}
-                </p>
-              )}
-              <p className="mt-2 line-clamp-1 text-[13px] leading-snug text-holo-ink-2">
-                {p.description}
-              </p>
-              <span
-                className="absolute right-[8px] top-[8px] flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#CCBCE0]"
-                aria-hidden="true"
+          {visiblePosts.map((p) => {
+            const visibleParticipants = (p.participants ?? []).slice(0, 3);
+            const extraCount = Math.max(0, (p.participants?.length ?? 0) - 3);
+            return (
+              <article
+                key={p.id}
+                data-post-card={p.id}
+                onClick={() => handleCardClick(p)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    goToPost(p.id);
+                  }
+                }}
+                className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 cursor-pointer rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
               >
-                <ArrowOutIcon stroke="#7448DD" />
-              </span>
-
-              {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 */}
-              {(p.participants?.length ?? 0) > 0 && (
-                <div className="mt-auto flex items-center">
-                  {(p.participants ?? []).slice(0, 3).map((pa, i) => (
-                    <span
-                      key={i}
-                      className="block h-[26px] w-[26px] rounded-full border-2 border-[#EBE4F5]"
-                      style={{
-                        backgroundColor: pa.avatarBg,
-                        marginLeft: i === 0 ? 0 : -6,
-                      }}
-                      aria-hidden="true"
-                    />
-                  ))}
-                  {(p.participants?.length ?? 0) > 3 && (
-                    <span
-                      className="ml-[-6px] flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-[#EBE4F5] bg-[#CCBCE0] text-[10px] font-bold text-holo-purple-deep"
-                      aria-label={"외 " + ((p.participants?.length ?? 0) - 3) + "명 더"}
-                    >
-                      +{(p.participants?.length ?? 0) - 3}
-                    </span>
-                  )}
+                <div className="text-[16px] font-bold text-holo-ink line-clamp-1 break-keep pr-[40px]">
+                  {p.title}
                 </div>
-              )}
-            </article>
-          ))}
+                <div className="mt-[3px] text-[12px] font-medium text-holo-purple-mid opacity-80">
+                  {p.distance} · {p.duration}
+                </div>
+                <p className="mt-2 line-clamp-2 max-h-[40px] max-w-[94px] text-[13px] leading-[1.4] text-[#333]">
+                  {p.description}
+                </p>
+                <span
+                  className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light"
+                  aria-hidden="true"
+                >
+                  <ArrowOutIcon stroke="#FFFFFF" />
+                </span>
+
+                {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 */}
+                {(p.participants?.length ?? 0) > 0 && (
+                  <div className="absolute bottom-[13px] left-[14px] flex">
+                    {visibleParticipants.map((pa, i) => (
+                      <span
+                        key={i}
+                        className="block h-[28px] w-[28px] rounded-full border-2 border-holo-lilac-card-2"
+                        style={{
+                          backgroundColor: pa.avatarBg,
+                          marginLeft: i === 0 ? 0 : -6,
+                        }}
+                        aria-hidden="true"
+                      />
+                    ))}
+                    {extraCount > 0 && (
+                      <span
+                        className="flex h-[28px] min-w-[28px] items-center justify-center rounded-full border-2 border-holo-lilac-card-2 bg-holo-purple-mid px-1 text-[11px] font-bold text-white"
+                        style={{ marginLeft: -6 }}
+                        aria-label={"외 " + extraCount + "명 더"}
+                      >
+                        +{extraCount}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
 

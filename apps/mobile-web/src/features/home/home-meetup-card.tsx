@@ -13,7 +13,7 @@ export type Meetup = {
   dim?: boolean;
 };
 
-const MAX_VISIBLE_AVATARS = 4;
+const MAX_VISIBLE_AVATARS = 3;
 
 export function MeetupCard({ m }: { m: Meetup }) {
   const visible = m.members.slice(0, MAX_VISIBLE_AVATARS);
@@ -23,7 +23,6 @@ export function MeetupCard({ m }: { m: Meetup }) {
   return (
     <article
       className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
-      style={{ opacity: m.dim ? 0.75 : 1 }}
     >
       <div className="text-[16px] font-bold text-holo-ink">{m.title}</div>
       <div className="mt-[3px] text-[12px] font-medium text-holo-purple-mid opacity-80">

@@ -14,6 +14,7 @@ export const ME = {
 };
 
 export const BOARD_CATEGORIES = [
+  { id: "all", label: "전체" },
   { id: "free", label: "자유게시판" },
   { id: "share", label: "공동구매 / 소분하기" },
   { id: "recommend", label: "추천해요" },
@@ -23,6 +24,19 @@ export const BOARD_CATEGORIES = [
   { id: "food", label: "맛집 & 먹거리" },
   { id: "help", label: "도와주세요!" },
 ] as const;
+
+// Board2 카드의 제목 앞에 붙는 짧은 카테고리 라벨
+export const CATEGORY_SHORT: Record<string, string> = {
+  all: "전체",
+  free: "자유",
+  share: "소분",
+  recommend: "추천",
+  game: "게임",
+  sport: "운동",
+  media: "영화",
+  food: "맛집",
+  help: "도움",
+};
 
 export type PostStatus = "모집중" | "모집완료";
 
@@ -193,7 +207,78 @@ export const POSTS: Post[] = [
       { avatarBg: "#FCEBB5" },
     ],
   },
+  // 자유게시판 (free)
+  { id: "f1", category: "free", status: "모집중", title: "떡볶이 어디가 맛있나요?", description: "아파트 근처 분식집이 궁금해요", distance: "0m", duration: "0분", likes: 12, comments: 3, timeAgo: "33분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12 },
+  { id: "f2", category: "free", status: "모집중", title: "주말에 뭐 하세요?", description: "심심한데 같이 놀 친구 구해요", distance: "0m", duration: "0분", likes: 8, comments: 2, timeAgo: "1시간 전", authorNickname: "감자 없는 카레", authorLevel: 7 },
+  { id: "f3", category: "free", status: "모집중", title: "근처 카페 추천", description: "공부할 만한 조용한 카페 있나요?", distance: "0m", duration: "0분", likes: 5, comments: 1, timeAgo: "2시간 전", authorNickname: "무지는 단무지", authorLevel: 24 },
+  // 추천해요 (recommend)
+  { id: "r1", category: "recommend", status: "모집중", title: "최근에 본 영화 추천", description: "스릴러 좋아하면 꼭 보세요!", distance: "0m", duration: "0분", likes: 25, comments: 2, timeAgo: "10분 전", authorNickname: "감자튀김", authorLevel: 31 },
+  { id: "r2", category: "recommend", status: "모집중", title: "근처 맛집 추천", description: "골목 안쪽에 숨은 보석 같은 가게", distance: "0m", duration: "0분", likes: 18, comments: 1, timeAgo: "30분 전", authorNickname: "포도껍질", authorLevel: 15 },
+  // 게임파티 (game)
+  { id: "g1", category: "game", status: "모집중", title: "보드게임 같이 해요", description: "주말 저녁 보드게임 카페 모임", distance: "150m", duration: "120분", likes: 15, comments: 2, timeAgo: "20분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12, peopleCount: 6 },
+  { id: "g2", category: "game", status: "모집완료", title: "PC방 4명 모집", description: "오버워치 같이 하실 분", distance: "300m", duration: "180분", likes: 10, comments: 1, timeAgo: "1시간 전", authorNickname: "감자튀김", authorLevel: 31, peopleCount: 4 },
+  // 드라마 · 영화 (media)
+  { id: "m1", category: "media", status: "모집중", title: "넷플릭스 같이 정주행", description: "주말마다 같이 정주행할 분 모집", distance: "100m", duration: "240분", likes: 14, comments: 1, timeAgo: "45분 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18, peopleCount: 4 },
+  // 도와주세요! (help)
+  { id: "h1", category: "help", status: "모집중", title: "이사 짐 옮길 분", description: "오후 시간 잠깐 도와주실 분 구해요", distance: "120m", duration: "30분", likes: 3, comments: 1, timeAgo: "5분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12, peopleCount: 2 },
 ];
+
+// 게시글 ID 별로 보여줄 댓글 (board-detail 화면에서 사용)
+export const POST_COMMENTS: Record<string, { id: string; nickname: string; content: string; timeAgo: string }[]> = {
+  f1: [
+    { id: "f1c1", nickname: "감자 없는 카레", content: "OO분식집이 가깝고 좋아요.", timeAgo: "1분 전" },
+    { id: "f1c2", nickname: "두부의 단단함", content: "조금 더 걸어가서 있는 ㅁㅁ분식집도 괜찮아요!", timeAgo: "5분 전" },
+    { id: "f1c3", nickname: "포도껍질", content: "버스타고 나가야 하긴 하는데 ㅎㅎ떡볶이 집도 맛있었어요.", timeAgo: "7분 전" },
+  ],
+  f2: [
+    { id: "f2c1", nickname: "껍질은 달걀껍질", content: "저도요! 같이 놀러가요!", timeAgo: "2분 전" },
+    { id: "f2c2", nickname: "감자튀김", content: "주말에 시간 비어요 :)", timeAgo: "8분 전" },
+  ],
+  f3: [
+    { id: "f3c1", nickname: "포도껍질", content: "OO카페 추천드려요. 콘센트도 많아요!", timeAgo: "3분 전" },
+  ],
+  "2": [
+    { id: "2c1", nickname: "껍질은 달걀껍질", content: "저요! 한 조각만 주세요~", timeAgo: "1분 전" },
+    { id: "2c2", nickname: "감자 없는 카레", content: "위치 어디세요?", timeAgo: "4분 전" },
+  ],
+  "6": [
+    { id: "6c1", nickname: "감자튀김", content: "키친타올 저도 사고 싶었어요!", timeAgo: "10분 전" },
+  ],
+  r1: [
+    { id: "r1c1", nickname: "두부의 단단함", content: "제목 알려주세요!", timeAgo: "2분 전" },
+    { id: "r1c2", nickname: "포도껍질", content: "방금 봤는데 진짜 재밌어요!", timeAgo: "12분 전" },
+  ],
+  r2: [
+    { id: "r2c1", nickname: "감자 없는 카레", content: "위치 좀 부탁드려요~", timeAgo: "8분 전" },
+  ],
+  g1: [
+    { id: "g1c1", nickname: "멜론은 키위를 좋아해", content: "보드게임 카페 어디로 가시나요?", timeAgo: "5분 전" },
+    { id: "g1c2", nickname: "감자튀김", content: "토요일 가능합니다!", timeAgo: "15분 전" },
+  ],
+  g2: [
+    { id: "g2c1", nickname: "껍질은 달걀껍질", content: "이미 마감됐나요? ㅠㅠ", timeAgo: "20분 전" },
+  ],
+  "3": [
+    { id: "3c1", nickname: "두부의 단단함", content: "저도 강아지 산책 같이 가고 싶어요!", timeAgo: "10분 전" },
+  ],
+  "4": [
+    { id: "4c1", nickname: "감자튀김", content: "어느 헬스장이세요?", timeAgo: "12분 전" },
+  ],
+  m1: [
+    { id: "m1c1", nickname: "포도껍질", content: "요즘 OOO 정주행 중인데 같이 봐요!", timeAgo: "20분 전" },
+  ],
+  "1": [
+    { id: "1c1", nickname: "껍질은 달걀껍질", content: "저요! 저요!", timeAgo: "1분 전" },
+    { id: "1c2", nickname: "감자 없는 카레", content: "오! 떡볶이 정말 좋아해요", timeAgo: "5분 전" },
+    { id: "1c3", nickname: "멜론은 키위를 좋아해", content: "떡볶이 가게 이름이 뭐에요?", timeAgo: "7분 전" },
+  ],
+  "5": [
+    { id: "5c1", nickname: "두부의 단단함", content: "치킨 좋아요, 어디 거 시키시나요?", timeAgo: "9분 전" },
+  ],
+  h1: [
+    { id: "h1c1", nickname: "감자 없는 카레", content: "몇 시까지 도와드리면 될까요?", timeAgo: "3분 전" },
+  ],
+};
 
 export const COMMENTS = [
   { id: "1", nickname: "껍질은 달걀껍질", content: "저요! 저요!", timeAgo: "1분 전" },

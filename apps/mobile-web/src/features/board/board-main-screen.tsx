@@ -1,36 +1,71 @@
 import { Link } from "react-router-dom";
 import { BOARD_CATEGORIES } from "@/shared/mock/data";
 
+const CATEGORY_ICON: Record<string, string> = {
+  free: "/icons/board_icon_free.png",
+  share: "/icons/board_icon_group.png",
+  recommend: "/icons/board_icon_recomm.png",
+  game: "/icons/board_icon_game.png",
+  sport: "/icons/board_icon_health.png",
+  media: "/icons/board_icon_tv.png",
+  food: "/icons/board_icon_food.png",
+  help: "/icons/board_icon_help.png",
+};
+
 export function BoardMainScreen() {
+  // Hide the "전체" pseudo-tab from the grid here — it remains available
+  // via the "게시판" text below, which navigates to the full Board2 list.
+  const visibleCategories = BOARD_CATEGORIES.filter((c) => c.id !== "all");
+
   return (
     <main className="flex flex-1 flex-col gap-3 px-4 pt-2 pb-4">
       {/* 실시간 TOP */}
       <Link
         to="/board/list"
-        className="flex h-[110px] items-center justify-between rounded-[15px] border border-holo-top-live-bd bg-holo-top-live-bg px-5"
+        className="relative flex h-[110px] items-center justify-between overflow-hidden rounded-[20px] border border-holo-top-live-bd bg-holo-top-live-bg pl-5 pr-3"
       >
         <div>
-          <p className="text-[16px] font-bold text-holo-ink">실시간 TOP</p>
-          <p className="mt-1 text-[12px] text-holo-error">지금 이 순간 가장 뜨거운 글</p>
+          <p className="text-[18px] font-bold text-holo-ink">실시간 TOP</p>
+          <p className="mt-1 text-[12px] text-holo-error">
+            지금 이 순간 가장 뜨거운 글
+          </p>
         </div>
-        <span className="flex h-[80px] w-[80px] items-center justify-center text-[28px]">⚡</span>
+        <img
+          src="/illustrations/board/board_top_live.png"
+          alt=""
+          aria-hidden
+          className="h-[90px] w-auto object-contain"
+        />
       </Link>
 
       {/* 주간 TOP */}
       <Link
         to="/board/list"
-        className="flex h-[110px] items-center justify-between rounded-[15px] border border-holo-lilac-deep bg-holo-lilac-card px-5"
+        className="relative flex h-[110px] items-center justify-between overflow-hidden rounded-[20px] border border-holo-lilac-deep bg-holo-lilac-card pl-5 pr-3"
       >
         <div>
-          <p className="text-[16px] font-bold text-holo-ink">주간 TOP</p>
-          <p className="mt-1 text-[12px] text-holo-purple-mid">이번 주 가장 많이 본 글</p>
+          <p className="text-[18px] font-bold text-holo-ink">주간 TOP</p>
+          <p className="mt-1 text-[12px] text-holo-purple-mid">
+            이번 주 가장 많이 본 글
+          </p>
         </div>
-        <span className="flex h-[80px] w-[80px] items-center justify-center text-[28px]">🏆</span>
+        <img
+          src="/illustrations/board/board_top_weekly.png"
+          alt=""
+          aria-hidden
+          className="h-[90px] w-auto object-contain"
+        />
       </Link>
 
       {/* 게시판 카테고리 */}
-      <section className="flex-1 rounded-[15px] border border-holo-line-2 bg-white p-5">
-        <p className="text-[16px] font-bold text-holo-ink">게시판</p>
+      <section className="relative flex-1 overflow-hidden rounded-[20px] border border-holo-line-2 bg-white p-5">
+        {/* "게시판" header → Board2 with 전체 active */}
+        <Link
+          to="/board/list"
+          className="inline-block text-[18px] font-bold text-holo-ink"
+        >
+          게시판
+        </Link>
         <p className="mt-1 text-[12px] text-holo-ink-3">
           우리 동네 이야기를
           <br />
@@ -38,17 +73,31 @@ export function BoardMainScreen() {
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-          {BOARD_CATEGORIES.map((c) => (
+          {visibleCategories.map((c) => (
             <Link
               key={c.id}
               to="/board/list"
               className="flex items-center gap-2 text-[13px] text-holo-ink"
             >
-              <CategoryIcon id={c.id} />
+              <img
+                src={CATEGORY_ICON[c.id] ?? "/icons/board_icon_free.png"}
+                alt=""
+                aria-hidden
+                className="h-[22px] w-[22px] object-contain"
+              />
               <span>{c.label}</span>
             </Link>
           ))}
         </div>
+
+        {/* 섹션 일러스트 — 카드 우측 하단 */}
+        <img
+          src="/illustrations/board/board_section_illustration.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute bottom-2 left-1/2 w-[260px] -translate-x-1/2 select-none object-contain"
+          draggable={false}
+        />
       </section>
 
       {/* FAB */}
@@ -63,19 +112,6 @@ export function BoardMainScreen() {
   );
 }
 
-function CategoryIcon({ id }: { id: string }) {
-  const map: Record<string, string> = {
-    free: "📝",
-    share: "🛒",
-    recommend: "👍",
-    game: "🎮",
-    sport: "🤝",
-    media: "📺",
-    food: "🍴",
-    help: "🆘",
-  };
-  return <span className="text-[16px] text-holo-purple-mid">{map[id] ?? "•"}</span>;
-}
 function PlusIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>

@@ -1,109 +1,553 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { COMMENTS, type Post } from "@/shared/mock/data";
-import { StatusBadge } from "./board-list-screen";
+import { COMMENTS, ME, POST_COMMENTS, type Post } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
+import { StatusBadge } from "./board-list-screen";
 import { LocationMap } from "@/features/map/post-map";
+
+type CommentReply = {
+  id: string;
+  nickname: string;
+  content: string;
+  timeAgo: string;
+  isAuthor?: boolean;
+  hasMap?: boolean;
+  hasPhoto?: boolean;
+};
+
+type CommentThread = {
+  id: string;
+  nickname: string;
+  content: string;
+  timeAgo: string;
+  replies: CommentReply[];
+};
+
+// Categories that use the simplified detail layout (no map / 함께하기 / etc.).
+const SIMPLE_CATEGORIES = new Set(["free", "recommend"]);
 
 export function BoardDetailScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // postsStore를 구독하여 새로 작성된 글도 반영되게 함
   const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
   useEffect(() => {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
   }, []);
   const post = posts.find((p) => p.id === id) ?? posts[0];
 
+  // Mock-only display fields not present on the Post type.
+  const place = post.place ?? post.location?.placeName ?? "미금역 사거리";
+  const timeText = "26.4.2  19:00";
+  const capacity = post.peopleCount ?? 5;
+  const baseJoined = post.status === "모집완료" ? capacity : Math.max(1, capacity - 2);
+
+  // Interactive state
+  const [liked, setLiked] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  // Pull context-appropriate comments per post if present, fall back to COMMENTS.
+  const initialComments = POST_COMMENTS[post.id] ?? COMMENTS;
+  const [comments, setComments] = useState<CommentThread[]>(() =>
+    initialComments.map((c) => ({ ...c, replies: [] })),
+  );
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyHasPhoto, setReplyHasPhoto] = useState(false);
+  const [replyHasMap, setReplyHasMap] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showFullAlert, setShowFullAlert] = useState(false);
+  const [showJoinBanner, setShowJoinBanner] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dots menu on outside click.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const isSimple = SIMPLE_CATEGORIES.has(post.category);
+  const likes = liked ? post.likes + 1 : post.likes;
+  const joined = Math.min(capacity, baseJoined + (joining ? 1 : 0));
+  const displayStatus: "모집중" | "모집완료" =
+    joined >= capacity ? "모집완료" : "모집중";
+  const totalComments =
+    post.comments + comments.reduce((acc, c) => acc + c.replies.length, 0);
+  const hasCommentText = commentText.trim().length > 0;
+  const hasReplyText = replyText.trim().length > 0;
+  const isMine = post.authorNickname === ME.nickname;
+
+  const handleSendComment = () => {
+    if (!hasCommentText) return;
+    const next: CommentThread = {
+      id: `c-${Date.now()}`,
+      nickname: ME.nickname,
+      content: commentText.trim(),
+      timeAgo: "방금 전",
+      replies: [],
+    };
+    setComments((prev) => [...prev, next]);
+    setCommentText("");
+  };
+
+  const handleSendReply = (parentId: string) => {
+    if (!hasReplyText && !replyHasPhoto && !replyHasMap) return;
+    const reply: CommentReply = {
+      id: `r-${Date.now()}`,
+      nickname: ME.nickname,
+      content: replyText.trim(),
+      timeAgo: "방금 전",
+      isAuthor: ME.nickname === post.authorNickname,
+      hasMap: replyHasMap,
+      hasPhoto: replyHasPhoto,
+    };
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === parentId ? { ...c, replies: [...c.replies, reply] } : c,
+      ),
+    );
+    // Keep replyingTo open so the user can add multiple replies in a row.
+    setReplyText("");
+    setReplyHasPhoto(false);
+    setReplyHasMap(false);
+  };
+
+  const handleJoinClick = () => {
+    // If already at capacity (and user has not yet joined), show alert instead.
+    if (!joining && baseJoined >= capacity) {
+      setShowFullAlert(true);
+      return;
+    }
+    setJoining((p) => {
+      const next = !p;
+      if (next) setShowJoinBanner(true);
+      return next;
+    });
+  };
+
+  const handleEdit = () => {
+    navigate("/board/write", {
+      state: {
+        postId: post.id,
+        postCategory: post.category,
+        title: post.title,
+        content: post.description,
+        meetupType: post.meetupType,
+        eventDate: post.eventDate,
+        peopleCount: post.peopleCount,
+        place: post.place ?? place,
+        postLocation: post.location ?? null,
+      },
+    });
+  };
+
+  const handleDelete = () => {
+    postsStore.remove([post.id]);
+    navigate("/board/list");
+  };
+
+  const menuItems = isMine
+    ? [
+        { key: "edit", label: "수정하기", Icon: EditIcon, onClick: handleEdit },
+        { key: "delete", label: "삭제하기", Icon: TrashIcon, onClick: handleDelete },
+      ]
+    : [
+        { key: "refresh", label: "새로고침", Icon: RefreshIcon, onClick: () => {} },
+        { key: "report", label: "신고", Icon: ReportIcon, onClick: () => {} },
+        { key: "block", label: "차단", Icon: BlockIcon, onClick: () => {} },
+        { key: "share", label: "URL 공유", Icon: ShareIcon, onClick: () => {} },
+      ];
+
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center px-4">
-        <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
-          <BackIcon />
-        </button>
-      </header>
-
-      <article className="mx-4 flex flex-1 flex-col rounded-t-holo-card border border-holo-lilac-soft bg-white p-4">
-        {/* author */}
+      {showJoinBanner && (
+        <div className="mx-4 mt-2 flex items-center gap-2 rounded-[14px] bg-white px-3 py-2 shadow-holo-card">
+          <span className="text-[20px]" aria-hidden>🎉</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-semibold text-holo-ink">
+              모임이 만들어졌어요!
+            </p>
+            <p className="truncate text-[11px] text-holo-ink-3">
+              '{post.title}' 채팅방으로 초대합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/chat")}
+            className="shrink-0 rounded-full border border-holo-purple-mid px-3 py-1 text-[11px] font-medium text-holo-purple-mid"
+          >
+            채팅방으로 이동
+          </button>
+          <button
+            type="button"
+            aria-label="배너 닫기"
+            onClick={() => setShowJoinBanner(false)}
+            className="text-holo-ink-3"
+          >
+            <XIcon />
+          </button>
+        </div>
+      )}
+      <article className="mx-4 mt-2 flex flex-1 flex-col rounded-holo-card border border-holo-lilac-soft bg-white p-4">
+        {/* Author row */}
         <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-full bg-holo-yellow-room" />
+          <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
+            <BackIcon />
+          </button>
+          <div className="ml-1 h-9 w-9 shrink-0 rounded-full bg-holo-yellow-room" />
           <span className="rounded-[4px] bg-holo-gradient px-2 py-0.5 text-[11px] font-semibold text-white">
             Lv.{post.authorLevel}
           </span>
-          <span className="text-[14px] font-semibold text-holo-ink">{post.authorNickname}</span>
-        </div>
-        <div className="mt-3 h-px w-full bg-holo-surface-3" />
-
-        {/* title + status */}
-        <div className="mt-3 flex items-center gap-2">
-          <StatusBadge status={post.status} />
-          <span className="text-[16px] font-semibold text-holo-ink">{post.title}</span>
-        </div>
-        <p className="mt-1 text-[13px] text-holo-ink-2">{post.description}</p>
-        <div className="mt-2 flex items-center gap-4 text-[12px] text-holo-ink-3">
-          <span className="flex items-center gap-1">
-            <HeartIcon /> {post.likes}
+          <span className="text-[14px] font-semibold text-holo-ink">
+            {post.authorNickname}
           </span>
-          <span className="flex items-center gap-1">
-            <CommentIcon /> {post.comments}
-          </span>
-          <span className="ml-auto">{post.timeAgo}</span>
-        </div>
 
-        {/* map — 위치가 있으면 실제 지도, 없으면 안내 문구 */}
-        {post.location ? (
-          <div className="mt-3 overflow-hidden rounded-[10px] border border-holo-line-2">
-            <LocationMap
-              location={post.location}
-              className="h-[160px]"
-            />
-            {(post.location.placeName || post.place) && (
-              <div className="flex items-center gap-1 bg-white px-3 py-2 text-[12px] text-holo-ink-2">
-                <span aria-hidden>📍</span>
-                <span className="truncate">
-                  {post.location.placeName ?? post.place}
-                </span>
+          <div ref={menuRef} className="relative ml-auto">
+            <button
+              type="button"
+              aria-label="더보기"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((p) => !p)}
+              className="text-holo-ink-3"
+            >
+              <DotsIcon />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-30 mt-1 w-[150px] overflow-hidden rounded-[12px] border border-holo-lilac-soft bg-white shadow-holo-card">
+                {menuItems.map((item, i) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      item.onClick();
+                    }}
+                    className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] text-holo-ink ${
+                      i > 0 ? "border-t border-holo-line" : ""
+                    }`}
+                  >
+                    <item.Icon />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
-        ) : post.place ? (
-          <div className="mt-3 flex items-center gap-1 rounded-[10px] border border-holo-line-2 bg-white px-3 py-3 text-[13px] text-holo-ink-2">
-            <span aria-hidden>📍</span>
-            <span className="truncate">{post.place}</span>
-          </div>
-        ) : null}
+        </div>
 
         <div className="mt-3 h-px w-full bg-holo-surface-3" />
 
-        {/* comments */}
-        <ul className="mt-3 flex flex-col gap-3">
-          {COMMENTS.map((c) => (
-            <li key={c.id} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-holo-ink">{c.nickname}</span>
-                <span className="text-[11px] text-holo-ink-3">{c.timeAgo}</span>
+        {/* Title row */}
+        <div className="mt-3 flex items-center gap-2">
+          {!isSimple && <StatusBadge status={displayStatus} />}
+          <span className="text-[16px] font-semibold text-holo-ink">
+            {post.title}
+          </span>
+          <span className="ml-auto text-[12px] text-holo-ink-3">
+            {post.timeAgo}
+          </span>
+        </div>
+
+        {/* Meetup-only blocks: place/time, description, map, stats */}
+        {!isSimple && (
+          <>
+            <div className="mt-2 flex gap-4 text-[13px]">
+              <div className="flex flex-col gap-[3px] font-semibold text-holo-ink">
+                <span>장소</span>
+                <span>시간</span>
               </div>
-              <p className="text-[13px] text-holo-ink-2">{c.content}</p>
-            </li>
-          ))}
+              <div className="flex flex-col gap-[3px] text-holo-ink-2">
+                <span>{place}</span>
+                <span>{timeText}</span>
+              </div>
+            </div>
+
+            <p className="mt-[15px] text-[13px] text-holo-ink-2">
+              {post.description}
+            </p>
+
+            {post.location ? (
+              <div className="mt-3 overflow-hidden rounded-[10px] border border-holo-line-2">
+                <LocationMap location={post.location} className="h-[180px]" />
+              </div>
+            ) : (
+              <img
+                src="/illustrations/map.png"
+                alt="모임 위치"
+                className="mt-3 h-[180px] w-full rounded-[10px] border border-holo-line-2 object-cover"
+              />
+            )}
+
+            <div className="mt-3 flex items-center gap-[15px] text-holo-ink-2">
+              <button
+                type="button"
+                aria-label={liked ? "좋아요 취소" : "좋아요"}
+                aria-pressed={liked}
+                onClick={() => setLiked((p) => !p)}
+                className="flex items-center gap-1"
+              >
+                <HeartIcon filled={liked} />
+                <span className="text-[14px] font-medium">{likes}</span>
+              </button>
+              <span className="flex items-center gap-1">
+                <CommentIcon />
+                <span className="text-[14px] font-medium">{totalComments}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <ParticipantIcon />
+                <span className="text-[14px] font-medium">
+                  {joined}/{capacity}
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label={joining ? "함께하기 취소" : "함께하기"}
+                aria-pressed={joining}
+                onClick={handleJoinClick}
+                className={`ml-auto flex items-center gap-1 rounded-full border px-4 py-1 text-[14px] font-semibold transition-colors ${
+                  joining
+                    ? "border-[#7448DD] text-[#7448DD]"
+                    : "border-holo-line-2 text-holo-ink-2"
+                }`}
+              >
+                <CheckMark color={joining ? "#7448DD" : "#A8A8A8"} />
+                {joining ? "모임 참여중" : "함께하기"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Simple-only: description + heart/comment stats row */}
+        {isSimple && (
+          <>
+            <p className="mt-2 text-[13px] text-holo-ink-2">{post.description}</p>
+            <div className="mt-3 flex items-center gap-[15px] text-holo-ink-2">
+              <button
+                type="button"
+                aria-label={liked ? "좋아요 취소" : "좋아요"}
+                aria-pressed={liked}
+                onClick={() => setLiked((prev) => !prev)}
+                className="flex items-center gap-1"
+              >
+                <HeartIcon filled={liked} />
+                <span className="text-[14px] font-medium">{likes}</span>
+              </button>
+              <span className="flex items-center gap-1">
+                <CommentIcon />
+                <span className="text-[14px] font-medium">{totalComments}</span>
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* Comments — every comment is wrapped with 20px top/bottom padding and a bottom divider line.
+            For simple posts (자유게시판/추천해요) the gray line sits 40px below the body per spec. */}
+        <div
+          className={`${
+            isSimple ? "mt-[40px]" : "mt-3"
+          } h-px w-full bg-holo-surface-3`}
+        />
+
+        <ul>
+          {comments.map((c) => {
+            const isReplying = replyingTo === c.id;
+            return (
+              <Fragment key={c.id}>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplyingTo((prev) => (prev === c.id ? null : c.id));
+                      setReplyText("");
+                      setReplyHasPhoto(false);
+                      setReplyHasMap(false);
+                    }}
+                    className="w-full py-[20px] text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-semibold text-holo-ink">
+                        {c.nickname}
+                      </span>
+                      <span className="text-[11px] text-holo-ink-3">
+                        {c.timeAgo}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[13px] text-holo-ink-2">
+                      {c.content}
+                    </p>
+                  </button>
+
+                  {/* Replies — indented with arrow + vertical line */}
+                  {c.replies.map((r) => (
+                    <div key={r.id} className="border-l-2 border-holo-lilac-soft pl-3 pb-[20px] ml-2">
+                      <div className="flex items-start gap-1">
+                        <ReplyArrowIcon />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[13px] font-semibold text-holo-ink">
+                              {r.nickname}
+                            </span>
+                            {r.isAuthor && (
+                              <span className="rounded-[4px] border border-holo-purple-mid px-1.5 py-0.5 text-[10px] font-medium text-holo-purple-mid">
+                                작성자
+                              </span>
+                            )}
+                            <span className="ml-auto text-[11px] text-holo-ink-3">
+                              {r.timeAgo}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[13px] text-holo-ink-2">
+                            {r.content}
+                          </p>
+                          {(r.hasPhoto || r.hasMap) && (
+                            <div className="mt-2 flex flex-col gap-2">
+                              {r.hasPhoto && (
+                                <div className="h-[110px] w-full max-w-[200px] rounded-[10px] bg-holo-line-3" />
+                              )}
+                              {r.hasMap && (
+                                <img
+                                  src="/illustrations/map.png"
+                                  alt="첨부 지도"
+                                  className="h-[110px] w-full max-w-[200px] rounded-[10px] border border-holo-line-2 object-cover"
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Inline reply input — supports photo / map attachments. */}
+                  {isReplying && (
+                    <div className="ml-2 border-l-2 border-holo-lilac-soft pl-3 pb-[20px]">
+                      <div className="flex flex-col gap-2">
+                        <div className="relative">
+                          <input
+                            autoFocus
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="답글 작성하기"
+                            className="h-[40px] w-full rounded-full bg-holo-surface-2 px-4 pr-12 text-[13px] outline-none placeholder:text-holo-ink-3"
+                          />
+                          <button
+                            type="button"
+                            aria-label="답글 전송"
+                            disabled={!hasReplyText && !replyHasPhoto && !replyHasMap}
+                            onClick={() => handleSendReply(c.id)}
+                            className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors ${
+                              hasReplyText || replyHasPhoto || replyHasMap
+                                ? "bg-[#7448DD] text-white"
+                                : "bg-holo-line-3 text-white"
+                            }`}
+                          >
+                            <SendIcon />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-3 text-[12px]">
+                          <button
+                            type="button"
+                            onClick={() => setReplyHasPhoto((p) => !p)}
+                            className={`flex items-center gap-1 ${
+                              replyHasPhoto ? "text-holo-purple-mid" : "text-holo-ink-3"
+                            }`}
+                          >
+                            <PhotoIcon /> 사진
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReplyHasMap((p) => !p)}
+                            className={`flex items-center gap-1 ${
+                              replyHasMap ? "text-holo-purple-mid" : "text-holo-ink-3"
+                            }`}
+                          >
+                            <PinIcon /> 지도
+                          </button>
+                        </div>
+                        {(replyHasPhoto || replyHasMap) && (
+                          <div className="flex flex-col gap-2">
+                            {replyHasPhoto && (
+                              <div className="h-[110px] w-full max-w-[200px] rounded-[10px] bg-holo-line-3" />
+                            )}
+                            {replyHasMap && (
+                              <img
+                                src="/illustrations/map.png"
+                                alt="첨부 지도 미리보기"
+                                className="h-[110px] w-full max-w-[200px] rounded-[10px] border border-holo-line-2 object-cover"
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </li>
+                <div className="h-px w-full bg-holo-surface-3" />
+              </Fragment>
+            );
+          })}
         </ul>
 
-        {/* comment input */}
+        {/* Main comment input */}
         <form
-          className="mt-auto flex items-center gap-2 pt-4"
-          onSubmit={(e) => e.preventDefault()}
+          className="mt-auto pt-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendComment();
+          }}
         >
-          <input
-            type="text"
-            placeholder="댓글 작성하기"
-            className="h-[34px] flex-1 rounded-full border border-holo-line-3 bg-white px-4 text-[13px] outline-none placeholder:text-holo-ink-3"
-          />
-          <button type="submit" aria-label="전송" className="text-holo-ink-4">
-            <SendIcon />
-          </button>
+          <div className="relative">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              type="text"
+              placeholder="댓글을 작성하기"
+              className="h-[40px] w-full rounded-full bg-holo-surface-2 px-4 pr-12 text-[13px] outline-none placeholder:text-holo-ink-3"
+            />
+            <button
+              type="submit"
+              aria-label="전송"
+              disabled={!hasCommentText}
+              className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
+                hasCommentText ? "text-[#7448DD]" : "text-holo-ink-3"
+              }`}
+            >
+              <SendIcon />
+            </button>
+          </div>
         </form>
       </article>
+
+      {/* 모집완료 alert */}
+      {showFullAlert && (
+        <div
+          className="fixed left-1/2 top-0 z-50 flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 items-center justify-center bg-black/40 px-6"
+          onClick={() => setShowFullAlert(false)}
+        >
+          <div
+            className="w-full max-w-[300px] rounded-2xl bg-white p-5 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[14px] leading-relaxed text-holo-ink">
+              모집 완료 된 게시글 입니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowFullAlert(false)}
+              className="mt-4 w-full rounded-full bg-holo-purple-mid px-3 py-2 text-[13px] font-medium text-white"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -115,9 +559,18 @@ function BackIcon() {
     </svg>
   );
 }
-function HeartIcon() {
+function DotsIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF9A9A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="5" r="1.2" />
+      <circle cx="12" cy="12" r="1.2" />
+      <circle cx="12" cy="19" r="1.2" />
+    </svg>
+  );
+}
+function HeartIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? "#FF9A9A" : "none"} stroke="#FF9A9A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
@@ -129,10 +582,105 @@ function CommentIcon() {
     </svg>
   );
 }
+function ParticipantIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="11" fill="#F4C952" />
+      <circle cx="12" cy="9.5" r="3" fill="#FFFFFF" />
+      <path d="M5 19c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function CheckMark({ color = "currentColor" }: { color?: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
 function SendIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M3 11 21 3l-8 18-2-8z" />
+    </svg>
+  );
+}
+function XIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 6l12 12M6 18 18 6" />
+    </svg>
+  );
+}
+function ReplyArrowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-1">
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h12a4 4 0 0 1 4 4v7" />
+    </svg>
+  );
+}
+function EditIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    </svg>
+  );
+}
+function RefreshIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 12a9 9 0 1 1-3.5-7.07" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+function ReportIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 22V4l16 6-16 6" />
+    </svg>
+  );
+}
+function BlockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m4.93 4.93 14.14 14.14" />
+    </svg>
+  );
+}
+function ShareIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <path d="m16 6-4-4-4 4" />
+      <path d="M12 2v13" />
+    </svg>
+  );
+}
+function PhotoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
+  );
+}
+function PinIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z" />
+      <circle cx="12" cy="9" r="2.5" />
     </svg>
   );
 }

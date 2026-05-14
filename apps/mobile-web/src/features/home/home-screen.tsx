@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getBadgeByName } from "../../badge";
 import { ME_PERSONA } from "./home-faces";
@@ -17,6 +17,45 @@ export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
   const handleRefresh = () => setMeetups((prev) => pickRandomMeetups(3, prev));
   const status = useStatusMessage();
+
+  // 카드 가로 드래그 스크롤 (map-screen과 동일)
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ down: false, startX: 0, scrollLeft: 0, moved: false });
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    const el = cardsRef.current;
+    if (!el) return;
+    dragRef.current = {
+      down: true,
+      startX: e.clientX,
+      scrollLeft: el.scrollLeft,
+      moved: false,
+    };
+    el.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const el = cardsRef.current;
+    if (!el || !dragRef.current.down) return;
+    const dx = e.clientX - dragRef.current.startX;
+    if (Math.abs(dx) > 4) dragRef.current.moved = true;
+    el.scrollLeft = dragRef.current.scrollLeft - dx;
+  }
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    const el = cardsRef.current;
+    if (!el) return;
+    if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    setTimeout(() => {
+      dragRef.current.down = false;
+      dragRef.current.moved = false;
+    }, 0);
+  }
+  // 드래그 중 카드 안쪽 Link 클릭이 발생하면 라우팅 방지
+  function onClickCapture(e: React.MouseEvent) {
+    if (dragRef.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
 
   return (
     <main className="flex flex-1 flex-col pb-6">
@@ -86,7 +125,16 @@ export function HomeScreen() {
             <RefreshIcon />
           </button>
         </div>
-        <div className="no-scrollbar -mx-[14px] flex gap-3 overflow-x-auto px-[14px] pb-2">
+        <div
+          ref={cardsRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onPointerLeave={onPointerUp}
+          onClickCapture={onClickCapture}
+          className="no-scrollbar -mx-[14px] flex cursor-grab select-none gap-3 overflow-x-auto px-[14px] pb-2 active:cursor-grabbing"
+        >
           {meetups.map((m) => (
             <MeetupCard key={m.id} m={m} />
           ))}
