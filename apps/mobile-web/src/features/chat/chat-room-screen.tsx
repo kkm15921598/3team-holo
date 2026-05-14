@@ -23,10 +23,20 @@ import {
 import { getAvatarUrl } from "./avatars";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
 import { MY_LOCATION } from "@/shared/mock/data";
+import { ME_PERSONA } from "@/features/home/home-faces";
 
 type ReplyTarget = { nickname: string; content: string } | null;
 
 type Member = { id: string; nickname: string; isMe: boolean; isHost: boolean; isFriend: boolean };
+
+/**
+ * 멤버/메시지 아바타 url — 본인(무지는 단무지) 은 홈/마이페이지와 동일한
+ * ME_PERSONA.face 이미지를 쓰고, 그 외는 닉네임 시드 기반 아바타로 폴백한다.
+ */
+function memberAvatarSrc(nickname: string): string {
+  if (nickname === ME_PERSONA.name) return ME_PERSONA.face;
+  return getAvatarUrl(nickname);
+}
 
 // 방 정보로 멤버 리스트 동적 생성
 function buildMembersFor(room: ChatRoom): Member[] {
@@ -218,7 +228,11 @@ export function ChatRoomScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState<string | null>(null);
   const [showAttach, setShowAttach] = useState(false);
-  const [addedFriends, setAddedFriends] = useState<string[]>([]);
+  // 친구 추가 버튼(UserPlusIcon) 으로 새로 친구가 된 멤버들의 닉네임 집합.
+  // 멤버 목록에는 추가/중복 등록을 하지 않고, 기존 멤버의 isFriend 플래그만 true 로 덮어쓴다.
+  const [newlyAddedFriends, setNewlyAddedFriends] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
   const [actionTarget, setActionTarget] = useState<ChatMessage | null>(null);
@@ -366,27 +380,17 @@ export function ChatRoomScreen() {
     if (!room) return [];
 
     const baseMembers = buildMembersFor(room);
-
-    const extraMembers: Member[] = addedFriends.map((nickname, i) => ({
-      id: `added-${i}-${nickname}`,
-      nickname,
-      isMe: false,
-      isHost: false,
-      isFriend: true,
-    }));
-
-    return [...baseMembers, ...extraMembers];
-  }, [room, addedFriends]);
+    if (newlyAddedFriends.size === 0) return baseMembers;
+    // 친구로 새로 등록한 멤버는 isFriend=true 로 덮어써서 "친구 추가" 버튼이 사라지게 함.
+    return baseMembers.map((m) =>
+      newlyAddedFriends.has(m.nickname) ? { ...m, isFriend: true } : m,
+    );
+  }, [room, newlyAddedFriends]);
 
   const displayRoomName = useMemo(() => {
     if (!room) return "채팅방";
-
-    if (!room.isGroup && addedFriends.length > 0) {
-      return `${room.name} 외 ${addedFriends.length}명`;
-    }
-
     return room.name;
-  }, [room, addedFriends]);
+  }, [room]);
 
   const displayMemberCount = members.length;
 
@@ -599,16 +603,53 @@ export function ChatRoomScreen() {
             </button>
             <div className="relative">
               {room?.isGroup ? (
-                <div className="grid h-9 w-9 grid-cols-2 gap-0.5 overflow-hidden rounded-[7px] bg-holo-surface-2 p-0.5">
-                  {[0, 1, 2, 3].map((i) => (
-                    <img
-                      key={i}
-                      src={getAvatarUrl((room?.name ?? "") + "_g" + i)}
-                      alt=""
-                      className="h-full w-full rounded-[3px] object-cover"
-                    />
-                  ))}
-                </div>
+                (() => {
+                  // 실제 멤버 닉네임(자기 제외)을 시드로 사용. 멤버 수만큼만 렌더하고
+                  // 레이아웃은 count 에 따라 변경: 1=원형 단일, 2=좌우 분할, 3~4=2x2 그리드.
+                  // 레거시 mock 방(memberNames 없음) 은 방 이름 시드로 4 슬롯 fallback.
+                  const names = room?.memberNames;
+                  const seeds =
+                    names && names.length > 0
+                      ? names.slice(0, 4)
+                      : [0, 1, 2, 3].map((i) => (room?.name ?? "") + "_g" + i);
+
+                  if (seeds.length === 1) {
+                    return (
+                      <img
+                        src={getAvatarUrl(seeds[0])}
+                        alt=""
+                        className="block h-9 w-9 rounded-full bg-holo-surface-2 object-cover"
+                      />
+                    );
+                  }
+                  if (seeds.length === 2) {
+                    return (
+                      <div className="flex h-9 w-9 gap-0.5 overflow-hidden rounded-[7px] bg-holo-surface-2 p-0.5">
+                        {seeds.map((seed, i) => (
+                          <img
+                            key={i}
+                            src={getAvatarUrl(seed)}
+                            alt=""
+                            className="h-full w-full rounded-[3px] object-cover"
+                          />
+                        ))}
+                      </div>
+                    );
+                  }
+                  // 3 or 4 → 2x2 grid (3일 경우 마지막 슬롯 빈칸)
+                  return (
+                    <div className="grid h-9 w-9 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden rounded-[7px] bg-holo-surface-2 p-0.5">
+                      {seeds.map((seed, i) => (
+                        <img
+                          key={i}
+                          src={getAvatarUrl(seed)}
+                          alt=""
+                          className="h-full w-full rounded-[3px] object-cover"
+                        />
+                      ))}
+                    </div>
+                  );
+                })()
               ) : (
                 <button
                   type="button"
@@ -632,7 +673,7 @@ export function ChatRoomScreen() {
               </p>
               <p className="text-[11px] text-holo-ink-3">
                 {room
-                  ? room.isGroup || addedFriends.length > 0
+                  ? room.isGroup
                     ? `멤버 ${displayMemberCount}명${room.online ? " · 활동 중" : ""}`
                     : room.online
                       ? "활동 중"
@@ -1014,9 +1055,11 @@ export function ChatRoomScreen() {
           onYes={() => {
             const friendName = showAddFriend;
 
-            setAddedFriends((prev) => {
-              if (prev.includes(friendName)) return prev;
-              return [...prev, friendName];
+            setNewlyAddedFriends((prev) => {
+              if (prev.has(friendName)) return prev;
+              const next = new Set(prev);
+              next.add(friendName);
+              return next;
             });
 
             setMessages((prev) => [
@@ -1024,7 +1067,7 @@ export function ChatRoomScreen() {
               {
                 id: `friend-added-${Date.now()}`,
                 nickname: "",
-                content: `${friendName}님이 대화상대에 추가되었습니다`,
+                content: `${friendName}님을 친구로 추가했어요`,
                 time: "",
                 mine: false,
                 type: "system",
@@ -1223,7 +1266,7 @@ function MessageItem({
           className="shrink-0"
         >
           <img
-            src={getAvatarUrl(message.nickname)}
+            src={memberAvatarSrc(message.nickname)}
             alt=""
             className="h-9 w-9 rounded-full bg-holo-yellow-room object-cover transition-transform hover:scale-105"
           />
@@ -1492,7 +1535,7 @@ function MeetingInfoModal({
                 className="flex w-full items-center gap-3 rounded-md p-1 transition-colors hover:bg-holo-line-3/50 disabled:cursor-default disabled:hover:bg-transparent"
               >
                 <img
-                  src={getAvatarUrl(m.nickname)}
+                  src={memberAvatarSrc(m.nickname)}
                   alt=""
                   className="h-8 w-8 rounded-full bg-holo-yellow-room object-cover"
                 />
@@ -1562,7 +1605,7 @@ function ChatInfoModal({
                 className="flex flex-1 items-center gap-3 rounded-md p-1 transition-colors hover:bg-holo-line-3/50 disabled:cursor-default disabled:hover:bg-transparent"
               >
                 <img
-                  src={getAvatarUrl(m.nickname)}
+                  src={memberAvatarSrc(m.nickname)}
                   alt=""
                   className="h-8 w-8 rounded-full bg-holo-yellow-room object-cover"
                 />

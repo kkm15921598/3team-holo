@@ -36,3 +36,34 @@ export function getPlacementWidth(kind: FurnitureKind, variant: string): number 
   if (natural === undefined) return Math.round(154 * SCALE); // fallback = 70
   return Math.round(natural * SCALE);
 }
+
+/**
+ * 모든 가구 변형의 PNG 원본 세로 픽셀 (left 버전 기준).
+ * NATURAL_W 와 짝을 이루어 변형별 정확한 종횡비를 계산할 수 있다.
+ */
+const NATURAL_H: Record<FurnitureKind, Record<string, number>> = {
+  bed: { "01": 236, "02": 226, "03": 208, "04": 214, "05": 216, "06": 244, "07": 210 },
+  bookshelf: { "01": 280, "02": 284, "03": 338, "04": 336, "05": 320, "06": 238 },
+  chair: {
+    "01": 116, "02": 140, "03": 128, "04": 134, "05": 132, "06": 140, "07": 134,
+    "08": 142, "09": 128, "10": 182, "11": 204, "12": 186, "13": 178, "14": 192, "15": 188,
+  },
+  closet: { "01": 320, "02": 338, "03": 328 },
+  console: {
+    "01": 176, "02": 156, "03": 134, "04": 136, "05": 128, "06": 126, "07": 112,
+    "08": 140, "09": 130, "10": 128, "11": 88, "12": 98, "13": 126, "14": 122, "15": 120,
+  },
+  desk: { "01": 252, "02": 252, "03": 336, "04": 210, "05": 224, "06": 240, "07": 196, "08": 220, "09": 212 },
+  lighting: { "01": 90, "02": 78, "03": 84, "04": 136, "05": 158, "06": 170 },
+  mirror: { "01": 186, "02": 188, "03": 178, "04": 216 },
+  rug: { "01": 116, "02": 122, "03": 120 },
+  shelf: { "01": 304, "02": 312, "03": 322, "04": 316, "05": 308, "06": 250, "07": 296, "08": 272, "09": 154 },
+  wall: { "01": 152, "02": 164, "03": 190, "04": 158, "05": 150, "06": 160, "07": 150 },
+};
+
+/** 배치 시 적용될 렌더 세로 픽셀 — width 와 동일 스케일이므로 종횡비가 보존된다. */
+export function getPlacementHeight(kind: FurnitureKind, variant: string): number {
+  const natural = NATURAL_H[kind]?.[variant];
+  if (natural === undefined) return Math.round(280 * SCALE); // fallback ≈ 127
+  return Math.round(natural * SCALE);
+}

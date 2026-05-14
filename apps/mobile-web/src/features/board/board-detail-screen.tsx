@@ -6,6 +6,7 @@ import { StatusBadge } from "./board-list-screen";
 import { LocationMap } from "@/features/map/post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { calcJoined, ensureMeetupRoom } from "./meetup-utils";
 
 type CommentReply = {
   id: string;
@@ -41,8 +42,7 @@ export function BoardDetailScreen() {
   // Mock-only display fields not present on the Post type.
   const place = post.place ?? post.location?.placeName ?? "미금역 사거리";
   const timeText = "26.4.2  19:00";
-  const capacity = post.peopleCount ?? 5;
-  const baseJoined = post.status === "모집완료" ? capacity : Math.max(1, capacity - 2);
+  const { capacity, baseJoined } = calcJoined(post);
 
   // Interactive state
   const [liked, setLiked] = useState(false);
@@ -182,7 +182,10 @@ export function BoardDetailScreen() {
           </div>
           <button
             type="button"
-            onClick={() => navigate("/chat")}
+            onClick={() => {
+              const roomId = ensureMeetupRoom(post);
+              navigate(`/chat/${roomId}`);
+            }}
             className="shrink-0 rounded-full border border-holo-purple-mid px-3 py-1 text-[11px] font-medium text-holo-purple-mid"
           >
             채팅방으로 이동
@@ -317,20 +320,31 @@ export function BoardDetailScreen() {
                   {joined}/{capacity}
                 </span>
               </span>
-              <button
-                type="button"
-                aria-label={joining ? "함께하기 취소" : "함께하기"}
-                aria-pressed={joining}
-                onClick={handleJoinClick}
-                className={`ml-auto flex items-center gap-1 rounded-full border px-4 py-1 text-[14px] font-semibold transition-colors ${
-                  joining
-                    ? "border-[#7448DD] text-[#7448DD]"
-                    : "border-holo-line-2 text-holo-ink-2"
-                }`}
-              >
-                <CheckMark color={joining ? "#7448DD" : "#A8A8A8"} />
-                {joining ? "모임 참여중" : "함께하기"}
-              </button>
+              {isMine ? (
+                // 내가 작성한 모임은 호스트이므로 "함께하기" 버튼 대신 호스트 표시.
+                <span
+                  className="ml-auto flex items-center gap-1 rounded-full border border-[#7448DD] bg-[#F4EEFF] px-4 py-1 text-[14px] font-semibold text-[#7448DD]"
+                  aria-label="내가 만든 모임 (호스트)"
+                >
+                  <CheckMark color="#7448DD" />
+                  내 모임
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={joining ? "함께하기 취소" : "함께하기"}
+                  aria-pressed={joining}
+                  onClick={handleJoinClick}
+                  className={`ml-auto flex items-center gap-1 rounded-full border px-4 py-1 text-[14px] font-semibold transition-colors ${
+                    joining
+                      ? "border-[#7448DD] text-[#7448DD]"
+                      : "border-holo-line-2 text-holo-ink-2"
+                  }`}
+                >
+                  <CheckMark color={joining ? "#7448DD" : "#A8A8A8"} />
+                  {joining ? "모임 참여중" : "함께하기"}
+                </button>
+              )}
             </div>
           </>
         )}

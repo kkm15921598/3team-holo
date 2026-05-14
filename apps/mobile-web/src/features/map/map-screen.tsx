@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { POSTS, type Post } from "@/shared/mock/data";
 import { MapView } from "./post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
+import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
 
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -39,11 +40,6 @@ export function MapScreen() {
     navigate("/board/" + id);
   }
 
-  function handleCardClick(p: Post) {
-    if (dragRef.current.moved) return; // 드래그 중 클릭은 무시
-    goToPost(p.id);
-  }
-
   function handleMarkerClick(id: string) {
     setExpanded(false); // 모달 닫고
     goToPost(id);       // 게시물로 이동
@@ -58,23 +54,45 @@ export function MapScreen() {
       scrollLeft: el.scrollLeft,
       moved: false,
     };
-    el.setPointerCapture(e.pointerId);
+    // 포인터 캡처는 실제 드래그가 시작된 뒤(onPointerMove) 잡는다.
+    // 즉시 캡처하면 자식 <Link>의 click 이벤트가 부모로 리디렉션되어
+    // 화살표 클릭 시 라우팅이 동작하지 않는다.
   }
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const el = cardsRef.current;
     if (!el || !dragRef.current.down) return;
     const dx = e.clientX - dragRef.current.startX;
-    if (Math.abs(dx) > 4) dragRef.current.moved = true;
-    el.scrollLeft = dragRef.current.scrollLeft - dx;
+    if (Math.abs(dx) > 4) {
+      if (!dragRef.current.moved) {
+        dragRef.current.moved = true;
+        // 임계치를 처음 넘는 순간에만 캡처 시작
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          // 일부 환경에서 캡처가 거부될 수 있음 — 무시
+        }
+      }
+    }
+    if (dragRef.current.moved) {
+      el.scrollLeft = dragRef.current.scrollLeft - dx;
+    }
   }
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     const el = cardsRef.current;
     if (!el) return;
     if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    dragRef.current.down = false;
+    // onClickCapture 가 직후에 실행되어 moved 값을 확인할 수 있도록 약간 지연 후 초기화
     setTimeout(() => {
-      dragRef.current.down = false;
       dragRef.current.moved = false;
     }, 0);
+  }
+  // 드래그 중 카드 안쪽 Link 클릭이 발생하면 라우팅 방지
+  function onClickCapture(e: React.MouseEvent) {
+    if (dragRef.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
   }
 
   return (
@@ -130,7 +148,7 @@ export function MapScreen() {
         </div>
       </section>
 
-      {/* 카드 — 클릭 시 게시물 상세로 이동 (가로 드래그 스크롤) */}
+      {/* 카드 — 우측 상단 화살표 아이콘 클릭 시 게시물 상세로 이동 (가로 드래그 스크롤) */}
       <section
         ref={cardsRef}
         className="holo-no-scrollbar mt-3 cursor-grab select-none overflow-x-auto pb-3 pl-4 pr-4 active:cursor-grabbing"
@@ -139,6 +157,7 @@ export function MapScreen() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onPointerLeave={onPointerUp}
+        onClickCapture={onClickCapture}
       >
         <div className="flex w-max gap-3">
           {visiblePosts.length === 0 && (
@@ -147,22 +166,19 @@ export function MapScreen() {
             </div>
           )}
           {visiblePosts.map((p) => {
-            const visibleParticipants = (p.participants ?? []).slice(0, 3);
-            const extraCount = Math.max(0, (p.participants?.length ?? 0) - 3);
+            // 카드에 표시할 참여 인원수는 게시글 UI 와 동일한 baseJoined 를 사용
+            // (= holds for home card / board detail / chat room).
+            const { baseJoined } = calcJoined(p);
+            // 아바타는 실제 멤버 닉네임을 시드로 사용해 채팅방 헤더 / board 와
+            // 동일한 얼굴이 나오도록 한다.
+            const memberSeeds = deriveMeetupMembers(p, baseJoined);
+            const visibleSeeds = memberSeeds.slice(0, 3);
+            const extraCount = Math.max(0, baseJoined - 3);
             return (
               <article
                 key={p.id}
                 data-post-card={p.id}
-                onClick={() => handleCardClick(p)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    goToPost(p.id);
-                  }
-                }}
-                className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 cursor-pointer rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
+                className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
               >
                 <div className="text-[16px] font-bold text-holo-ink line-clamp-1 break-keep pr-[40px]">
                   {p.title}
@@ -173,20 +189,21 @@ export function MapScreen() {
                 <p className="mt-2 line-clamp-2 max-h-[40px] max-w-[94px] text-[13px] leading-[1.4] text-[#333]">
                   {p.description}
                 </p>
-                <span
-                  className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light"
-                  aria-hidden="true"
+                <Link
+                  to={`/board/${p.id}`}
+                  aria-label={`${p.title} 게시글로 이동`}
+                  className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light transition-colors hover:bg-holo-purple-mid"
                 >
                   <ArrowOutIcon stroke="#FFFFFF" />
-                </span>
+                </Link>
 
-                {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 (post id + index로 일관된 face 매핑) */}
-                {(p.participants?.length ?? 0) > 0 && (
+                {/* 참여자 아바타 — 실제 멤버 닉네임을 시드로 사용해 채팅방/board 와 일치 */}
+                {baseJoined > 0 && visibleSeeds.length > 0 && (
                   <div className="absolute bottom-[13px] left-[14px] flex">
-                    {visibleParticipants.map((_, i) => (
+                    {visibleSeeds.map((seed, i) => (
                       <img
-                        key={i}
-                        src={getAvatarUrl(`${p.id}-${i}`)}
+                        key={seed + i}
+                        src={getAvatarUrl(seed)}
                         alt=""
                         aria-hidden
                         draggable={false}

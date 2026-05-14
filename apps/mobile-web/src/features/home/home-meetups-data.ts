@@ -26,7 +26,7 @@ export const MEETUP_POOL: Meetup[] = [
     totalCount: 7,
   },
   {
-    id: "3",
+    id: "hm3",
     title: "편의점 야식",
     distance: "120m",
     duration: "5분",
@@ -35,7 +35,7 @@ export const MEETUP_POOL: Meetup[] = [
     dim: true,
   },
   {
-    id: "4",
+    id: "hm4",
     title: "코스트코 소분",
     distance: "700m",
     duration: "50분",
@@ -43,7 +43,7 @@ export const MEETUP_POOL: Meetup[] = [
     members: [p("준호"), p("은채")],
   },
   {
-    id: "5",
+    id: "hm5",
     title: "러닝 메이트",
     distance: "200m",
     duration: "60분",
@@ -52,7 +52,7 @@ export const MEETUP_POOL: Meetup[] = [
     totalCount: 5,
   },
   {
-    id: "6",
+    id: "hm6",
     title: "스터디 카페",
     distance: "400m",
     duration: "120분",
@@ -60,7 +60,7 @@ export const MEETUP_POOL: Meetup[] = [
     members: [p("유나"), p("현우"), p("지호")],
   },
   {
-    id: "7",
+    id: "hm7",
     title: "보드게임 모임",
     distance: "650m",
     duration: "90분",
@@ -69,7 +69,7 @@ export const MEETUP_POOL: Meetup[] = [
     totalCount: 6,
   },
   {
-    id: "8",
+    id: "hm8",
     title: "카페 투어",
     distance: "800m",
     duration: "180분",
@@ -77,7 +77,7 @@ export const MEETUP_POOL: Meetup[] = [
     members: [p("수정"), p("혜진")],
   },
   {
-    id: "9",
+    id: "hm9",
     title: "산책 메이트",
     distance: "150m",
     duration: "40분",
@@ -85,7 +85,7 @@ export const MEETUP_POOL: Meetup[] = [
     members: [p("정희"), p("철수")],
   },
   {
-    id: "10",
+    id: "hm10",
     title: "독서 모임",
     distance: "550m",
     duration: "75분",

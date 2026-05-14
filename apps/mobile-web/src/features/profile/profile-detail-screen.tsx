@@ -44,7 +44,10 @@ export function ProfileDetailScreen() {
 
   const [isFriend, setIsFriend] = useState(initialIsFriend);
 
-  const friendRoom = useMemo(() => randomRoomFurniture(nickname), [nickname]);
+  const friendRoom = useMemo(
+    () => randomRoomFurniture(nickname, user.level),
+    [nickname, user.level],
+  );
 
   const [confirm, setConfirm] = useState<{
     message: ReactNode;

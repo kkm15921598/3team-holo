@@ -17,12 +17,20 @@ const BADGE = getBadgeByName("HOLO 수호신");
 
 export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
-  const handleRefresh = () => setMeetups((prev) => pickRandomMeetups(3, prev));
   const status = useStatusMessage();
 
   // 카드 가로 드래그 스크롤 (map-screen과 동일)
   const cardsRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ down: false, startX: 0, scrollLeft: 0, moved: false });
+
+  const handleRefresh = () => {
+    setMeetups((prev) => pickRandomMeetups(3, prev));
+    // 새로고침 시 카드 캐러셀을 첫 번째 카드 위치로 되돌린다.
+    const el = cardsRef.current;
+    if (el) {
+      el.scrollTo({ left: 0, behavior: "smooth" });
+    }
+  };
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     const el = cardsRef.current;
@@ -33,21 +41,36 @@ export function HomeScreen() {
       scrollLeft: el.scrollLeft,
       moved: false,
     };
-    el.setPointerCapture(e.pointerId);
+    // 포인터 캡처는 실제 드래그가 시작된 뒤(onPointerMove) 잡는다.
+    // 즉시 캡처하면 자식 <Link>의 click 이벤트가 부모로 리디렉션되어
+    // 화살표 클릭 시 라우팅이 동작하지 않는다.
   }
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const el = cardsRef.current;
     if (!el || !dragRef.current.down) return;
     const dx = e.clientX - dragRef.current.startX;
-    if (Math.abs(dx) > 4) dragRef.current.moved = true;
-    el.scrollLeft = dragRef.current.scrollLeft - dx;
+    if (Math.abs(dx) > 4) {
+      if (!dragRef.current.moved) {
+        dragRef.current.moved = true;
+        // 임계치를 처음 넘는 순간에만 캡처 시작
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          // ignore — 일부 환경에서 캡처가 거부될 수 있음
+        }
+      }
+    }
+    if (dragRef.current.moved) {
+      el.scrollLeft = dragRef.current.scrollLeft - dx;
+    }
   }
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     const el = cardsRef.current;
     if (!el) return;
     if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    dragRef.current.down = false;
+    // onClickCapture가 직후에 실행되어 moved 값을 확인할 수 있도록 약간 지연 후 초기화
     setTimeout(() => {
-      dragRef.current.down = false;
       dragRef.current.moved = false;
     }, 0);
   }
