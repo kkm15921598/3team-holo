@@ -64,6 +64,16 @@ export default {
         "holo-input": "15px",
         "holo-tile": "10px",
       },
+      keyframes: {
+        "holo-pulse": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.85" },
+        },
+      },
+      animation: {
+        // 기본 animate-pulse(1↔0.5)보다 부드러운 펄스 — 1↔0.85, 3초 주기
+        "holo-pulse": "holo-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      },
     },
   },
   plugins: [],

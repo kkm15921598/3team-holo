@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
+import { ME_PERSONA } from "@/features/home/home-faces";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -11,9 +12,12 @@ export function MypageScreen() {
       <section className="-mx-4">
         <div className="bg-holo-lilac-card-2 p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-holo-yellow-room text-[32px] leading-none">
-              <span aria-hidden>👧</span>
-            </span>
+            <img
+              src={ME_PERSONA.face}
+              alt={ME.nickname}
+              className="h-14 w-14 shrink-0 rounded-full bg-holo-yellow-room object-cover"
+              draggable={false}
+            />
             <div className="flex flex-1 flex-col">
               <div className="flex items-center gap-2">
                 <span className="text-[16px] font-semibold text-holo-ink">{ME.nickname}</span>

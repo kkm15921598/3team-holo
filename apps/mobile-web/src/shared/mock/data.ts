@@ -442,9 +442,9 @@ export const ATTENDANCE_DAYS: AttendanceDay[] = [
   { day: 2, points: 5,  checked: false, isToday: true  },
   { day: 3, points: 15, checked: false, isToday: false, label: "연속보너스" },
   { day: 4, points: 5,  checked: false, isToday: false },
-  { day: 5, points: 25, checked: false, isToday: false },
+  { day: 5, points: 25, checked: false, isToday: false, label: "연속보너스" },
   { day: 6, points: 5,  checked: false, isToday: false },
-  { day: 7, points: 55, checked: false, isToday: false, label: "전체보너스" },
+  { day: 7, points: 55, checked: false, isToday: false, label: "스페셜 보너스" },
 ];
 
 export const ATTENDANCE_STREAK = 20; // 연속 출석일 수

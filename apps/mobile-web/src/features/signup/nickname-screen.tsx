@@ -172,13 +172,14 @@ export function NicknameScreen() {
               다시 추천
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* 2열 grid — 각 셀 너비가 같아 추천이 바뀌어도 위치가 안정적 */}
+          <div className="grid grid-cols-2 gap-2">
             {suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => update("nickname", s)}
-                className="rounded-full border border-holo-line bg-white px-4 py-1.5 text-[13px] text-holo-ink transition hover:border-holo-purple-mid hover:text-holo-purple-mid"
+                className="truncate rounded-full border border-holo-line bg-white px-4 py-1.5 text-center text-[13px] text-holo-ink transition hover:border-holo-purple-mid hover:text-holo-purple-mid"
               >
                 {s}
               </button>

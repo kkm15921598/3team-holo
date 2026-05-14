@@ -55,7 +55,7 @@ export function PrivacyScreen() {
 
       <section className="mt-4 px-4 pb-4">
         <p className="text-[11px] leading-5 text-holo-ink-3">
-          홀로는 사용자의 개인정보를 안전하게 보관하고, 동의한 범위 안에서만 활용해요.
+          홀로는 개인정보를 안전하게 보관·활용해요.
         </p>
       </section>
     </main>

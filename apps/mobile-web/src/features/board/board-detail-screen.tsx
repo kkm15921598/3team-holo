@@ -4,6 +4,8 @@ import { COMMENTS, ME, POST_COMMENTS, type Post } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
 import { StatusBadge } from "./board-list-screen";
 import { LocationMap } from "@/features/map/post-map";
+import { getAvatarUrl } from "@/features/chat/avatars";
+import { ME_PERSONA } from "@/features/home/home-faces";
 
 type CommentReply = {
   id: string;
@@ -201,7 +203,16 @@ export function BoardDetailScreen() {
           <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
             <BackIcon />
           </button>
-          <div className="ml-1 h-9 w-9 shrink-0 rounded-full bg-holo-yellow-room" />
+          <img
+            src={
+              post.authorNickname === ME.nickname
+                ? ME_PERSONA.face
+                : getAvatarUrl(post.authorNickname)
+            }
+            alt={post.authorNickname}
+            className="ml-1 h-9 w-9 shrink-0 rounded-full bg-holo-yellow-room object-cover"
+            draggable={false}
+          />
           <span className="rounded-[4px] bg-holo-gradient px-2 py-0.5 text-[11px] font-semibold text-white">
             Lv.{post.authorLevel}
           </span>

@@ -6,10 +6,12 @@ import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickRandomMeetups } from "./home-meetups-data";
 import { useStatusMessage } from "../myroom/myroom-store";
+import { ME } from "@/shared/mock/data";
 
-const NICKNAME = "무지는단무지";
-const LEVEL = 24;
-const TITLE = "#벌레_해결사";
+// 모든 화면에서 동일한 닉네임 사용 — 데이터 단일 출처
+const NICKNAME = ME.nickname;
+const LEVEL = ME.level;
+const TITLE = ME.title;
 /** 메인 프로필에 표시할 뱃지 — 한글 이름으로 지정 */
 const BADGE = getBadgeByName("HOLO 수호신");
 

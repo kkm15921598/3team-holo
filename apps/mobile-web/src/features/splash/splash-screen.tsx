@@ -1,31 +1,27 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+const SPLASH_DELAY_MS = 1800;
 
 export function SplashScreen() {
   const navigate = useNavigate();
 
-  const goToLogin = () => navigate("/login", { replace: true });
+  // 일정 시간 후 자동으로 로그인 화면으로 이동
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      navigate("/login", { replace: true });
+    }, SPLASH_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [navigate]);
 
   return (
-    <main
-      role="button"
-      tabIndex={0}
-      onClick={goToLogin}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          goToLogin();
-        }
-      }}
-      className="flex flex-1 cursor-pointer select-none flex-col items-center bg-white"
-    >
-      {/* 레이아웃: 로고는 화면 중앙, 안내 문구는 화면 하단 근처.
-        - 로고 묶음에 mt-auto, 안내에도 mt-auto를 줘서 남은 공간을 양쪽으로 균등 분배.
-      */}
+    <main className="flex flex-1 select-none flex-col items-center bg-white">
+      {/* 레이아웃: 로고는 화면 중앙. 안내 문구는 자동전환이라 제거. */}
       <div className="mt-auto flex flex-col items-center gap-3">
         <img
           src="/illustrations/splash-logo.png"
           alt=""
-          className="h-[112px] w-[132px] animate-pulse object-contain"
+          className="h-[112px] w-[132px] animate-holo-pulse object-contain"
           aria-hidden
         />
         <span className="font-fredoka text-[40px] font-semibold leading-none text-holo-purple">
@@ -33,9 +29,7 @@ export function SplashScreen() {
         </span>
       </div>
 
-      <span className="mb-20 mt-auto animate-pulse text-sm text-holo-purple/60">
-        화면을 터치하세요
-      </span>
+      <span className="mb-20 mt-auto" aria-hidden />
     </main>
   );
 }

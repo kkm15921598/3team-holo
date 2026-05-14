@@ -3,9 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import {
   BOARD_CATEGORIES,
   CATEGORY_SHORT,
+  ME,
   type Post,
 } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
+import { getAvatarUrl } from "@/features/chat/avatars";
+import { ME_PERSONA } from "@/features/home/home-faces";
+
+// 내 게시글이면 home과 동일한 ME_PERSONA face, 아니면 닉네임 해시 face
+function avatarFor(nickname: string): string {
+  return nickname === ME.nickname ? ME_PERSONA.face : getAvatarUrl(nickname);
+}
 
 const DRAG_THRESHOLD = 4;
 
@@ -65,7 +73,7 @@ export function BoardListScreen() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        className="overflow-x-auto border-b border-holo-line px-4 py-2 [&::-webkit-scrollbar]:hidden"
+        className="overflow-x-auto px-4 py-2 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none", cursor: "grab" }}
       >
         <div className="flex w-max gap-2">
@@ -111,8 +119,9 @@ export function BoardListScreen() {
 }
 
 function PostCard({ post }: { post: Post }) {
-  // Status block under avatar appears for every category EXCEPT 추천해요.
-  const showStatusBlock = post.category !== "recommend";
+  // 자유게시판/추천해요는 상태 블록을 숨기되, 자리는 비워둠 → 탭 이동 시 카드 높이가 동일하게 유지됨
+  const isSimple =
+    post.category === "recommend" || post.category === "free";
   // Category badge before the title appears ONLY on 자유게시판 posts.
   const showCategoryBadge = post.category === "free";
 
@@ -122,15 +131,25 @@ function PostCard({ post }: { post: Post }) {
 
   return (
     <li className="border-b border-holo-line">
-      <Link to={`/board/${post.id}`} className="flex items-start gap-3 px-4 py-3">
-        <div className="flex shrink-0 flex-col items-center gap-1">
-          <div className="h-12 w-12 rounded-full bg-holo-yellow-room" />
-          {showStatusBlock && (
-            <>
+      <Link to={`/board/${post.id}`} className="flex items-stretch gap-3 px-4 py-3">
+        <div className="flex shrink-0 flex-col items-center">
+          <img
+            src={avatarFor(post.authorNickname)}
+            alt={post.authorNickname}
+            className="h-12 w-12 rounded-full bg-holo-yellow-room object-cover"
+            draggable={false}
+          />
+          {/* 좌측 컬럼 하단으로 밀어 우측 컬럼 끝의 > 화살표와 같은 줄에 정렬되도록 함.
+              gap-2(8px)로 모집중 텍스트가 pill과 적당히 떨어져 위로 올라가 보이게 함 */}
+          <div className="mt-auto flex flex-col items-center gap-2">
+            {/* 보이지 않더라도 invisible로 자리를 차지해 카드 높이를 일정하게 유지 */}
+            <div className={isSimple ? "invisible" : ""}>
               <StatusText status={post.status} />
+            </div>
+            <div className={isSimple ? "invisible" : ""}>
               <FractionPill status={post.status} text={`${joined}/${cap}`} />
-            </>
-          )}
+            </div>
+          </div>
         </div>
         <div className="flex flex-1 flex-col">
           <div className="flex items-center gap-2">
@@ -154,9 +173,9 @@ function PostCard({ post }: { post: Post }) {
             <span className="flex items-center gap-1">
               <CommentIcon /> {post.comments}
             </span>
+            <ChevronRight />
           </div>
         </div>
-        <ChevronRight />
       </Link>
     </li>
   );
@@ -179,7 +198,9 @@ export function StatusBadge({ status }: { status: "모집중" | "모집완료" }
 
 function StatusText({ status }: { status: "모집중" | "모집완료" }) {
   return (
-    <span className="text-[11px] font-medium text-[#000000]">{status}</span>
+    <span className="block text-[11px] font-medium leading-none text-[#000000]">
+      {status}
+    </span>
   );
 }
 
@@ -195,7 +216,7 @@ function FractionPill({
       ? "bg-holo-success text-[#3F7E25]"
       : "bg-holo-full text-[#C53030]";
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${styles}`}>
+    <span className={`block rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none ${styles}`}>
       {text}
     </span>
   );
@@ -217,7 +238,7 @@ function CommentIcon() {
 }
 function ChevronRight() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="ml-2 self-center">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="ml-auto">
       <path d="m9 6 6 6-6 6" />
     </svg>
   );

@@ -1,17 +1,6 @@
 import { Link } from "react-router-dom";
 import { BOARD_CATEGORIES } from "@/shared/mock/data";
 
-const CATEGORY_ICON: Record<string, string> = {
-  free: "/icons/board_icon_free.png",
-  share: "/icons/board_icon_group.png",
-  recommend: "/icons/board_icon_recomm.png",
-  game: "/icons/board_icon_game.png",
-  sport: "/icons/board_icon_health.png",
-  media: "/icons/board_icon_tv.png",
-  food: "/icons/board_icon_food.png",
-  help: "/icons/board_icon_help.png",
-};
-
 export function BoardMainScreen() {
   // Hide the "전체" pseudo-tab from the grid here — it remains available
   // via the "게시판" text below, which navigates to the full Board2 list.
@@ -59,45 +48,42 @@ export function BoardMainScreen() {
 
       {/* 게시판 카테고리 */}
       <section className="relative flex-1 overflow-hidden rounded-[20px] border border-holo-line-2 bg-white p-5">
-        {/* "게시판" header → Board2 with 전체 active */}
-        <Link
-          to="/board/list"
-          className="inline-block text-[18px] font-bold text-holo-ink"
-        >
-          게시판
-        </Link>
-        <p className="mt-1 text-[12px] text-holo-ink-3">
-          우리 동네 이야기를
-          <br />
-          나눠보세요
-        </p>
+        {/* 상단 영역 — 좌측 텍스트 + 우측 일러스트 (높이 고정으로 그리드와 분리) */}
+        <div className="relative h-[180px]">
+          <div className="relative z-10">
+            <Link
+              to="/board/list"
+              className="inline-block text-[18px] font-bold text-holo-ink"
+            >
+              게시판
+            </Link>
+            <p className="mt-1 text-[12px] text-holo-ink-3">
+              우리 동네 이야기를
+              <br />
+              나눠보세요
+            </p>
+          </div>
+          <img
+            src="/illustrations/board/board_section_illustration.png"
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="pointer-events-none absolute -right-5 -top-1 z-0 h-[200px] w-auto select-none object-contain"
+          />
+        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3">
           {visibleCategories.map((c) => (
             <Link
               key={c.id}
               to="/board/list"
               className="flex items-center gap-2 text-[13px] text-holo-ink"
             >
-              <img
-                src={CATEGORY_ICON[c.id] ?? "/icons/board_icon_free.png"}
-                alt=""
-                aria-hidden
-                className="h-[22px] w-[22px] object-contain"
-              />
+              <CategoryIcon id={c.id} />
               <span>{c.label}</span>
             </Link>
           ))}
         </div>
-
-        {/* 섹션 일러스트 — 카드 우측 하단 */}
-        <img
-          src="/illustrations/board/board_section_illustration.png"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute bottom-2 left-1/2 w-[260px] -translate-x-1/2 select-none object-contain"
-          draggable={false}
-        />
       </section>
 
       {/* FAB */}
@@ -112,6 +98,19 @@ export function BoardMainScreen() {
   );
 }
 
+function CategoryIcon({ id }: { id: string }) {
+  const map: Record<string, string> = {
+    free: "📝",
+    share: "🛒",
+    recommend: "👍",
+    game: "🎮",
+    sport: "🤝",
+    media: "📺",
+    food: "🍴",
+    help: "🆘",
+  };
+  return <span className="text-[16px] text-holo-purple-mid">{map[id] ?? "•"}</span>;
+}
 function PlusIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>

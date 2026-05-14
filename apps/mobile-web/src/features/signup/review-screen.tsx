@@ -38,35 +38,20 @@ export function ReviewScreen() {
       </p>
 
       <div className="mt-7 flex flex-col divide-y divide-holo-line rounded-holo-input border border-holo-line">
-        <ReviewItem
-          label="이름"
-          value={data.name || "-"}
-          onEdit={() => navigate("/signup/verify")}
-        />
+        <ReviewItem label="이름" value={data.name || "-"} />
         <ReviewItem
           label="휴대폰"
           value={data.phone ? formatPhone(data.phone) : "-"}
-          onEdit={() => navigate("/signup/verify")}
         />
-        <ReviewItem
-          label="아이디"
-          value={data.userId || "-"}
-          onEdit={() => navigate("/signup/account")}
-        />
+        <ReviewItem label="아이디" value={data.userId || "-"} />
         <ReviewItem
           label="비밀번호"
           value={data.password ? "•".repeat(Math.min(data.password.length, 12)) : "-"}
-          onEdit={() => navigate("/signup/account")}
         />
-        <ReviewItem
-          label="닉네임"
-          value={data.nickname || "-"}
-          onEdit={() => navigate("/signup/nickname")}
-        />
+        <ReviewItem label="닉네임" value={data.nickname || "-"} />
         <ReviewItem
           label="관심사"
           value={allInterests.length > 0 ? allInterests.join(", ") : "-"}
-          onEdit={() => navigate("/signup/interest")}
           multiline
         />
       </div>
@@ -95,12 +80,10 @@ export function ReviewScreen() {
 function ReviewItem({
   label,
   value,
-  onEdit,
   multiline,
 }: {
   label: string;
   value: string;
-  onEdit: () => void;
   multiline?: boolean;
 }) {
   return (
@@ -113,13 +96,6 @@ function ReviewItem({
           {value}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="shrink-0 rounded-full border border-holo-line px-3 py-1 text-[12px] text-holo-ink-3 transition hover:text-holo-ink"
-      >
-        수정
-      </button>
     </div>
   );
 }

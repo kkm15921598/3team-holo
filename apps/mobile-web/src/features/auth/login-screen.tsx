@@ -64,7 +64,13 @@ export function LoginScreen() {
 
   return (
     <main className="flex flex-1 flex-col px-4 pb-8 pt-20">
-      <div className="mb-12 flex flex-col items-center">
+      <div className="mb-12 flex flex-col items-center gap-3">
+        <img
+          src="/illustrations/splash-logo.png"
+          alt=""
+          aria-hidden
+          className="h-[90px] w-[105px] animate-holo-pulse object-contain"
+        />
         <span className="font-fredoka text-[44px] font-semibold leading-none text-holo-purple">
           HOLO
         </span>

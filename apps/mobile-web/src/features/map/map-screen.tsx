@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { POSTS, type Post } from "@/shared/mock/data";
 import { MapView } from "./post-map";
+import { getAvatarUrl } from "@/features/chat/avatars";
 
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -179,18 +180,20 @@ export function MapScreen() {
                   <ArrowOutIcon stroke="#FFFFFF" />
                 </span>
 
-                {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 */}
+                {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 (post id + index로 일관된 face 매핑) */}
                 {(p.participants?.length ?? 0) > 0 && (
                   <div className="absolute bottom-[13px] left-[14px] flex">
-                    {visibleParticipants.map((pa, i) => (
-                      <span
+                    {visibleParticipants.map((_, i) => (
+                      <img
                         key={i}
-                        className="block h-[28px] w-[28px] rounded-full border-2 border-holo-lilac-card-2"
+                        src={getAvatarUrl(`${p.id}-${i}`)}
+                        alt=""
+                        aria-hidden
+                        draggable={false}
+                        className="block h-[28px] w-[28px] rounded-full border-2 border-holo-lilac-card-2 object-cover"
                         style={{
-                          backgroundColor: pa.avatarBg,
                           marginLeft: i === 0 ? 0 : -6,
                         }}
-                        aria-hidden="true"
                       />
                     ))}
                     {extraCount > 0 && (
