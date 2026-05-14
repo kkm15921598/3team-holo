@@ -21,6 +21,8 @@ import {
   persistWithoutUnreadDivider,
 } from "./messages-store";
 import { getAvatarUrl } from "./avatars";
+import { LocationMap, LocationPicker } from "@/features/map/post-map";
+import { MY_LOCATION } from "@/shared/mock/data";
 
 type ReplyTarget = { nickname: string; content: string } | null;
 
@@ -225,6 +227,11 @@ export function ChatRoomScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [alert, setAlert] = useState<{ title: string; description?: string; onConfirm?: () => void; danger?: boolean } | null>(null);
+
+  // 위치 공유 picker 모달 상태
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locDraftPick, setLocDraftPick] = useState<{ lat: number; lng: number } | null>(null);
+  const [locDraftAddress, setLocDraftAddress] = useState<string>("");
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     // 1) 캐시된 메시지가 있으면 그대로 복원 (재진입 시 이전 대화 유지)
@@ -440,40 +447,52 @@ export function ChatRoomScreen() {
   };
 
   const handleLocationShare = () => {
+    // 모달을 열고 사용자가 지도에서 위치를 선택하게 함
+    setLocDraftPick(null);
+    setLocDraftAddress("");
+    setShowLocationPicker(true);
+  };
+
+  const useMyCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
-      setAlert({ title: "위치 정보를 지원하지 않는 브라우저예요" });
+      // geolocation 미지원 — mock의 내 위치로 대체
+      setLocDraftPick({ lat: MY_LOCATION.lat, lng: MY_LOCATION.lng });
       return;
     }
-    setAlert({ title: "위치를 가져오는 중..." });
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setAlert(null);
         const { latitude, longitude } = pos.coords;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: String(Date.now()),
-            nickname: "",
-            content: "",
-            time: nowTime(),
-            mine: true,
-            type: "location",
-            location: { lat: latitude, lng: longitude },
-            read: false,
-            readBy: 1,
-          },
-        ]);
+        setLocDraftPick({ lat: latitude, lng: longitude });
       },
-      (err) => {
-        setAlert({
-          title: "위치를 가져올 수 없어요",
-          description: err.code === err.PERMISSION_DENIED
-            ? "브라우저 설정에서 위치 권한을 허용해주세요."
-            : "잠시 후 다시 시도해주세요.",
-        });
+      () => {
+        // 권한 거부/실패 시 mock 위치로 대체
+        setLocDraftPick({ lat: MY_LOCATION.lat, lng: MY_LOCATION.lng });
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
+  };
+
+  const sendPickedLocation = () => {
+    if (!locDraftPick) return;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: String(Date.now()),
+        nickname: "",
+        content: "",
+        time: nowTime(),
+        mine: true,
+        type: "location",
+        location: {
+          lat: locDraftPick.lat,
+          lng: locDraftPick.lng,
+          address: locDraftAddress.trim() || undefined,
+        },
+        read: false,
+        readBy: 1,
+      },
+    ]);
+    setShowLocationPicker(false);
   };
 
   const onAttachPick = (kind: string) => {
@@ -909,6 +928,72 @@ export function ChatRoomScreen() {
         />
       )}
 
+      {showLocationPicker && (
+        <div
+          className="fixed left-1/2 top-0 z-50 flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40"
+          onClick={() => setShowLocationPicker(false)}
+        >
+          <div
+            className="mt-auto flex h-[85%] flex-col overflow-hidden rounded-t-2xl bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line px-4">
+              <button
+                type="button"
+                onClick={() => setShowLocationPicker(false)}
+                className="text-[14px] text-holo-ink-2"
+              >
+                취소
+              </button>
+              <span className="text-[14px] font-semibold text-holo-ink">
+                위치 보내기
+              </span>
+              <button
+                type="button"
+                onClick={sendPickedLocation}
+                disabled={!locDraftPick}
+                className="text-[14px] font-semibold text-holo-purple-mid disabled:opacity-40"
+              >
+                보내기
+              </button>
+            </div>
+
+            <div className="relative flex-1">
+              <LocationPicker value={locDraftPick} onChange={setLocDraftPick} />
+              <p className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
+                지도를 탭해 위치를 선택하세요
+              </p>
+              <button
+                type="button"
+                onClick={useMyCurrentLocation}
+                className="absolute bottom-3 right-3 z-[400] flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-holo-purple-mid shadow"
+              >
+                📍 내 위치
+              </button>
+            </div>
+
+            <div className="shrink-0 border-t border-holo-line px-4 py-3">
+              <label className="text-[12px] text-holo-ink-3" htmlFor="loc-address">
+                장소 이름 (선택)
+              </label>
+              <input
+                id="loc-address"
+                type="text"
+                value={locDraftAddress}
+                onChange={(e) => setLocDraftAddress(e.target.value)}
+                placeholder="예: 미금역 1번 출구"
+                className="mt-1 w-full border-b border-holo-line py-2 text-[14px] outline-none placeholder:text-holo-ink-3"
+              />
+              {locDraftPick && (
+                <p className="mt-2 text-[11px] text-holo-ink-3">
+                  선택한 좌표: {locDraftPick.lat.toFixed(5)}, {locDraftPick.lng.toFixed(5)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {alert && (
         <AlertModal
           title={alert.title}
@@ -1066,8 +1151,6 @@ function MessageItem({
     }
     if (message.type === "location" && message.location) {
       const { lat, lng } = message.location;
-      // OpenStreetMap 정적 이미지 (공개 타일 사용)
-      const mapSrc = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=300x180&markers=${lat},${lng},red-pushpin`;
       return (
         <a
           href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`}
@@ -1078,13 +1161,11 @@ function MessageItem({
           }`}
           {...pressProps}
         >
-          <img
-            src={mapSrc}
-            alt="지도"
-            className="h-[120px] w-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
+          <LocationMap
+            location={{ lat, lng, placeName: message.location.address }}
+            className="h-[120px]"
+            preview
+            showUserMarker={false}
           />
           <div className="flex items-center gap-1.5 px-3 py-2">
             <PinSmallIcon />

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import type { PostLocation } from "@/shared/mock/data";
+import { LocationPicker } from "@/features/map/post-map";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
 
@@ -48,6 +50,7 @@ type WriteLocationState = {
   eventDate?: string;
   peopleCount?: number | null;
   place?: string;
+  postLocation?: PostLocation | null;
 } | null;
 
 export function BoardWriteScreen() {
@@ -88,6 +91,40 @@ export function BoardWriteScreen() {
     incomingState?.peopleCount ?? null,
   );
 
+  // 위치(지도) 선택 상태
+  const [postLocation, setPostLocation] = useState<PostLocation | null>(
+    incomingState?.postLocation ?? null,
+  );
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  // 모달 내부 임시 상태(취소 시 버려짐)
+  const [draftPick, setDraftPick] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
+  const [draftPlaceName, setDraftPlaceName] = useState<string>("");
+
+  const openLocationPicker = () => {
+    setDraftPick(
+      postLocation ? { lat: postLocation.lat, lng: postLocation.lng } : null,
+    );
+    setDraftPlaceName(postLocation?.placeName ?? incomingState?.place ?? "");
+    setShowLocationPicker(true);
+  };
+  const confirmLocationPicker = () => {
+    if (draftPick) {
+      setPostLocation({
+        lat: draftPick.lat,
+        lng: draftPick.lng,
+        placeName: draftPlaceName.trim() || undefined,
+      });
+    } else {
+      setPostLocation(null);
+    }
+    setShowLocationPicker(false);
+  };
+  const clearLocation = () => {
+    setPostLocation(null);
+  };
+
   const controlsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,7 +154,8 @@ export function BoardWriteScreen() {
     cameFromDraft ||
     cameFromEdit ||
     title !== initialTitle ||
-    content !== initialContent;
+    content !== initialContent ||
+    postLocation !== (incomingState?.postLocation ?? null);
 
   const handleBackClick = () => {
     if (isDirty) {
@@ -162,7 +200,11 @@ export function BoardWriteScreen() {
           meetupType: meetupType ?? undefined,
           eventDate: date,
           peopleCount,
-          place: incomingState.place ?? existing.place,
+          place:
+            postLocation?.placeName ??
+            incomingState.place ??
+            existing.place,
+          location: postLocation ?? existing.location,
         });
       }
     } else {
@@ -183,7 +225,8 @@ export function BoardWriteScreen() {
         meetupType: meetupType ?? undefined,
         eventDate: date,
         peopleCount,
-        place: incomingState?.place,
+        place: postLocation?.placeName ?? incomingState?.place,
+        location: postLocation ?? undefined,
       });
       if (incomingState?.draftId) {
         draftsStore.remove([incomingState.draftId]);
@@ -528,11 +571,36 @@ export function BoardWriteScreen() {
           </div>
         )}
 
+        {/* 선택된 위치 칩 — 지도 미리보기를 함께 노출 */}
+        {postLocation && (
+          <div className="mx-5 mt-2 flex items-center gap-2 rounded-full border border-holo-lilac-soft bg-holo-lilac-soft/40 px-3 py-1.5 text-[12px] text-holo-purple-mid">
+            <PinIcon />
+            <span className="truncate">
+              {postLocation.placeName ??
+                `${postLocation.lat.toFixed(4)}, ${postLocation.lng.toFixed(4)}`}
+            </span>
+            <button
+              type="button"
+              aria-label="위치 제거"
+              onClick={clearLocation}
+              className="ml-auto text-holo-ink-3"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="mt-auto flex items-center gap-4 border-t border-holo-line-3 px-5 py-3 text-[14px] text-holo-ink">
           <button type="button" className="flex items-center gap-1">
             <PhotoIcon /> 사진
           </button>
-          <button type="button" className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openLocationPicker}
+            className={`flex items-center gap-1 ${
+              postLocation ? "text-holo-purple-mid" : ""
+            }`}
+          >
             <PinIcon /> 장소
           </button>
         </div>
@@ -568,6 +636,69 @@ export function BoardWriteScreen() {
               >
                 나가기
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Location picker modal */}
+      {showLocationPicker && (
+        <div
+          className="fixed left-1/2 top-0 z-50 flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40"
+          onClick={() => setShowLocationPicker(false)}
+        >
+          <div
+            className="mt-auto flex h-[85%] flex-col overflow-hidden rounded-t-2xl bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line px-4">
+              <button
+                type="button"
+                onClick={() => setShowLocationPicker(false)}
+                className="text-[14px] text-holo-ink-2"
+              >
+                취소
+              </button>
+              <span className="text-[14px] font-semibold text-holo-ink">
+                위치 선택
+              </span>
+              <button
+                type="button"
+                onClick={confirmLocationPicker}
+                disabled={!draftPick}
+                className="text-[14px] font-semibold text-holo-purple-mid disabled:opacity-40"
+              >
+                확인
+              </button>
+            </div>
+
+            {/* 지도 영역 */}
+            <div className="relative flex-1">
+              <LocationPicker value={draftPick} onChange={setDraftPick} />
+              <p className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
+                지도를 탭해 위치를 선택하세요
+              </p>
+            </div>
+
+            {/* 장소 이름 입력 */}
+            <div className="shrink-0 border-t border-holo-line px-4 py-3">
+              <label className="text-[12px] text-holo-ink-3" htmlFor="place-name">
+                장소 이름 (선택)
+              </label>
+              <input
+                id="place-name"
+                type="text"
+                value={draftPlaceName}
+                onChange={(e) => setDraftPlaceName(e.target.value)}
+                placeholder="예: 미금역 1번 출구"
+                className="mt-1 w-full border-b border-holo-line py-2 text-[14px] outline-none placeholder:text-holo-ink-3"
+              />
+              {draftPick && (
+                <p className="mt-2 text-[11px] text-holo-ink-3">
+                  선택한 좌표: {draftPick.lat.toFixed(5)}, {draftPick.lng.toFixed(5)}
+                </p>
+              )}
             </div>
           </div>
         </div>

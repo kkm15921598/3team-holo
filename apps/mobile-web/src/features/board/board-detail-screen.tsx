@@ -1,11 +1,20 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { POSTS, COMMENTS } from "@/shared/mock/data";
+import { COMMENTS, type Post } from "@/shared/mock/data";
 import { StatusBadge } from "./board-list-screen";
+import { postsStore } from "./posts-store";
+import { LocationMap } from "@/features/map/post-map";
 
 export function BoardDetailScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const post = POSTS.find((p) => p.id === id) ?? POSTS[0];
+
+  // postsStore를 구독하여 새로 작성된 글도 반영되게 함
+  const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
+  useEffect(() => {
+    return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
+  }, []);
+  const post = posts.find((p) => p.id === id) ?? posts[0];
 
   return (
     <main className="flex flex-1 flex-col">
@@ -42,12 +51,28 @@ export function BoardDetailScreen() {
           <span className="ml-auto">{post.timeAgo}</span>
         </div>
 
-        {/* map */}
-        <img
-          src="/illustrations/map.png"
-          alt="모임 위치"
-          className="mt-3 h-[120px] w-full rounded-[10px] border border-holo-line-2 object-cover"
-        />
+        {/* map — 위치가 있으면 실제 지도, 없으면 안내 문구 */}
+        {post.location ? (
+          <div className="mt-3 overflow-hidden rounded-[10px] border border-holo-line-2">
+            <LocationMap
+              location={post.location}
+              className="h-[160px]"
+            />
+            {(post.location.placeName || post.place) && (
+              <div className="flex items-center gap-1 bg-white px-3 py-2 text-[12px] text-holo-ink-2">
+                <span aria-hidden>📍</span>
+                <span className="truncate">
+                  {post.location.placeName ?? post.place}
+                </span>
+              </div>
+            )}
+          </div>
+        ) : post.place ? (
+          <div className="mt-3 flex items-center gap-1 rounded-[10px] border border-holo-line-2 bg-white px-3 py-3 text-[13px] text-holo-ink-2">
+            <span aria-hidden>📍</span>
+            <span className="truncate">{post.place}</span>
+          </div>
+        ) : null}
 
         <div className="mt-3 h-px w-full bg-holo-surface-3" />
 

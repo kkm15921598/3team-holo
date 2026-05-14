@@ -25,7 +25,7 @@ export function VerificationScreen() {
   const [verifyError, setVerifyError] = useState("");
   const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
   const [showIdNum, setShowIdNum] = useState(false);
-  
+
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent);
 
@@ -308,21 +308,53 @@ function AlreadyJoinedModal({ onLogin, onFindPassword, onClose }: any) {
 function ChevronDownIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>; }
 function CheckIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m4 12 6 6 10-14" /></svg>; }
 
+// 마스킹 표시: "123456 - 1***" — 7번째 자리만 보이고 나머지는 실제 입력된 만큼만 *
 function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
-  return `${v.slice(0, 6)} - ${v.slice(6, 7)}******`;
+  const seven = v.slice(6, 7);
+  const hiddenCount = Math.max(0, v.length - 7);
+  return `${v.slice(0, 6)} - ${seven}${"*".repeat(hiddenCount)}`;
 }
 
+// 미마스킹 표시: 전체 13자리 모두 노출
 function formatIdRaw(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
   return `${v.slice(0, 6)} - ${v.slice(6)}`;
 }
 
+// 입력 파서 — 마스킹 모드에서도 추가/삭제가 정상 동작하도록 prev와 diff 비교
 function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) {
-  const digits = displayValue.replace(/[^\d]/g, "");
-  return digits.slice(0, 13);
+  if (!masked) {
+    // 노출 모드: 그냥 숫자만 추출
+    return displayValue.replace(/\D/g, "").slice(0, 13);
+  }
+
+  // 마스킹 모드
+  const prevDisplay = formatId(prevIdNum);
+  const newDigits = displayValue.replace(/\D/g, "");
+  const prevDigits = prevDisplay.replace(/\D/g, "");
+  const lenDiff = displayValue.length - prevDisplay.length;
+
+  // 사용자가 문자(숫자)를 추가했음 → 가시 영역 뒤에 새 숫자가 추가된 것으로 간주하여 idNum에 append
+  if (lenDiff > 0) {
+    const addedDigits = newDigits.length - prevDigits.length;
+    if (addedDigits > 0) {
+      const additions = newDigits.slice(prevDigits.length);
+      return (prevIdNum + additions).slice(0, 13);
+    }
+    return prevIdNum;
+  }
+
+  // 사용자가 문자(숫자 또는 *)를 삭제했음 → idNum 끝에서 그만큼 제거
+  if (lenDiff < 0) {
+    const removed = -lenDiff;
+    return prevIdNum.slice(0, Math.max(0, prevIdNum.length - removed));
+  }
+
+  // 길이 동일 — 가시 영역의 숫자가 교체된 경우. 새 숫자 + 기존 숨김 결합
+  return (newDigits + prevIdNum.slice(newDigits.length)).slice(0, 13);
 }
 
 function formatPhone(v: string) {

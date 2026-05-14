@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import L from "leaflet";
-import { MY_LOCATION, POSTS, type Post } from "@/shared/mock/data";
+import { POSTS, type Post } from "@/shared/mock/data";
+import { MapView } from "./post-map";
 
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -11,134 +11,6 @@ function filterPosts(filter: Filter): Post[] {
   if (filter === "전체") return withLocation;
   if (filter === "지금바로") return withLocation.filter((p) => p.status === "모집중");
   return withLocation.filter((p) => p.status === "모집완료");
-}
-
-const postIcon = L.divIcon({
-  className: "holo-post-marker",
-  iconSize: [44, 44],
-  iconAnchor: [22, 22],
-  html: '<div class="holo-post-glow"><div class="holo-post-dot"></div></div>',
-});
-
-// 표준 앱 스타일 사용자 위치 마커: 정확도 링 + solid dot
-function buildUserIcon(preview: boolean) {
-  const size = preview ? 48 : 80;
-  return L.divIcon({
-    className: "holo-user-marker" + (preview ? " holo-preview" : ""),
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    html:
-      '<div class="holo-user-glow-outer">' +
-      '<div class="holo-user-glow-inner"></div>' +
-      "</div>",
-  });
-}
-
-type MapViewProps = {
-  preview: boolean;
-  visiblePosts: Post[];
-  onMarkerClick?: (id: string) => void;
-};
-
-function MapView({ preview, visiblePosts, onMarkerClick }: MapViewProps) {
-  const elRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const postMarkersRef = useRef<Record<string, L.Marker>>({});
-
-  useLayoutEffect(() => {
-    if (!elRef.current || mapRef.current) return;
-
-    const map = L.map(elRef.current, {
-      center: [MY_LOCATION.lat, MY_LOCATION.lng],
-      zoom: 16,
-      minZoom: 14,
-      maxZoom: 18,
-      zoomControl: !preview,
-      attributionControl: !preview,
-      dragging: !preview,
-      scrollWheelZoom: !preview,
-      doubleClickZoom: !preview,
-      touchZoom: !preview,
-      boxZoom: !preview,
-      keyboard: !preview,
-    });
-
-    const tiles = L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-      {
-        maxZoom: 19,
-        subdomains: "abcd",
-        attribution: "© OSM © CARTO",
-      },
-    );
-    tiles.addTo(map);
-
-    L.marker([MY_LOCATION.lat, MY_LOCATION.lng], {
-      icon: buildUserIcon(preview),
-      interactive: false,
-      keyboard: false,
-      zIndexOffset: 1000,
-    }).addTo(map);
-
-    mapRef.current = map;
-
-    function refreshSize() {
-      map.invalidateSize();
-      tiles.redraw();
-      // 1px 팬 → 원위치: leaflet의 내부 viewport 캐시를 강제로 무효화
-      map.panBy([1, 0], { animate: false });
-      map.panBy([-1, 0], { animate: false });
-    }
-    const ro = new ResizeObserver(refreshSize);
-    ro.observe(elRef.current);
-    const raf1 = requestAnimationFrame(refreshSize);
-    const raf2 = requestAnimationFrame(() => requestAnimationFrame(refreshSize));
-    const timers = [50, 200, 500, 1000, 2000].map((d) => setTimeout(refreshSize, d));
-
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      timers.forEach(clearTimeout);
-      ro.disconnect();
-      map.remove();
-      mapRef.current = null;
-      postMarkersRef.current = {};
-    };
-  }, [preview]);
-
-  // 게시물 마커 동기화
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    Object.values(postMarkersRef.current).forEach((m) => m.remove());
-    postMarkersRef.current = {};
-
-    visiblePosts.forEach((p) => {
-      if (!p.location) return;
-      const marker = L.marker([p.location.lat, p.location.lng], {
-        icon: postIcon,
-        interactive: !preview,
-        riseOnHover: true,
-      }).addTo(map);
-
-      if (!preview && onMarkerClick) {
-        marker.on("click", () => onMarkerClick(p.id));
-      }
-
-      postMarkersRef.current[p.id] = marker;
-    });
-  }, [visiblePosts, preview, onMarkerClick]);
-
-  return (
-    <div className="relative h-full w-full overflow-hidden">
-      <div
-        ref={elRef}
-        className="absolute inset-0"
-        style={preview ? { pointerEvents: "none" } : undefined}
-      />
-    </div>
-  );
 }
 
 export function MapScreen() {
@@ -310,9 +182,9 @@ export function MapScreen() {
               </span>
 
               {/* 참여자 아바타 — 3명까지 표시, 그 이상은 +N 배지 */}
-              {p.participants.length > 0 && (
+              {(p.participants?.length ?? 0) > 0 && (
                 <div className="mt-auto flex items-center">
-                  {p.participants.slice(0, 3).map((pa, i) => (
+                  {(p.participants ?? []).slice(0, 3).map((pa, i) => (
                     <span
                       key={i}
                       className="block h-[26px] w-[26px] rounded-full border-2 border-[#EBE4F5]"
@@ -323,12 +195,12 @@ export function MapScreen() {
                       aria-hidden="true"
                     />
                   ))}
-                  {p.participants.length > 3 && (
+                  {(p.participants?.length ?? 0) > 3 && (
                     <span
                       className="ml-[-6px] flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-[#EBE4F5] bg-[#CCBCE0] text-[10px] font-bold text-holo-purple-deep"
-                      aria-label={"외 " + (p.participants.length - 3) + "명 더"}
+                      aria-label={"외 " + ((p.participants?.length ?? 0) - 3) + "명 더"}
                     >
-                      +{p.participants.length - 3}
+                      +{(p.participants?.length ?? 0) - 3}
                     </span>
                   )}
                 </div>

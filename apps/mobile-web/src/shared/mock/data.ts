@@ -51,7 +51,12 @@ export type Post = {
   authorLevel: number;
   location?: PostLocation;
   /** 현재 참여자. 4명 이상이면 카드에 +N 표시. */
-  participants: ParticipantAvatar[];
+  participants?: ParticipantAvatar[];
+  // Optional meetup metadata (used by Board5 publish/edit flow)
+  meetupType?: string;
+  eventDate?: string;
+  peopleCount?: number | null;
+  place?: string;
 };
 
 // 사용자(나)의 현재 위치 — 분당 미금역 부근 더미값.

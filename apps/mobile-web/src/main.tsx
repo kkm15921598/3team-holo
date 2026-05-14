@@ -30,6 +30,7 @@ import { BoardListScreen } from "@/features/board/board-list-screen";
 import { BoardDetailScreen } from "@/features/board/board-detail-screen";
 import { BoardSearchScreen } from "@/features/board/board-search-screen";
 import { BoardWriteScreen } from "@/features/board/board-write-screen";
+import { BoardDraftsScreen } from "@/features/board/board-drafts-screen";
 
 // Chat & Profile
 import { AttendanceScreen } from "@/features/event/attendance-screen";
@@ -103,6 +104,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/board/list" element={<TabLayout><BoardListScreen /></TabLayout>} />
           <Route path="/board/search" element={<TabLayout><BoardSearchScreen /></TabLayout>} />
           <Route path="/board/write" element={<BoardWriteScreen />} />
+          <Route path="/board/drafts" element={<BoardDraftsScreen />} />
           <Route path="/board/:id" element={<TabLayout><BoardDetailScreen /></TabLayout>} />
 
           {/* Chat & Profile */}
