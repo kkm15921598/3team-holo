@@ -45,7 +45,7 @@ export function ManagedList({
 
   return (
     <>
-      <div className="flex items-center justify-between border-b border-holo-line-3 px-4 py-3">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line-3 px-4">
         <span className="text-[14px] font-semibold text-holo-ink">
           {manage ? "삭제할 게시글을 선택해 주세요" : title}
         </span>

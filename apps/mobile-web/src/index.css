@@ -137,6 +137,7 @@ body {
   position: relative;
   box-shadow: 0 0 24px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+  transform: translateZ(0); /* fixed 자식이 뷰포트가 아닌 이 프레임 기준으로 배치되도록 */
 }
 
 /* === Utilities === */
@@ -148,6 +149,7 @@ body {
   /* 모바일 화면(360px)을 데스크탑에서 둘러싼 프레임 — 고정 높이 */
   .device-frame {
     @apply relative mx-auto flex h-[100dvh] w-full max-w-[360px] flex-col overflow-hidden bg-white shadow-xl;
+    transform: translateZ(0);
   }
 }
 

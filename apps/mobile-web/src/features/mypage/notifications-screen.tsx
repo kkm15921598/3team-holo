@@ -1,18 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getQuietHours, subscribeQuietHours } from "./quiet-hours-store";
+import {
+  getNotificationSettings,
+  setNotificationSettings,
+  subscribeNotificationSettings,
+} from "@/shared/stores/notification-settings-store";
 
 export function NotificationsScreen() {
   const navigate = useNavigate();
   const goQuiet = () => navigate("/mypage/notifications/quiet");
-  const [master, setMaster] = useState(true);
-  const [comment, setComment] = useState(true);
-  const [like, setLike] = useState(true);
-  const [friend, setFriend] = useState(true);
-  const [chat, setChat] = useState(true);
-  const [meeting, setMeeting] = useState(true);
-  const [event, setEvent] = useState(false);
-  const [marketing, setMarketing] = useState(false);
+
+  const [settings, setSettings] = useState(getNotificationSettings);
+  useEffect(() => subscribeNotificationSettings(() => setSettings(getNotificationSettings())), []);
+
+  const set = (key: keyof typeof settings) => (v: boolean) => {
+    setNotificationSettings({ [key]: v });
+  };
+
+  const { master, comment, like, friend, chat, meeting, event, marketing } = settings;
   const [quiet, setQuiet] = useState(false);
+  const [quietHours, setQuietHoursState] = useState(getQuietHours);
+
+  useEffect(() => subscribeQuietHours(() => setQuietHoursState(getQuietHours())), []);
+
+  const formatTime = (h: number, m: number) =>
+    `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const quietLabel = `${formatTime(quietHours.startH, quietHours.startM)} ~ ${formatTime(quietHours.endH, quietHours.endM)}`;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -30,7 +44,7 @@ export function NotificationsScreen() {
             label="전체 알림"
             hint={master ? "푸시 알림이 켜져 있어요" : "모든 알림이 꺼져 있어요"}
             value={master}
-            onChange={setMaster}
+            onChange={set("master")}
             emphasize
           />
         </ul>
@@ -40,11 +54,11 @@ export function NotificationsScreen() {
       <section className={`mt-4 px-4 ${master ? "" : "opacity-50 pointer-events-none"}`}>
         <p className="text-[12px] text-holo-ink-3">활동 알림</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <ToggleRow label="댓글 알림" hint="내 글에 새로운 댓글이 달릴 때" value={comment} onChange={setComment} />
-          <ToggleRow label="좋아요 알림" hint="내 글·댓글에 좋아요가 눌릴 때" value={like} onChange={setLike} />
-          <ToggleRow label="친구 요청 알림" value={friend} onChange={setFriend} />
-          <ToggleRow label="채팅 알림" hint="새 메시지가 도착할 때" value={chat} onChange={setChat} />
-          <ToggleRow label="모임 알림" hint="모집 마감·새 멤버 합류 등" value={meeting} onChange={setMeeting} />
+          <ToggleRow label="댓글 알림" hint="내 글에 새로운 댓글이 달릴 때" value={comment} onChange={set("comment")} />
+          <ToggleRow label="좋아요 알림" hint="내 글·댓글에 좋아요가 눌릴 때" value={like} onChange={set("like")} />
+          <ToggleRow label="친구 요청 알림" value={friend} onChange={set("friend")} />
+          <ToggleRow label="채팅 알림" hint="새 메시지가 도착할 때" value={chat} onChange={set("chat")} />
+          <ToggleRow label="모임 알림" hint="모집 마감·새 멤버 합류 등" value={meeting} onChange={set("meeting")} />
         </ul>
       </section>
 
@@ -52,12 +66,12 @@ export function NotificationsScreen() {
       <section className={`mt-4 px-4 ${master ? "" : "opacity-50 pointer-events-none"}`}>
         <p className="text-[12px] text-holo-ink-3">이벤트 / 마케팅</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <ToggleRow label="이벤트 알림" hint="출석체크·포인트 이벤트 안내" value={event} onChange={setEvent} />
+          <ToggleRow label="이벤트 알림" hint="출석체크·포인트 이벤트 안내" value={event} onChange={set("event")} />
           <ToggleRow
             label="마케팅 알림"
             hint="혜택·프로모션 소식 (선택)"
             value={marketing}
-            onChange={setMarketing}
+            onChange={set("marketing")}
           />
         </ul>
       </section>
@@ -68,7 +82,7 @@ export function NotificationsScreen() {
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
           <ToggleRow
             label="방해 금지 모드"
-            hint="22:00 ~ 08:00 동안 알림이 오지 않아요"
+            hint={`${quietLabel} 동안 알림이 오지 않아요`}
             value={quiet}
             onChange={setQuiet}
           />
@@ -81,7 +95,7 @@ export function NotificationsScreen() {
               >
                 <span className="text-[14px] text-holo-ink">시간 설정</span>
                 <span className="flex items-center gap-1 text-[13px] text-holo-purple-mid">
-                  22:00 ~ 08:00
+                  {quietLabel}
                   <ChevronRightIcon />
                 </span>
               </button>

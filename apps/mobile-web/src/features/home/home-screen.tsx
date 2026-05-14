@@ -146,7 +146,7 @@ export function HomeScreen() {
       <Link
         to="/board/write"
         aria-label="모임 만들기"
-        className="fixed bottom-[103px] left-1/2 z-20 flex h-[52px] w-[52px] translate-x-[110px] items-center justify-center rounded-full text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.5)]"
+        className="fixed bottom-[88px] right-4 z-20 flex h-[52px] w-[52px] items-center justify-center rounded-full text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.5)]"
         style={{ background: "linear-gradient(135deg,#542BB4,#E95AA4)" }}
       >
         <PlusIcon />

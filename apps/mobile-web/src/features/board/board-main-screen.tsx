@@ -90,7 +90,8 @@ export function BoardMainScreen() {
       <Link
         to="/board/write"
         aria-label="글쓰기"
-        className="fixed bottom-[88px] right-1/2 z-10 flex h-[50px] w-[50px] translate-x-[160px] items-center justify-center rounded-full bg-holo-gradient text-white shadow-md"
+        className="fixed bottom-[88px] right-4 z-20 flex h-[52px] w-[52px] items-center justify-center rounded-full text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.5)]"
+        style={{ background: "linear-gradient(135deg,#542BB4,#E95AA4)" }}
       >
         <PlusIcon />
       </Link>

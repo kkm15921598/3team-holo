@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getQuietHours, setQuietHours } from "./quiet-hours-store";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = [0, 15, 30, 45];
@@ -16,10 +17,11 @@ const DAYS = [
 
 export function QuietHoursScreen() {
   const navigate = useNavigate();
-  const [startH, setStartH] = useState(22);
-  const [startM, setStartM] = useState(0);
-  const [endH, setEndH] = useState(8);
-  const [endM, setEndM] = useState(0);
+  const initial = getQuietHours();
+  const [startH, setStartH] = useState(initial.startH);
+  const [startM, setStartM] = useState(initial.startM);
+  const [endH, setEndH] = useState(initial.endH);
+  const [endM, setEndM] = useState(initial.endM);
   const [days, setDays] = useState<Record<string, boolean>>({
     mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
   });
@@ -48,7 +50,10 @@ export function QuietHoursScreen() {
         </div>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            setQuietHours({ startH, startM, endH, endM });
+            navigate(-1);
+          }}
           className="text-[14px] font-semibold text-holo-purple-mid"
         >
           저장
@@ -119,10 +124,10 @@ export function QuietHoursScreen() {
                 key={d.id}
                 type="button"
                 onClick={() => toggleDay(d.id)}
-                className={`flex h-10 flex-1 items-center justify-center rounded-full text-[14px] transition ${
+                className={`flex h-10 flex-1 items-center justify-center rounded-full border text-[14px] transition ${
                   on
-                    ? "bg-holo-purple-mid text-white"
-                    : "border border-holo-line text-holo-ink-2"
+                    ? "border-transparent bg-holo-purple-mid text-white"
+                    : "border-holo-line text-holo-ink-2"
                 }`}
               >
                 {d.label}
@@ -146,19 +151,55 @@ function TimeWheel({
   unit: string;
   onChange: (v: number) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ startY: number; scrollTop: number } | null>(null);
+  const isDragging = useRef(false);
+
+  // 마우스 드래그 스크롤
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+    isDragging.current = false;
+    drag.current = { startY: e.clientY, scrollTop: scrollRef.current.scrollTop };
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!drag.current || !scrollRef.current) return;
+      const delta = drag.current.startY - e.clientY;
+      if (Math.abs(delta) > 3) isDragging.current = true;
+      scrollRef.current.scrollTop = drag.current.scrollTop + delta;
+    };
+    const onMouseUp = () => { drag.current = null; };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   return (
     <div className="flex flex-1 flex-col rounded-holo-input border border-holo-line-3 bg-white">
       <div className="flex items-center justify-center border-b border-holo-line-3 py-2 text-[12px] text-holo-ink-3">
         {unit}
       </div>
-      <div className="max-h-[160px] flex-1 overflow-y-auto py-1">
+      <div
+        ref={scrollRef}
+        onMouseDown={onMouseDown}
+        className="max-h-[160px] flex-1 overflow-y-auto py-1 cursor-grab active:cursor-grabbing select-none"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        <style>{`div::-webkit-scrollbar { display: none; }`}</style>
         {options.map((opt) => {
           const active = opt === value;
           return (
             <button
               key={opt}
               type="button"
-              onClick={() => onChange(opt)}
+              onMouseUp={() => {
+                if (!isDragging.current) onChange(opt);
+              }}
               className={`flex h-9 w-full items-center justify-center text-[15px] transition ${
                 active
                   ? "bg-holo-lilac-card-2 font-semibold text-holo-purple-mid"

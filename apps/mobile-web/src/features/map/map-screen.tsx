@@ -218,7 +218,8 @@ export function MapScreen() {
         type="button"
         onClick={() => navigate("/board/write")}
         aria-label="모임 만들기"
-        className="absolute bottom-3 right-4 z-[400] flex h-[52px] w-[52px] items-center justify-center rounded-full bg-holo-gradient shadow-[0_4px_16px_rgba(84,43,180,0.4)] transition active:scale-95"
+        className="fixed bottom-[88px] right-4 z-20 flex h-[52px] w-[52px] items-center justify-center rounded-full shadow-[0_2px_6.9px_rgba(84,43,180,0.5)] transition active:scale-95"
+        style={{ background: "linear-gradient(135deg,#542BB4,#E95AA4)" }}
       >
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
           <path d="M11 4V18M4 11H18" stroke="white" strokeWidth="2.5" strokeLinecap="round" />

@@ -21,7 +21,6 @@ const ONETIME: Mission[] = [
   { id: "verify", category: "onetime", label: "동네 인증", hint: "현재 위치로 동네 인증하기", reward: 10, emoji: "📍" },
   { id: "first-post", category: "onetime", label: "첫 글 작성", hint: "어떤 게시판이든 OK", reward: 20, emoji: "🎯" },
   { id: "first-furniture", category: "onetime", label: "첫 가구 배치", hint: "마이룸을 꾸며보세요", reward: 10, emoji: "🪑" },
-  { id: "social", category: "onetime", label: "소셜 계정 연동", hint: "카카오·네이버·구글", reward: 30, emoji: "🔗" },
 ];
 
 const ONGOING: Mission[] = [
@@ -97,14 +96,6 @@ export function FreePointsScreen() {
     }
     setCompleted((prev) => ({ ...prev, verify: true }));
     showToast("동네 인증 완료! +10P 적립");
-  };
-
-  const handleSocial = () => {
-    if (completed.social) {
-      showToast("이미 연동됐어요.");
-      return;
-    }
-    navigate("/mypage/account/link");
   };
 
   const handleInvite = () => {
@@ -210,12 +201,6 @@ export function FreePointsScreen() {
             done={!!completed["first-furniture"]}
             label={completed["first-furniture"] ? "완료" : "꾸미기"}
             onClick={handleFirstFurniture}
-          />
-          <MissionRow
-            m={ONETIME[3]}
-            done={!!completed.social}
-            label={completed.social ? "완료" : "연동"}
-            onClick={handleSocial}
           />
         </ul>
       </section>
