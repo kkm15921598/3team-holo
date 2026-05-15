@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FRIENDS, ME } from "@/shared/mock/data";
+import { ME } from "@/shared/mock/data";
+import { getAvatarUrl } from "@/features/chat/avatars";
+import {
+  blockFriendById,
+  removeFriendById,
+  unblockFriendById,
+  useBlocked,
+  useFriends,
+  type Friend,
+} from "./friends-store";
 
-type Friend = (typeof FRIENDS)[number];
 type Mode = "view" | "block" | "report" | "delete";
 
 export function FriendsScreen() {
   const navigate = useNavigate();
-  const [showEmpty, setShowEmpty] = useState(false);
+  const friends = useFriends();
+  const blocked = useBlocked();
   const [showMenu, setShowMenu] = useState(false);
   const [mode, setMode] = useState<Mode>("view");
-  const [friends, setFriends] = useState<Friend[]>(FRIENDS);
-  const [blocked, setBlocked] = useState<Friend[]>([]);
   const [showBlockedView, setShowBlockedView] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState<Friend | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Friend | null>(null);
@@ -26,41 +33,36 @@ export function FriendsScreen() {
 
   const handleBlock = () => {
     if (!confirmBlock) return;
-    setBlocked((prev) => [...prev, confirmBlock]);
-    setFriends((prev) => prev.filter((f) => f.id !== confirmBlock.id));
+    blockFriendById(confirmBlock.id);
     setConfirmBlock(null);
     showToast("차단되었습니다.");
   };
 
   const handleDelete = () => {
     if (!confirmDelete) return;
-    setFriends((prev) => prev.filter((f) => f.id !== confirmDelete.id));
+    removeFriendById(confirmDelete.id);
     setConfirmDelete(null);
     showToast("친구가 삭제되었습니다.");
   };
 
   const handleUnblock = (id: string) => {
-    const f = blocked.find((b) => b.id === id);
-    if (!f) return;
-    setFriends((prev) => [...prev, f]);
-    setBlocked((prev) => prev.filter((b) => b.id !== id));
+    unblockFriendById(id);
     showToast("차단이 해제되었습니다.");
   };
 
   const handleSubmitReport = () => {
     if (!reportTarget || !reportReason.trim()) return;
-    const targetId = reportTarget.id;
-    setFriends((prev) => prev.filter((f) => f.id !== targetId));
+    removeFriendById(reportTarget.id);
     setReportTarget(null);
     setReportReason("");
     showToast("신고가 접수되었습니다.");
   };
 
-  const visibleFriends = showEmpty ? [] : friends;
+  const visibleFriends = friends;
 
   return (
     <main className="relative flex flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center justify-between px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line-3 px-4">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -88,19 +90,12 @@ export function FriendsScreen() {
               <button type="button" aria-label="더보기" onClick={() => setShowMenu(true)}>
                 <MoreIcon />
               </button>
-              <button
-                type="button"
-                onClick={() => setShowEmpty((v) => !v)}
-                className="text-[11px] text-holo-ink-3 underline"
-              >
-                {showEmpty ? "데모" : "빈상태"}
-              </button>
             </>
           )}
         </div>
       </header>
 
-      <div className="flex items-center justify-between px-4 pb-3 pt-1">
+      <div className="flex items-center justify-between border-b border-holo-line-3 px-4 pb-3 pt-3">
         <span className="flex items-center gap-2 text-[14px] text-holo-ink">
           <PeopleIcon />
           {mode === "block"
@@ -112,32 +107,34 @@ export function FriendsScreen() {
                 : "친구목록"}
         </span>
         {mode === "view" && (
-          <span className="text-[12px] text-holo-ink-3">내 ID : {ME.friendCode}</span>
+          <span className="text-[12px] text-holo-ink-3">내 코드 : {ME.friendCode}</span>
         )}
       </div>
 
       {visibleFriends.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center text-[14px] text-holo-ink-3">
-          {mode === "view" ? "친구를 추가 해보세요" : "친구 목록이 없습니다"}
+          {mode === "view" ? "" : "친구 목록이 없습니다"}
         </div>
       ) : (
-        <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-[12px] overflow-y-auto px-4 pb-3">
+        <ul className="grid flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-[16px] overflow-y-auto px-4 pb-3 pt-3">
           {visibleFriends.map((f) => (
             <li key={f.id}>
               <button
                 type="button"
-                disabled={mode === "view"}
                 onClick={() => {
                   if (mode === "block") setConfirmBlock(f);
                   else if (mode === "report") setReportTarget(f);
                   else if (mode === "delete") setConfirmDelete(f);
+                  else navigate(`/profile/${encodeURIComponent(f.nickname)}`);
                 }}
-                className="flex w-full items-center gap-2 text-left disabled:cursor-default"
+                className="flex w-full items-center gap-2 text-left"
               >
                 <span className="relative">
-                  <span
-                    className="block h-12 w-12 rounded-full"
-                    style={{ background: f.avatarBg }}
+                  <img
+                    src={getAvatarUrl(f.nickname)}
+                    alt=""
+                    className="block h-12 w-12 rounded-full object-cover"
+                    style={{ backgroundColor: f.avatarBg }}
                   />
                   {mode === "block" && (
                     <span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-holo-error text-white">
@@ -351,9 +348,11 @@ export function FriendsScreen() {
             <ul className="flex flex-1 flex-col divide-y divide-holo-line-3 overflow-y-auto px-4">
               {blocked.map((f) => (
                 <li key={f.id} className="flex items-center gap-3 py-3">
-                  <span
-                    className="block h-10 w-10 rounded-full"
-                    style={{ background: f.avatarBg }}
+                  <img
+                    src={getAvatarUrl(f.nickname)}
+                    alt=""
+                    className="block h-10 w-10 rounded-full object-cover"
+                    style={{ backgroundColor: f.avatarBg }}
                   />
                   <span className="flex-1 text-[14px] text-holo-ink">{f.nickname}</span>
                   <button

@@ -1,8 +1,13 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FRIENDS, type ChatRoom } from "@/shared/mock/data";
+import { type ChatRoom } from "@/shared/mock/data";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
+import {
+  addFriendByNickname,
+  removeFriendByNickname,
+  useFriends,
+} from "@/features/mypage/friends-store";
 import { RoomSceneView, randomRoomFurniture } from "@/features/home/home-illustrations";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
@@ -37,12 +42,11 @@ export function ProfileDetailScreen() {
   const nickname = id ? decodeURIComponent(id) : "샬랄라 움밤바";
   const user = useMemo(() => buildOtherUser(nickname), [nickname]);
 
-  const initialIsFriend = useMemo(
-    () => FRIENDS.some((f) => f.nickname === nickname),
-    [nickname],
+  const friends = useFriends();
+  const isFriend = useMemo(
+    () => friends.some((f) => f.nickname === nickname),
+    [friends, nickname],
   );
-
-  const [isFriend, setIsFriend] = useState(initialIsFriend);
 
   const friendRoom = useMemo(
     () => randomRoomFurniture(nickname, user.level),
@@ -64,7 +68,7 @@ export function ProfileDetailScreen() {
       ),
       confirmLabel: "추가",
       onConfirm: () => {
-        setIsFriend(true);
+        addFriendByNickname(nickname);
         setConfirm(null);
       },
     });
@@ -78,7 +82,7 @@ export function ProfileDetailScreen() {
       ),
       confirmLabel: "삭제",
       onConfirm: () => {
-        setIsFriend(false);
+        removeFriendByNickname(nickname);
         setConfirm(null);
       },
     });

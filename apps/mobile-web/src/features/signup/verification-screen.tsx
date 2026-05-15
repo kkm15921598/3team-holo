@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
-import { useSignup } from "@/shared/contexts/signup-context";
+import { useSignup, genderFromIdNum } from "@/shared/contexts/signup-context";
 import { PasswordToggle } from "@/shared/components/password-toggle";
 import { SignupLayout } from "./signup-layout";
 
@@ -95,7 +95,12 @@ export function VerificationScreen() {
           <Input
             placeholder="주민번호 입력"
             value={showIdNum ? formatIdRaw(idNum) : formatId(idNum)}
-            onChange={(v) => update("idNum", parseIdInput(v, idNum, !showIdNum))}
+            onChange={(v) => {
+              const next = parseIdInput(v, idNum, !showIdNum);
+              update("idNum", next);
+              // 뒷자리 첫 숫자가 입력되면 성별 자동 인식
+              update("gender", genderFromIdNum(next));
+            }}
             inputMode="numeric"
             valid={isIdValid}
             paddingRight

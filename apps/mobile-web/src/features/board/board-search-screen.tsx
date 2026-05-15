@@ -36,17 +36,6 @@ export function BoardSearchScreen() {
 
   return (
     <main className="flex flex-1 flex-col">
-      {/* Header with back button — Board5 spec (h-12, px-4, 22px #1A1A1A) */}
-      <header className="flex h-12 shrink-0 items-center px-4">
-        <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
-          <BackIcon />
-        </button>
-      </header>
-
-      {/* Gap below the header (16px) — combined with the 13px below the
-          centered icon, yields 29px from the icon bottom to lavender start. */}
-      <div className="h-4 shrink-0" />
-
       {/* Lavender area — pt-[23px] extends the bg 23px above the search input. */}
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto bg-[#EBE3F5] px-4 pt-[23px] pb-24">
         <input
@@ -90,6 +79,14 @@ export function BoardSearchScreen() {
         {/* 검색하기 button: text 20px SemiBold, height preserved at 60px */}
         <button
           type="button"
+          disabled={!isActive}
+          onClick={() => {
+            const q = keyword.trim();
+            const params = new URLSearchParams();
+            if (q) params.set("q", q);
+            const query = params.toString();
+            navigate(query ? `/board/list?${query}` : "/board/list");
+          }}
           className={`mt-4 h-[60px] w-full rounded-holo-pill text-[20px] font-semibold text-[#FFFFFF] transition-colors ${
             isActive ? "bg-[#000000]" : "bg-[#A8A8A8]"
           }`}
@@ -137,23 +134,5 @@ function FilterGroup({
         })}
       </div>
     </section>
-  );
-}
-
-function BackIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#1A1A1A"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
   );
 }

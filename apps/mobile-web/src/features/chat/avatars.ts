@@ -89,6 +89,20 @@ const VARIATION_POOL = [
   ...FACES.woman_grandma,
 ];
 
+/** 남성 프로필 이미지 풀 (성인+소년+노인) — 가입 시 프로필 선택용 */
+export const MAN_FACES = [
+  ...FACES.man_man,
+  ...FACES.man_boy,
+  ...FACES.man_grandfa,
+].map((p) => encodeURI(p));
+
+/** 여성 프로필 이미지 풀 (성인+소녀+노인) — 가입 시 프로필 선택용 */
+export const WOMAN_FACES = [
+  ...FACES.woman_woman,
+  ...FACES.woman_girl,
+  ...FACES.woman_grandma,
+].map((p) => encodeURI(p));
+
 // 닉네임 → 안정적인 정수 해시 (FNV-1a 변형)
 function hashString(s: string): number {
   let h = 2166136261;

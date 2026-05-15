@@ -123,7 +123,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/posts" element={<TabLayout showHeader={false}><MyPostsScreen /></TabLayout>} />
           <Route path="/mypage/comments" element={<TabLayout showHeader={false}><MyCommentsScreen /></TabLayout>} />
           <Route path="/mypage/recent" element={<TabLayout showHeader={false}><RecentPostsScreen /></TabLayout>} />
-          <Route path="/mypage/friends" element={<TabLayout showHeader={false}><FriendsScreen /></TabLayout>} />
+          <Route path="/mypage/friends" element={<TabLayout><FriendsScreen /></TabLayout>} />
           <Route path="/mypage/friends/add" element={<TabLayout showHeader={false}><FriendsAddScreen /></TabLayout>} />
 
           {/* Mypage Settings */}

@@ -1,10 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
+import { addFriendByNickname, isFriend } from "./friends-store";
 
 export function FriendsAddScreen() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"id" | "qr">("qr");
+  const [tab, setTab] = useState<"id" | "qr">("id");
+  const [input, setInput] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1600);
+  };
+
+  const handleAdd = () => {
+    const nick = input.trim();
+    if (!nick) {
+      showToast("닉네임 또는 ID를 입력해 주세요.");
+      return;
+    }
+    if (isFriend(nick)) {
+      showToast("이미 친구 목록에 있어요.");
+      return;
+    }
+    const added = addFriendByNickname(nick);
+    if (!added) {
+      showToast("친구를 추가할 수 없어요.");
+      return;
+    }
+    showToast(`${nick}님을 친구로 추가했어요.`);
+    setInput("");
+    window.setTimeout(() => navigate("/mypage/friends", { replace: true }), 600);
+  };
 
   return (
     <main className="absolute inset-0 z-30 flex flex-col bg-black/50">
@@ -47,18 +75,32 @@ export function FriendsAddScreen() {
           <div className="flex w-full max-w-[300px] flex-col rounded-holo-card bg-white p-5">
             <p className="text-[14px] font-semibold text-holo-ink">친구 ID 입력</p>
             <input
-              placeholder="ID를 입력하세요"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAdd();
+              }}
+              placeholder="ID 또는 닉네임을 입력하세요"
               className="mt-3 h-[44px] rounded-holo-input border border-holo-line px-4 text-[14px] outline-none placeholder:text-holo-ink-3 focus:border-2 focus:border-holo-purple-mid"
             />
             <button
               type="button"
+              onClick={handleAdd}
               className="mt-4 h-[44px] rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white"
             >
-              검색
+              친구 추가
             </button>
           </div>
         )}
       </div>
+
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-6">
+          <div className="rounded-full bg-black/80 px-4 py-2 text-[13px] text-white">
+            {toast}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NotificationPanel } from "./notification-panel";
 import {
   getNotificationSettings,
@@ -27,6 +27,9 @@ export function AppHeader({
   showLogo = true,
   showActions = true,
 }: AppHeaderProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isOnSearch = location.pathname.startsWith("/board/search");
   const [open, setOpen] = useState(false);
   const [nSettings, setNSettings] = useState(getNotificationSettings);
   const [readIds, setReadIds] = useState(() => getReadIds());
@@ -62,8 +65,15 @@ export function AppHeader({
       {showActions && (
         <div className="flex items-center gap-4">
 
-          {/* 검색 */}
-          <button type="button" aria-label="검색">
+          {/* 검색 — 검색 화면이 열려 있으면 닫기, 아니면 열기 */}
+          <button
+            type="button"
+            aria-label={isOnSearch ? "검색 닫기" : "검색"}
+            onClick={() => {
+              if (isOnSearch) navigate(-1);
+              else navigate("/board/search");
+            }}
+          >
             <img
               src="/icons/top_search.svg"
               className="h-[22px] w-[22px] object-contain"

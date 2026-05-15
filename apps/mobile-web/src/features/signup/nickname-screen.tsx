@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/shared/contexts/signup-context";
 import { containsProfanity } from "@/shared/utils/profanity";
+import { MAN_FACES, WOMAN_FACES } from "@/features/chat/avatars";
 import { SignupLayout } from "./signup-layout";
 
 const KOREAN_ONLY = /^[가-힣\s]+$/;
@@ -64,6 +65,22 @@ export function NicknameScreen() {
   const [checked, setChecked] = useState(false);
   const [taken, setTaken] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(() => generateSuggestions());
+  const [showFacePicker, setShowFacePicker] = useState(false);
+
+  // 주민번호로 인식된 성별에 따라 노출 가능한 프로필 이미지 풀
+  const facePool = useMemo(() => {
+    if (data.gender === "M") return MAN_FACES;
+    if (data.gender === "F") return WOMAN_FACES;
+    return [];
+  }, [data.gender]);
+
+  // 성별과 다른 이미지가 이미 들어있으면 초기화 (예: 가입 중에 주민번호를 수정한 경우)
+  useEffect(() => {
+    if (data.profileFace && !facePool.includes(data.profileFace)) {
+      update("profileFace", null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.gender]);
 
   const isFormatInvalid =
     value.length > 0 && (!KOREAN_ONLY.test(value) || value.length > MAX_LEN);
@@ -79,7 +96,7 @@ export function NicknameScreen() {
   }, [value]);
 
   const canCheck = isFormatValid && !isProfane && !checked;
-  const canNext = checked;
+  const canNext = checked && !!data.profileFace;
 
   const handleCheck = () => {
     if (!canCheck) return;
@@ -116,7 +133,34 @@ export function NicknameScreen() {
       </h1>
       <p className="mt-2 text-[14px] text-holo-ink-3">한글 최대 10자 / 특수문자, 비속어 불가</p>
 
-      <div className="mt-7 flex flex-col gap-1">
+      {/* 프로필 이미지 미리보기 + 변경 */}
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowFacePicker(true)}
+          disabled={!data.gender}
+          className="relative h-[88px] w-[88px] overflow-hidden rounded-full border-2 border-holo-line bg-holo-surface-2 disabled:opacity-50"
+          aria-label="프로필 이미지 선택"
+        >
+          {data.profileFace ? (
+            <img src={data.profileFace} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-[24px] text-holo-ink-3">
+              ?
+            </span>
+          )}
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-holo-purple-mid text-white shadow">
+            <CameraIcon />
+          </span>
+        </button>
+        <p className="text-[12px] text-holo-ink-3">
+          {data.gender
+            ? "프로필 이미지를 선택해 주세요"
+            : "주민번호를 먼저 입력해 주세요"}
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-1">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -172,7 +216,6 @@ export function NicknameScreen() {
               다시 추천
             </button>
           </div>
-          {/* 2열 grid — 각 셀 너비가 같아 추천이 바뀌어도 위치가 안정적 */}
           <div className="grid grid-cols-2 gap-2">
             {suggestions.map((s) => (
               <button
@@ -201,7 +244,76 @@ export function NicknameScreen() {
           다음
         </button>
       </div>
+
+      {showFacePicker && data.gender && (
+        <FacePickerSheet
+          faces={facePool}
+          selected={data.profileFace}
+          onSelect={(face) => {
+            update("profileFace", face);
+            setShowFacePicker(false);
+          }}
+          onClose={() => setShowFacePicker(false)}
+        />
+      )}
     </SignupLayout>
+  );
+}
+
+function FacePickerSheet({
+  faces,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  faces: string[];
+  selected: string | null;
+  onSelect: (face: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[420px] rounded-t-[18px] bg-white p-4 pb-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-holo-line" />
+        <p className="mb-3 text-center text-[15px] font-semibold text-holo-ink">
+          프로필 이미지 선택
+        </p>
+        <div className="max-h-[60vh] overflow-y-auto">
+          <div className="grid grid-cols-4 gap-3">
+            {faces.map((src) => {
+              const on = selected === src;
+              return (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => onSelect(src)}
+                  className={`relative aspect-square overflow-hidden rounded-full border-2 ${
+                    on ? "border-holo-purple-mid" : "border-transparent"
+                  }`}
+                >
+                  <img src={src} alt="" className="h-full w-full object-cover" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
   );
 }
 

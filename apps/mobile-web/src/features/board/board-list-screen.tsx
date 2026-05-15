@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BOARD_CATEGORIES,
   CATEGORY_SHORT,
@@ -18,12 +18,20 @@ function avatarFor(nickname: string): string {
 const DRAG_THRESHOLD = 4;
 
 export function BoardListScreen() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const keyword = (searchParams.get("q") ?? "").trim();
   const [activeCat, setActiveCat] = useState<string>("all");
   const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
 
   useEffect(() => {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
   }, []);
+
+  const clearKeyword = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
 
   const tabsRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({
@@ -62,8 +70,19 @@ export function BoardListScreen() {
     setActiveCat(catId);
   };
 
-  const visible =
-    activeCat === "all" ? posts : posts.filter((p) => p.category === activeCat);
+  const visible = useMemo(() => {
+    let list = activeCat === "all" ? posts : posts.filter((p) => p.category === activeCat);
+    if (keyword) {
+      const lq = keyword.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.title.toLowerCase().includes(lq) ||
+          p.description.toLowerCase().includes(lq) ||
+          p.authorNickname.toLowerCase().includes(lq),
+      );
+    }
+    return list;
+  }, [posts, activeCat, keyword]);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -95,9 +114,31 @@ export function BoardListScreen() {
         </div>
       </div>
 
+      {keyword && (
+        <div className="flex items-center justify-between border-b border-holo-line bg-holo-lilac-soft/40 px-4 py-2 text-[12px] text-holo-ink-2">
+          <span>
+            <span className="font-semibold text-holo-purple-mid">‘{keyword}’</span> 검색 결과 {visible.length}건
+          </span>
+          <button
+            type="button"
+            onClick={clearKeyword}
+            className="text-[12px] text-holo-purple-mid underline"
+          >
+            검색 지우기
+          </button>
+        </div>
+      )}
+
       {visible.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center text-[14px] text-holo-ink-3">
-          게시글이 없습니다.
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 text-[14px] text-holo-ink-3">
+          {keyword ? (
+            <>
+              <span>‘{keyword}’에 대한 검색 결과가 없습니다.</span>
+              <span className="text-[12px]">다른 검색어로 다시 시도해 보세요.</span>
+            </>
+          ) : (
+            <span>게시글이 없습니다.</span>
+          )}
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">

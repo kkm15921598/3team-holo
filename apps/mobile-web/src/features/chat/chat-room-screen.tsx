@@ -3,12 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   CHAT_MESSAGES,
   CHAT_QUICK_EMOJIS,
-  FRIENDS,
   type ChatMessage,
   type ChatMessageReaction,
   type ChatRoom,
   type MeetingInfo,
 } from "@/shared/mock/data";
+import {
+  addFriendByNickname,
+  getFriends,
+  useFriends,
+} from "@/features/mypage/friends-store";
 import {
   addMembersToRoom,
   getRoom,
@@ -40,7 +44,7 @@ function memberAvatarSrc(nickname: string): string {
 
 // 방 정보로 멤버 리스트 동적 생성
 function buildMembersFor(room: ChatRoom): Member[] {
-  const friendNicks = new Set(FRIENDS.map((f) => f.nickname));
+  const friendNicks = new Set(getFriends().map((f) => f.nickname));
   const me: Member = { id: "me", nickname: "무지는 단무지", isMe: true, isHost: false, isFriend: false };
   if (!room.isGroup) {
     return [
@@ -1055,6 +1059,9 @@ export function ChatRoomScreen() {
           onYes={() => {
             const friendName = showAddFriend;
 
+            // 전역 친구 store에 실제로 추가 — 친구 목록/프로필에 반영된다.
+            addFriendByNickname(friendName);
+
             setNewlyAddedFriends((prev) => {
               if (prev.has(friendName)) return prev;
               const next = new Set(prev);
@@ -1696,19 +1703,22 @@ function InviteFriendsModal({
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
+  const allFriends = useFriends();
 
   // 동일 닉네임 한 번만 + 이미 방에 있는 친구는 disabled
   const friends = useMemo(() => {
     const seen = new Set<string>();
-    return FRIENDS.filter((f) => {
-      if (seen.has(f.nickname)) return false;
-      seen.add(f.nickname);
-      return true;
-    }).map((f) => ({
-      ...f,
-      already: existingNicknames.includes(f.nickname),
-    }));
-  }, [existingNicknames]);
+    return allFriends
+      .filter((f) => {
+        if (seen.has(f.nickname)) return false;
+        seen.add(f.nickname);
+        return true;
+      })
+      .map((f) => ({
+        ...f,
+        already: existingNicknames.includes(f.nickname),
+      }));
+  }, [allFriends, existingNicknames]);
 
   const filtered = useMemo(() => {
     if (!q.trim()) return friends;
@@ -1975,7 +1985,7 @@ function AlertModal({
             onClick={onClose}
             className="flex-1 py-3 text-center text-[15px] font-medium"
           >
-            {onConfirm ? "아니오" : "확인"}
+            {onConfirm ? "아니요" : "확인"}
           </button>
         </div>
       </div>
