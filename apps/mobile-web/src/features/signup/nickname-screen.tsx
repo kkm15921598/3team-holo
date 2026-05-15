@@ -10,7 +10,9 @@ const MAX_LEN = 10;
 
 const MOCK_TAKEN_NICKNAMES = ["관리자", "운영자", "테스트", "단무지", "어드민"];
 
-const ADJECTIVES = [
+// 일반 형용사 — 모든 명사 카테고리와 조합 가능
+const GENERAL_ADJECTIVES = [
+  // 성격·기분
   "행복한",
   "용감한",
   "빛나는",
@@ -23,28 +25,198 @@ const ADJECTIVES = [
   "발랄한",
   "포근한",
   "재밌는",
+  "사랑스러운",
+  "정겨운",
+  "신나는",
+  // 분위기·감각
+  "반짝이는",
+  "산뜻한",
+  "보송보송한",
+  "몽글몽글한",
+  "두근거리는",
+  // 취미·행동
+  "책읽는",
+  "그림그리는",
+  "산책하는",
+  "글쓰는",
+  "사진찍는",
 ];
-const NOUNS = [
+// 맛·식감 형용사 — 음식·음료 명사에만 사용. 동물·자연·꽃·계절·색깔·악기·판타지 앞에는 어색하므로 제외.
+const FOOD_ADJECTIVES = [
+  "달콤한",
+  "고소한",
+  "새콤한",
+  "매콤한",
+  "바삭한",
+  "쫄깃한",
+  "촉촉한",
+];
+
+// 동물 명사 — "맛·식감" 형용사와는 조합하지 않음
+const ANIMAL_NOUNS = [
   "햄찌",
-  "오이",
-  "무지",
   "토끼",
   "강아지",
   "고양이",
   "참새",
   "다람쥐",
-  "두부",
+  "팬더",
+  "곰",
+  "펭귄",
+  "사슴",
+  "거북이",
+  "너구리",
+  "코알라",
+  "캥거루",
+  "알파카",
+  "부엉이",
+  "여우",
+  "늑대",
+  "양",
+  "햄스터",
+  "수달",
+  "고래",
+  "돌고래",
+  "고슴도치",
+];
+// 자연·날씨 명사 — 잔잔하고 예쁜 분위기. "맛·식감" 형용사는 제외.
+const NATURE_NOUNS = [
+  "별",
+  "달",
+  "햇살",
+  "무지개",
+  "구름",
+  "노을",
+  "바람",
+  "별빛",
+  "달빛",
+  "이슬",
+  "단풍",
+  "물결",
+];
+// 꽃 명사 — 부드러운 톤. "맛·식감" 형용사는 제외.
+const FLOWER_NOUNS = [
+  "장미",
+  "튤립",
+  "해바라기",
+  "백합",
+  "민들레",
+  "벚꽃",
+  "코스모스",
+  "수국",
+  "라일락",
+];
+// 계절·시간 명사
+const SEASON_NOUNS = [
+  "봄",
+  "여름",
+  "가을",
+  "겨울",
+  "새벽",
+  "한낮",
+  "한밤",
+];
+// 색깔 명사 — "행복한 분홍", "포근한 하늘" 처럼 자연스럽게 조합됨
+const COLOR_NOUNS = [
+  "분홍",
+  "노랑",
+  "파랑",
+  "보라",
+  "초록",
+  "하늘",
+];
+// 악기 명사
+const INSTRUMENT_NOUNS = [
+  "피아노",
+  "기타",
+  "바이올린",
+  "드럼",
+  "우쿨렐레",
+  "하프",
+];
+// 판타지·캐릭터 명사
+const FANTASY_NOUNS = [
+  "요정",
+  "천사",
+  "마법사",
+  "유니콘",
+  "별똥별",
+];
+// 음식 명사 (과일·채소·디저트·분식·음료 등) — 모든 형용사와 조합 가능
+const FOOD_NOUNS = [
+  // 과일 / 채소
+  "오이",
   "복숭아",
   "수박",
-  "팬더",
+  "딸기",
+  "망고",
+  "바나나",
+  "토마토",
+  "당근",
+  "감자",
+  "고구마",
+  "파인애플",
+  // 디저트 / 분식 / 빵
+  "두부",
+  "무지",
+  "단무지",
+  "김밥",
+  "떡볶이",
+  "만두",
+  "라면",
+  "김치",
+  "도넛",
+  "케이크",
+  "마카롱",
+  "푸딩",
+  "젤리",
+  "쿠키",
+  "호빵",
+  "호떡",
+  "와플",
+  "붕어빵",
+  "사탕",
+  "초콜릿",
+  // 음료
+  "라떼",
+  "코코아",
+  "모카",
+  "우유",
+  "에이드",
+  "주스",
 ];
+
+const NOUNS = [
+  ...ANIMAL_NOUNS,
+  ...NATURE_NOUNS,
+  ...FLOWER_NOUNS,
+  ...SEASON_NOUNS,
+  ...COLOR_NOUNS,
+  ...INSTRUMENT_NOUNS,
+  ...FANTASY_NOUNS,
+  ...FOOD_NOUNS,
+];
+// "맛·식감" 형용사가 어색한 카테고리 — 동물·자연·꽃·계절·색깔·악기·판타지
+const NON_FOOD_NOUN_SET = new Set([
+  ...ANIMAL_NOUNS,
+  ...NATURE_NOUNS,
+  ...FLOWER_NOUNS,
+  ...SEASON_NOUNS,
+  ...COLOR_NOUNS,
+  ...INSTRUMENT_NOUNS,
+  ...FANTASY_NOUNS,
+]);
 
 function generateSuggestions(count = 4): string[] {
   const used = new Set<string>();
   let safety = 0;
   while (used.size < count && safety++ < 50) {
-    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
     const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    // 동물·자연·꽃 앞에는 맛·식감 형용사를 쓰지 않는다.
+    const adjPool = NON_FOOD_NOUN_SET.has(noun)
+      ? GENERAL_ADJECTIVES
+      : [...GENERAL_ADJECTIVES, ...FOOD_ADJECTIVES];
+    const adj = adjPool[Math.floor(Math.random() * adjPool.length)];
     const candidate = `${adj} ${noun}`;
     if (
       candidate.length <= MAX_LEN &&
@@ -159,7 +331,7 @@ export function NicknameScreen() {
         <p className="text-[12px] text-holo-ink-3">프로필 이미지를 선택해 주세요</p>
       </div>
 
-      <div className="mt-6 flex flex-col gap-1">
+      <div className="mt-4 flex flex-col gap-1">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <input
@@ -168,7 +340,7 @@ export function NicknameScreen() {
               value={value}
               onChange={(e) => update("nickname", e.target.value.slice(0, MAX_LEN + 1))}
               maxLength={MAX_LEN + 1}
-              className={`h-[62px] w-full rounded-holo-input border px-5 pr-16 text-[15px] outline-none placeholder:text-holo-ink-4 ${inputBorder}`}
+              className={`h-[52px] w-full rounded-holo-input border px-5 pr-16 text-[15px] outline-none placeholder:text-holo-ink-4 ${inputBorder}`}
             />
             <span
               className={`pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-[12px] tabular-nums ${
@@ -182,7 +354,7 @@ export function NicknameScreen() {
             type="button"
             onClick={handleCheck}
             disabled={!canCheck}
-            className={`h-[62px] shrink-0 rounded-holo-input px-4 text-[14px] font-semibold transition ${
+            className={`h-[52px] shrink-0 rounded-holo-input px-4 text-[14px] font-semibold transition ${
               checked
                 ? "bg-holo-purple-mid text-white"
                 : canCheck
@@ -202,7 +374,7 @@ export function NicknameScreen() {
         )}
       </div>
 
-      <div className="mt-5 flex flex-col gap-2">
+      <div className="mt-3 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-[12px] text-holo-ink-3">이런 이름은 어때요?</span>
             <button
@@ -214,13 +386,13 @@ export function NicknameScreen() {
               다시 추천
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => update("nickname", s)}
-                className="truncate rounded-full border border-holo-line bg-white px-4 py-1.5 text-center text-[13px] text-holo-ink transition hover:border-holo-purple-mid hover:text-holo-purple-mid"
+                className="rounded-full border border-holo-line bg-white px-4 py-1.5 text-[13px] text-holo-ink transition hover:border-holo-purple-mid hover:text-holo-purple-mid"
               >
                 {s}
               </button>

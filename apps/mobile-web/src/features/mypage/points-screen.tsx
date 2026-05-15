@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { ME, POINT_HISTORY } from "@/shared/mock/data";
+import { usePoints } from "@/features/myroom/myroom-store";
 
 export function PointsScreen() {
   const navigate = useNavigate();
+  const points = usePoints();
 
   return (
     <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-2 pb-4">
@@ -16,7 +18,7 @@ export function PointsScreen() {
       {/* Balance */}
       <section className="flex items-center justify-between rounded-holo-input bg-holo-purple-mid px-5 py-4 text-white">
         <span className="text-[14px] font-semibold">보유포인트</span>
-        <span className="text-[20px] font-bold">{ME.points} P</span>
+        <span className="text-[20px] font-bold">{points} P</span>
       </section>
 
       {/* Quick actions */}

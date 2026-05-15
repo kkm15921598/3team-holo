@@ -15,7 +15,13 @@ import type { CatalogItem } from "../myroom/myroom-data";
 import { CATALOG } from "../myroom/myroom-catalog";
 import { getPlacementWidth } from "../myroom/myroom-dimensions";
 import { RoomEditorView } from "../myroom/myroom-room-view";
-import { setMyroomItems, purchaseItem } from "../myroom/myroom-store";
+import { setMyroomItems, purchaseItem, addPoints } from "../myroom/myroom-store";
+import {
+  setNickname,
+  setProfileFace,
+} from "@/shared/stores/profile-store";
+
+const SIGNUP_BONUS_POINTS = 500;
 
 const MAX_BUY_COUNT = 2;
 const TUTORIAL_LEVEL = 1;
@@ -182,6 +188,13 @@ export function RoomScreen() {
     if (kind && variant) purchaseItem(kind, variant);
   });
 
+  // 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
+  if (data.nickname.trim()) setNickname(data.nickname.trim());
+  if (data.profileFace) setProfileFace(data.profileFace);
+
+  // 가입 보너스 포인트 적립
+  addPoints(SIGNUP_BONUS_POINTS);
+
   localStorage.setItem(
     "holoUser",
     JSON.stringify({
@@ -194,6 +207,13 @@ export function RoomScreen() {
     })
   );
 
+  // 환영 모달은 홈 화면에 진입한 뒤에 보이도록 sessionStorage 에 플래그를 남기고
+  // 즉시 홈으로 이동한다.
+  try {
+    window.sessionStorage.setItem("holo:welcomeBonus", String(SIGNUP_BONUS_POINTS));
+  } catch {
+    // ignore
+  }
   navigate("/home", { replace: true });
 };
 

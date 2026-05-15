@@ -130,11 +130,11 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      {/* 오버레이 */}
-      <div className="fixed inset-0 z-[90]" onClick={onClose} aria-hidden />
+      {/* 오버레이 — Leaflet 내부 컨트롤(최대 z-1000) 보다 위에 올려 지도를 가리도록 함 */}
+      <div className="fixed inset-0 z-[1100]" onClick={onClose} aria-hidden />
 
       {/* 패널 */}
-      <div className="absolute left-0 right-0 top-14 z-[91] mx-3 overflow-hidden rounded-[16px] bg-white shadow-[0_8px_32px_rgba(84,43,180,0.18)]">
+      <div className="absolute left-0 right-0 top-14 z-[1101] mx-3 overflow-hidden rounded-[16px] bg-white shadow-[0_8px_32px_rgba(84,43,180,0.18)]">
         {/* 헤더 */}
         <div className="flex items-center justify-between border-b border-holo-line-3 px-4 py-3">
           <div className="flex items-center gap-2">

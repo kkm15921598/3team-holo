@@ -27,12 +27,74 @@ export function VerificationScreen() {
   const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
   const [showIdNum, setShowIdNum] = useState(false);
 
+  // 내국인 / 외국인 구분 — 이름 / ID 번호 입력 방식이 달라진다.
+  const [nationality, setNationality] = useState<"kor" | "foreign">("kor");
+
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent);
 
-  const isNameValid = name.trim().length > 0;
-  const isIdValid = idNum.length === 13;
-  const isPhoneValid = phone.length >= 10;
+  // 내국인: 한글 완성형(가-힣) 2~10자
+  // 외국인: 영문 알파벳 2~30자, 단어 사이 1칸 공백 허용
+  const isNameValid =
+    nationality === "kor"
+      ? /^[가-힣]{2,10}$/.test(name)
+      : /^[a-zA-Z]+(?:\s[a-zA-Z]+)*$/.test(name) &&
+        name.length >= 2 &&
+        name.length <= 30;
+
+  // ── 주민등록번호 / 외국인등록번호 형식 검증 ───────────────────────
+  //  - 13자리
+  //  - 앞 6자리가 유효한 YYMMDD (윤년·월별 일수까지 확인)
+  //  - 7번째 자리(성별·세기 코드)
+  //      내국인: 1·2(1900s), 3·4(2000s)
+  //      외국인: 5·6(1900s), 7·8(2000s)
+  const idSeventh = idNum.length >= 7 ? idNum.charAt(6) : "";
+  const isKoreanIdSeventh = ["1", "2", "3", "4"].includes(idSeventh);
+  const isForeignIdSeventh = ["5", "6", "7", "8"].includes(idSeventh);
+  const isIdSeventhValid =
+    nationality === "kor" ? isKoreanIdSeventh : isForeignIdSeventh;
+  const isIdDateValid = (() => {
+    if (idNum.length < 6) return false;
+    const yy = Number(idNum.slice(0, 2));
+    const mm = Number(idNum.slice(2, 4));
+    const dd = Number(idNum.slice(4, 6));
+    if (Number.isNaN(yy) || Number.isNaN(mm) || Number.isNaN(dd)) return false;
+    if (mm < 1 || mm > 12) return false;
+    // 7번째 자리로 세기 판정 → 윤년 정확히 계산
+    let century = 1900;
+    if (["3", "4", "7", "8"].includes(idSeventh)) century = 2000;
+    const year = century + yy;
+    const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const daysInMonth = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return dd >= 1 && dd <= daysInMonth[mm - 1];
+  })();
+  const isIdValid = idNum.length === 13 && isIdSeventhValid && isIdDateValid;
+  // 인라인 에러 메시지: 13자리 채운 뒤에만 표시
+  const idMismatchKind: "none" | "seventh" | "date" =
+    idNum.length === 13
+      ? !isIdSeventhValid
+        ? "seventh"
+        : !isIdDateValid
+          ? "date"
+          : "none"
+      : "none";
+
+  // ── 휴대폰 번호 형식 검증 ─────────────────────────────────────
+  // 010-XXXX-XXXX (11자리) 또는 01X-XXX(X)-XXXX (10~11자리, X=1·6·7·8·9)
+  const PHONE_PATTERN = /^01(?:0\d{8}|[16789]\d{7,8})$/;
+  const isPhoneValid = PHONE_PATTERN.test(phone);
+  const showPhoneError =
+    phone.length >= 3 &&
+    !/^01[016789]/.test(phone);
+
+  // 국적 토글 변경 — 검증 패턴이 달라지므로 이름/주민번호 입력값 초기화
+  const handleNationalityChange = (next: "kor" | "foreign") => {
+    if (next === nationality) return;
+    setNationality(next);
+    update("name", "");
+    update("idNum", "");
+    update("gender", null);
+  };
   
   const baseFilled = isNameValid && isIdValid && carrier && isPhoneValid;
   const canSubmit = codeSent ? code.length === 6 : baseFilled;
@@ -80,39 +142,106 @@ export function VerificationScreen() {
       </h1>
       <p className="mt-2 text-[14px] text-holo-ink-3">회원여부 확인 및 가입을 진행합니다.</p>
       <p className="mt-1 text-[12px] text-holo-purple-mid">
-        ※ 휴대폰 번호 1개당 아이디 1개만 만들 수 있어요. (테스트 인증번호: {MOCK_VERIFY_CODE})
+        ※ 휴대폰 번호 1개당 하나의 계정만 만들 수 있어요.
       </p>
 
-      <div className="mt-7 flex flex-col gap-3">
-        <Input
-          placeholder="이름 입력"
-          value={name}
-          onChange={(v) => update("name", v.slice(0, 20))}
-          valid={isNameValid}
-          maxLength={20}
-        />
+      {/* 국적 토글 — 내국인 / 외국인 */}
+      <div className="mt-6 flex h-[44px] rounded-holo-pill border border-holo-line p-[3px]">
+        {(
+          [
+            { id: "kor", label: "내국인" },
+            { id: "foreign", label: "외국인" },
+          ] as const
+        ).map((opt) => {
+          const on = nationality === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => handleNationalityChange(opt.id)}
+              className={`flex-1 rounded-holo-pill text-[14px] font-semibold transition ${
+                on
+                  ? "bg-holo-purple-mid text-white shadow-sm"
+                  : "text-holo-ink-3"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
 
-        <div className="relative">
+      <div className="mt-4 flex flex-col gap-3">
+        {nationality === "kor" ? (
           <Input
-            placeholder="주민번호 입력"
-            value={showIdNum ? formatIdRaw(idNum) : formatId(idNum)}
+            placeholder="이름 입력 (한글 2~10자)"
+            value={name}
             onChange={(v) => {
-              const next = parseIdInput(v, idNum, !showIdNum);
-              update("idNum", next);
-              // 뒷자리 첫 숫자가 입력되면 성별 자동 인식
-              const g = genderFromIdNum(next);
-              update("gender", g);
-              // 전역 인증 store 에도 반영하여 프로필 편집의 캐릭터 필터에 사용
-              if (g) setGlobalGender(g);
+              // 한글 완성형 + 자모(IME 조합 중 임시로 노출되는 ㄱㄴㄷ/ㅏㅑㅓ) 허용.
+              // 자모만으로는 isNameValid가 통과되지 않으므로 다음 버튼은 비활성 상태 유지.
+              const filtered = v.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣ]/g, "").slice(0, 10);
+              update("name", filtered);
             }}
-            inputMode="numeric"
-            valid={isIdValid}
-            paddingRight
+            valid={isNameValid}
+            maxLength={10}
           />
-          <PasswordToggle
-            visible={showIdNum}
-            onClick={() => setShowIdNum((s) => !s)}
+        ) : (
+          <Input
+            placeholder="이름 입력 (영문 2~30자)"
+            value={name}
+            onChange={(v) => {
+              // 영문/공백 외 문자는 즉시 제거 + 연속 공백 압축 + 30자 제한
+              const filtered = v
+                .replace(/[^a-zA-Z\s]/g, "")
+                .replace(/\s{2,}/g, " ")
+                .slice(0, 30);
+              update("name", filtered);
+            }}
+            valid={isNameValid}
+            maxLength={30}
           />
+        )}
+
+        <div className="flex flex-col gap-1">
+          <div className="relative">
+            <Input
+              placeholder={
+                nationality === "kor"
+                  ? "주민등록번호 입력"
+                  : "외국인등록번호 입력"
+              }
+              value={showIdNum ? formatIdRaw(idNum) : formatId(idNum)}
+              onChange={(v) => {
+                const next = parseIdInput(v, idNum, !showIdNum);
+                update("idNum", next);
+                // 뒷자리 첫 숫자가 입력되면 성별 자동 인식
+                const g = genderFromIdNum(next);
+                update("gender", g);
+                // 전역 인증 store 에도 반영하여 프로필 편집의 캐릭터 필터에 사용
+                if (g) setGlobalGender(g);
+              }}
+              inputMode="numeric"
+              valid={isIdValid}
+              error={idMismatchKind !== "none"}
+              paddingRight
+            />
+            <PasswordToggle
+              visible={showIdNum}
+              onClick={() => setShowIdNum((s) => !s)}
+            />
+          </div>
+          {idMismatchKind === "seventh" && (
+            <p className="pl-2 text-[12px] text-holo-error">
+              {nationality === "kor"
+                ? "주민등록번호 형식이 올바르지 않습니다. (뒷자리 첫 숫자 1~4)"
+                : "외국인등록번호 형식이 올바르지 않습니다. (뒷자리 첫 숫자 5~8)"}
+            </p>
+          )}
+          {idMismatchKind === "date" && (
+            <p className="pl-2 text-[12px] text-holo-error">
+              생년월일이 올바르지 않습니다. (YYMMDD)
+            </p>
+          )}
         </div>
 
         <button
@@ -126,14 +255,22 @@ export function VerificationScreen() {
           <ChevronDownIcon />
         </button>
 
-        <Input
-          placeholder="휴대폰 번호 입력"
-          value={formatPhone(phone)}
-          onChange={(v) => update("phone", v.replace(/\D/g, "").slice(0, 11))}
-          inputMode="numeric"
-          autoComplete="tel"
-          valid={isPhoneValid}
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            placeholder="휴대폰 번호 입력"
+            value={formatPhone(phone)}
+            onChange={(v) => update("phone", v.replace(/\D/g, "").slice(0, 11))}
+            inputMode="numeric"
+            autoComplete="tel"
+            valid={isPhoneValid}
+            error={showPhoneError}
+          />
+          {showPhoneError && (
+            <p className="pl-2 text-[12px] text-holo-error">
+              010·011·016·017·018·019 로 시작하는 번호여야 합니다.
+            </p>
+          )}
+        </div>
 
         {codeSent && (
           <div className="flex flex-col gap-1">

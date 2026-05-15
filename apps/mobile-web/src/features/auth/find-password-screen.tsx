@@ -6,8 +6,8 @@ import { PasswordStrength } from "@/shared/components/password-strength";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 
-const MOCK_NAME = "홍길동";
-const MOCK_PHONE = "01012345678";
+// mock 데모용: 어떤 이름/번호든 인증번호 6자리만 맞으면 통과시킨다.
+const MOCK_CODE = "123456";
 
 type Step = "verify" | "reset" | "done";
 
@@ -33,8 +33,16 @@ export function FindPasswordScreen() {
   const newPwCaps = useCapsLock();
   const confirmPwCaps = useCapsLock();
 
-  const isNameValid = name.trim().length >= 2;
-  const isPhoneValid = phone.length >= 10;
+  // 가입 시 검증과 동일: 한글 완성형(가-힣) 또는 영문 알파벳, 단어 사이 1칸 공백 허용.
+  // 총 2~20자.
+  const isNameValid =
+    /^[가-힣a-zA-Z]+(?:\s[가-힣a-zA-Z]+)*$/.test(name) &&
+    name.length >= 2 &&
+    name.length <= 20;
+  // 표준 휴대폰 번호: 010 (11자) 또는 011·016·017·018·019 (10~11자)
+  const PHONE_PATTERN = /^01(?:0\d{8}|[16789]\d{7,8})$/;
+  const isPhoneValid = PHONE_PATTERN.test(phone);
+  const showPhoneError = phone.length >= 3 && !/^01[016789]/.test(phone);
   const baseFilled = isNameValid && isPhoneValid;
   const canSubmitVerify = codeSent ? code.length >= 6 : baseFilled;
 
@@ -59,10 +67,12 @@ export function FindPasswordScreen() {
       return;
     }
 
-    if (name.trim() === MOCK_NAME && phone === MOCK_PHONE && code === "123456") {
+    // mock 환경이라 입력한 이름/번호는 형식 검증(길이)만 통과하면 OK.
+    // 실서비스에서는 서버 응답으로 일치 여부를 받아야 함.
+    if (code === MOCK_CODE) {
       setStep("reset");
     } else {
-      setVerifyError("일치하는 정보를 찾을 수 없습니다.");
+      setVerifyError("인증번호가 올바르지 않습니다. (데모: 123456)");
     }
   };
 
@@ -142,7 +152,10 @@ export function FindPasswordScreen() {
             설정해주세요.
           </h1>
           <p className="mt-2 text-[14px] text-holo-ink-3">
-            영문, 숫자를 포함하여 8~16자로 입력해주세요.
+            영문과 숫자를 포함해 8~16자로 입력해 주세요.
+          </p>
+          <p className="mt-1 text-[12px] text-holo-purple-mid">
+            ※ 이전에 사용하던 비밀번호와 다르게 설정해 주세요.
           </p>
 
           <div className="mt-7 flex flex-col gap-3">
@@ -161,11 +174,9 @@ export function FindPasswordScreen() {
                   onBlur={newPwCaps.capsHandlers.onBlur}
                   maxLength={16}
                   className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
-                    newPwIncludesId
-                      ? "border-2 border-holo-error"
-                      : isPwValid
-                        ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                        : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
+                    isPwValid
+                      ? "border-2 border-holo-purple-mid text-holo-purple-mid"
+                      : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
                   }`}
                 />
                 <PasswordToggle visible={showNewPw} onClick={() => setShowNewPw((s) => !s)} />
@@ -249,13 +260,22 @@ export function FindPasswordScreen() {
         <p className="mt-2 text-[14px] text-holo-ink-3">
           가입한 이름과 휴대폰 번호를 입력해주세요.
         </p>
+        <p className="mt-1 text-[12px] text-holo-purple-mid">
+          ※ 본인 확인을 통과해야 새 비밀번호를 설정할 수 있어요.
+        </p>
 
         <div className="mt-7 flex flex-col gap-3">
           <Input
-            placeholder="이름 입력"
+            placeholder="이름 입력 (한글/영문, 2~20자)"
             value={name}
             onChange={(v) => {
-              setName(v.slice(0, 20));
+              // 한글 완성형 + 자모(IME 조합 중) + 영문 + 공백 허용.
+              // 연속 공백 압축 + 20자 제한.
+              const filtered = v
+                .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s]/g, "")
+                .replace(/\s{2,}/g, " ")
+                .slice(0, 20);
+              setName(filtered);
               setVerifyError("");
             }}
             inputMode="text"
@@ -263,17 +283,25 @@ export function FindPasswordScreen() {
             valid={isNameValid}
             maxLength={20}
           />
-          <Input
-            placeholder="휴대폰 번호 입력 (010-1234-5678)"
-            value={formatPhone(phone)}
-            onChange={(v) => {
-              setPhone(v.replace(/\D/g, "").slice(0, 11));
-              setVerifyError("");
-            }}
-            inputMode="numeric"
-            autoComplete="tel"
-            valid={isPhoneValid}
-          />
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="휴대폰 번호 입력"
+              value={formatPhone(phone)}
+              onChange={(v) => {
+                setPhone(v.replace(/\D/g, "").slice(0, 11));
+                setVerifyError("");
+              }}
+              inputMode="numeric"
+              autoComplete="tel"
+              valid={isPhoneValid}
+              error={showPhoneError}
+            />
+            {showPhoneError && (
+              <p className="pl-2 text-[12px] text-holo-error">
+                010·011·016·017·018·019 로 시작하는 번호여야 합니다.
+              </p>
+            )}
+          </div>
 
           {codeSent && (
             <div className="flex flex-col gap-1">

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
+import { useProfile } from "@/shared/hooks/use-profile";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { ME_PERSONA } from "../home/home-faces";
 import { CATEGORIES, clampPlacement, DEFAULT_PLACEMENT, furnitureSrc, type CategoryKey, type PlacedFurniture } from "./myroom-data";
@@ -26,6 +27,7 @@ export function MyroomScreen() {
   const items = useMyroomItems();
   const owned = useOwnedSet();
   const points = usePoints();
+  const profile = useProfile();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState<CategoryKey>("all");
   /** 구매 확인 다이얼로그 대상 (null = 닫힘) */
@@ -189,7 +191,7 @@ export function MyroomScreen() {
             <span className="rounded-[4px] bg-holo-gradient-soft px-2 py-0.5 text-[11px] font-semibold text-white">
               Lv.{ME.level}
             </span>
-            <span className="text-[15px] font-semibold text-holo-ink">{ME.nickname}</span>
+            <span className="text-[15px] font-semibold text-holo-ink">{profile.nickname}</span>
           </div>
           <div className="flex items-center gap-2 text-[12px] text-holo-ink-3">
             내 포인트 <span className="font-semibold text-holo-purple-text">{points} P</span>

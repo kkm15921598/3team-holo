@@ -2,8 +2,8 @@
 
 export const ME = {
   nickname: "무지는 단무지",
-  level: 24,
-  points: 1264,
+  level: 1,
+  points: 0,
   title: "#벌레_해결사",
   region: "성남시 분당구",
   friendCode: "ajhd5",

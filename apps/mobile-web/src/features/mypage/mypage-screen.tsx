@@ -4,11 +4,13 @@ import { ME } from "@/shared/mock/data";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
+import { usePoints } from "@/features/myroom/myroom-store";
 
 export function MypageScreen() {
   const navigate = useNavigate();
   const [showLogout, setShowLogout] = useState(false);
   const profile = useProfile();
+  const points = usePoints();
   const badgeSrc = getEquippedBadgeSrc();
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
@@ -17,8 +19,8 @@ export function MypageScreen() {
         <div className="bg-holo-lilac-card-2 p-4">
           <div className="flex items-center gap-3">
             <img
-              src={ME_PERSONA.face}
-              alt={ME.nickname}
+              src={profile.profileFace ?? ME_PERSONA.face}
+              alt={profile.nickname}
               className="h-14 w-14 shrink-0 rounded-full bg-holo-yellow-room object-cover"
               draggable={false}
             />
@@ -41,7 +43,7 @@ export function MypageScreen() {
           className="flex items-center justify-between bg-holo-purple-mid px-4 py-3 text-white"
         >
           <span className="text-[14px] font-semibold">나의 포인트</span>
-          <span className="text-[16px] font-bold">{ME.points}P</span>
+          <span className="text-[16px] font-bold">{points}P</span>
         </Link>
       </section>
 

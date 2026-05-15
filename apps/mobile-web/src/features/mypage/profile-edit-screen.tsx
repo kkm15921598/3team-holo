@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
-import { setNickname as storeSetNickname } from "@/shared/stores/profile-store";
+import {
+  setNickname as storeSetNickname,
+  setProfileFace as storeSetProfileFace,
+} from "@/shared/stores/profile-store";
 import {
   FEMALE_FACES,
   MALE_FACES,
@@ -39,9 +42,11 @@ export function ProfileEditScreen() {
   const characterOptions =
     verification.gender === "M" ? MALE_FACES : FEMALE_FACES;
 
+  // 현재 저장된 프로필 얼굴 → 없으면 ME_PERSONA 기본값을 인덱스로 사용
+  const initialFace = profile.profileFace ?? ME_PERSONA.face;
   const currentFaceIndex = Math.max(
     0,
-    characterOptions.findIndex((f) => f === ME_PERSONA.face),
+    characterOptions.findIndex((f) => f === initialFace),
   );
   const [character, setCharacter] = useState(currentFaceIndex);
   const [bg, setBg] = useState(1);
@@ -61,6 +66,8 @@ export function ProfileEditScreen() {
           type="button"
           onClick={() => {
             if (check === "ok") storeSetNickname(nickname);
+            // 선택한 캐릭터 얼굴도 함께 저장
+            if (selectedFace) storeSetProfileFace(selectedFace);
             navigate(-1);
           }}
           className="text-[14px] font-semibold text-holo-ink"

@@ -162,7 +162,7 @@ export function useOwnedSet(): Set<string> {
 
 // ─── 포인트 (구매 시 차감) ───────────────────────────────
 const POINTS_KEY = "holo:myroom:points";
-const DEFAULT_POINTS = 1264; // ME.points 와 동일
+const DEFAULT_POINTS = 0; // 신규 가입자는 0P 에서 시작 (가입 완료 시 +500P 지급)
 
 function loadPoints(): number {
   if (typeof window === "undefined") return DEFAULT_POINTS;
@@ -198,6 +198,14 @@ export function spendPoints(amount: number): boolean {
   persistPoints();
   emitPoints();
   return true;
+}
+
+/** 포인트 적립 (가입 보너스·이벤트 등) */
+export function addPoints(amount: number): void {
+  if (amount <= 0) return;
+  pointsState += amount;
+  persistPoints();
+  emitPoints();
 }
 
 /** 현재 포인트 (구독 안 함) */

@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PasswordToggle } from "@/shared/components/password-toggle";
-import { PasswordStrength } from "@/shared/components/password-strength";
-import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
-import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 
@@ -18,9 +15,6 @@ export function AccountScreen() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [showPwConfirm, setShowPwConfirm] = useState(false);
-
-  const pwCaps = useCapsLock();
-  const pwConfirmCaps = useCapsLock();
 
   const passwordValid = PASSWORD_PATTERN.test(password);
   const passwordInvalid = password.length > 0 && !passwordValid;
@@ -40,8 +34,14 @@ export function AccountScreen() {
         <br />
         비밀번호를 만들어 주세요!
       </h1>
+      <p className="mt-2 text-[14px] text-holo-ink-3">
+        영문과 숫자를 포함해 8~16자로 입력해 주세요.
+      </p>
+      <p className="mt-1 text-[12px] text-holo-purple-mid">
+        ※ 다른 사이트와 동일한 비밀번호 사용은 피해주세요.
+      </p>
 
-      <div className="mt-7 flex flex-col gap-4">
+      <div className="mt-6 flex flex-col gap-2">
         <div className="flex flex-col gap-1">
           <div className="relative">
             <input
@@ -50,9 +50,6 @@ export function AccountScreen() {
               placeholder="비밀번호 (영문 + 숫자 8~16자)"
               value={password}
               onChange={(e) => update("password", e.target.value.slice(0, 16))}
-              onKeyDown={pwCaps.capsHandlers.onKeyDown}
-              onKeyUp={pwCaps.capsHandlers.onKeyUp}
-              onBlur={pwCaps.capsHandlers.onBlur}
               maxLength={16}
               className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
                 passwordInvalid
@@ -64,15 +61,11 @@ export function AccountScreen() {
             />
             <PasswordToggle visible={showPw} onClick={() => setShowPw((s) => !s)} />
           </div>
-          <CapsLockBadge visible={pwCaps.capsOn} />
           {passwordInvalid && (
             <p className="pl-2 text-[13px] text-holo-error">
               영문과 숫자를 모두 포함해 8~16자로 입력해 주세요.
             </p>
           )}
-          <PasswordStrength
-            password={password}
-          />
         </div>
 
         <div className="flex flex-col gap-1">
@@ -83,9 +76,6 @@ export function AccountScreen() {
               placeholder="비밀번호 확인"
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
-              onKeyDown={pwConfirmCaps.capsHandlers.onKeyDown}
-              onKeyUp={pwConfirmCaps.capsHandlers.onKeyUp}
-              onBlur={pwConfirmCaps.capsHandlers.onBlur}
               maxLength={16}
               className={`h-[62px] w-full rounded-holo-input px-5 pr-12 text-[15px] outline-none ${
                 passwordMismatch
@@ -97,7 +87,6 @@ export function AccountScreen() {
             />
             <PasswordToggle visible={showPwConfirm} onClick={() => setShowPwConfirm((s) => !s)} />
           </div>
-          <CapsLockBadge visible={pwConfirmCaps.capsOn} />
           {passwordMismatch && (
             <p className="pl-2 text-[13px] text-holo-error">
               비밀번호가 일치하지 않아요.

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getBadgeById } from "../../badge";
 import { ME_PERSONA } from "./home-faces";
@@ -18,6 +18,29 @@ export function HomeScreen() {
   const statusPos = useStatusPosition();
   const profile = useProfile();
   const equippedBadge = getBadgeById(profile.equippedBadgeId);
+
+  // 가입 직후 sessionStorage 에 남겨둔 보너스 포인트 플래그를 읽어 환영 모달 노출.
+  // 모달을 닫으면 플래그를 제거하므로 다시 들어와도 한 번만 보인다.
+  const [welcomeBonus, setWelcomeBonus] = useState<number | null>(null);
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem("holo:welcomeBonus");
+      if (raw) {
+        const n = Number(raw);
+        if (Number.isFinite(n) && n > 0) setWelcomeBonus(n);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+  const closeWelcome = () => {
+    try {
+      window.sessionStorage.removeItem("holo:welcomeBonus");
+    } catch {
+      // ignore
+    }
+    setWelcomeBonus(null);
+  };
 
   // 카드 가로 드래그 스크롤 (map-screen과 동일)
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -117,8 +140,8 @@ export function HomeScreen() {
           <div className="absolute -bottom-[44px] left-1/2 z-[6] flex h-[88px] w-[319px] -translate-x-1/2 items-center gap-[14px] rounded-[20px] bg-holo-surface px-4 shadow-[0_4px_16px_rgba(116,72,221,0.1)]">
             <div className="relative h-[63px] w-[63px] shrink-0">
               <img
-                src={ME_PERSONA.face}
-                alt={ME_PERSONA.name}
+                src={profile.profileFace ?? ME_PERSONA.face}
+                alt={profile.nickname}
                 className="h-[63px] w-[63px] rounded-full object-cover"
                 draggable={false}
               />
@@ -181,6 +204,50 @@ export function HomeScreen() {
       >
         <PlusIcon />
       </Link>
+
+      {welcomeBonus !== null && (
+        <WelcomeBonusModal bonus={welcomeBonus} onClose={closeWelcome} />
+      )}
     </main>
+  );
+}
+
+/** 가입 직후 홈 진입 시 한 번 띄우는 환영 보너스 모달 */
+function WelcomeBonusModal({
+  bonus,
+  onClose,
+}: {
+  bonus: number;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/40 px-6">
+      <div className="w-full max-w-[320px] rounded-[20px] bg-white p-6 text-center shadow-xl">
+        <div className="mx-auto flex h-[80px] w-[80px] items-center justify-center rounded-full bg-holo-lilac-card-2 text-[36px]">
+          🎉
+        </div>
+        <h2 className="mt-5 text-[20px] font-bold text-holo-ink">
+          환영합니다!
+        </h2>
+        <p className="mt-2 text-[13px] leading-relaxed text-holo-ink-3">
+          HOLO 가입을 축하드려요.
+          <br />
+          가입 보너스로 포인트를 드릴게요.
+        </p>
+        <div className="mt-5 flex items-center justify-center gap-2 rounded-[16px] border border-holo-lilac-deep bg-holo-lilac-card px-4 py-3">
+          <span className="text-[18px]">💜</span>
+          <span className="text-[22px] font-bold text-holo-purple-mid">
+            +{bonus}P
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 h-[52px] w-full rounded-holo-pill bg-holo-gradient text-[15px] font-semibold text-white shadow-md transition active:scale-[0.99]"
+        >
+          확인
+        </button>
+      </div>
+    </div>
   );
 }

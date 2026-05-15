@@ -975,7 +975,7 @@ export function ChatRoomScreen() {
 
       {showLocationPicker && (
         <div
-          className="fixed left-1/2 top-0 z-50 flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40"
+          className="fixed left-1/2 top-0 z-[1100] flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40"
           onClick={() => setShowLocationPicker(false)}
         >
           <div

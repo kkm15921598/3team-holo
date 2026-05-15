@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ME } from "@/shared/mock/data";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { useProfile } from "@/shared/hooks/use-profile";
 import {
   getVerification,
   subscribeVerification,
@@ -11,6 +12,7 @@ export function AccountScreen() {
   const navigate = useNavigate();
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [verification, setVerification] = useState(getVerification);
+  const profile = useProfile();
 
   useEffect(() => {
     const unsub = subscribeVerification(() => setVerification(getVerification()));
@@ -18,6 +20,7 @@ export function AccountScreen() {
   }, []);
 
   const verified = verification.phoneVerified && verification.regionVerified;
+  const faceSrc = profile.profileFace ?? ME_PERSONA.face;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -33,13 +36,13 @@ export function AccountScreen() {
         <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-holo-card">
           <div className="flex items-center gap-3">
             <img
-              src={ME_PERSONA.face}
-              alt={ME_PERSONA.name}
+              src={faceSrc}
+              alt={profile.nickname}
               className="h-9 w-9 rounded-full object-cover"
               draggable={false}
             />
             <div className="flex flex-col">
-              <span className="text-[14px] font-semibold text-holo-ink">{ME.nickname}</span>
+              <span className="text-[14px] font-semibold text-holo-ink">{profile.nickname}</span>
               <span className="text-[12px] text-holo-ink-3">ID : {ME.friendCode}</span>
             </div>
           </div>
