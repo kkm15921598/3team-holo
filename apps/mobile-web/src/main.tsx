@@ -70,7 +70,12 @@ import { MyTitlesScreen } from "@/features/mypage/my-titles-screen";
 import { MyMeetingsScreen } from "@/features/mypage/my-meetings-screen";
 import { MyroomScreen } from "@/features/myroom/myroom-screen";
 
+import { markActiveToday } from "@/shared/stores/activity-store";
+
 import "./index.css";
+
+// 앱 진입 시 오늘 날짜를 접속일 set 에 기록 — 가입일 이후 실제 사용한 고유 일 수 카운트용
+markActiveToday();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

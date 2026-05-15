@@ -1,6 +1,14 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import L from "leaflet";
-import { MY_LOCATION, type Post, type PostLocation } from "@/shared/mock/data";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import { type Post, type PostLocation } from "@/shared/mock/data";
+
+/**
+ * GPS fix 가 아직 안 잡혔거나 좌표가 지정되지 않은 경우의 지도 기본 중심.
+ * 의미 있는 fallback 좌표가 없으면 서울 시청 부근으로 떨군다.
+ */
+const SEOUL_FALLBACK_CENTER = { lat: 37.5665, lng: 126.9780 };
 
 // ──────────────────────────────────────────────────────────────
 // Shared marker icons + helpers
@@ -12,6 +20,36 @@ const postIcon = L.divIcon({
   iconAnchor: [22, 22],
   html: '<div class="holo-post-glow"><div class="holo-post-dot"></div></div>',
 });
+
+/**
+ * 여러 게시글 마커가 한 곳에 겹칠 때 보여줄 클러스터 아이콘.
+ * 기존 단일 마커(.holo-post-marker) 와 동일한 라일락 글로우 + 보라 점 디자인,
+ * 안쪽 점에 숫자를 표기한다. 개수에 따라 살짝 커진다.
+ */
+function buildClusterIcon(cluster: L.MarkerCluster): L.DivIcon {
+  const count = cluster.getChildCount();
+  let size = 44;
+  let tier: "sm" | "md" | "lg" = "sm";
+  if (count >= 10) {
+    size = 50;
+    tier = "md";
+  }
+  if (count >= 30) {
+    size = 56;
+    tier = "lg";
+  }
+  return L.divIcon({
+    className: "holo-post-marker holo-cluster-marker",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html:
+      '<div class="holo-post-glow holo-cluster-' +
+      tier +
+      '"><div class="holo-post-dot holo-cluster-dot"><span class="holo-cluster-count">' +
+      count +
+      "</span></div></div>",
+  });
+}
 
 // 표준 앱 스타일 사용자 위치 마커: 정확도 링 + solid dot
 function buildUserIcon(preview: boolean) {
@@ -60,6 +98,89 @@ function attachResizeNudges(
   };
 }
 
+/**
+ * Leaflet 의 watchPosition 래퍼인 map.locate({watch:true}) 를 사용해
+ * 실시간 GPS 위치를 추적한다.
+ * - 첫 fix 시 사용자 마커를 그 위치에 새로 생성 (mock 좌표를 미리 깔지 않는다)
+ * - 이후 fix 마다 마커 좌표 갱신
+ * - 첫 fix 시 옵션에 따라 지도 중심도 사용자 위치로 이동
+ * - 권한 거부 / HTTPS 미사용 등 에러 시 마커를 표시하지 않은 채로 둔다
+ */
+function attachLiveUserLocation(
+  map: L.Map,
+  options: {
+    preview: boolean;
+    centerOnFix?: boolean;
+    /**
+     * 상위가 이미 알고 있는 마지막 GPS 좌표.
+     * 주어지면 마커를 즉시 그 위치에 그려서 첫 watchPosition fix 가 들어오기 전에도
+     * 사용자 위치가 보이게 한다. fix 가 들어오면 그 위치로 자연스럽게 이동.
+     */
+    initialPosition?: { lat: number; lng: number };
+  },
+): () => void {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    if (options.initialPosition) {
+      // geolocation API 미지원이지만 상위가 좌표를 줬다면 정적 마커만이라도 그린다.
+      const m = L.marker(options.initialPosition, {
+        icon: buildUserIcon(options.preview),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 1000,
+      }).addTo(map);
+      return () => {
+        m.remove();
+      };
+    }
+    return () => {};
+  }
+  let userMarker: L.Marker | null = null;
+  let firstFix = true;
+  if (options.initialPosition) {
+    userMarker = L.marker(options.initialPosition, {
+      icon: buildUserIcon(options.preview),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 1000,
+    }).addTo(map);
+  }
+  const onFound = (e: L.LocationEvent) => {
+    if (!userMarker) {
+      userMarker = L.marker(e.latlng, {
+        icon: buildUserIcon(options.preview),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 1000,
+      }).addTo(map);
+    } else {
+      userMarker.setLatLng(e.latlng);
+    }
+    if (firstFix && options.centerOnFix !== false) {
+      map.setView(e.latlng, map.getZoom());
+      firstFix = false;
+    }
+  };
+  const onError = (e: L.ErrorEvent) => {
+    // 권한 거부 / GPS 비활성 / HTTPS 미사용 등.
+    // mock 좌표로 떨구지 않고 마커 없이 진행한다.
+    if (typeof console !== "undefined") {
+      console.warn("[map] geolocation error:", e.message);
+    }
+  };
+  map.on("locationfound", onFound);
+  map.on("locationerror", onError);
+  map.locate({ watch: true, enableHighAccuracy: true, setView: false });
+  return () => {
+    map.stopLocate();
+    map.off("locationfound", onFound);
+    map.off("locationerror", onError);
+    if (userMarker) {
+      userMarker.remove();
+      userMarker = null;
+    }
+  };
+}
+
 // ──────────────────────────────────────────────────────────────
 // MapView — 여러 게시물 마커 + 사용자 위치 (map-screen에서 사용)
 // ──────────────────────────────────────────────────────────────
@@ -68,29 +189,47 @@ type MapViewProps = {
   preview: boolean;
   visiblePosts: Post[];
   onMarkerClick?: (id: string) => void;
+  /**
+   * 지도 마운트 시 초기 중심 좌표. 상위에서 이미 GPS 좌표를 들고 있을 때 전달하면
+   * 모달이 열린 직후 깜빡임 없이 사용자 위치 부근에서 시작한다.
+   * 없으면 서울 시청을 fallback 으로 잡는다.
+   */
+  initialCenter?: { lat: number; lng: number };
 };
 
-export function MapView({ preview, visiblePosts, onMarkerClick }: MapViewProps) {
+export function MapView({
+  preview,
+  visiblePosts,
+  onMarkerClick,
+  initialCenter,
+}: MapViewProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const postMarkersRef = useRef<Record<string, L.Marker>>({});
+  const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
+  // 초기 중심은 한 번 캡쳐 — useLayoutEffect 의존성에 넣지 않고 mount 시점 값만 사용
+  const initialCenterRef = useRef(initialCenter);
 
   useLayoutEffect(() => {
     if (!elRef.current || mapRef.current) return;
 
+    // 상위에서 GPS 좌표를 넘겨줬으면 그쪽에서 시작, 아니면 서울 시청 fallback.
+    const initial = initialCenterRef.current ?? SEOUL_FALLBACK_CENTER;
+
     const map = L.map(elRef.current, {
-      center: [MY_LOCATION.lat, MY_LOCATION.lng],
+      center: [initial.lat, initial.lng],
       zoom: 16,
       minZoom: 14,
       maxZoom: 18,
-      zoomControl: !preview,
+      // 컨트롤 UI 는 양쪽 모두 숨김 — 표준 지도 앱처럼 제스처로만 줌
+      zoomControl: false,
       attributionControl: !preview,
-      dragging: !preview,
-      scrollWheelZoom: !preview,
-      doubleClickZoom: !preview,
-      touchZoom: !preview,
-      boxZoom: !preview,
-      keyboard: !preview,
+      // 인터랙션(드래그/줌) 은 미리보기에서도 허용
+      dragging: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      touchZoom: true,
+      boxZoom: true,
+      keyboard: true,
     });
 
     const tiles = L.tileLayer(TILE_URL, {
@@ -100,56 +239,70 @@ export function MapView({ preview, visiblePosts, onMarkerClick }: MapViewProps) 
     });
     tiles.addTo(map);
 
-    L.marker([MY_LOCATION.lat, MY_LOCATION.lng], {
-      icon: buildUserIcon(preview),
-      interactive: false,
-      keyboard: false,
-      zIndexOffset: 1000,
-    }).addTo(map);
-
     mapRef.current = map;
 
+    // 마커 클러스터 그룹 — 줌 인 시 자동으로 펼쳐지고, 클러스터 클릭 시
+    // 자식 마커들을 보여주기 위해 확대된다.
+    const clusterGroup = L.markerClusterGroup({
+      iconCreateFunction: buildClusterIcon,
+      showCoverageOnHover: false,
+      // 미리보기에서도 드래그/줌이 가능하므로 모두 활성화
+      spiderfyOnMaxZoom: true,
+      zoomToBoundsOnClick: true,
+      animate: true,
+    });
+    map.addLayer(clusterGroup);
+    clusterGroupRef.current = clusterGroup;
+
     const cleanupNudges = attachResizeNudges(map, tiles, elRef.current);
+    // 실시간 GPS 위치 추적 — fix 가 들어오면 그때 user marker 생성/이동.
+    // initialPosition 이 있으면 마커가 즉시 그려지므로 모달 열자마자 위치 표시됨.
+    // 미리보기와 풀맵 모두 사용자 GPS 위치로 중심을 이동시킨다.
+    const cleanupLocate = attachLiveUserLocation(map, {
+      preview,
+      centerOnFix: true,
+      initialPosition: initialCenterRef.current,
+    });
 
     return () => {
       cleanupNudges();
+      cleanupLocate();
+      clusterGroup.clearLayers();
       map.remove();
       mapRef.current = null;
-      postMarkersRef.current = {};
+      clusterGroupRef.current = null;
     };
   }, [preview]);
 
-  // 게시물 마커 동기화
+  // 게시물 마커 동기화 — clusterGroup 에 add/remove 만 하면 클러스터링은 라이브러리가 처리
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const clusterGroup = clusterGroupRef.current;
+    if (!map || !clusterGroup) return;
 
-    Object.values(postMarkersRef.current).forEach((m) => m.remove());
-    postMarkersRef.current = {};
+    clusterGroup.clearLayers();
 
+    const markers: L.Marker[] = [];
     visiblePosts.forEach((p) => {
       if (!p.location) return;
       const marker = L.marker([p.location.lat, p.location.lng], {
         icon: postIcon,
-        interactive: !preview,
+        interactive: true,
         riseOnHover: true,
-      }).addTo(map);
-
-      if (!preview && onMarkerClick) {
+      });
+      if (onMarkerClick) {
         marker.on("click", () => onMarkerClick(p.id));
       }
-
-      postMarkersRef.current[p.id] = marker;
+      markers.push(marker);
     });
+    if (markers.length > 0) {
+      clusterGroup.addLayers(markers);
+    }
   }, [visiblePosts, preview, onMarkerClick]);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <div
-        ref={elRef}
-        className="absolute inset-0"
-        style={preview ? { pointerEvents: "none" } : undefined}
-      />
+      <div ref={elRef} className="absolute inset-0" />
     </div>
   );
 }
@@ -183,7 +336,7 @@ export function LocationMap({
       zoom: 17,
       minZoom: 13,
       maxZoom: 18,
-      zoomControl: !preview,
+      zoomControl: false,
       attributionControl: !preview,
       dragging: !preview,
       scrollWheelZoom: !preview,
@@ -206,19 +359,21 @@ export function LocationMap({
       keyboard: false,
     }).addTo(map);
 
+    let cleanupLocate: (() => void) | null = null;
     if (showUserMarker) {
-      L.marker([MY_LOCATION.lat, MY_LOCATION.lng], {
-        icon: buildUserIcon(true),
-        interactive: false,
-        keyboard: false,
-        zIndexOffset: 1000,
-      }).addTo(map);
+      // mock 좌표로 미리 깔지 않고, 실제 GPS fix 가 들어오면 helper 가 마커를 만든다.
+      // 게시글 상세 지도에서는 게시글 위치에 중심을 유지하므로 centerOnFix:false.
+      cleanupLocate = attachLiveUserLocation(map, {
+        preview: true,
+        centerOnFix: false,
+      });
     }
 
     const cleanupNudges = attachResizeNudges(map, tiles, elRef.current);
 
     return () => {
       cleanupNudges();
+      cleanupLocate?.();
       map.remove();
     };
   }, [location.lat, location.lng, showUserMarker, preview]);
@@ -259,14 +414,14 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
   useLayoutEffect(() => {
     if (!elRef.current || mapRef.current) return;
 
-    const center = value ?? { lat: MY_LOCATION.lat, lng: MY_LOCATION.lng };
+    const center = value ?? SEOUL_FALLBACK_CENTER;
 
     const map = L.map(elRef.current, {
       center: [center.lat, center.lng],
       zoom: 17,
       minZoom: 13,
       maxZoom: 18,
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: false,
     });
 
@@ -277,12 +432,9 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
     });
     tiles.addTo(map);
 
-    L.marker([MY_LOCATION.lat, MY_LOCATION.lng], {
-      icon: buildUserIcon(true),
-      interactive: false,
-      keyboard: false,
-      zIndexOffset: 1000,
-    }).addTo(map);
+    // 글쓰기 화면 — 사용자 위치는 실제 GPS fix 가 들어오면 helper 가 마커를 만든다.
+    // 지도 중심은 사용자가 선택한 좌표를 유지하므로 centerOnFix:false.
+    const cleanupLocate = attachLiveUserLocation(map, { preview: true, centerOnFix: false });
 
     if (value) {
       markerRef.current = L.marker([value.lat, value.lng], {
@@ -309,6 +461,7 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
 
     return () => {
       cleanupNudges();
+      cleanupLocate();
       map.remove();
       mapRef.current = null;
       markerRef.current = null;

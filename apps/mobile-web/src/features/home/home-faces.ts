@@ -65,3 +65,11 @@ export const FEMALE_FACES: string[] = [
 export const MALE_FACES: string[] = PERSONAS.filter((p) =>
   p.face.includes("/man/"),
 ).map((p) => p.face);
+
+/** 성별별 기본 프로필 얼굴 — profileFace 가 비어있을 때 fallback 으로 사용 */
+export const FEMALE_DEFAULT_FACE: string = ME_PERSONA.face;
+export const MALE_DEFAULT_FACE: string = MALE_FACES[0];
+
+export function defaultFaceForGender(gender: "M" | "F"): string {
+  return gender === "M" ? MALE_DEFAULT_FACE : FEMALE_DEFAULT_FACE;
+}

@@ -226,6 +226,42 @@ body {
   box-shadow: 0 1px 4px rgba(116, 72, 221, 0.25);
 }
 
+/* 마커 클러스터 — 단일 게시글 마커와 동일한 글로우 + 보라 점 디자인,
+   안쪽 점에 흰 숫자. 개수에 따라 사이즈 차등. */
+.holo-cluster-marker .holo-post-glow {
+  width: 100%;
+  height: 100%;
+}
+.holo-cluster-dot {
+  /* 기존 .holo-post-dot 보다 살짝 크게 — 숫자가 들어갈 자리 확보 */
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.holo-cluster-md .holo-cluster-dot {
+  width: 30px;
+  height: 30px;
+}
+.holo-cluster-lg .holo-cluster-dot {
+  width: 34px;
+  height: 34px;
+}
+.holo-cluster-count {
+  color: #ffffff;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-size: 12px;
+}
+.holo-cluster-md .holo-cluster-count { font-size: 13px; }
+.holo-cluster-lg .holo-cluster-count { font-size: 14px; }
+.holo-cluster-marker:hover .holo-post-dot {
+  transform: scale(1.06);
+  transition: transform 120ms ease;
+}
+
 /* attribution 컨트롤을 작고 은은하게 */
 .leaflet-container .leaflet-control-attribution {
   background: rgba(255, 255, 255, 0.7);

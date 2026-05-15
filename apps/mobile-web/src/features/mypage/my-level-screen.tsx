@@ -1,5 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
+import { useAccountStats } from "@/shared/stores/account-stats-store";
+import {
+  getDailyRemaining,
+  getLevelProgress,
+  useXpState,
+  XP_CONFIG,
+  type XpAction,
+} from "@/shared/stores/xp-store";
 
 const LEVEL_MAX = 30;
 const LEVEL_BENEFITS = [
@@ -11,20 +18,23 @@ const LEVEL_BENEFITS = [
   { level: 30, label: "명예의 전당 등록" },
 ];
 
-const LEVEL_ACTIVITIES = [
-  { label: "게시글 작성", xp: "+10 XP" },
-  { label: "댓글 작성", xp: "+5 XP" },
-  { label: "모임 참여", xp: "+20 XP" },
-  { label: "출석 체크", xp: "+3 XP" },
-  { label: "이웃 친구 추가", xp: "+15 XP" },
-  { label: "게시글 좋아요 받기", xp: "+2 XP" },
+// 화면에 보여줄 액션 순서 — XP_CONFIG 와 1:1 매핑
+const ACTIVITY_ORDER: XpAction[] = [
+  "post",
+  "comment",
+  "join",
+  "attendance",
+  "friend",
+  "likeReceived",
 ];
 
 export function MyLevelScreen() {
   const navigate = useNavigate();
-  const currentXp = 340;
-  const nextLevelXp = 500;
-  const progress = Math.round((currentXp / nextLevelXp) * 100);
+  const stats = useAccountStats();
+  // XP 변경을 구독해 진행도 / 잔여 횟수가 실시간 반영되게 한다.
+  useXpState();
+  const { current: currentXp, required: nextLevelXp, percent: progress } =
+    getLevelProgress();
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -39,7 +49,7 @@ export function MyLevelScreen() {
       <section className="mx-4 mt-2 rounded-[16px] bg-holo-gradient p-5 text-white">
         <p className="text-[13px] font-medium opacity-80">현재 레벨</p>
         <div className="mt-1 flex items-end gap-2">
-          <span className="text-[48px] font-bold leading-none">{ME.level}</span>
+          <span className="text-[48px] font-bold leading-none">{stats.level}</span>
           <span className="mb-1 text-[18px] font-semibold opacity-70">/ {LEVEL_MAX}</span>
         </div>
         <div className="mt-4">
@@ -61,7 +71,7 @@ export function MyLevelScreen() {
         <p className="text-[14px] font-semibold text-holo-ink">레벨업 혜택</p>
         <div className="mt-3 flex flex-col gap-2">
           {LEVEL_BENEFITS.map((b) => {
-            const unlocked = ME.level >= b.level;
+            const unlocked = stats.level >= b.level;
             return (
               <div
                 key={b.level}
@@ -96,12 +106,32 @@ export function MyLevelScreen() {
       <section className="mt-5 px-4">
         <p className="text-[14px] font-semibold text-holo-ink">경험치 획득 방법</p>
         <div className="mt-3 divide-y divide-holo-line rounded-[12px] border border-holo-line bg-white">
-          {LEVEL_ACTIVITIES.map((a) => (
-            <div key={a.label} className="flex items-center justify-between px-4 py-3">
-              <span className="text-[14px] text-holo-ink">{a.label}</span>
-              <span className="text-[13px] font-semibold text-holo-purple-mid">{a.xp}</span>
-            </div>
-          ))}
+          {ACTIVITY_ORDER.map((action) => {
+            const cfg = XP_CONFIG[action];
+            const remaining = getDailyRemaining(action);
+            const done = remaining === 0;
+            return (
+              <div
+                key={action}
+                className="flex items-center justify-between px-4 py-3"
+              >
+                <div className="flex flex-col">
+                  <span className="text-[14px] text-holo-ink">{cfg.label}</span>
+                  <span className="mt-0.5 text-[11px] text-holo-ink-3">
+                    오늘 남은 횟수 {remaining}/{cfg.dailyLimit}
+                    {done && " · 일일 한도 도달"}
+                  </span>
+                </div>
+                <span
+                  className={`text-[13px] font-semibold ${
+                    done ? "text-holo-ink-3" : "text-holo-purple-mid"
+                  }`}
+                >
+                  +{cfg.xp} XP
+                </span>
+              </div>
+            );
+          })}
         </div>
       </section>
     </main>

@@ -1,8 +1,29 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
+import { type Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
+import { useUserComments } from "@/shared/stores/comments-store";
+import { useActivityState } from "@/shared/stores/activity-store";
+import { useProfile } from "@/shared/hooks/use-profile";
 
 export function ActivityScreen() {
   const navigate = useNavigate();
+  const profile = useProfile();
+  const userComments = useUserComments();
+  const activity = useActivityState();
+  const [allPosts, setAllPosts] = useState<Post[]>(postsStore.getPosts());
+
+  useEffect(() => {
+    return postsStore.subscribe(() => setAllPosts(postsStore.getPosts()));
+  }, []);
+
+  // 실제 사용자가 작성한 글 / 댓글 수
+  const postsCount = useMemo(
+    () => allPosts.filter((p) => p.authorNickname === profile.nickname).length,
+    [allPosts, profile.nickname],
+  );
+  const commentsCount = userComments.length;
+
   return (
     <main className="flex flex-1 flex-col px-4 pb-4">
       <header className="flex h-12 shrink-0 items-center">
@@ -13,11 +34,11 @@ export function ActivityScreen() {
       </header>
 
       <section className="flex justify-around rounded-holo-input bg-white py-4">
-        <Stat label="내가 쓴 글" value={ME.postsCount} />
+        <Stat label="내가 쓴 글" value={postsCount} />
         <span className="h-10 w-px bg-holo-line" />
-        <Stat label="내가 쓴 댓글" value={ME.commentsCount} />
+        <Stat label="내가 쓴 댓글" value={commentsCount} />
         <span className="h-10 w-px bg-holo-line" />
-        <Stat label="접속일수" value={ME.daysActive} />
+        <Stat label="접속일수" value={activity.activeDates.length} />
       </section>
 
       <ul className="mt-3 flex flex-col text-[14px] text-holo-ink">

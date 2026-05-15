@@ -3,16 +3,40 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BOARD_CATEGORIES,
   CATEGORY_SHORT,
+  COMMENTS,
   ME,
+  POST_COMMENTS,
   type Post,
 } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { getProfile } from "@/shared/stores/profile-store";
+import { getAuthorGender } from "@/shared/lib/author-gender";
+import { useLikedSet } from "@/shared/stores/likes-store";
+import { useUserComments } from "@/shared/stores/comments-store";
+import { useJoinedSet } from "@/shared/stores/joined-store";
+import { calcJoined } from "./meetup-utils";
 
-// 내 게시글이면 home과 동일한 ME_PERSONA face, 아니면 닉네임 해시 face
+// 내 게시글이면 profile-store 의 얼굴, 아니면 닉네임 해시 face
 function avatarFor(nickname: string): string {
-  return nickname === ME.nickname ? ME_PERSONA.face : getAvatarUrl(nickname);
+  if (nickname === ME.nickname) {
+    return getProfile().profileFace ?? ME_PERSONA.face;
+  }
+  return getAvatarUrl(nickname);
+}
+
+/**
+ * 게시글 상세에서 실제 렌더링되는 댓글 수 — board-detail 의 totalComments 와 일치시킨다.
+ * mock(POST_COMMENTS / COMMENTS) + 사용자가 작성한 댓글/대댓글 합산.
+ */
+function buildCommentCounter(
+  userCounts: Map<string, number>,
+): (postId: string) => number {
+  return (postId) => {
+    const mockCount = (POST_COMMENTS[postId] ?? COMMENTS).length;
+    return mockCount + (userCounts.get(postId) ?? 0);
+  };
 }
 
 const DRAG_THRESHOLD = 4;
@@ -50,8 +74,33 @@ export function BoardListScreen() {
   const keyword = (searchParams.get("q") ?? "").trim();
   const topMode = searchParams.get("top"); // "live" | "weekly" | null
   const isTopView = topMode === "live" || topMode === "weekly";
-  const [activeCat, setActiveCat] = useState<string>("all");
+  // URL 의 ?cat=<id> 파라미터로 카테고리 진입 (board-main 카테고리 카드에서 사용)
+  const catParam = searchParams.get("cat");
+  const isValidCat = BOARD_CATEGORIES.some((c) => c.id === catParam);
+  const genderParam = searchParams.get("gender"); // "M" | "F" | null
+  const [activeCat, setActiveCat] = useState<string>(
+    isValidCat ? (catParam as string) : "all",
+  );
   const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
+  const likedSet = useLikedSet();
+  const joinedSet = useJoinedSet();
+  const userComments = useUserComments();
+  const getCommentCount = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of userComments) {
+      counts.set(c.postId, (counts.get(c.postId) ?? 0) + 1);
+    }
+    return buildCommentCounter(counts);
+  }, [userComments]);
+
+  // URL 의 cat 파라미터가 바뀌면 (예: 다른 카테고리로 다시 진입) activeCat 동기화
+  useEffect(() => {
+    if (isValidCat && catParam && catParam !== activeCat) {
+      setActiveCat(catParam);
+    }
+    // activeCat 의존성 제외 — 내부 탭 클릭으로 변경된 값은 URL 에서 되돌리지 않는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catParam, isValidCat]);
 
   useEffect(() => {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
@@ -142,8 +191,12 @@ export function BoardListScreen() {
           p.authorNickname.toLowerCase().includes(lq),
       );
     }
+    // 성별 필터 — 검색 화면에서 "남자"/"여자" 만 단일 선택된 경우 URL ?gender=M|F 로 전달됨
+    if (genderParam === "M" || genderParam === "F") {
+      list = list.filter((p) => getAuthorGender(p.authorNickname) === genderParam);
+    }
     return list;
-  }, [posts, activeCat, keyword, topMode]);
+  }, [posts, activeCat, keyword, topMode, genderParam]);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -251,6 +304,9 @@ export function BoardListScreen() {
               key={p.id}
               post={p}
               rank={isTopView ? i + 1 : undefined}
+              liked={likedSet.has(p.id)}
+              commentCount={getCommentCount(p.id)}
+              joined={joinedSet.has(p.id)}
             />
           ))}
         </ul>
@@ -267,7 +323,19 @@ export function BoardListScreen() {
   );
 }
 
-function PostCard({ post, rank }: { post: Post; rank?: number }) {
+function PostCard({
+  post,
+  rank,
+  liked = false,
+  commentCount,
+  joined = false,
+}: {
+  post: Post;
+  rank?: number;
+  liked?: boolean;
+  commentCount: number;
+  joined?: boolean;
+}) {
   // 자유게시판/추천해요는 상태 블록을 숨기되, 자리는 비워둠 → 탭 이동 시 카드 높이가 동일하게 유지됨
   const isSimple =
     post.category === "recommend" || post.category === "free";
@@ -275,8 +343,9 @@ function PostCard({ post, rank }: { post: Post; rank?: number }) {
   const showCategoryBadge =
     post.category === "free" || post.category === "recommend";
 
-  const cap = post.peopleCount ?? 5;
-  const joined = post.status === "모집완료" ? cap : Math.max(1, cap - 2);
+  const { capacity, baseJoined } = calcJoined(post);
+  // 게시글 상세와 동일한 계산식: baseJoined + (현재 사용자 참여 여부)
+  const joinedCount = Math.min(capacity, baseJoined + (joined ? 1 : 0));
   const shortLabel = CATEGORY_SHORT[post.category] ?? "";
 
   return (
@@ -298,7 +367,7 @@ function PostCard({ post, rank }: { post: Post; rank?: number }) {
               <StatusText status={post.status} />
             </div>
             <div className={isSimple ? "invisible" : ""}>
-              <FractionPill status={post.status} text={`${joined}/${cap}`} />
+              <FractionPill status={post.status} text={`${joinedCount}/${capacity}`} />
             </div>
           </div>
         </div>
@@ -319,10 +388,10 @@ function PostCard({ post, rank }: { post: Post; rank?: number }) {
           </p>
           <div className="mt-1 flex items-center gap-3 text-[12px] text-holo-ink-3">
             <span className="flex items-center gap-1">
-              <HeartIcon /> {post.likes}
+              <HeartIcon filled={liked} /> {post.likes + (liked ? 1 : 0)}
             </span>
             <span className="flex items-center gap-1">
-              <CommentIcon /> {post.comments}
+              <CommentIcon /> {commentCount}
             </span>
             <ChevronRight />
           </div>
@@ -366,10 +435,18 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-/** 모집중/모집완료 as plain text — no pill background, #000000. */
+/** 모집중/모집완료 pill — 모집중 = 연한 초록, 모집완료 = 연한 빨강 */
 export function StatusBadge({ status }: { status: "모집중" | "모집완료" }) {
+  const styles =
+    status === "모집중"
+      ? "bg-holo-success text-[#3F7E25]"
+      : "bg-holo-full text-[#C53030]";
   return (
-    <span className="text-[12px] font-medium text-[#000000]">{status}</span>
+    <span
+      className={`inline-block rounded-[5px] px-[9px] pt-[5px] pb-[4px] text-[11px] font-semibold leading-none ${styles}`}
+    >
+      {status}
+    </span>
   );
 }
 
@@ -399,9 +476,19 @@ function FractionPill({
   );
 }
 
-function HeartIcon() {
+function HeartIcon({ filled = false }: { filled?: boolean }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF9A9A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? "#FF9A9A" : "none"}
+      stroke="#FF9A9A"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );

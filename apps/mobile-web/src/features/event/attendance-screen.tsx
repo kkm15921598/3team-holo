@@ -1,11 +1,25 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ATTENDANCE_DAYS, ATTENDANCE_STREAK } from "@/shared/mock/data";
+import { awardXp } from "@/shared/stores/xp-store";
+import { addPoints } from "@/features/myroom/myroom-store";
 
 type Day = (typeof ATTENDANCE_DAYS)[number];
 
 export function AttendanceScreen() {
   const navigate = useNavigate();
+  const [toast, setToast] = useState<string | null>(null);
   const todayDay = ATTENDANCE_DAYS.find((d) => d.isToday);
+  const handleAttendance = () => {
+    const result = awardXp("attendance");
+    if (result.capped) {
+      setToast("오늘은 이미 출석했어요.");
+    } else {
+      addPoints(todayDay?.points ?? 5);
+      setToast(`출석 완료! +${result.gained} XP / +${todayDay?.points ?? 5}P`);
+    }
+    window.setTimeout(() => setToast(null), 1800);
+  };
   const checkedCount = ATTENDANCE_DAYS.filter((d) => d.checked).length;
 
   const firstRow = ATTENDANCE_DAYS.slice(0, 4);
@@ -102,11 +116,19 @@ export function AttendanceScreen() {
       <div className="mt-6 px-4">
         <button
           type="button"
+          onClick={handleAttendance}
           className="h-[56px] w-full rounded-holo-pill bg-holo-ink text-[16px] font-semibold text-white active:opacity-80"
         >
           오늘 출석하고 {todayDay?.points ?? 5}P 받기
         </button>
       </div>
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-6">
+          <div className="rounded-full bg-black/80 px-4 py-2 text-[13px] font-medium text-white shadow-lg">
+            {toast}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

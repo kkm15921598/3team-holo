@@ -3,9 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { PasswordToggle } from "@/shared/components/password-toggle";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
-
-const MOCK_PHONE = "01012341234";
-const MOCK_PASSWORD = "test1234";
+import { setGender } from "@/shared/stores/verification-store";
+import {
+  setProfileFace,
+  setNickname,
+  setTitle,
+  setEquippedBadgeId,
+} from "@/shared/stores/profile-store";
+import { defaultFaceForGender } from "@/features/home/home-faces";
+import { setMyroomItems, setStatusMessage } from "@/features/myroom/myroom-store";
+import { TEST_ACCOUNTS } from "@/shared/mock/test-accounts";
+import { seedAccount } from "@/shared/lib/seed-account";
+import {
+  getChoices,
+  setCurrentAccount,
+} from "@/shared/stores/account-choices-store";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
 const formatPhone = (raw: string) => {
@@ -69,7 +81,27 @@ export function LoginScreen() {
       return;
     }
 
-    if (password === MOCK_PASSWORD) {
+    const account = TEST_ACCOUNTS[phone];
+    if (!account) {
+      setPhoneError(true);
+      setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
+      return;
+    }
+
+    if (password === account.password) {
+      setGender(account.gender);
+      setCurrentAccount(account.phone);
+      const saved = getChoices(account.phone);
+      // 테스트 계정이므로 로그인할 때마다 프로필/마이룸을 계정 mock 값으로 초기화한다.
+      // 단, 사용자가 직접 바꾼 장착 뱃지/칭호는 saved 에 들어 있으면 그쪽을 우선 복원.
+      setProfileFace(defaultFaceForGender(account.gender));
+      setNickname(account.nickname);
+      setTitle(saved.title ?? account.title);
+      setEquippedBadgeId(saved.equippedBadgeId ?? account.equippedBadgeId);
+      setMyroomItems(account.myroomItems);
+      setStatusMessage(account.statusMessage);
+      // 데모용 mock 데이터(통계·포인트·게시글·댓글·좋아요·참여·최근본글) 시드
+      seedAccount(account);
       navigate("/home", { replace: true });
     } else {
       setPasswordError(true);
@@ -121,7 +153,7 @@ export function LoginScreen() {
             <input
               type={showPw ? "text" : "password"}
               autoComplete="current-password"
-              placeholder="비밀번호 (test1234)"
+              placeholder="비밀번호 입력"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value.slice(0, 16));

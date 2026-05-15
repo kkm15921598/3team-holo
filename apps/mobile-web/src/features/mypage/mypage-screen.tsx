@@ -5,6 +5,8 @@ import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
 import { usePoints } from "@/features/myroom/myroom-store";
+import { useJoinedSet } from "@/shared/stores/joined-store";
+import { useAccountStats } from "@/shared/stores/account-stats-store";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -12,6 +14,9 @@ export function MypageScreen() {
   const profile = useProfile();
   const points = usePoints();
   const badgeSrc = getEquippedBadgeSrc();
+  const joinedSet = useJoinedSet();
+  const meetupCount = joinedSet.size;
+  const stats = useAccountStats();
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
       {/* Profile card + Points (connected, full-width edge-to-edge) */}
@@ -49,13 +54,13 @@ export function MypageScreen() {
 
       {/* Stats */}
       <section className="flex justify-around rounded-holo-input bg-white p-3">
-        <StatLink to="/mypage/level" label="나의 레벨" value={ME.level} />
+        <StatLink to="/mypage/level" label="나의 레벨" value={stats.level} />
         <span className="h-10 w-px bg-holo-line" />
-        <StatLink to="/mypage/badges" label="나의 뱃지" value={12} />
+        <StatLink to="/mypage/badges" label="나의 뱃지" value={stats.acquiredBadgeIds.length} />
         <span className="h-10 w-px bg-holo-line" />
-        <StatLink to="/mypage/titles" label="나의 칭호" value={22} />
+        <StatLink to="/mypage/titles" label="나의 칭호" value={stats.acquiredTitles.length} />
         <span className="h-10 w-px bg-holo-line" />
-        <StatLink to="/mypage/meetings" label="모임 참여" value={8} />
+        <StatLink to="/mypage/meetings" label="모임 참여" value={meetupCount} />
       </section>
 
       {/* Region verify */}

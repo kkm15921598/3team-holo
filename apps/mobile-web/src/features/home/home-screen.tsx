@@ -7,16 +7,15 @@ import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickRandomMeetups } from "./home-meetups-data";
 import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
 import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
-import { ME } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
-
-const LEVEL = ME.level;
+import { useAccountStats } from "@/shared/stores/account-stats-store";
 
 export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
   const status = useStatusMessage();
   const statusPos = useStatusPosition();
   const profile = useProfile();
+  const stats = useAccountStats();
   const equippedBadge = getBadgeById(profile.equippedBadgeId);
 
   // 가입 직후 sessionStorage 에 남겨둔 보너스 포인트 플래그를 읽어 환영 모달 노출.
@@ -149,7 +148,7 @@ export function HomeScreen() {
                 className="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[4px] px-[9px] py-[3px] text-[12px] font-bold text-white"
                 style={{ background: "linear-gradient(to right,#542BB4,#E95AA4)" }}
               >
-                Lv.{LEVEL}
+                Lv.{stats.level}
               </div>
             </div>
             <div className="min-w-0 flex-1">

@@ -1,13 +1,22 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TITLES } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { setTitle as storeSetTitle } from "@/shared/stores/profile-store";
+import { useAccountStats } from "@/shared/stores/account-stats-store";
+import { saveChoice } from "@/shared/stores/account-choices-store";
 
 export function MyTitlesScreen() {
   const navigate = useNavigate();
   const profile = useProfile();
+  const stats = useAccountStats();
   const [selected, setSelected] = useState<string>(profile.title);
+
+  // 실제 보유한 칭호 = stats.acquiredTitles
+  const unlockedTitles = useMemo(
+    () => new Set(stats.acquiredTitles),
+    [stats.acquiredTitles],
+  );
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -16,7 +25,7 @@ export function MyTitlesScreen() {
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">나의 칭호</span>
-        <span className="ml-auto text-[13px] text-holo-ink-3">총 {TITLES.length}개</span>
+        <span className="ml-auto text-[13px] text-holo-ink-3">{stats.acquiredTitles.length} / {TITLES.length}개</span>
       </header>
 
       {/* 현재 장착 칭호 */}
@@ -31,18 +40,29 @@ export function MyTitlesScreen() {
         <div className="flex flex-wrap gap-2">
           {TITLES.map((t) => {
             const on = selected === t;
+            const unlocked = unlockedTitles.has(t);
+            const handleClick = () => {
+              if (!unlocked) return;
+              setSelected(t);
+              storeSetTitle(t);
+              saveChoice("title", t);
+            };
             return (
               <button
                 key={t}
                 type="button"
-                onClick={() => { setSelected(t); storeSetTitle(t); }}
+                onClick={handleClick}
+                disabled={!unlocked}
                 className={`rounded-[20px] border px-4 py-2 text-[13px] font-medium transition ${
                   on
                     ? "border-holo-purple-mid bg-holo-purple-mid text-white shadow-sm"
-                    : "border-holo-line bg-white text-holo-ink hover:border-holo-purple-mid hover:text-holo-purple-mid"
+                    : unlocked
+                      ? "border-holo-line bg-white text-holo-ink hover:border-holo-purple-mid hover:text-holo-purple-mid"
+                      : "cursor-not-allowed border-holo-line bg-holo-surface-2 text-holo-ink-4"
                 }`}
               >
                 {t}
+                {!unlocked && <span className="ml-1 text-[11px]">🔒</span>}
               </button>
             );
           })}

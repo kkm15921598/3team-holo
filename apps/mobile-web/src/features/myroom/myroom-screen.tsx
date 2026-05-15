@@ -181,8 +181,8 @@ export function MyroomScreen() {
 
       <div className="flex shrink-0 items-center gap-3 pb-3">
         <img
-          src={ME_PERSONA.face}
-          alt={ME_PERSONA.name}
+          src={profile.profileFace ?? ME_PERSONA.face}
+          alt={profile.nickname}
           className="h-12 w-12 rounded-full object-cover"
           draggable={false}
         />

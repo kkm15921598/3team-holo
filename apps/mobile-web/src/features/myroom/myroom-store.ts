@@ -208,6 +208,13 @@ export function addPoints(amount: number): void {
   emitPoints();
 }
 
+/** 포인트 절대값으로 설정 — 테스트 계정 시드 시 사용 */
+export function setPoints(amount: number): void {
+  pointsState = Math.max(0, Math.floor(amount));
+  persistPoints();
+  emitPoints();
+}
+
 /** 현재 포인트 (구독 안 함) */
 export function getPoints(): number {
   return pointsState;

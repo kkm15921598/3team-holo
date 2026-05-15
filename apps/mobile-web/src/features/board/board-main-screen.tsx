@@ -76,7 +76,7 @@ export function BoardMainScreen() {
           {visibleCategories.map((c) => (
             <Link
               key={c.id}
-              to="/board/list"
+              to={`/board/list?cat=${c.id}`}
               className="flex items-center gap-2 text-[13px] text-holo-ink"
             >
               <CategoryIcon id={c.id} />

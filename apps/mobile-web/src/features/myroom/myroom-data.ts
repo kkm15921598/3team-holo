@@ -108,12 +108,14 @@ export const DEFAULT_PLACEMENT: Record<
   wall:      { x: 80,  y: 40,  width: 75 },
 };
 
-/** Default room contents — same as the home page hero room */
+/**
+ * Default room contents — same as the home page hero room.
+ * 가구는 책상 + 의자 2개만 — 좌표는 home-illustrations.tsx 의 floorTopY 기준으로
+ * 마름모 바닥 안에 안착하도록 산정되어 있다.
+ */
 export const DEFAULT_ROOM: PlacedFurniture[] = [
-  { id: "wall-1", kind: "wall", variant: "03", flipped: false, x: 70, y: 50, width: 100 },
-  { id: "bookshelf-1", kind: "bookshelf", variant: "01", flipped: false, x: 60, y: 70, width: 65 },
-  { id: "desk-1", kind: "desk", variant: "01", flipped: false, x: 35, y: 150, width: 170 },
-  { id: "chair-1", kind: "chair", variant: "01", flipped: true, x: 275, y: 195, width: 95 },
+  { id: "desk-1", kind: "desk", variant: "01", flipped: false, x: 117, y: 135, width: 107 },
+  { id: "chair-1", kind: "chair", variant: "01", flipped: true, x: 248, y: 188, width: 55 },
 ];
 
 export function furnitureSrc(item: PlacedFurniture | { kind: FurnitureKind; variant: string; flipped: boolean }): string {

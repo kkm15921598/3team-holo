@@ -1,15 +1,28 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BADGES } from "@/shared/mock/data";
 import { getBadgeById } from "@/badge";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { setEquippedBadgeId as storeSetBadge } from "@/shared/stores/profile-store";
+import {
+  useAccountStats,
+  getBadgeAcquiredDate,
+} from "@/shared/stores/account-stats-store";
+import { saveChoice } from "@/shared/stores/account-choices-store";
 
 export function MyBadgesScreen() {
   const navigate = useNavigate();
   const profile = useProfile();
+  const stats = useAccountStats();
   const [equippedId, setEquippedId] = useState<string>(profile.equippedBadgeId);
   const [modal, setModal] = useState<{ id: string; isAcquired: boolean } | null>(null);
+
+  // 실제 획득한 뱃지 집합 — account-stats-store 의 acquiredBadgeIds 가 출처.
+  // 장착 뱃지는 반드시 acquired 안에 들어 있어야 한다.
+  const unlockedSet = useMemo(
+    () => new Set(stats.acquiredBadgeIds),
+    [stats.acquiredBadgeIds],
+  );
 
   const equipped = BADGES.find((b) => b.id === equippedId)!;
   const equippedImg = getBadgeById(equippedId);
@@ -23,7 +36,7 @@ export function MyBadgesScreen() {
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">나의 뱃지</span>
-        <span className="ml-auto text-[13px] text-holo-ink-3">총 {BADGES.length}개</span>
+        <span className="ml-auto text-[13px] text-holo-ink-3">{stats.acquiredBadgeIds.length} / {BADGES.length}개</span>
       </header>
 
       {/* 현재 장착 뱃지 */}
@@ -43,7 +56,7 @@ export function MyBadgesScreen() {
       <section className="mt-4 px-4">
         <div className="grid grid-cols-3 gap-3">
           {BADGES.map((b) => {
-            const acquired = !!b.date;
+            const acquired = unlockedSet.has(b.id);
             const isEquipped = b.id === equippedId;
             const img = getBadgeById(b.id);
             return (
@@ -77,7 +90,9 @@ export function MyBadgesScreen() {
                   {b.label}
                 </span>
                 <span className="text-[10px] text-holo-ink-4">
-                  {acquired ? b.date : "미획득"}
+                  {acquired
+                    ? (getBadgeAcquiredDate(b.id) ?? b.date ?? "")
+                    : "미획득"}
                 </span>
               </button>
             );
@@ -109,10 +124,20 @@ export function MyBadgesScreen() {
 
             {modal.isAcquired ? (
               <>
-                <p className="mt-1 text-[12px] text-holo-ink-3">획득일 {modalBadge.date}</p>
+                {(() => {
+                  const d = getBadgeAcquiredDate(modalBadge.id) ?? modalBadge.date;
+                  return d ? (
+                    <p className="mt-1 text-[12px] text-holo-ink-3">획득일 {d}</p>
+                  ) : null;
+                })()}
                 <button
                   type="button"
-                  onClick={() => { setEquippedId(modalBadge.id); storeSetBadge(modalBadge.id); setModal(null); }}
+                  onClick={() => {
+                    setEquippedId(modalBadge.id);
+                    storeSetBadge(modalBadge.id);
+                    saveChoice("equippedBadgeId", modalBadge.id);
+                    setModal(null);
+                  }}
                   disabled={equippedId === modalBadge.id}
                   className={`mt-4 h-[46px] w-full rounded-holo-pill text-[14px] font-semibold transition ${
                     equippedId === modalBadge.id

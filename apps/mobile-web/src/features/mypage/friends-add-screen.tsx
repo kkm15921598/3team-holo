@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 import { addFriendByNickname, isFriend } from "./friends-store";
+import { awardXp } from "@/shared/stores/xp-store";
 
 export function FriendsAddScreen() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export function FriendsAddScreen() {
       showToast("친구를 추가할 수 없어요.");
       return;
     }
+    awardXp("friend");
     showToast(`${nick}님을 친구로 추가했어요.`);
     setInput("");
     window.setTimeout(() => navigate("/mypage/friends", { replace: true }), 600);

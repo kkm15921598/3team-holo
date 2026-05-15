@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -25,6 +26,7 @@ export function ManagedList({
   items: Post[];
   onDelete: (ids: string[]) => void;
 }) {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -79,7 +81,13 @@ export function ManagedList({
               <li key={p.id}>
                 <button
                   type="button"
-                  onClick={() => (manage ? toggle(p.id) : null)}
+                  onClick={() => {
+                    if (manage) {
+                      toggle(p.id);
+                    } else {
+                      navigate(`/board/${p.id}`);
+                    }
+                  }}
                   className={`relative flex w-full items-start gap-3 rounded-holo-card bg-white p-4 text-left shadow-holo-card ${
                     manage && on ? "ring-2 ring-holo-purple-mid" : ""
                   }`}

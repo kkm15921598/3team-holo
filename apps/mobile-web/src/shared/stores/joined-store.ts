@@ -1,14 +1,14 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * 게시글 좋아요 상태 store.
+ * 모임 참여 상태 store.
  *
- * - 사용자가 board-detail 의 하트 버튼을 누르면 해당 post.id 가 set 에 들어간다.
- * - localStorage 에 영속화되어 다시 열어도 상태가 유지된다.
- * - mypage 의 "좋아요" 목록 화면도 같은 store 를 구독한다.
+ * - 게시글 상세에서 "함께하기" 버튼을 누르면 해당 post.id 가 set 에 추가된다.
+ * - 한 번 추가된 id 는 풀지 않는다 — 페이지를 떠났다가 다시 들어와도 "모임 참여중" 상태가 유지.
+ * - localStorage 에 영속화되어 새로고침 후에도 유지된다.
  */
 
-const STORAGE_KEY = "holo:likes:v1";
+const STORAGE_KEY = "holo:joined:v1";
 
 function loadInitial(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -40,37 +40,29 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-export function isPostLiked(id: string): boolean {
+export function isPostJoined(id: string): boolean {
   return state.has(id);
 }
 
-export function togglePostLike(id: string): boolean {
+/**
+ * 참여 추가. 이미 참여 중이면 no-op.
+ * 일부러 "취소" API 는 제공하지 않는다 — 한 번 누른 참여중 상태는 풀리지 않아야 한다.
+ */
+export function joinPost(id: string): void {
+  if (state.has(id)) return;
   const next = new Set(state);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  state = next;
-  persist();
-  emit();
-  return state.has(id);
-}
-
-export function setPostLiked(id: string, liked: boolean): void {
-  const has = state.has(id);
-  if (has === liked) return;
-  const next = new Set(state);
-  if (liked) next.add(id);
-  else next.delete(id);
+  next.add(id);
   state = next;
   persist();
   emit();
 }
 
-export function getLikedIds(): string[] {
+export function getJoinedIds(): string[] {
   return [...state];
 }
 
-/** 좋아요 set 전체 교체 — 테스트 계정 시드 / 리셋 시 사용 */
-export function setLikedIds(ids: string[]): void {
+/** 참여 set 전체 교체 — 테스트 계정 시드 / 리셋 시 사용 */
+export function setJoinedIds(ids: string[]): void {
   state = new Set(ids);
   persist();
   emit();
@@ -84,7 +76,7 @@ const subscribe = (cb: () => void) => {
 };
 const snapshot = () => state;
 
-/** 좋아요 누른 post.id 의 Set 을 React 컴포넌트에서 구독 */
-export function useLikedSet(): Set<string> {
+/** 참여한 post.id 의 Set 을 React 컴포넌트에서 구독 */
+export function useJoinedSet(): Set<string> {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }

@@ -1,12 +1,31 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { POSTS } from "@/shared/mock/data";
 import { ManagedList } from "./managed-list";
+import {
+  removeViewedPosts,
+  useViewedEntries,
+} from "@/shared/stores/viewed-posts-store";
 
 export function RecentPostsScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
-  const [recent, setRecent] = useState(() => POSTS.slice(0, 5));
+  const viewedEntries = useViewedEntries();
+
+  // store 의 viewed 엔트리(최근순)에 해당하는 게시글만 노출.
+  // 가입 직후엔 비어 있고, 게시글을 누를 때마다 한 줄씩 쌓이며 가장 최근에 본 글이 맨 위로 온다.
+  const items = useMemo(
+    () =>
+      viewedEntries
+        .map((e) => POSTS.find((p) => p.id === e.id))
+        .filter((p): p is (typeof POSTS)[number] => !!p),
+    [viewedEntries],
+  );
+
+  const handleDelete = (ids: string[]) => {
+    removeViewedPosts(ids);
+  };
+
   return (
     <main className="flex flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center px-4">
@@ -19,8 +38,8 @@ export function RecentPostsScreen() {
         title="최근 본 글"
         manage={manage}
         onToggleManage={() => setManage((v) => !v)}
-        items={recent}
-        onDelete={(ids) => setRecent((prev) => prev.filter((p) => !ids.includes(p.id)))}
+        items={items}
+        onDelete={handleDelete}
       />
     </main>
   );

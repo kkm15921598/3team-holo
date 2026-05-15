@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { PostLocation } from "@/shared/mock/data";
 import { LocationPicker } from "@/features/map/post-map";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { awardXp } from "@/shared/stores/xp-store";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
 
@@ -57,6 +59,7 @@ export function BoardWriteScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const incomingState = (location.state as WriteLocationState) ?? null;
+  const profile = useProfile();
 
   // Capture initial values once for dirty detection.
   const [initialTitle] = useState<string>(incomingState?.title ?? "");
@@ -147,6 +150,8 @@ export function BoardWriteScreen() {
   const isLongTerm = meetupType === "장기성 모임";
   const dateLabel = isLongTerm ? `${date} ~ ${endDate}` : date;
   const peopleLabel = peopleCount !== null ? `${peopleCount}명` : "인원 수";
+  // 자유게시판/추천해요는 모임이 아닌 일반 글 — 모임유형/인원수/날짜 입력을 숨긴다.
+  const isSimpleCategory = category === "자유게시판" || category === "추천해요";
 
   const cameFromDraft = !!incomingState?.draftId;
   const cameFromEdit = !!incomingState?.postId;
@@ -220,14 +225,16 @@ export function BoardWriteScreen() {
         likes: 0,
         comments: 0,
         timeAgo: "방금 전",
-        authorNickname: "무지는 단무지",
+        authorNickname: profile.nickname,
         authorLevel: 24,
-        meetupType: meetupType ?? undefined,
-        eventDate: date,
-        peopleCount,
+        meetupType: isSimpleCategory ? undefined : (meetupType ?? undefined),
+        eventDate: isSimpleCategory ? undefined : date,
+        peopleCount: isSimpleCategory ? null : peopleCount,
         place: postLocation?.placeName ?? incomingState?.place,
         location: postLocation ?? undefined,
       });
+      // 새 게시글 작성 → XP 부여 (일일 cap 적용)
+      awardXp("post");
       if (incomingState?.draftId) {
         draftsStore.remove([incomingState.draftId]);
       }
@@ -335,16 +342,18 @@ export function BoardWriteScreen() {
             </ul>
           )}
 
-          <div className="relative z-20 pt-3">
-            <div className="flex flex-col gap-2 px-5">
-              <div className="flex flex-wrap gap-2">
-                {typePill}
-                {peoplePill}
+          <div className={`relative z-20 ${isSimpleCategory ? "" : "pt-3"}`}>
+            {!isSimpleCategory && (
+              <div className="flex flex-col gap-2 px-5">
+                <div className="flex flex-wrap gap-2">
+                  {typePill}
+                  {peoplePill}
+                </div>
+                <div className="flex flex-wrap gap-2">{datePill}</div>
               </div>
-              <div className="flex flex-wrap gap-2">{datePill}</div>
-            </div>
+            )}
 
-            {openSection === "type" && (
+            {!isSimpleCategory && openSection === "type" && (
               <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 {MEETUP_TYPES.map((t, i) => {
                   const selected = t === meetupType;
@@ -376,7 +385,7 @@ export function BoardWriteScreen() {
               </div>
             )}
 
-            {openSection === "date" && (
+            {!isSimpleCategory && openSection === "date" && (
               <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 {isLongTerm && (
                   <div className="flex border-b border-holo-line text-[12px]">
@@ -513,7 +522,7 @@ export function BoardWriteScreen() {
               </div>
             )}
 
-            {openSection === "people" && (
+            {!isSimpleCategory && openSection === "people" && (
               <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[14px] text-holo-ink">인원 수</span>
@@ -551,7 +560,9 @@ export function BoardWriteScreen() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="제목을 입력해주세요."
-          className="mx-5 mt-4 border-b border-holo-line py-2 text-[16px] outline-none placeholder:text-holo-ink-3"
+          className={`mx-5 border-b border-holo-line py-2 text-[16px] outline-none placeholder:text-holo-ink-3 ${
+            isSimpleCategory ? "mt-3" : "mt-4"
+          }`}
         />
 
         <textarea

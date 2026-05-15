@@ -1,10 +1,23 @@
-import { useNavigate } from "react-router-dom";
-import { CHATROOMS } from "@/shared/mock/data";
-
-const MY_MEETINGS = CHATROOMS.filter((r) => r.isGroup);
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import type { Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
+import { useJoinedSet } from "@/shared/stores/joined-store";
 
 export function MyMeetingsScreen() {
   const navigate = useNavigate();
+  const joinedSet = useJoinedSet();
+  const [allPosts, setAllPosts] = useState<Post[]>(postsStore.getPosts());
+
+  useEffect(() => {
+    return postsStore.subscribe(() => setAllPosts(postsStore.getPosts()));
+  }, []);
+
+  // 사용자가 참여한 게시글만 추출
+  const myMeetings = useMemo(
+    () => allPosts.filter((p) => joinedSet.has(p.id)),
+    [allPosts, joinedSet],
+  );
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -13,67 +26,70 @@ export function MyMeetingsScreen() {
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">모임 참여</span>
-        <span className="ml-auto text-[13px] text-holo-ink-3">총 {MY_MEETINGS.length}개</span>
+        <span className="ml-auto text-[13px] text-holo-ink-3">총 {myMeetings.length}개</span>
       </header>
 
       <section className="mt-1 flex flex-col gap-3 px-4">
-        {MY_MEETINGS.length === 0 ? (
+        {myMeetings.length === 0 ? (
           <div className="mt-16 flex flex-col items-center gap-2 text-center">
             <span className="text-[40px]">🤝</span>
             <p className="text-[15px] font-semibold text-holo-ink">참여한 모임이 없어요</p>
             <p className="text-[13px] text-holo-ink-3">이웃들과 함께하는 모임을 찾아보세요!</p>
           </div>
         ) : (
-          MY_MEETINGS.map((room) => {
-            // 오늘 활동(오전/오후 X:XX)이면 진행 중, 그 외(어제, 날짜)는 종료된 모임으로 간주
-            const isOngoing = /^(오전|오후)\s/.test(room.lastTime);
-            return (
-              <div
-                key={room.id}
-                className={`rounded-[14px] bg-white p-4 ${
-                  isOngoing
-                    ? "border-[1.5px] border-holo-purple-mid"
-                    : "border border-holo-line"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-1 flex-col gap-1 min-w-0">
-                    <span className="truncate text-[15px] font-semibold text-holo-ink">
-                      {room.name}
-                    </span>
-                    <span className="text-[12px] text-holo-ink-3">{room.subtitle}</span>
-                  </div>
+          myMeetings.map((post) => (
+            <Link
+              key={post.id}
+              to={`/board/${post.id}`}
+              className="block rounded-[14px] border border-holo-line bg-white p-4 active:bg-holo-surface-2"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-1 flex-col gap-1 min-w-0">
+                  <span className="truncate text-[15px] font-semibold text-holo-ink">
+                    {post.title}
+                  </span>
+                  <span className="line-clamp-1 text-[12px] text-holo-ink-3">
+                    {post.description}
+                  </span>
+                </div>
+                {post.peopleCount != null && (
                   <span className="shrink-0 rounded-full bg-holo-purple-mid/10 px-2.5 py-1 text-[11px] font-semibold text-holo-purple-mid">
-                    {room.memberCount}명
+                    {post.peopleCount}명
                   </span>
-                </div>
-
-                {room.meeting && (
-                  <div className="mt-3 flex items-center gap-2 rounded-[10px] bg-holo-surface-2 px-3 py-2">
-                    <CalendarIcon />
-                    <span className="text-[12px] text-holo-ink-3">
-                      {room.meeting.date} {room.meeting.time}
-                    </span>
-                    <span className="mx-1 h-3 w-px bg-holo-line" />
-                    <span className="truncate text-[12px] text-holo-ink-3">
-                      {room.meeting.place}
-                    </span>
-                  </div>
                 )}
-
-                <div className="mt-3 flex items-center justify-between">
-                  <span
-                    className={`text-[12px] ${
-                      isOngoing ? "text-holo-ink-3" : "font-medium text-holo-ink-4"
-                    }`}
-                  >
-                    {isOngoing ? room.lastMessage : "종료된 모임입니다."}
-                  </span>
-                  <span className="text-[11px] text-holo-ink-4">{room.lastTime}</span>
-                </div>
               </div>
-            );
-          })
+
+              {(post.eventDate || post.place) && (
+                <div className="mt-3 flex items-center gap-2 rounded-[10px] bg-holo-surface-2 px-3 py-2">
+                  {post.eventDate && (
+                    <>
+                      <CalendarIcon />
+                      <span className="text-[12px] text-holo-ink-3">
+                        {post.eventDate}
+                      </span>
+                    </>
+                  )}
+                  {post.eventDate && post.place && (
+                    <span className="mx-1 h-3 w-px bg-holo-line" />
+                  )}
+                  {post.place && (
+                    <span className="truncate text-[12px] text-holo-ink-3">
+                      {post.place}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[12px] text-holo-ink-3">
+                  {post.authorNickname} · {post.timeAgo}
+                </span>
+                <span className="text-[11px] font-semibold text-holo-purple-mid">
+                  참여중
+                </span>
+              </div>
+            </Link>
+          ))
         )}
       </section>
     </main>

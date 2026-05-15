@@ -49,6 +49,15 @@ export function addRoom(room: ChatRoom) {
   setRooms((prev) => [room, ...prev]);
 }
 
+/**
+ * "모임" 카테고리(group + meeting 정보 있는) 방을 전부 제거.
+ * 테스트 계정 시드 시 mock CHATROOMS 의 모임 방을 비우고
+ * 사용자가 실제로 참여한 게시글의 채팅방만 남기기 위해 사용.
+ */
+export function clearMeetupRooms() {
+  setRooms((prev) => prev.filter((r) => !(r.isGroup && !!r.meeting)));
+}
+
 // 그룹방에 멤버 추가 (초대)
 export function addMembersToRoom(id: string, nicknames: string[]) {
   setRooms((prev) =>

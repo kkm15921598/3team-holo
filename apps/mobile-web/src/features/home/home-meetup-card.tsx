@@ -21,8 +21,10 @@ export function MeetupCard({ m }: { m: Meetup }) {
   const extra = total - visible.length;
 
   return (
-    <article
-      className="relative h-[153px] w-[169px] min-w-[169px] shrink-0 rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px]"
+    <Link
+      to={`/board/${m.id}`}
+      aria-label={`${m.title} 게시글로 이동`}
+      className="relative block h-[153px] w-[169px] min-w-[169px] shrink-0 rounded-[10px] bg-holo-lilac-card-2 px-[14px] pb-[13px] pt-[15px] transition-colors active:bg-holo-lilac-card"
     >
       <div className="line-clamp-1 break-keep pr-[40px] text-[16px] font-bold text-holo-ink">
         {m.title}
@@ -33,15 +35,14 @@ export function MeetupCard({ m }: { m: Meetup }) {
       <p className="mt-[10px] line-clamp-2 text-[13px] leading-[1.45] text-[#333]">
         {m.description}
       </p>
-      <Link
-        to={`/board/${m.id}`}
-        aria-label={`${m.title} 게시글로 이동`}
-        className="absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light transition-colors hover:bg-holo-purple-mid"
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-[13px] top-[13px] flex h-[33px] w-[33px] items-center justify-center rounded-full bg-holo-lilac-light"
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
           <path d="M3 11L11 3M11 3H5M11 3V9" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      </Link>
+      </span>
       <div className="absolute bottom-[13px] left-[14px] flex">
         {visible.map((p, i) => (
           <img
@@ -63,7 +64,7 @@ export function MeetupCard({ m }: { m: Meetup }) {
           </span>
         )}
       </div>
-    </article>
+    </Link>
   );
 }
 

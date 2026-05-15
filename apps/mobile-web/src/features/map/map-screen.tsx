@@ -4,23 +4,47 @@ import { POSTS, type Post } from "@/shared/mock/data";
 import { MapView } from "./post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
+import {
+  useGeolocation,
+  distanceMeters,
+  type GeoPosition,
+} from "@/shared/hooks/use-geolocation";
+
+/** 지도에서 노출되는 게시글의 최대 반경 — 정책 텍스트와 일치시킨다. */
+const NEARBY_RADIUS_M = 1000;
 
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
 
-function filterPosts(filter: Filter): Post[] {
-  const withLocation = POSTS.filter((p) => !!p.location);
-  if (filter === "전체") return withLocation;
-  if (filter === "지금바로") return withLocation.filter((p) => p.status === "모집중");
-  return withLocation.filter((p) => p.status === "모집완료");
+function filterPosts(filter: Filter, userPos: GeoPosition | null): Post[] {
+  let list = POSTS.filter((p) => !!p.location);
+  // GPS 있을 때만 거리 필터링 — 아직 fix 가 없으면 전체 표시
+  if (userPos) {
+    list = list.filter((p) => {
+      if (!p.location) return false;
+      return distanceMeters(userPos, p.location) <= NEARBY_RADIUS_M;
+    });
+  }
+  // 모임 유형 필터: 지금바로=단기성, 계속 함께=장기성
+  if (filter === "지금바로") {
+    return list.filter((p) => p.meetupType === "단기성 모임");
+  }
+  if (filter === "계속 함께") {
+    return list.filter((p) => p.meetupType === "장기성 모임");
+  }
+  return list;
 }
 
 export function MapScreen() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("전체");
   const [expanded, setExpanded] = useState(false);
+  const userPos = useGeolocation();
 
-  const visiblePosts = useMemo(() => filterPosts(filter), [filter]);
+  const visiblePosts = useMemo(
+    () => filterPosts(filter, userPos),
+    [filter, userPos],
+  );
 
   // ESC로 모달 닫기
   useEffect(() => {
@@ -97,31 +121,26 @@ export function MapScreen() {
 
   return (
     <main className="relative flex flex-1 flex-col overflow-x-clip">
-      {/* 지도 미리보기 — 클릭 시 확장 (button 대신 div: leaflet 내부 panes 사이즈 계산이 button child일 때 어긋남) */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setExpanded(true)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setExpanded(true);
-          }
-        }}
-        aria-label="지도 크게 보기"
-        className="relative mx-4 mt-3 h-[290px] cursor-pointer overflow-hidden rounded-holo-tile shadow-[0_4px_20px_rgba(84,43,180,0.10)]"
-      >
-        <MapView preview visiblePosts={visiblePosts} />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute right-2 top-2 z-[400] flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow"
+      {/* 지도 미리보기 — 드래그/줌 가능. 확장은 우상단 아이콘 버튼으로만. */}
+      <div className="relative mx-4 mt-3 h-[290px] overflow-hidden rounded-holo-tile shadow-[0_4px_20px_rgba(84,43,180,0.10)]">
+        <MapView
+          preview
+          visiblePosts={visiblePosts}
+          onMarkerClick={goToPost}
+          initialCenter={userPos ?? undefined}
+        />
+        <button
+          type="button"
+          aria-label="지도 크게 보기"
+          onClick={() => setExpanded(true)}
+          className="absolute right-2 top-2 z-[400] flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow transition active:scale-95"
         >
           <ExpandIcon />
-        </span>
+        </button>
       </div>
 
       <p className="mt-2 px-4 text-center text-[12px] font-medium text-holo-ink-4">
-        ※ 정책상 반경 50m 거리 내 위치만 표시됩니다
+        ※ 정책상 반경 1km 거리 내 위치만 표시됩니다
       </p>
 
       {/* 필터 */}
@@ -266,6 +285,7 @@ export function MapScreen() {
                 preview={false}
                 visiblePosts={visiblePosts}
                 onMarkerClick={handleMarkerClick}
+                initialCenter={userPos ?? undefined}
               />
             </div>
           </div>

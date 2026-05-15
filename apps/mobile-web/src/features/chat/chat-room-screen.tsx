@@ -26,8 +26,8 @@ import {
 } from "./messages-store";
 import { getAvatarUrl } from "./avatars";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
-import { MY_LOCATION } from "@/shared/mock/data";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { getProfile } from "@/shared/stores/profile-store";
 
 type ReplyTarget = { nickname: string; content: string } | null;
 
@@ -38,7 +38,9 @@ type Member = { id: string; nickname: string; isMe: boolean; isHost: boolean; is
  * ME_PERSONA.face 이미지를 쓰고, 그 외는 닉네임 시드 기반 아바타로 폴백한다.
  */
 function memberAvatarSrc(nickname: string): string {
-  if (nickname === ME_PERSONA.name) return ME_PERSONA.face;
+  if (nickname === ME_PERSONA.name) {
+    return getProfile().profileFace ?? ME_PERSONA.face;
+  }
   return getAvatarUrl(nickname);
 }
 
@@ -463,8 +465,7 @@ export function ChatRoomScreen() {
 
   const useMyCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
-      // geolocation 미지원 — mock의 내 위치로 대체
-      setLocDraftPick({ lat: MY_LOCATION.lat, lng: MY_LOCATION.lng });
+      // geolocation 미지원 — 사용자가 지도에서 직접 위치를 선택하도록 유지
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -473,8 +474,7 @@ export function ChatRoomScreen() {
         setLocDraftPick({ lat: latitude, lng: longitude });
       },
       () => {
-        // 권한 거부/실패 시 mock 위치로 대체
-        setLocDraftPick({ lat: MY_LOCATION.lat, lng: MY_LOCATION.lng });
+        // 권한 거부/실패 — mock 좌표로 떨구지 않고 picking 상태 유지
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );

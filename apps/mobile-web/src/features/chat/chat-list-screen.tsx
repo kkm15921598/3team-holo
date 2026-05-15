@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FRIENDS, type ChatRoom } from "@/shared/mock/data";
 import {
   addRoom,
@@ -17,8 +17,20 @@ type Filter = "all" | "unread" | "groups" | "meetings";
 export function ChatListScreen() {
   const navigate = useNavigate();
   const allRooms = useRooms();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  // 필터 상태를 URL 의 ?tab= 으로 동기화 — 채팅방 들어갔다 뒤로가도 마지막 탭 복원
+  const tabParam = searchParams.get("tab");
+  const filter: Filter =
+    tabParam === "unread" || tabParam === "groups" || tabParam === "meetings"
+      ? tabParam
+      : "all";
+  const setFilter = (next: Filter) => {
+    const sp = new URLSearchParams(searchParams);
+    if (next === "all") sp.delete("tab");
+    else sp.set("tab", next);
+    setSearchParams(sp, { replace: true });
+  };
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);

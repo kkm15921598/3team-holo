@@ -1,14 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
-
-const MOCK_NAME = "홍길동";
-const MOCK_PHONE = "01012345678";
-
-const MOCK_FOUND = {
-  id: "test1234",
-  joinedAt: "2024.03.15",
-};
+import { findAccountByNameAndPhone, type TestAccount } from "@/shared/mock/test-accounts";
 
 export function FindIdScreen() {
   const navigate = useNavigate();
@@ -16,8 +9,9 @@ export function FindIdScreen() {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
-  const [foundId, setFoundId] = useState<string | null>(null);
+  const [foundAccount, setFoundAccount] = useState<TestAccount | null>(null);
   const [error, setError] = useState("");
+  const foundId = foundAccount?.id ?? null;
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent && !foundId);
 
@@ -42,8 +36,9 @@ export function FindIdScreen() {
       return;
     }
 
-    if (name.trim() === MOCK_NAME && phone === MOCK_PHONE && code === "123456") {
-      setFoundId(MOCK_FOUND.id);
+    const account = findAccountByNameAndPhone(name, phone);
+    if (account && code === "123456") {
+      setFoundAccount(account);
     } else {
       setError("일치하는 정보를 찾을 수 없습니다.");
     }
@@ -80,7 +75,7 @@ export function FindIdScreen() {
             <div className="mt-4 flex items-center gap-2 rounded-full bg-white/70 px-3 py-1">
               <CalendarIcon />
               <span className="text-[12px] text-holo-ink-3">
-                <span className="text-holo-ink">{MOCK_FOUND.joinedAt}</span> 가입
+                <span className="text-holo-ink">{foundAccount?.joinedAt}</span> 가입
               </span>
             </div>
           </div>

@@ -84,6 +84,16 @@ export function BoardSearchScreen() {
             const q = keyword.trim();
             const params = new URLSearchParams();
             if (q) params.set("q", q);
+            // 성별 필터: "남자" / "여자" 만 단일 선택했을 때 적용
+            // "상관없음" 또는 미선택은 필터 없음
+            const genderSet = selected["gender"];
+            if (genderSet) {
+              const picks = [...genderSet];
+              if (picks.length === 1) {
+                if (picks[0] === "남자") params.set("gender", "M");
+                else if (picks[0] === "여자") params.set("gender", "F");
+              }
+            }
             const query = params.toString();
             navigate(query ? `/board/list?${query}` : "/board/list");
           }}

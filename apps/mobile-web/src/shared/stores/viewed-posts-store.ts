@@ -1,0 +1,97 @@
+import { useSyncExternalStore } from "react";
+
+/**
+ * 사용자가 실제로 클릭해서 본 게시글의 id 와 마지막 조회 시각을 영속화한다.
+ *
+ * - "최근 본 글" 마이페이지에 노출될 목록의 원천.
+ * - 같은 글을 다시 보면 viewedAt 만 갱신되어 목록 상단으로 올라간다.
+ * - 가입 직후 사용자에겐 비어 있고, 글을 누를 때마다 하나씩 쌓인다.
+ */
+
+const STORAGE_KEY = "holo:viewed-posts:v1";
+const MAX_ENTRIES = 50;
+
+export type ViewedEntry = {
+  id: string;
+  viewedAt: number; // unix ms
+};
+
+function loadInitial(): ViewedEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as ViewedEntry[];
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+let state: ViewedEntry[] = loadInitial();
+const listeners = new Set<() => void>();
+
+function persist() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+function emit() {
+  listeners.forEach((l) => l());
+}
+
+/**
+ * post 를 봤다고 기록. 이미 기록되어 있으면 viewedAt 만 갱신해 가장 최근으로.
+ * 최대 MAX_ENTRIES 까지만 유지 — 가장 오래된 항목부터 잘려나감.
+ */
+export function markPostViewed(id: string): void {
+  const now = Date.now();
+  const next = state.filter((e) => e.id !== id);
+  next.unshift({ id, viewedAt: now });
+  state = next.slice(0, MAX_ENTRIES);
+  persist();
+  emit();
+}
+
+/** 마이페이지 관리 삭제 — 지정한 id 들을 viewed 목록에서 제거 */
+export function removeViewedPosts(ids: string[]): void {
+  const set = new Set(ids);
+  state = state.filter((e) => !set.has(e.id));
+  persist();
+  emit();
+}
+
+/** 가장 최근에 본 순서대로 id 배열 반환 */
+export function getViewedIdsByRecency(): string[] {
+  return state.map((e) => e.id);
+}
+
+/**
+ * viewed 엔트리 전체 교체 — 테스트 계정 시드 시 사용.
+ * 입력 배열의 0번 인덱스가 가장 최근, 마지막이 가장 오래된 것.
+ */
+export function setViewedIds(ids: string[]): void {
+  const now = Date.now();
+  state = ids.map((id, i) => ({ id, viewedAt: now - i * 1000 }));
+  persist();
+  emit();
+}
+
+const subscribe = (cb: () => void) => {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+};
+const snapshot = () => state;
+
+/** viewed 엔트리 전체를 React 컴포넌트에서 구독 (최근순) */
+export function useViewedEntries(): ViewedEntry[] {
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
+}

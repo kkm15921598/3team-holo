@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { COMMENTS, ME, POST_COMMENTS, type Post } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
@@ -6,8 +6,13 @@ import { StatusBadge } from "./board-list-screen";
 import { LocationMap } from "@/features/map/post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { useProfile } from "@/shared/hooks/use-profile";
 import { calcJoined, ensureMeetupRoom } from "./meetup-utils";
 import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
+import { joinPost, useJoinedSet } from "@/shared/stores/joined-store";
+import { addComment, useUserComments } from "@/shared/stores/comments-store";
+import { markPostViewed } from "@/shared/stores/viewed-posts-store";
+import { awardXp } from "@/shared/stores/xp-store";
 
 type CommentReply = {
   id: string;
@@ -39,6 +44,7 @@ export function BoardDetailScreen() {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
   }, []);
   const post = posts.find((p) => p.id === id) ?? posts[0];
+  const profile = useProfile();
 
   // Mock-only display fields not present on the Post type.
   const place = post.place ?? post.location?.placeName ?? "미금역 사거리";
@@ -48,13 +54,54 @@ export function BoardDetailScreen() {
   // Interactive state — 좋아요는 likes-store 에서 영속화된 상태를 사용
   const likedSet = useLikedSet();
   const liked = likedSet.has(post.id);
-  const [joining, setJoining] = useState(false);
+  // 참여 상태는 joined-store 에서 읽는다 — localStorage 영속화 + 한 번 참여하면 풀리지 않음
+  const joinedSet = useJoinedSet();
+  const joining = joinedSet.has(post.id);
   const [commentText, setCommentText] = useState("");
   // Pull context-appropriate comments per post if present, fall back to COMMENTS.
   const initialComments = POST_COMMENTS[post.id] ?? COMMENTS;
-  const [comments, setComments] = useState<CommentThread[]>(() =>
-    initialComments.map((c) => ({ ...c, replies: [] })),
-  );
+  // 사용자가 작성한 댓글/대댓글은 store 에서 가져와 mock 과 합친다.
+  const userComments = useUserComments();
+  const comments = useMemo<CommentThread[]>(() => {
+    const parents: CommentThread[] = initialComments.map((c) => ({
+      id: c.id,
+      nickname: c.nickname,
+      content: c.content,
+      timeAgo: c.timeAgo,
+      replies: [],
+    }));
+    const myForThisPost = userComments.filter((c) => c.postId === post.id);
+    // 사용자가 단 일반 댓글들을 뒤에 붙인다.
+    for (const c of myForThisPost) {
+      if (!c.parentId) {
+        parents.push({
+          id: c.id,
+          nickname: c.nickname,
+          content: c.content,
+          timeAgo: c.timeAgo,
+          replies: [],
+        });
+      }
+    }
+    // 대댓글들을 부모 아래로 정렬해서 붙인다.
+    for (const r of myForThisPost) {
+      if (!r.parentId) continue;
+      const parent = parents.find((p) => p.id === r.parentId);
+      if (!parent) continue;
+      parent.replies.push({
+        id: r.id,
+        nickname: r.nickname,
+        content: r.content,
+        timeAgo: r.timeAgo,
+        isAuthor: r.isAuthor,
+        hasMap: r.hasMap,
+        hasPhoto: r.hasPhoto,
+      });
+    }
+    return parents;
+    // initialComments 는 mock 상수라 매 렌더마다 새 배열일 수 있어 의존성에 넣지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userComments, post.id]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyHasPhoto, setReplyHasPhoto] = useState(false);
@@ -62,8 +109,14 @@ export function BoardDetailScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [showJoinBanner, setShowJoinBanner] = useState(false);
+  const [showNotJoinedAlert, setShowNotJoinedAlert] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // 게시글 진입 시 "최근 본 글" 에 기록 (마이페이지 목록의 원천)
+  useEffect(() => {
+    if (post?.id) markPostViewed(post.id);
+  }, [post?.id]);
 
   // Close dots menu on outside click.
   useEffect(() => {
@@ -82,41 +135,43 @@ export function BoardDetailScreen() {
   const joined = Math.min(capacity, baseJoined + (joining ? 1 : 0));
   const displayStatus: "모집중" | "모집완료" =
     joined >= capacity ? "모집완료" : "모집중";
-  const totalComments =
-    post.comments + comments.reduce((acc, c) => acc + c.replies.length, 0);
+  // 실제 렌더링되는 댓글 + 대댓글 수 — post.comments(mock 카운트) 가 아니라
+  // 화면에 보이는 항목과 일치시킨다.
+  const totalComments = comments.reduce(
+    (acc, c) => acc + 1 + c.replies.length,
+    0,
+  );
   const hasCommentText = commentText.trim().length > 0;
   const hasReplyText = replyText.trim().length > 0;
   const isMine = post.authorNickname === ME.nickname;
 
   const handleSendComment = () => {
     if (!hasCommentText) return;
-    const next: CommentThread = {
+    addComment({
       id: `c-${Date.now()}`,
+      postId: post.id,
       nickname: ME.nickname,
       content: commentText.trim(),
       timeAgo: "방금 전",
-      replies: [],
-    };
-    setComments((prev) => [...prev, next]);
+    });
+    awardXp("comment");
     setCommentText("");
   };
 
   const handleSendReply = (parentId: string) => {
     if (!hasReplyText && !replyHasPhoto && !replyHasMap) return;
-    const reply: CommentReply = {
+    addComment({
       id: `r-${Date.now()}`,
+      postId: post.id,
+      parentId,
       nickname: ME.nickname,
       content: replyText.trim(),
       timeAgo: "방금 전",
       isAuthor: ME.nickname === post.authorNickname,
       hasMap: replyHasMap,
       hasPhoto: replyHasPhoto,
-    };
-    setComments((prev) =>
-      prev.map((c) =>
-        c.id === parentId ? { ...c, replies: [...c.replies, reply] } : c,
-      ),
-    );
+    });
+    awardXp("comment");
     // Keep replyingTo open so the user can add multiple replies in a row.
     setReplyText("");
     setReplyHasPhoto(false);
@@ -124,16 +179,17 @@ export function BoardDetailScreen() {
   };
 
   const handleJoinClick = () => {
-    // If already at capacity (and user has not yet joined), show alert instead.
-    if (!joining && baseJoined >= capacity) {
+    // 이미 참여 중이면 더 이상 토글되지 않음 — 풀리지 않게 무시
+    if (joining) return;
+    // 모집 정원이 다 찼으면 안내
+    if (baseJoined >= capacity) {
       setShowFullAlert(true);
       return;
     }
-    setJoining((p) => {
-      const next = !p;
-      if (next) setShowJoinBanner(true);
-      return next;
-    });
+    joinPost(post.id);
+    ensureMeetupRoom(post);
+    awardXp("join");
+    setShowJoinBanner(true);
   };
 
   const handleEdit = () => {
@@ -185,6 +241,11 @@ export function BoardDetailScreen() {
           <button
             type="button"
             onClick={() => {
+              // 배너가 어떻게든 남아있더라도 실제 참여 상태가 아니면 진입 차단
+              if (!joining) {
+                setShowNotJoinedAlert(true);
+                return;
+              }
               const roomId = ensureMeetupRoom(post);
               navigate(`/chat/${roomId}`);
             }}
@@ -211,7 +272,7 @@ export function BoardDetailScreen() {
           <img
             src={
               post.authorNickname === ME.nickname
-                ? ME_PERSONA.face
+                ? (profile.profileFace ?? ME_PERSONA.face)
                 : getAvatarUrl(post.authorNickname)
             }
             alt={post.authorNickname}
@@ -225,7 +286,7 @@ export function BoardDetailScreen() {
             {post.authorNickname}
           </span>
 
-          <div ref={menuRef} className="relative ml-auto">
+          <div ref={menuRef} className="relative z-[1000] ml-auto">
             <button
               type="button"
               aria-label="더보기"
@@ -236,7 +297,7 @@ export function BoardDetailScreen() {
               <DotsIcon />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-30 mt-1 w-[150px] overflow-hidden rounded-[12px] border border-holo-lilac-soft bg-white shadow-holo-card">
+              <div className="absolute right-0 top-full z-[1001] mt-1 w-[150px] overflow-hidden rounded-[12px] border border-holo-lilac-soft bg-white shadow-holo-card">
                 {menuItems.map((item, i) => (
                   <button
                     key={item.key}
@@ -378,10 +439,10 @@ export function BoardDetailScreen() {
         )}
 
         {/* Comments — every comment is wrapped with 20px top/bottom padding and a bottom divider line.
-            For simple posts (자유게시판/추천해요) the gray line sits 40px below the body per spec. */}
+            simple 카테고리(자유/추천)는 stats row 와 댓글 사이 간격을 16px 로 좁힌다. */}
         <div
           className={`${
-            isSimple ? "mt-[40px]" : "mt-3"
+            isSimple ? "mt-4" : "mt-3"
           } h-px w-full bg-holo-surface-3`}
         />
 
@@ -399,7 +460,7 @@ export function BoardDetailScreen() {
                       setReplyHasPhoto(false);
                       setReplyHasMap(false);
                     }}
-                    className="w-full py-[20px] text-left"
+                    className="w-full py-3 text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] font-semibold text-holo-ink">
@@ -416,7 +477,7 @@ export function BoardDetailScreen() {
 
                   {/* Replies — indented with arrow + vertical line */}
                   {c.replies.map((r) => (
-                    <div key={r.id} className="border-l-2 border-holo-lilac-soft pl-3 pb-[20px] ml-2">
+                    <div key={r.id} className="border-l-2 border-holo-lilac-soft pl-3 pb-3 ml-2">
                       <div className="flex items-start gap-1">
                         <ReplyArrowIcon />
                         <div className="flex-1">
@@ -457,7 +518,7 @@ export function BoardDetailScreen() {
 
                   {/* Inline reply input — supports photo / map attachments. */}
                   {isReplying && (
-                    <div className="ml-2 border-l-2 border-holo-lilac-soft pl-3 pb-[20px]">
+                    <div className="ml-2 border-l-2 border-holo-lilac-soft pl-3 pb-3">
                       <div className="flex flex-col gap-2">
                         <div className="relative">
                           <input
@@ -475,7 +536,7 @@ export function BoardDetailScreen() {
                             className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors ${
                               hasReplyText || replyHasPhoto || replyHasMap
                                 ? "bg-[#7448DD] text-white"
-                                : "bg-holo-line-3 text-white"
+                                : "bg-holo-line-3 text-holo-ink-2"
                             }`}
                           >
                             <SendIcon />
@@ -545,8 +606,8 @@ export function BoardDetailScreen() {
               type="submit"
               aria-label="전송"
               disabled={!hasCommentText}
-              className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
-                hasCommentText ? "text-[#7448DD]" : "text-holo-ink-3"
+              className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full transition-colors ${
+                hasCommentText ? "bg-[#7448DD] text-white" : "bg-holo-line-3 text-holo-ink-2"
               }`}
             >
               <SendIcon />
@@ -571,6 +632,30 @@ export function BoardDetailScreen() {
             <button
               type="button"
               onClick={() => setShowFullAlert(false)}
+              className="mt-4 w-full rounded-full bg-holo-purple-mid px-3 py-2 text-[13px] font-medium text-white"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 미참여 상태에서 "채팅방으로 이동" 누른 경우 안내 */}
+      {showNotJoinedAlert && (
+        <div
+          className="fixed left-1/2 top-0 z-50 flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 items-center justify-center bg-black/40 px-6"
+          onClick={() => setShowNotJoinedAlert(false)}
+        >
+          <div
+            className="w-full max-w-[300px] rounded-2xl bg-white p-5 text-center shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[14px] leading-relaxed text-holo-ink">
+              모임에 참여하지 않았습니다.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowNotJoinedAlert(false)}
               className="mt-4 w-full rounded-full bg-holo-purple-mid px-3 py-2 text-[13px] font-medium text-white"
             >
               확인
