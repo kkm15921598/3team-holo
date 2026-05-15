@@ -191,21 +191,35 @@ function emitPoints() {
   pointsListeners.forEach((l) => l());
 }
 
+/** 포인트 적립/차감 사유 — 포인트 이용 내역에 표시될 라벨 */
+export type PointReason = {
+  /** 메인 라벨 (예: "출석체크", "아이템 구매", "글쓰기") */
+  title: string;
+  /** 부가 설명 (예: 가구 이름, 게시글 제목 등) */
+  note?: string;
+};
+
 /** 포인트 차감 (음수 방지). 부족하면 false 리턴 */
-export function spendPoints(amount: number): boolean {
+export function spendPoints(amount: number, reason?: PointReason): boolean {
   if (pointsState < amount) return false;
   pointsState -= amount;
   persistPoints();
   emitPoints();
+  if (reason) {
+    appendPointEvent({ title: reason.title, note: reason.note, amount: -amount });
+  }
   return true;
 }
 
 /** 포인트 적립 (가입 보너스·이벤트 등) */
-export function addPoints(amount: number): void {
+export function addPoints(amount: number, reason?: PointReason): void {
   if (amount <= 0) return;
   pointsState += amount;
   persistPoints();
   emitPoints();
+  if (reason) {
+    appendPointEvent({ title: reason.title, note: reason.note, amount });
+  }
 }
 
 /** 포인트 절대값으로 설정 — 테스트 계정 시드 시 사용 */
@@ -330,4 +344,167 @@ const statusPosSnapshot = () => statusPosState;
 
 export function useStatusPosition(): { x: number; y: number } {
   return useSyncExternalStore(statusPosSubscribe, statusPosSnapshot, statusPosSnapshot);
+}
+
+// ─── 포인트 이용 내역 (History) ────────────────────────────
+/** 포인트가 변동될 때마다 자동으로 누적되는 이용 내역 항목 */
+export type PointEvent = {
+  id: string;
+  /** "YY.MM.DD" 형식 — 화면 표시용 */
+  date: string;
+  /** 메인 라벨 (예: "출석체크", "아이템 구매") */
+  title: string;
+  /** 부가 설명 (예: 가구 이름) */
+  note?: string;
+  /** 적립은 양수, 차감은 음수 */
+  amount: number;
+};
+
+const HISTORY_KEY = "holo:myroom:pointHistory";
+
+/** 화면 시안 재현용 기본 내역 — 신규 동작이 누적되면 최상단에 쌓인다. */
+const DEFAULT_HISTORY: PointEvent[] = [
+  { id: "seed-1", date: "26.04.08", title: "친구 초대", amount: 50 },
+  { id: "seed-2", date: "26.04.07", title: "단기 모임 참여", note: "바퀴 벌레 잡아 주실분", amount: 20 },
+  { id: "seed-3", date: "26.04.01", title: "아이템 구매", note: "노란 원목 침대", amount: -100 },
+  { id: "seed-4", date: "26.03.27", title: "아이템 구매", note: "핑크 의자", amount: -50 },
+];
+
+function loadHistory(): PointEvent[] {
+  if (typeof window === "undefined") return DEFAULT_HISTORY;
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as PointEvent[];
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_HISTORY;
+}
+
+let historyState: PointEvent[] = loadHistory();
+const historyListeners = new Set<() => void>();
+
+function persistHistory() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(historyState));
+  } catch {
+    // ignore
+  }
+}
+
+function emitHistory() {
+  historyListeners.forEach((l) => l());
+}
+
+function todayDateLabel(): string {
+  const d = new Date();
+  const y = String(d.getFullYear()).slice(-2);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
+}
+
+/** 내역 항목 추가 — 최신이 맨 위. addPoints/spendPoints 내부에서 자동 호출됨 */
+function appendPointEvent(entry: Omit<PointEvent, "id" | "date"> & { date?: string }): void {
+  const next: PointEvent = {
+    id: `pe-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    date: entry.date ?? todayDateLabel(),
+    title: entry.title,
+    note: entry.note,
+    amount: entry.amount,
+  };
+  historyState = [next, ...historyState];
+  persistHistory();
+  emitHistory();
+}
+
+/** 외부에서 직접 내역만 남기고 싶을 때 (테스트 시드 등) */
+export function addPointHistoryEntry(entry: Omit<PointEvent, "id" | "date"> & { date?: string }): void {
+  appendPointEvent(entry);
+}
+
+/** 현재 내역 (구독 안 함) */
+export function getPointHistory(): PointEvent[] {
+  return historyState;
+}
+
+const historySubscribe = (cb: () => void) => {
+  historyListeners.add(cb);
+  return () => {
+    historyListeners.delete(cb);
+  };
+};
+const historySnapshot = () => historyState;
+
+/** 포인트 이용 내역을 React 컴포넌트에서 구독 */
+export function usePointHistory(): PointEvent[] {
+  return useSyncExternalStore(historySubscribe, historySnapshot, historySnapshot);
+}
+
+// ─── 일일 적립 cap 추적 (글쓰기 등) ────────────────────────
+const DAILY_CAP_KEY = "holo:myroom:dailyCaps";
+
+type DailyCapRecord = {
+  date: string; // YYYY-MM-DD (자정 reset 키)
+  counts: Record<string, number>;
+};
+
+function todayKey(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function loadDailyCaps(): DailyCapRecord {
+  if (typeof window === "undefined") return { date: todayKey(), counts: {} };
+  try {
+    const raw = window.localStorage.getItem(DAILY_CAP_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as DailyCapRecord;
+      if (parsed.date === todayKey()) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return { date: todayKey(), counts: {} };
+}
+
+let dailyCaps: DailyCapRecord = loadDailyCaps();
+
+function persistDailyCaps() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DAILY_CAP_KEY, JSON.stringify(dailyCaps));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * 일일 cap 안에서 적립 시도. 성공 시 true 반환, cap 초과 시 false.
+ * key 예: "post" (글쓰기 일 6회), "ad" (광고 일 5회)
+ */
+export function tryDailyEarn(key: string, max: number, amount: number, reason: PointReason): boolean {
+  // 날짜가 바뀌었으면 reset
+  if (dailyCaps.date !== todayKey()) {
+    dailyCaps = { date: todayKey(), counts: {} };
+  }
+  const cur = dailyCaps.counts[key] ?? 0;
+  if (cur >= max) return false;
+  dailyCaps.counts[key] = cur + 1;
+  persistDailyCaps();
+  addPoints(amount, reason);
+  return true;
+}
+
+/** 오늘 해당 key 로 몇 번 적립했는지 (UI 표시용) */
+export function getDailyCount(key: string): number {
+  if (dailyCaps.date !== todayKey()) return 0;
+  return dailyCaps.counts[key] ?? 0;
 }

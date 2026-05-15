@@ -49,6 +49,8 @@ import { MyCommentsScreen } from "@/features/mypage/my-comments-screen";
 import { RecentPostsScreen } from "@/features/mypage/recent-posts-screen";
 import { FriendsScreen } from "@/features/mypage/friends-screen";
 import { FriendsAddScreen } from "@/features/mypage/friends-add-screen";
+import { FriendRequestsScreen } from "@/features/mypage/friend-requests-screen";
+import { NotificationsListScreen } from "@/features/notifications/notifications-list-screen";
 import { AccountScreen as MypageAccountScreen } from "@/features/mypage/account-screen";
 import { AccountLinkScreen } from "@/features/mypage/account-link-screen";
 import { PasswordChangeScreen } from "@/features/mypage/password-change-screen";
@@ -134,6 +136,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/recent" element={<TabLayout showHeader={false}><RecentPostsScreen /></TabLayout>} />
           <Route path="/mypage/friends" element={<TabLayout showHeader={false}><FriendsScreen /></TabLayout>} />
           <Route path="/mypage/friends/add" element={<TabLayout showHeader={false}><FriendsAddScreen /></TabLayout>} />
+          <Route path="/mypage/friends/requests" element={<TabLayout showHeader={false}><FriendRequestsScreen /></TabLayout>} />
+          <Route path="/notifications" element={<TabLayout showHeader={false}><NotificationsListScreen /></TabLayout>} />
 
           {/* Mypage Settings */}
           <Route path="/mypage/account" element={<TabLayout showHeader={false}><MypageAccountScreen /></TabLayout>} />

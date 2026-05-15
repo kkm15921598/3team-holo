@@ -3,11 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import {
+  MAX_FRIENDS,
   blockFriendById,
   removeFriendById,
   unblockFriendById,
   useBlocked,
   useFriends,
+  useReceivedRequests,
   type Friend,
 } from "./friends-store";
 
@@ -17,6 +19,7 @@ export function FriendsScreen() {
   const navigate = useNavigate();
   const friends = useFriends();
   const blocked = useBlocked();
+  const receivedRequests = useReceivedRequests();
   const [showMenu, setShowMenu] = useState(false);
   const [mode, setMode] = useState<Mode>("view");
   const [showBlockedView, setShowBlockedView] = useState(false);
@@ -46,8 +49,12 @@ export function FriendsScreen() {
   };
 
   const handleUnblock = (id: string) => {
-    unblockFriendById(id);
-    showToast("차단이 해제되었습니다.");
+    const ok = unblockFriendById(id);
+    if (ok) {
+      showToast("차단이 해제되었습니다.");
+    } else {
+      showToast("친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요.");
+    }
   };
 
   const handleSubmitReport = () => {
@@ -105,11 +112,46 @@ export function FriendsScreen() {
               : mode === "delete"
                 ? "삭제할 친구를 선택해 주세요"
                 : "친구목록"}
+          {mode === "view" && (
+            <span
+              className={`text-[12px] ${
+                friends.length >= MAX_FRIENDS
+                  ? "font-semibold text-holo-error"
+                  : "text-holo-ink-3"
+              }`}
+            >
+              {friends.length}/{MAX_FRIENDS}
+            </span>
+          )}
         </span>
         {mode === "view" && (
           <span className="text-[12px] text-holo-ink-3">내 코드 : {ME.friendCode}</span>
         )}
       </div>
+
+      {mode === "view" && receivedRequests.length > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate("/mypage/friends/requests")}
+          className="flex items-center justify-between border-b border-holo-line-3 bg-holo-lilac-card-2 px-4 py-3 text-left active:opacity-80"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-[18px]">🤝</span>
+            <span className="flex flex-col">
+              <span className="text-[13px] font-semibold text-holo-ink">
+                받은 친구 요청 {receivedRequests.length}건
+              </span>
+              <span className="text-[11px] text-holo-ink-3">
+                새 친구가 기다리고 있어요
+              </span>
+            </span>
+          </span>
+          <span className="flex items-center gap-1 text-[12px] font-semibold text-holo-purple-mid">
+            확인하기
+            <ChevronRightIcon />
+          </span>
+        </button>
+      )}
 
       {visibleFriends.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center text-[14px] text-holo-ink-3">
@@ -439,6 +481,13 @@ function FlagIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M4 21V4l14 4-7 3 7 4z" />
+    </svg>
+  );
+}
+function ChevronRightIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }

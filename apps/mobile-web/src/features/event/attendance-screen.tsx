@@ -15,8 +15,12 @@ export function AttendanceScreen() {
     if (result.capped) {
       setToast("오늘은 이미 출석했어요.");
     } else {
-      addPoints(todayDay?.points ?? 5);
-      setToast(`출석 완료! +${result.gained} XP / +${todayDay?.points ?? 5}P`);
+      const pts = todayDay?.points ?? 5;
+      addPoints(pts, {
+        title: "출석체크",
+        note: todayDay ? `${todayDay.day}일차${todayDay.label ? ` · ${todayDay.label}` : ""}` : undefined,
+      });
+      setToast(`출석 완료! +${result.gained} XP / +${pts}P`);
     }
     window.setTimeout(() => setToast(null), 1800);
   };

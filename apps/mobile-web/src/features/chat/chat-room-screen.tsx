@@ -9,7 +9,7 @@ import {
   type MeetingInfo,
 } from "@/shared/mock/data";
 import {
-  addFriendByNickname,
+  sendFriendRequest,
   getFriends,
   useFriends,
 } from "@/features/mypage/friends-store";
@@ -1059,8 +1059,8 @@ export function ChatRoomScreen() {
           onYes={() => {
             const friendName = showAddFriend;
 
-            // 전역 친구 store에 실제로 추가 — 친구 목록/프로필에 반영된다.
-            addFriendByNickname(friendName);
+            // 전역 친구 store 에 요청을 보낸다 — 실제 친구로는 상대 수락 후에 등록된다.
+            const result = sendFriendRequest(friendName);
 
             setNewlyAddedFriends((prev) => {
               if (prev.has(friendName)) return prev;
@@ -1069,12 +1069,23 @@ export function ChatRoomScreen() {
               return next;
             });
 
+            const systemMessage =
+              result === "already-friend"
+                ? `${friendName}님은 이미 친구예요`
+                : result === "already-sent"
+                  ? `${friendName}님에게는 이미 친구 요청을 보냈어요`
+                  : result === "incoming-exists"
+                    ? `${friendName}님이 먼저 친구 요청을 보냈어요. 친구 화면에서 수락해 보세요`
+                    : result === "max-reached"
+                      ? `친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요`
+                      : `${friendName}님에게 친구 요청을 보냈어요`;
+
             setMessages((prev) => [
               ...prev,
               {
                 id: `friend-added-${Date.now()}`,
                 nickname: "",
-                content: `${friendName}님을 친구로 추가했어요`,
+                content: systemMessage,
                 time: "",
                 mine: false,
                 type: "system",

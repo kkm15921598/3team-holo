@@ -349,12 +349,259 @@ export const POST_COMMENTS: Record<string, { id: string; nickname: string; conte
     { id: "hm10c1", nickname: "포도껍질", content: "어떤 책 읽나요?", timeAgo: "8분 전" },
     { id: "hm10c2", nickname: "멜론은 키위를 좋아해", content: "독서 모임 처음인데 환영해주세요 :)", timeAgo: "22분 전" },
   ],
+
+  // ── 맛집 & 먹거리 (food) ─────────────────────────────────
+  fd11: [
+    { id: "fd11c1", nickname: "감자튀김", content: "저 마라탕 진짜 좋아해요! 몇 시 출발이세요?", timeAgo: "3분 전" },
+    { id: "fd11c2", nickname: "치즈볶이", content: "탕화쿵푸 메뉴 추천 부탁드려요~", timeAgo: "10분 전" },
+  ],
+  fd12: [
+    { id: "fd12c1", nickname: "라면 한 봉지", content: "양념 반 후라이드 반 어때요?", timeAgo: "12분 전" },
+  ],
+  fd13: [
+    { id: "fd13c1", nickname: "예린", content: "라이크라이크 브런치 진짜 맛있어요!", timeAgo: "5분 전" },
+    { id: "fd13c2", nickname: "민지", content: "주말 몇 시쯤 가실 거예요?", timeAgo: "20분 전" },
+    { id: "fd13c3", nickname: "포도껍질", content: "에그베네딕트 꼭 드세요 :)", timeAgo: "1시간 전" },
+  ],
+  fd14: [
+    { id: "fd14c1", nickname: "준호", content: "퇴근 시간 맞으면 합류하고 싶어요!", timeAgo: "15분 전" },
+    { id: "fd14c2", nickname: "도윤", content: "고기굽는집 단골이라 추천드려요 ㅎㅎ", timeAgo: "45분 전" },
+  ],
+  fd15: [
+    { id: "fd15c1", nickname: "민지", content: "스시노믹 점심 특선 있어요?", timeAgo: "10분 전" },
+    { id: "fd15c2", nickname: "감자 없는 카레", content: "초밥 메이트 구해요! 같이 가요", timeAgo: "30분 전" },
+    { id: "fd15c3", nickname: "토마토킹", content: "런치 코스 가성비 좋더라구요", timeAgo: "2시간 전" },
+    { id: "fd15c4", nickname: "옥자", content: "예약 필요해요?", timeAgo: "5시간 전" },
+  ],
+  fd16: [
+    { id: "fd16c1", nickname: "두부의 단단함", content: "아쉽... 다음 번에 또 모집해주세요!", timeAgo: "1시간 전" },
+    { id: "fd16c2", nickname: "옥자", content: "어머니 김치찌개 진짜 잘 끓이세요", timeAgo: "1일 전" },
+  ],
+
+  // ── 공동구매 / 소분하기 (share) ──────────────────────────
+  sh11: [
+    { id: "sh11c1", nickname: "지윤", content: "딸기 1kg 정도 원하면 가능할까요?", timeAgo: "10분 전" },
+    { id: "sh11c2", nickname: "수박나라", content: "농장 직배송이라니 기대돼요!", timeAgo: "30분 전" },
+    { id: "sh11c3", nickname: "혜진", content: "픽업 시간 알려주세요~", timeAgo: "50분 전" },
+  ],
+  sh12: [
+    { id: "sh12c1", nickname: "준호", content: "30롤짜리 몇 패키지 사실 거예요?", timeAgo: "20분 전" },
+  ],
+  sh13: [
+    { id: "sh13c1", nickname: "서아", content: "참외 박스 크기가 어느 정도예요?", timeAgo: "30분 전" },
+    { id: "sh13c2", nickname: "포도껍질", content: "한 두 개씩 나눌 수 있나요?", timeAgo: "2시간 전" },
+  ],
+  sh14: [
+    { id: "sh14c1", nickname: "현우", content: "햅쌀 맞나요? 받으러 갈 시간 알려주세요!", timeAgo: "1시간 전" },
+  ],
+  sh15: [
+    { id: "sh15c1", nickname: "유나", content: "어떤 샴푸인가요? 향이 어때요?", timeAgo: "30분 전" },
+    { id: "sh15c2", nickname: "은채", content: "1통씩 나눠 받을 수 있나요?", timeAgo: "3시간 전" },
+  ],
+  sh16: [
+    { id: "sh16c1", nickname: "정희", content: "마감됐다니 아쉬워요 ㅠㅠ", timeAgo: "1일 전" },
+    { id: "sh16c2", nickname: "지윤", content: "다음에 또 모집하시면 알려주세요!", timeAgo: "1일 전" },
+    { id: "sh16c3", nickname: "수박나라", content: "한라봉 진짜 달죠~", timeAgo: "2일 전" },
+    { id: "sh16c4", nickname: "예린", content: "잘 받았어요. 감사합니다 :)", timeAgo: "2일 전" },
+  ],
+  sh17: [
+    { id: "sh17c1", nickname: "성훈", content: "이마트 이번 주 세일이라 좋네요!", timeAgo: "3일 전" },
+  ],
+
+  // ── 같이 운동해요 (sport) ────────────────────────────────
+  sp11: [
+    { id: "sp11c1", nickname: "도윤", content: "초보도 가능할까요?", timeAgo: "20분 전" },
+    { id: "sp11c2", nickname: "민호", content: "라켓 빌려주실 수 있어요?", timeAgo: "50분 전" },
+  ],
+  sp12: [
+    { id: "sp12c1", nickname: "민호", content: "포지션은 미드필더 가능해요!", timeAgo: "15분 전" },
+    { id: "sp12c2", nickname: "감자튀김", content: "유니폼 색상 정해졌나요?", timeAgo: "40분 전" },
+    { id: "sp12c3", nickname: "태양", content: "풋살화 신어야 하나요?", timeAgo: "1시간 전" },
+    { id: "sp12c4", nickname: "당근소년", content: "참가비는 얼마예요?", timeAgo: "1시간 전" },
+    { id: "sp12c5", nickname: "성훈", content: "10명 채우면 바로 시작인가요?", timeAgo: "2시간 전" },
+  ],
+  sp13: [
+    { id: "sp13c1", nickname: "은채", content: "더 핏 필라테스 시설 좋아요!", timeAgo: "1시간 전" },
+  ],
+  sp14: [
+    { id: "sp14c1", nickname: "지호", content: "새벽 6시 가능하시면 같이 다녀요!", timeAgo: "3시간 전" },
+  ],
+  sp15: [
+    { id: "sp15c1", nickname: "병태", content: "탁구장 라켓 대여되나요?", timeAgo: "5시간 전" },
+    { id: "sp15c2", nickname: "재민", content: "초보인데 같이 쳐도 괜찮을까요?", timeAgo: "1일 전" },
+  ],
+  sp16: [
+    { id: "sp16c1", nickname: "태양", content: "출발 시간 알려주세요!", timeAgo: "3시간 전" },
+    { id: "sp16c2", nickname: "도윤", content: "코스 어디까지 가실 거예요?", timeAgo: "5시간 전" },
+    { id: "sp16c3", nickname: "민호", content: "헬멧 필수죠? 챙겨갈게요", timeAgo: "10시간 전" },
+    { id: "sp16c4", nickname: "현우", content: "비 오면 취소인가요?", timeAgo: "1일 전" },
+    { id: "sp16c5", nickname: "당근소년", content: "라이딩 페이스 어느 정도예요?", timeAgo: "1일 전" },
+    { id: "sp16c6", nickname: "감자튀김", content: "탄천 자전거도로 진짜 좋아요!", timeAgo: "2일 전" },
+  ],
+
+  // ── 도와주세요! (help) ───────────────────────────────────
+  hp11: [
+    { id: "hp11c1", nickname: "치즈볶이", content: "오늘 집에 있어서 받아드릴 수 있어요!", timeAgo: "10분 전" },
+  ],
+  hp12: [
+    { id: "hp12c1", nickname: "토마토킹", content: "강아지 종이랑 산책 코스 알려주세요!", timeAgo: "30분 전" },
+    { id: "hp12c2", nickname: "수박나라", content: "저녁 시간대 가능합니다 :)", timeAgo: "55분 전" },
+  ],
+  hp13: [
+    { id: "hp13c1", nickname: "참치는 등푸른", content: "어떤 작업 위주로 쓰시나요?", timeAgo: "1시간 전" },
+    { id: "hp13c2", nickname: "지호", content: "그램 16인치 가성비 좋아요", timeAgo: "2시간 전" },
+    { id: "hp13c3", nickname: "성훈", content: "맥북에어 M3 추천드려요!", timeAgo: "2시간 전" },
+  ],
+  hp15: [
+    { id: "hp15c1", nickname: "라면 한 봉지", content: "지갑 색깔이랑 브랜드 알려주세요", timeAgo: "10시간 전" },
+    { id: "hp15c2", nickname: "포도껍질", content: "투썸 카운터에 분실물 있어요. 한번 가보세요!", timeAgo: "12시간 전" },
+    { id: "hp15c3", nickname: "감자 없는 카레", content: "꼭 찾으셨으면 좋겠어요 ㅠㅠ", timeAgo: "20시간 전" },
+    { id: "hp15c4", nickname: "두부의 단단함", content: "분실물 카페에도 한번 올려보세요", timeAgo: "1일 전" },
+  ],
+  hp16: [
+    { id: "hp16c1", nickname: "수박나라", content: "고양이 몇 살이고 사료 종류 알려주세요!", timeAgo: "1일 전" },
+    { id: "hp16c2", nickname: "치즈볶이", content: "주말 비어요. 메시지 드려도 될까요?", timeAgo: "2일 전" },
+  ],
+  hp17: [
+    { id: "hp17c1", nickname: "닭볶음탕수", content: "메디컬센터 2층 정형외과 친절했어요!", timeAgo: "1일 전" },
+    { id: "hp17c2", nickname: "민지", content: "예약하고 가시면 빨라요", timeAgo: "2일 전" },
+  ],
+
+  // ── 게임파티 (game) ──────────────────────────────────────
+  gm11: [
+    { id: "gm11c1", nickname: "당근소년", content: "골드 1~2 라인 어디 선호하세요?", timeAgo: "10분 전" },
+    { id: "gm11c2", nickname: "감자튀김", content: "보이스 가능한가요?", timeAgo: "20분 전" },
+    { id: "gm11c3", nickname: "지호", content: "저녁에 몇 시쯤 시작해요?", timeAgo: "25분 전" },
+  ],
+  gm12: [
+    { id: "gm12c1", nickname: "지호", content: "버전이랑 모드팩 어떤 거 쓰세요?", timeAgo: "30분 전" },
+  ],
+  gm13: [
+    { id: "gm13c1", nickname: "도윤", content: "오버쿡드 같이 하실래요?", timeAgo: "1시간 전" },
+    { id: "gm13c2", nickname: "성훈", content: "무료게임 추천 받습니다!", timeAgo: "2시간 전" },
+  ],
+  gm14: [
+    { id: "gm14c1", nickname: "정희", content: "보드앤플레이 신작 많아요!", timeAgo: "1시간 전" },
+    { id: "gm14c2", nickname: "옥자", content: "초보도 환영인가요?", timeAgo: "2시간 전" },
+    { id: "gm14c3", nickname: "재민", content: "토요일 저녁 가능합니다 :)", timeAgo: "3시간 전" },
+  ],
+  gm15: [
+    { id: "gm15c1", nickname: "성훈", content: "캐릭터 풀 누구 쓰세요?", timeAgo: "3시간 전" },
+  ],
+  gm16: [
+    { id: "gm16c1", nickname: "옥자", content: "난이도 어느 정도예요?", timeAgo: "1시간 전" },
+    { id: "gm16c2", nickname: "예린", content: "어려운 거 환영! 같이 가요", timeAgo: "5시간 전" },
+    { id: "gm16c3", nickname: "은채", content: "이스케이프 룸 정자점 후기 좋더라구요", timeAgo: "1일 전" },
+    { id: "gm16c4", nickname: "민지", content: "4명 채우면 바로 예약하나요?", timeAgo: "1일 전" },
+  ],
+  gm17: [
+    { id: "gm17c1", nickname: "재민", content: "마감됐네요 ㅠ 다음에 또 모집해주세요!", timeAgo: "1일 전" },
+    { id: "gm17c2", nickname: "지윤", content: "친목 포커 재밌었어요 :)", timeAgo: "2일 전" },
+  ],
+
+  // ── 드라마 · 영화 (media) ────────────────────────────────
+  md11: [
+    { id: "md11c1", nickname: "멜론은 키위를 좋아해", content: "디스코드 채널 만들까요?", timeAgo: "10분 전" },
+    { id: "md11c2", nickname: "민지", content: "시즌1 정주행하고 갈게요!", timeAgo: "15분 전" },
+    { id: "md11c3", nickname: "서아", content: "스포 금지 룰 정해요!!", timeAgo: "20분 전" },
+    { id: "md11c4", nickname: "두부의 단단함", content: "공개 첫날 같이 봐요 :)", timeAgo: "30분 전" },
+  ],
+  md12: [
+    { id: "md12c1", nickname: "민지", content: "아이언맨1부터 순서대로 가는 거죠?", timeAgo: "30분 전" },
+    { id: "md12c2", nickname: "현우", content: "엔드게임 다시 보면 또 울 듯..", timeAgo: "1시간 전" },
+  ],
+  md13: [
+    { id: "md13c1", nickname: "서아", content: "어떤 영화 보실 예정이에요?", timeAgo: "1시간 전" },
+    { id: "md13c2", nickname: "예린", content: "CGV 분당 라운지관 추천!", timeAgo: "2시간 전" },
+    { id: "md13c3", nickname: "정희", content: "조조 가능하시면 같이 가요", timeAgo: "3시간 전" },
+  ],
+  md14: [
+    { id: "md14c1", nickname: "현우", content: "심령류 vs 슬래셔 중 어느 쪽이에요?", timeAgo: "2시간 전" },
+    { id: "md14c2", nickname: "민호", content: "콘저링 시리즈 정주행 어떠세요?", timeAgo: "3시간 전" },
+  ],
+  md15: [
+    { id: "md15c1", nickname: "은채", content: "3인이면 한 명당 얼마씩이에요?", timeAgo: "5시간 전" },
+  ],
+  md16: [
+    { id: "md16c1", nickname: "예린", content: "분당 아트홀 상영작 라인업 좋더라구요", timeAgo: "5시간 전" },
+    { id: "md16c2", nickname: "철수", content: "예매 도와드릴까요?", timeAgo: "6시간 전" },
+  ],
+  md17: [
+    { id: "md17c1", nickname: "병태", content: "카사블랑카부터 시작해도 좋겠어요!", timeAgo: "1일 전" },
+  ],
+  md18: [
+    { id: "md18c1", nickname: "철수", content: "리뷰 작성 가이드 있나요?", timeAgo: "2일 전" },
+    { id: "md18c2", nickname: "예린", content: "같이 글쓰면 더 재밌을 것 같아요 :)", timeAgo: "2일 전" },
+  ],
+  md19: [
+    { id: "md19c1", nickname: "태양", content: "어떤 다큐 보실 거예요?", timeAgo: "3일 전" },
+    { id: "md19c2", nickname: "철수", content: "지구 시리즈 어떠세요?", timeAgo: "3일 전" },
+    { id: "md19c3", nickname: "두부의 단단함", content: "다음 모임도 알려주세요!", timeAgo: "3일 전" },
+  ],
+
+  // ── 자유게시판 (free) ────────────────────────────────────
+  f11: [
+    { id: "f11c1", nickname: "포도껍질", content: "저희 동은 일요일 저녁 8시예요", timeAgo: "5분 전" },
+    { id: "f11c2", nickname: "단무지가 부럽다", content: "동마다 다르니 관리실에 한번 물어보세요!", timeAgo: "20분 전" },
+  ],
+  f12: [
+    { id: "f12c1", nickname: "단무지가 부럽다", content: "정자일로 공원은 24시간 개방이에요!", timeAgo: "10분 전" },
+  ],
+  f13: [
+    { id: "f13c1", nickname: "포도껍질", content: "기상청 보니까 오후 3시쯤부터 비 와요!", timeAgo: "10분 전" },
+    { id: "f13c2", nickname: "두부의 단단함", content: "우산 꼭 챙기세요 ☔", timeAgo: "25분 전" },
+    { id: "f13c3", nickname: "감자튀김", content: "지금은 안 오는데 흐려요. 곧 올 듯", timeAgo: "40분 전" },
+  ],
+  f15: [
+    { id: "f15c1", nickname: "두부의 단단함", content: "관리실에 먼저 전달 부탁드리는 게 제일 깔끔했어요", timeAgo: "30분 전" },
+    { id: "f15c2", nickname: "포도껍질", content: "층간소음 슬리퍼 깔아두면 도움 돼요", timeAgo: "1시간 전" },
+    { id: "f15c3", nickname: "감자 없는 카레", content: "직접 올라가지 마시고 무조건 관리실 통해서요", timeAgo: "2시간 전" },
+    { id: "f15c4", nickname: "깻잎쟁이", content: "방음매트 + 매트 두께 좀 두꺼운 걸로 추천드려요", timeAgo: "2시간 전" },
+    { id: "f15c5", nickname: "옥자", content: "동주민센터 분쟁조정도 가능해요", timeAgo: "2시간 전" },
+    { id: "f15c6", nickname: "토마토킹", content: "녹음해두시는 것도 방법이에요", timeAgo: "3시간 전" },
+  ],
+  f16: [
+    { id: "f16c1", nickname: "깻잎쟁이", content: "요즘은 떡 안 돌리시는 분도 많더라구요", timeAgo: "30분 전" },
+    { id: "f16c2", nickname: "포도껍질", content: "저는 양 옆집만 간단히 인사드렸어요", timeAgo: "5시간 전" },
+    { id: "f16c3", nickname: "두부의 단단함", content: "받으면 기분은 좋더라구요 :)", timeAgo: "10시간 전" },
+    { id: "f16c4", nickname: "감자 없는 카레", content: "마음만 받으셔도 충분할 것 같아요", timeAgo: "1일 전" },
+  ],
+  f17: [
+    { id: "f17c1", nickname: "점심은 감튀", content: "공부 위주면 정자도서관 추천!", timeAgo: "1시간 전" },
+    { id: "f17c2", nickname: "포도껍질", content: "야탑도서관이 신간 더 빨라요", timeAgo: "1일 전" },
+    { id: "f17c3", nickname: "단무지가 부럽다", content: "둘 다 좋은데 거리상 가까운 곳 추천!", timeAgo: "2일 전" },
+  ],
+
+  // ── 추천해요 (recommend) ─────────────────────────────────
+  r13: [
+    { id: "r13c1", nickname: "멜론은 키위를 좋아해", content: "제목이 뭐예요?? 궁금해요!", timeAgo: "20분 전" },
+    { id: "r13c2", nickname: "민지", content: "최근에 본 거 중에 진짜 갓작이었어요!", timeAgo: "30분 전" },
+    { id: "r13c3", nickname: "서아", content: "주말에 정주행 각이네요", timeAgo: "40분 전" },
+    { id: "r13c4", nickname: "포도껍질", content: "넷플릭스에 있나요?", timeAgo: "50분 전" },
+    { id: "r13c5", nickname: "현우", content: "스포 살짝만 부탁드려요 ㅋㅋ", timeAgo: "1시간 전" },
+  ],
+  r14: [
+    { id: "r14c1", nickname: "민호", content: "데상트 가성비 좋아요!", timeAgo: "30분 전" },
+    { id: "r14c2", nickname: "도윤", content: "룰루레몬 핏이 진짜 예뻐요", timeAgo: "1시간 전" },
+    { id: "r14c3", nickname: "당근소년", content: "안다르 추천드립니다", timeAgo: "2시간 전" },
+  ],
+  r15: [
+    { id: "r15c1", nickname: "지윤", content: "정자역 1번 출구 쪽 '헤어로그' 진짜 잘하세요!", timeAgo: "30분 전" },
+    { id: "r15c2", nickname: "유나", content: "디자이너분 이름도 알려주세요!", timeAgo: "2시간 전" },
+  ],
+  r17: [
+    { id: "r17c1", nickname: "혜진", content: "분당 율동공원 강추예요!", timeAgo: "3시간 전" },
+    { id: "r17c2", nickname: "민호", content: "서현역에서 버스로 갈 수 있는 곳도 있어요", timeAgo: "5시간 전" },
+    { id: "r17c3", nickname: "포도껍질", content: "탄천 산책 코스도 좋아요", timeAgo: "1일 전" },
+  ],
 };
 
+/**
+ * Fallback 댓글 — 게시글에 POST_COMMENTS 항목이 없을 때만 노출.
+ * 사용자가 직접 작성한 새 글에 한해 보이도록 의도된 안내성 첫 댓글.
+ */
 export const COMMENTS = [
-  { id: "1", nickname: "껍질은 달걀껍질", content: "저도 관심 있어요!", timeAgo: "1분 전" },
-  { id: "2", nickname: "감자 없는 카레", content: "참여하고 싶어요 :)", timeAgo: "5분 전" },
-  { id: "3", nickname: "멜론은 키위를 좋아해", content: "정보 감사합니다~", timeAgo: "7분 전" },
+  { id: "fb-1", nickname: "껍질은 달걀껍질", content: "글 잘 봤어요! 응원할게요 :)", timeAgo: "방금 전" },
 ];
 
 export type MeetingInfo = {

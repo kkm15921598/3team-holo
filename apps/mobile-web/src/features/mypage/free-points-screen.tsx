@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { addPoints } from "@/features/myroom/myroom-store";
 
 type Mission = {
   id: string;
@@ -71,6 +72,7 @@ export function FreePointsScreen() {
         if (prev.remaining <= 1) {
           clearInterval(interval);
           DAILY_PROGRESS.ad.done += 1;
+          addPoints(5, { title: "광고 시청", note: `${DAILY_PROGRESS.ad.done}/${DAILY_PROGRESS.ad.cap}` });
           showToast("광고 시청 완료! +5P 적립");
           return null;
         }
@@ -86,6 +88,7 @@ export function FreePointsScreen() {
     }
     setClaimedToday((prev) => ({ ...prev, survey: true }));
     DAILY_PROGRESS.survey.done = 1;
+    addPoints(20, { title: "오늘의 설문" });
     showToast("설문 완료! +20P 적립");
   };
 
@@ -95,6 +98,7 @@ export function FreePointsScreen() {
       return;
     }
     setCompleted((prev) => ({ ...prev, verify: true }));
+    addPoints(10, { title: "동네 인증" });
     showToast("동네 인증 완료! +10P 적립");
   };
 
@@ -147,6 +151,7 @@ export function FreePointsScreen() {
             onClick={() => {
               if (!claimedToday.login) {
                 setClaimedToday((p) => ({ ...p, login: true }));
+                addPoints(5, { title: "매일 접속" });
                 showToast("출석 보상 +5P 적립");
               } else {
                 showToast("이미 적립됐어요!");

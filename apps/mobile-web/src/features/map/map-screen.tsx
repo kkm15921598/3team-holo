@@ -167,7 +167,22 @@ export function MapScreen() {
         </div>
       </section>
 
-      {/* 카드 — 우측 상단 화살표 아이콘 클릭 시 게시물 상세로 이동 (가로 드래그 스크롤) */}
+      {/* 카드 — 우측 상단 화살표 아이콘 클릭 시 게시물 상세로 이동 (가로 드래그 스크롤)
+          빈 상태일 때는 가로 슬라이드를 비우고 별도의 풀 너비 안내 박스를 표시한다. */}
+      {visiblePosts.length === 0 ? (
+        <section className="mt-3 px-4 pb-3">
+          <div className="flex h-[220px] w-full flex-col items-center justify-center gap-3 rounded-[16px] bg-holo-lilac-card-2 px-6 text-center">
+            <p className="text-[15px] font-semibold text-holo-ink">
+              해당 필터에 표시할 모임이 없어요
+            </p>
+            <p className="text-[12px] leading-relaxed text-holo-ink-3">
+              다른 필터를 선택하거나 지도를 움직여
+              <br />
+              가까운 모임을 찾아보세요
+            </p>
+          </div>
+        </section>
+      ) : (
       <section
         ref={cardsRef}
         className="holo-no-scrollbar mt-3 cursor-grab select-none overflow-x-auto pb-3 pl-4 pr-4 active:cursor-grabbing"
@@ -179,11 +194,6 @@ export function MapScreen() {
         onClickCapture={onClickCapture}
       >
         <div className="flex w-max gap-3">
-          {visiblePosts.length === 0 && (
-            <div className="flex h-[153px] w-[280px] items-center justify-center rounded-[10px] bg-holo-lilac-card-2 text-[13px] text-holo-ink-3">
-              해당 필터에 표시할 모임이 없어요
-            </div>
-          )}
           {visiblePosts.map((p) => {
             // 카드에 표시할 참여 인원수는 게시글 UI 와 동일한 baseJoined 를 사용
             // (= holds for home card / board detail / chat room).
@@ -248,6 +258,7 @@ export function MapScreen() {
           })}
         </div>
       </section>
+      )}
 
       {/* FAB */}
       <button

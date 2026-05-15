@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { ME, POINT_HISTORY } from "@/shared/mock/data";
-import { usePoints } from "@/features/myroom/myroom-store";
+import { usePoints, usePointHistory } from "@/features/myroom/myroom-store";
 
 export function PointsScreen() {
   const navigate = useNavigate();
   const points = usePoints();
+  const history = usePointHistory();
 
   return (
     <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-2 pb-4">
@@ -34,7 +34,12 @@ export function PointsScreen() {
           포인트 이용 내역
         </p>
         <ul className="flex flex-col">
-          {POINT_HISTORY.map((h) => (
+          {history.length === 0 && (
+            <li className="py-6 text-center text-[13px] text-holo-ink-3">
+              아직 포인트 이용 내역이 없어요.
+            </li>
+          )}
+          {history.map((h) => (
             <li key={h.id} className="flex items-start gap-3 border-b border-holo-line-3 py-3">
               <span className="text-[13px] text-holo-ink-2">{h.date}</span>
               <div className="flex flex-1 flex-col">

@@ -7,6 +7,11 @@ import {
   markRead,
   markAllRead,
 } from "@/shared/stores/notification-settings-store";
+import {
+  markAllDynRead,
+  markDynRead,
+  useDynNotifications,
+} from "@/shared/stores/notifications-store";
 
 type NotifType = "comment" | "like" | "friend" | "chat" | "meeting" | "event";
 
@@ -16,17 +21,23 @@ type Notification = {
   title: string;
   body: string;
   time: string;
+  /** 정렬 우선순위 — 작을수록 위에 표시. 정적 mock 용 */
+  order: number;
   read: boolean;
   link: string;
+  /** 동적 알림 여부 — 읽음 처리 라우팅 분기에 사용 */
+  dynamic?: boolean;
 };
 
-const ALL_NOTIFICATIONS: Notification[] = [
+// 정적 알림 (mock 데모용 — 친구 관련은 동적 store 가 담당하므로 제외)
+const STATIC_NOTIFICATIONS: Notification[] = [
   {
     id: "n1",
     type: "comment",
     title: "댓글 알림",
     body: "홀로빌리지님이 내 글에 댓글을 달았어요. \"저도 같이 하고 싶어요!\"",
     time: "방금 전",
+    order: 1,
     read: false,
     link: "/board/1",
   },
@@ -36,17 +47,9 @@ const ALL_NOTIFICATIONS: Notification[] = [
     title: "좋아요 알림",
     body: "단무지팬님이 내 글 \"점심 번개 같이 해요\"에 좋아요를 눌렀어요.",
     time: "5분 전",
+    order: 5,
     read: false,
     link: "/board/1",
-  },
-  {
-    id: "n3",
-    type: "friend",
-    title: "친구 요청",
-    body: "보드게임왕님이 친구 요청을 보냈어요.",
-    time: "12분 전",
-    read: false,
-    link: "/mypage/friends",
   },
   {
     id: "n4",
@@ -54,6 +57,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     title: "채팅 알림",
     body: "스터디카페 채팅방에 새 메시지가 도착했어요. \"내일 몇 시에 오세요?\"",
     time: "30분 전",
+    order: 30,
     read: true,
     link: "/chat",
   },
@@ -63,6 +67,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     title: "모임 알림",
     body: "\"강아지 산책 친구\" 모임에 새 멤버가 합류했어요.",
     time: "1시간 전",
+    order: 60,
     read: true,
     link: "/board/3",
   },
@@ -72,6 +77,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     title: "이벤트 알림",
     body: "오늘의 출석 체크를 완료하고 포인트를 받아가세요! 🎁",
     time: "오전 9:00",
+    order: 120,
     read: true,
     link: "/event/attendance",
   },
@@ -100,6 +106,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const [nSettings, setNSettings] = useState(getNotificationSettings);
   const [readSet, setReadSet] = useState(() => getReadIds());
+  const dynNotifications = useDynNotifications();
 
   useEffect(() =>
     subscribeNotificationSettings(() => {
@@ -109,21 +116,42 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
   []);
 
   const handleNotificationClick = (n: Notification) => {
-    markRead(n.id);
+    if (n.dynamic) markDynRead(n.id);
+    else markRead(n.id);
     onClose();
     navigate(n.link);
   };
-  const handleMarkAllRead = () =>
-    markAllRead(ALL_NOTIFICATIONS.map((n) => n.id));
+  const handleMarkAllRead = () => {
+    markAllRead(STATIC_NOTIFICATIONS.map((n) => n.id));
+    markAllDynRead();
+  };
 
-  // 설정에 따라 보여줄 알림 필터링
-  const visibleNotifications = !nSettings.master
-    ? []
-    : ALL_NOTIFICATIONS.filter((n) => nSettings[TYPE_TO_SETTING[n.type]]);
+  // 동적 친구 알림 → 공통 Notification 형식으로 매핑
+  const dynItems: Notification[] = dynNotifications.map((d) => ({
+    id: d.id,
+    type: "friend",
+    title: d.title,
+    body: d.body,
+    time: d.time,
+    order: -d.createdAt, // 최신이 위
+    read: d.read,
+    link: d.link,
+    dynamic: true,
+  }));
 
-  const items = visibleNotifications.map((n) => ({
+  // 설정에 따라 보여줄 알림 필터링 — friend 토글이 꺼져 있으면 동적 알림도 숨김
+  const merged: Notification[] = nSettings.master
+    ? [...dynItems, ...STATIC_NOTIFICATIONS].filter(
+        (n) => nSettings[TYPE_TO_SETTING[n.type]],
+      )
+    : [];
+
+  // 정렬 — 동적은 createdAt(음수)이 가장 작아 위에 옴, 정적은 order 값으로 그 다음
+  merged.sort((a, b) => a.order - b.order);
+
+  const items = merged.map((n) => ({
     ...n,
-    read: n.read || readSet.has(n.id),
+    read: n.dynamic ? n.read : n.read || readSet.has(n.id),
   }));
 
   const unreadCount = items.filter((n) => !n.read).length;

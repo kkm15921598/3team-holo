@@ -4,6 +4,7 @@ import type { PostLocation } from "@/shared/mock/data";
 import { LocationPicker } from "@/features/map/post-map";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { awardXp } from "@/shared/stores/xp-store";
+import { tryDailyEarn } from "@/features/myroom/myroom-store";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
 
@@ -235,6 +236,11 @@ export function BoardWriteScreen() {
       });
       // 새 게시글 작성 → XP 부여 (일일 cap 적용)
       awardXp("post");
+      // 글쓰기 포인트 보상 — 하루 최대 6회(=30P) 까지 적립
+      tryDailyEarn("post", 6, 5, {
+        title: "글쓰기",
+        note: title.trim() || "새 게시글",
+      });
       if (incomingState?.draftId) {
         draftsStore.remove([incomingState.draftId]);
       }

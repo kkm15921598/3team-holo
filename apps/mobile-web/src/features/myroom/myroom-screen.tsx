@@ -52,7 +52,10 @@ export function MyroomScreen() {
 
   const confirmPurchase = () => {
     if (!pendingPurchase) return;
-    const ok = spendPoints(pendingPurchase.price ?? 0);
+    const ok = spendPoints(pendingPurchase.price ?? 0, {
+      title: "아이템 구매",
+      note: pendingPurchase.label,
+    });
     if (ok) {
       purchaseItem(pendingPurchase.kind, pendingPurchase.variant);
     }

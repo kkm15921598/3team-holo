@@ -4,10 +4,16 @@ import { type ChatRoom } from "@/shared/mock/data";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
 import {
-  addFriendByNickname,
+  acceptFriendRequest,
+  cancelFriendRequest,
+  declineFriendRequest,
   removeFriendByNickname,
+  sendFriendRequest,
   useFriends,
+  useReceivedRequests,
+  useSentRequests,
 } from "@/features/mypage/friends-store";
+import { awardXp } from "@/shared/stores/xp-store";
 import { RoomSceneView, randomRoomFurniture } from "@/features/home/home-illustrations";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
@@ -43,10 +49,31 @@ export function ProfileDetailScreen() {
   const user = useMemo(() => buildOtherUser(nickname), [nickname]);
 
   const friends = useFriends();
+  const sentRequests = useSentRequests();
+  const receivedRequests = useReceivedRequests();
+
   const isFriend = useMemo(
     () => friends.some((f) => f.nickname === nickname),
     [friends, nickname],
   );
+  const sentRequest = useMemo(
+    () => sentRequests.find((r) => r.nickname === nickname) ?? null,
+    [sentRequests, nickname],
+  );
+  const receivedRequest = useMemo(
+    () => receivedRequests.find((r) => r.nickname === nickname) ?? null,
+    [receivedRequests, nickname],
+  );
+
+  /** 친구 버튼 상태 — 친구 / 보낸 요청 / 받은 요청 / 없음 */
+  type FriendButtonState = "friend" | "sent" | "received" | "none";
+  const buttonState: FriendButtonState = isFriend
+    ? "friend"
+    : sentRequest
+      ? "sent"
+      : receivedRequest
+        ? "received"
+        : "none";
 
   const friendRoom = useMemo(
     () => randomRoomFurniture(nickname, user.level),
@@ -59,19 +86,73 @@ export function ProfileDetailScreen() {
     onConfirm: () => void;
   } | null>(null);
 
-  const askAddFriend = () =>
+  const askSendRequest = () =>
     setConfirm({
       message: (
         <>
-          <strong>{nickname}</strong>님을 친구로 추가하시겠습니까?
+          <strong>{nickname}</strong>님에게 친구 요청을 보낼까요?
         </>
       ),
-      confirmLabel: "추가",
+      confirmLabel: "요청 보내기",
       onConfirm: () => {
-        addFriendByNickname(nickname);
+        sendFriendRequest(nickname);
         setConfirm(null);
       },
     });
+
+  const askCancelRequest = () => {
+    if (!sentRequest) return;
+    setConfirm({
+      message: (
+        <>
+          <strong>{nickname}</strong>님에게 보낸 친구 요청을 취소할까요?
+        </>
+      ),
+      confirmLabel: "요청 취소",
+      onConfirm: () => {
+        cancelFriendRequest(sentRequest.id);
+        setConfirm(null);
+      },
+    });
+  };
+
+  const handleAcceptRequest = () => {
+    if (!receivedRequest) return;
+    const result = acceptFriendRequest(receivedRequest.id);
+    if (result.ok) {
+      awardXp("friend");
+    } else if (result.reason === "max-reached") {
+      setConfirm({
+        message: (
+          <>
+            친구 정원이 가득 찼어요.
+            <br />
+            <span className="text-[13px] font-normal text-holo-ink-2">
+              (최대 30명까지 추가할 수 있어요)
+            </span>
+          </>
+        ),
+        confirmLabel: "확인",
+        onConfirm: () => setConfirm(null),
+      });
+    }
+  };
+
+  const handleDeclineRequest = () => {
+    if (!receivedRequest) return;
+    setConfirm({
+      message: (
+        <>
+          <strong>{nickname}</strong>님의 친구 요청을 거절할까요?
+        </>
+      ),
+      confirmLabel: "거절",
+      onConfirm: () => {
+        declineFriendRequest(receivedRequest.id);
+        setConfirm(null);
+      },
+    });
+  };
 
   const askRemoveFriend = () =>
     setConfirm({
@@ -88,12 +169,19 @@ export function ProfileDetailScreen() {
     });
 
   const handleFriendButton = () => {
-    if (isFriend) {
+    if (buttonState === "friend") {
       askRemoveFriend();
       return;
     }
-
-    askAddFriend();
+    if (buttonState === "sent") {
+      askCancelRequest();
+      return;
+    }
+    if (buttonState === "received") {
+      handleAcceptRequest();
+      return;
+    }
+    askSendRequest();
   };
 
   const askBlock = () =>
@@ -205,16 +293,50 @@ export function ProfileDetailScreen() {
         </div>
 
         <div className="mt-7 flex w-full gap-2">
-          <button
-            type="button"
-            onClick={handleFriendButton}
-            className={`flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill text-[15px] font-semibold text-white ${
-              isFriend ? "bg-[#E95AA4]" : "bg-holo-purple-mid"
-            }`}
-          >
-            {isFriend ? <UserMinusIcon /> : <UserPlusIcon />}
-            {isFriend ? "친구 삭제" : "친구추가"}
-          </button>
+          {buttonState === "received" ? (
+            <div className="flex flex-1 gap-2">
+              <button
+                type="button"
+                onClick={handleFriendButton}
+                className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill bg-holo-purple-mid text-[15px] font-semibold text-white"
+              >
+                <UserPlusIcon /> 요청 수락
+              </button>
+              <button
+                type="button"
+                onClick={handleDeclineRequest}
+                aria-label="요청 거절"
+                className="flex h-[50px] w-[50px] items-center justify-center rounded-holo-pill border border-holo-line text-holo-ink-2"
+              >
+                <UserMinusIcon />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleFriendButton}
+              className={`flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill text-[15px] font-semibold text-white ${
+                buttonState === "friend"
+                  ? "bg-[#E95AA4]"
+                  : buttonState === "sent"
+                    ? "bg-holo-ink-4"
+                    : "bg-holo-purple-mid"
+              }`}
+            >
+              {buttonState === "friend" ? (
+                <UserMinusIcon />
+              ) : buttonState === "sent" ? (
+                <ClockIcon />
+              ) : (
+                <UserPlusIcon />
+              )}
+              {buttonState === "friend"
+                ? "친구 삭제"
+                : buttonState === "sent"
+                  ? "요청 보냄"
+                  : "친구 요청"}
+            </button>
+          )}
 
           <button
             type="button"
@@ -280,6 +402,25 @@ function CloseIcon() {
       aria-hidden
     >
       <path d="m6 6 12 12M6 18 18 6" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </svg>
   );
 }

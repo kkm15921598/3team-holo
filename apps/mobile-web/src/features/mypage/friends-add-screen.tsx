@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
-import { addFriendByNickname, isFriend } from "./friends-store";
-import { awardXp } from "@/shared/stores/xp-store";
+import {
+  sendFriendRequest,
+  useReceivedRequests,
+  useSentRequests,
+} from "./friends-store";
 
 export function FriendsAddScreen() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"id" | "qr">("id");
   const [input, setInput] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const received = useReceivedRequests();
+  const sent = useSentRequests();
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -21,19 +26,34 @@ export function FriendsAddScreen() {
       showToast("닉네임 또는 ID를 입력해 주세요.");
       return;
     }
-    if (isFriend(nick)) {
-      showToast("이미 친구 목록에 있어요.");
-      return;
+    const result = sendFriendRequest(nick);
+    switch (result) {
+      case "sent":
+        showToast(`${nick}님에게 친구 요청을 보냈어요.`);
+        setInput("");
+        window.setTimeout(
+          () => navigate("/mypage/friends/requests", { replace: true }),
+          700,
+        );
+        return;
+      case "already-friend":
+        showToast("이미 친구 목록에 있어요.");
+        return;
+      case "already-sent":
+        showToast("이미 친구 요청을 보냈어요.");
+        return;
+      case "incoming-exists":
+        showToast(
+          `${nick}님이 먼저 요청을 보냈어요. 받은 요청에서 수락해 주세요.`,
+        );
+        return;
+      case "max-reached":
+        showToast("친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요.");
+        return;
+      default:
+        showToast("친구 요청을 보낼 수 없어요.");
+        return;
     }
-    const added = addFriendByNickname(nick);
-    if (!added) {
-      showToast("친구를 추가할 수 없어요.");
-      return;
-    }
-    awardXp("friend");
-    showToast(`${nick}님을 친구로 추가했어요.`);
-    setInput("");
-    window.setTimeout(() => navigate("/mypage/friends", { replace: true }), 600);
   };
 
   return (
@@ -74,24 +94,50 @@ export function FriendsAddScreen() {
             </div>
           </div>
         ) : (
-          <div className="flex w-full max-w-[300px] flex-col rounded-holo-card bg-white p-5">
-            <p className="text-[14px] font-semibold text-holo-ink">친구 ID 입력</p>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAdd();
-              }}
-              placeholder="ID 또는 닉네임을 입력하세요"
-              className="mt-3 h-[44px] rounded-holo-input border border-holo-line px-4 text-[14px] outline-none placeholder:text-holo-ink-3 focus:border-2 focus:border-holo-purple-mid"
-            />
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="mt-4 h-[44px] rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white"
-            >
-              친구 추가
-            </button>
+          <div className="flex w-full max-w-[300px] flex-col gap-3">
+            {(received.length > 0 || sent.length > 0) && (
+              <button
+                type="button"
+                onClick={() => navigate("/mypage/friends/requests")}
+                className="flex items-center justify-between rounded-holo-card bg-holo-lilac-card-2 px-4 py-3 text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-[18px]">🤝</span>
+                  <span className="flex flex-col">
+                    <span className="text-[13px] font-semibold text-holo-ink">
+                      친구 요청 {received.length > 0 ? `${received.length}건` : "확인"}
+                    </span>
+                    <span className="text-[11px] text-holo-ink-3">
+                      받은 {received.length} · 보낸 {sent.length}
+                    </span>
+                  </span>
+                </span>
+                <ChevronRightIcon />
+              </button>
+            )}
+
+            <div className="flex w-full flex-col rounded-holo-card bg-white p-5">
+              <p className="text-[14px] font-semibold text-holo-ink">친구 ID 입력</p>
+              <p className="mt-1 text-[12px] text-holo-ink-3">
+                요청을 보내면 상대가 수락한 뒤 친구가 돼요.
+              </p>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd();
+                }}
+                placeholder="ID 또는 닉네임을 입력하세요"
+                className="mt-3 h-[44px] rounded-holo-input border border-holo-line px-4 text-[14px] outline-none placeholder:text-holo-ink-3 focus:border-2 focus:border-holo-purple-mid"
+              />
+              <button
+                type="button"
+                onClick={handleAdd}
+                className="mt-4 h-[44px] rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white"
+              >
+                친구 요청 보내기
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -111,6 +157,13 @@ function CloseIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" aria-hidden>
       <path d="m6 6 12 12M6 18 18 6" />
+    </svg>
+  );
+}
+function ChevronRightIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }
