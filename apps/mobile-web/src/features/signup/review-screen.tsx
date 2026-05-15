@@ -38,27 +38,22 @@ export function ReviewScreen() {
       </p>
 
       <div className="mt-7 flex flex-col divide-y divide-holo-line rounded-holo-input border border-holo-line">
+        <ReviewItem label="닉네임" value={data.nickname || "-"} />
         <ReviewItem label="이름" value={data.name || "-"} />
         <ReviewItem
           label="휴대폰"
           value={data.phone ? formatPhone(data.phone) : "-"}
         />
-        <ReviewItem label="아이디" value={data.userId || "-"} />
         <ReviewItem
           label="비밀번호"
           value={data.password ? "•".repeat(Math.min(data.password.length, 12)) : "-"}
         />
-        <ReviewItem label="닉네임" value={data.nickname || "-"} />
         <ReviewItem
           label="관심사"
           value={allInterests.length > 0 ? allInterests.join(", ") : "-"}
           multiline
         />
       </div>
-
-      <p className="mt-3 text-[12px] text-holo-ink-3">
-        ※ 휴대폰 번호 1개당 아이디는 1개만 만들 수 있어요.
-      </p>
 
       <div className="mt-auto pt-6">
         <button

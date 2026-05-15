@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
 
 export function MypageScreen() {
   const navigate = useNavigate();
   const [showLogout, setShowLogout] = useState(false);
+  const profile = useProfile();
+  const badgeSrc = getEquippedBadgeSrc();
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
       {/* Profile card + Points (connected, full-width edge-to-edge) */}
@@ -20,10 +24,12 @@ export function MypageScreen() {
             />
             <div className="flex flex-1 flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-[16px] font-semibold text-holo-ink">{ME.nickname}</span>
-                <span>{ME.badgeIcon}</span>
+                <span className="text-[20px] font-semibold text-holo-ink">{profile.nickname}</span>
+                {badgeSrc && (
+                  <img src={badgeSrc} alt="장착 뱃지" className="h-6 w-6 object-contain" />
+                )}
               </div>
-              <span className="text-[12px] text-holo-ink-3">{ME.title}</span>
+              <span className="text-[15px] text-holo-ink-3">{profile.title}</span>
             </div>
             <Link to="/mypage/edit" aria-label="프로필 편집">
               <EditIcon />
@@ -41,13 +47,13 @@ export function MypageScreen() {
 
       {/* Stats */}
       <section className="flex justify-around rounded-holo-input bg-white p-3">
-        <Stat label="나의 레벨" value={ME.level} />
+        <StatLink to="/mypage/level" label="나의 레벨" value={ME.level} />
         <span className="h-10 w-px bg-holo-line" />
-        <Stat label="나의 뱃지" value={12} />
+        <StatLink to="/mypage/badges" label="나의 뱃지" value={12} />
         <span className="h-10 w-px bg-holo-line" />
-        <Stat label="나의 칭호" value={22} />
+        <StatLink to="/mypage/titles" label="나의 칭호" value={22} />
         <span className="h-10 w-px bg-holo-line" />
-        <Stat label="모임 참여" value={8} />
+        <StatLink to="/mypage/meetings" label="모임 참여" value={8} />
       </section>
 
       {/* Region verify */}
@@ -146,12 +152,12 @@ function ChevronRightIcon() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function StatLink({ to, label, value }: { to: string; label: string; value: number }) {
   return (
-    <div className="flex flex-1 flex-col items-center">
+    <Link to={to} className="flex flex-1 flex-col items-center active:opacity-70">
       <span className="text-[12px] text-holo-ink-3">{label}</span>
       <span className="mt-0.5 text-[18px] font-bold text-holo-ink">{value}</span>
-    </div>
+    </Link>
   );
 }
 function Quick({ to, label, icon }: { to: string; label: string; icon: React.ReactNode }) {

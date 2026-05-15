@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ME, BADGES, TITLES } from "@/shared/mock/data";
+import { ME } from "@/shared/mock/data";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { setNickname as storeSetNickname } from "@/shared/stores/profile-store";
 
 const HAIR_COUNT = 6;
 const BG_COLORS = [
@@ -16,13 +18,11 @@ const BG_COLORS = [
 
 export function ProfileEditScreen() {
   const navigate = useNavigate();
-  const [nickname, setNickname] = useState(ME.nickname);
+  const profile = useProfile();
+  const [nickname, setNickname] = useState(profile.nickname);
   const [check, setCheck] = useState<"ok" | "fail" | null>(null);
   const [hair, setHair] = useState(2);
   const [bg, setBg] = useState(1);
-  const [badge, setBadge] = useState(1);
-  const [titleIdx, setTitleIdx] = useState(0);
-
   const handleCheck = () => {
     setCheck(nickname === "감자는 감자" ? "fail" : "ok");
   };
@@ -35,7 +35,10 @@ export function ProfileEditScreen() {
         </button>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (check === "ok") storeSetNickname(nickname);
+            navigate(-1);
+          }}
           className="text-[14px] font-semibold text-holo-ink"
         >
           완료
@@ -66,7 +69,7 @@ export function ProfileEditScreen() {
             중복확인
           </button>
         </div>
-        <p className="mt-1 text-[12px] text-holo-ink-3">한글과 공백 포함 최대 10자, 영어와 특수문자 불가.</p>
+        <p className="mt-1 text-[12px] text-holo-ink-3">한글과 공백 포함 최대 10자 / 영어, 특수문자, 비속어 불가</p>
         {check === "ok" && <p className="mt-1 text-[13px] text-holo-purple-mid">사용할 수 있는 닉네임입니다!</p>}
         {check === "fail" && <p className="mt-1 text-[13px] text-holo-error">사용할 수 없는 닉네임입니다!</p>}
       </section>
@@ -124,72 +127,6 @@ export function ProfileEditScreen() {
         </div>
       </section>
 
-      <Divider />
-
-      {/* Badges */}
-      <section className="px-4">
-        <div className="flex items-center justify-between">
-          <p className="text-[14px] font-semibold text-holo-ink">나의 뱃지</p>
-          <span className="text-[12px] text-holo-ink-3">총 {BADGES.length}개</span>
-        </div>
-        <div className="-mx-4 mt-3 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-max gap-3">
-            {BADGES.map((b) => {
-              const on = badge === b.id;
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setBadge(b.id)}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-holo-surface-2 text-[22px]">
-                    🏅
-                  </span>
-                  <span className="text-[10px] text-holo-ink-3">{b.date}</span>
-                  <span className="text-[12px] text-holo-ink">{b.label}</span>
-                  <span
-                    className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                      on ? "border-holo-purple-mid bg-holo-purple-mid" : "border-holo-line bg-white"
-                    }`}
-                  >
-                    {on && <CheckMini />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <Divider />
-
-      {/* Titles */}
-      <section className="px-4">
-        <div className="flex items-center justify-between">
-          <p className="text-[14px] font-semibold text-holo-ink">나의 칭호</p>
-          <span className="text-[12px] text-holo-ink-3">총 {TITLES.length}개</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {TITLES.map((t, i) => {
-            const on = titleIdx === i;
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTitleIdx(i)}
-                className={`rounded-[20px] border border-holo-line px-3 py-1.5 text-[13px] ${
-                  on
-                    ? "border-holo-purple-mid text-holo-purple-mid shadow-[inset_0_0_0_1px_#7448DD]"
-                    : "text-holo-ink"
-                }`}
-              >
-                {t}
-              </button>
-            );
-          })}
-        </div>
-      </section>
     </main>
   );
 }

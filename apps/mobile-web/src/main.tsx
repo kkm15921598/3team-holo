@@ -64,6 +64,10 @@ import { QuietHoursScreen } from "@/features/mypage/quiet-hours-screen";
 import { ModeScreen } from "@/features/mypage/mode-screen";
 import { FreePointsScreen } from "@/features/mypage/free-points-screen";
 import { VerifyRegionScreen } from "@/features/mypage/verify-region-screen";
+import { MyLevelScreen } from "@/features/mypage/my-level-screen";
+import { MyBadgesScreen } from "@/features/mypage/my-badges-screen";
+import { MyTitlesScreen } from "@/features/mypage/my-titles-screen";
+import { MyMeetingsScreen } from "@/features/mypage/my-meetings-screen";
 import { MyroomScreen } from "@/features/myroom/myroom-screen";
 
 import "./index.css";
@@ -140,6 +144,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/notifications" element={<TabLayout showHeader={false}><NotificationsScreen /></TabLayout>} />
           <Route path="/mypage/notifications/quiet" element={<TabLayout showHeader={false}><QuietHoursScreen /></TabLayout>} />
           <Route path="/mypage/mode" element={<TabLayout showHeader={false}><ModeScreen /></TabLayout>} />
+          <Route path="/mypage/level" element={<TabLayout showHeader={false}><MyLevelScreen /></TabLayout>} />
+          <Route path="/mypage/badges" element={<TabLayout showHeader={false}><MyBadgesScreen /></TabLayout>} />
+          <Route path="/mypage/titles" element={<TabLayout showHeader={false}><MyTitlesScreen /></TabLayout>} />
+          <Route path="/mypage/meetings" element={<TabLayout showHeader={false}><MyMeetingsScreen /></TabLayout>} />
 
           <Route path="*" element={<Navigate to="/splash" replace />} />
         </Routes>

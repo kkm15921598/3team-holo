@@ -1,23 +1,21 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { getBadgeByName } from "../../badge";
+import { getBadgeById } from "../../badge";
 import { ME_PERSONA } from "./home-faces";
 import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickRandomMeetups } from "./home-meetups-data";
 import { useStatusMessage } from "../myroom/myroom-store";
 import { ME } from "@/shared/mock/data";
+import { useProfile } from "@/shared/hooks/use-profile";
 
-// 모든 화면에서 동일한 닉네임 사용 — 데이터 단일 출처
-const NICKNAME = ME.nickname;
 const LEVEL = ME.level;
-const TITLE = ME.title;
-/** 메인 프로필에 표시할 뱃지 — 한글 이름으로 지정 */
-const BADGE = getBadgeByName("HOLO 수호신");
 
 export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
   const status = useStatusMessage();
+  const profile = useProfile();
+  const equippedBadge = getBadgeById(profile.equippedBadgeId);
 
   // 카드 가로 드래그 스크롤 (map-screen과 동일)
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -124,12 +122,12 @@ export function HomeScreen() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="mb-[6px] flex items-center gap-2">
-                <span className="text-[20px] font-bold text-holo-ink">{NICKNAME}</span>
-                {BADGE && (
-                  <img src={BADGE.src} alt={BADGE.name} title={BADGE.name} className="h-[27px] w-[27px] object-contain" />
+                <span className="text-[20px] font-bold text-holo-ink">{profile.nickname}</span>
+                {equippedBadge && (
+                  <img src={equippedBadge.src} alt={equippedBadge.name} title={equippedBadge.name} className="h-[27px] w-[27px] object-contain" />
                 )}
               </div>
-              <div className="text-[15px] text-[#A9A9A9]">{TITLE}</div>
+              <div className="text-[15px] text-[#A9A9A9]">{profile.title}</div>
             </div>
           </div>
         </div>
@@ -138,7 +136,7 @@ export function HomeScreen() {
       <section className="mt-[68px] px-[14px]">
         <p className="mb-[3px] text-[15px] text-[#8E8E8E]">어떤 모임에 들어갈지 고민되시나요?</p>
         <div className="mb-[14px] flex items-center gap-[6px] text-[18px]">
-          <span className="font-bold text-holo-purple-mid">{NICKNAME}</span>
+          <span className="font-bold text-holo-purple-mid">{profile.nickname}</span>
           <span className="font-medium text-black">님을 위한</span>
           <span className="font-bold text-holo-purple-mid">추천 모임</span>
           <button

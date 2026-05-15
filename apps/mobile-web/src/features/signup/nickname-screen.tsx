@@ -125,39 +125,38 @@ export function NicknameScreen() {
         : "border-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid";
 
   return (
-    <SignupLayout step={3}>
+    <SignupLayout step={4}>
       <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
         HOLO에서 사용할
         <br />
         당신의 이름을 정해주세요!
       </h1>
-      <p className="mt-2 text-[14px] text-holo-ink-3">한글 최대 10자 / 특수문자, 비속어 불가</p>
+      <p className="mt-2 text-[14px] text-holo-ink-3">한글과 공백 포함 최대 10자 / 영어, 특수문자, 비속어 불가</p>
 
       {/* 프로필 이미지 미리보기 + 변경 */}
       <div className="mt-6 flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setShowFacePicker(true)}
-          disabled={!data.gender}
-          className="relative h-[88px] w-[88px] overflow-hidden rounded-full border-2 border-holo-line bg-holo-surface-2 disabled:opacity-50"
-          aria-label="프로필 이미지 선택"
-        >
-          {data.profileFace ? (
-            <img src={data.profileFace} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center text-[24px] text-holo-ink-3">
-              ?
-            </span>
-          )}
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-holo-purple-mid text-white shadow">
-            <CameraIcon />
-          </span>
-        </button>
-        <p className="text-[12px] text-holo-ink-3">
-          {data.gender
-            ? "프로필 이미지를 선택해 주세요"
-            : "주민번호를 먼저 입력해 주세요"}
-        </p>
+        {/* 프로필 원형 + 설정 아이콘 오버레이 */}
+        <div className="relative h-[88px] w-[88px]">
+          <div className="h-full w-full overflow-hidden rounded-full border-2 border-holo-line bg-holo-surface-2">
+            {data.profileFace ? (
+              <img src={data.profileFace} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-[32px] text-holo-ink-4">?</span>
+            )}
+          </div>
+          {/* 설정 아이콘 — 프로필 원 우하단에 겹침 */}
+          <button
+            type="button"
+            onClick={() => setShowFacePicker(true)}
+            disabled={!data.gender}
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-holo-purple-mid text-white shadow transition hover:bg-holo-purple active:scale-95 disabled:opacity-40"
+            aria-label="프로필 이미지 선택"
+          >
+            <SettingsIcon />
+          </button>
+        </div>
+        {/* 안내 문구 */}
+        <p className="text-[12px] text-holo-ink-3">프로필 이미지를 선택해 주세요</p>
       </div>
 
       <div className="mt-6 flex flex-col gap-1">
@@ -203,8 +202,7 @@ export function NicknameScreen() {
         )}
       </div>
 
-      {value.length === 0 && (
-        <div className="mt-5 flex flex-col gap-2">
+      <div className="mt-5 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-[12px] text-holo-ink-3">이런 이름은 어때요?</span>
             <button
@@ -229,7 +227,6 @@ export function NicknameScreen() {
             ))}
           </div>
         </div>
-      )}
 
       <div className="mt-auto flex flex-col items-center gap-3 pt-6">
         <p className="text-[12px] text-holo-ink-3">나중에 다시 수정할 수 있어요!</p>
@@ -308,11 +305,11 @@ function FacePickerSheet({
   );
 }
 
-function CameraIcon() {
+function SettingsIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-      <circle cx="12" cy="13" r="4" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   );
 }

@@ -408,19 +408,37 @@ export const TITLES = [
   "#홈트_동기부여",
 ];
 
-export const BADGES = [
-  { id: 1, label: "미식가", date: "2025.10.11" },
-  { id: 2, label: "다정한 이웃", date: "2025.09.22" },
-  { id: 3, label: "집밥 고수", date: "2025.08.07" },
-  { id: 4, label: "골목 대장", date: "2025.06.30" },
-  { id: 5, label: "이웃 친구", date: "2025.05.10" },
-  { id: 6, label: "동네 명사", date: "2025.04.01" },
-  { id: 7, label: "탐험가", date: "2025.03.15" },
-  { id: 8, label: "산책 메이트", date: "2025.02.18" },
-  { id: 9, label: "수다왕", date: "2025.01.20" },
-  { id: 10, label: "리뷰어", date: "2024.12.05" },
-  { id: 11, label: "단골", date: "2024.11.11" },
-  { id: 12, label: "초대장인", date: "2024.10.10" },
+export type Badge = {
+  id: string;       // badge_01 ~ badge_23
+  label: string;
+  condition: string;
+  date?: string;    // 획득 시 날짜 존재
+};
+
+export const BADGES: Badge[] = [
+  { id: "badge_01", label: "빨래 요정",      condition: "세탁 관련 게시글을 5개 이상 작성하세요.",           date: "2025.10.11" },
+  { id: "badge_02", label: "장보기 달인",    condition: "공동구매 모임에 3회 이상 참여하세요.",              date: "2025.09.22" },
+  { id: "badge_03", label: "분리수거 요원",  condition: "분리수거 관련 글을 5개 이상 작성하세요.",           date: "2025.08.07" },
+  { id: "badge_04", label: "설거지 명수",    condition: "음식 나눔 후기를 3개 이상 작성하세요.",             date: "2025.06.30" },
+  { id: "badge_05", label: "재료 손질 장인", condition: "집밥 관련 게시글을 10개 이상 작성하세요.",          date: "2025.05.10" },
+  { id: "badge_06", label: "홈카페 사장님",  condition: "카페 모임에 5회 이상 참여하세요.",                  date: "2025.04.01" },
+  { id: "badge_07", label: "다정한 이웃",    condition: "이웃에게 댓글을 50개 이상 달아주세요.",             date: "2025.03.15" },
+  { id: "badge_08", label: "꿀잠 수호자",    condition: "출석 체크를 30일 연속 달성하세요.",                 date: "2025.02.18" },
+  { id: "badge_09", label: "먼지 사냥꾼",    condition: "청소 관련 게시글을 5개 이상 작성하세요.",           date: "2025.01.20" },
+  { id: "badge_10", label: "지구 지킴이",    condition: "환경 관련 모임에 3회 이상 참여하세요.",             date: "2024.12.05" },
+  { id: "badge_11", label: "집밥 고수",      condition: "음식 나눔 모임에 5회 이상 참여하세요.",             date: "2024.11.11" },
+  { id: "badge_12", label: "방구석 독서가",  condition: "독서 모임에 3회 이상 참여하세요.",                  date: "2024.10.10" },
+  { id: "badge_13", label: "정주행의 달인",  condition: "TV·영화 게시판에 글을 10개 이상 작성하세요.",       date: undefined },
+  { id: "badge_14", label: "산책 대장",      condition: "산책 모임에 5회 이상 참여하세요.",                  date: undefined },
+  { id: "badge_15", label: "릴렉스 마스터",  condition: "힐링 모임에 3회 이상 참여하세요.",                  date: undefined },
+  { id: "badge_16", label: "초록 집사",      condition: "식물 관련 게시글을 5개 이상 작성하세요.",           date: undefined },
+  { id: "badge_17", label: "베이킹 마법사",  condition: "베이킹 모임에 3회 이상 참여하세요.",                date: undefined },
+  { id: "badge_18", label: "꿀광 피부",      condition: "뷰티 관련 게시글을 10개 이상 작성하세요.",          date: undefined },
+  { id: "badge_19", label: "오운완 실천가",  condition: "운동 모임에 10회 이상 참여하세요.",                 date: undefined },
+  { id: "badge_20", label: "숙면 전문가",    condition: "출석 체크를 60일 연속 달성하세요.",                 date: undefined },
+  { id: "badge_21", label: "동네 미식가",    condition: "맛집 관련 게시글을 10개 이상 작성하세요.",          date: undefined },
+  { id: "badge_22", label: "동네 소통가",    condition: "채팅 메시지를 500개 이상 보내세요.",                date: undefined },
+  { id: "badge_23", label: "HOLO 수호신",   condition: "레벨 30을 달성하세요.",                             date: undefined },
 ];
 
 export const FRIENDS = [
