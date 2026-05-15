@@ -7,6 +7,7 @@ import { LocationMap } from "@/features/map/post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { calcJoined, ensureMeetupRoom } from "./meetup-utils";
+import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 
 type CommentReply = {
   id: string;
@@ -44,8 +45,9 @@ export function BoardDetailScreen() {
   const timeText = "26.4.2  19:00";
   const { capacity, baseJoined } = calcJoined(post);
 
-  // Interactive state
-  const [liked, setLiked] = useState(false);
+  // Interactive state — 좋아요는 likes-store 에서 영속화된 상태를 사용
+  const likedSet = useLikedSet();
+  const liked = likedSet.has(post.id);
   const [joining, setJoining] = useState(false);
   const [commentText, setCommentText] = useState("");
   // Pull context-appropriate comments per post if present, fall back to COMMENTS.
@@ -287,24 +289,27 @@ export function BoardDetailScreen() {
               {post.description}
             </p>
 
-            {post.location ? (
-              <div className="mt-3 overflow-hidden rounded-[10px] border border-holo-line-2">
-                <LocationMap location={post.location} className="h-[180px]" />
-              </div>
-            ) : (
-              <img
-                src="/illustrations/map.png"
-                alt="모임 위치"
-                className="mt-3 h-[180px] w-full rounded-[10px] border border-holo-line-2 object-cover"
+            {/* 자유게시판/추천해요 외 카테고리는 항상 실제 지도를 표시한다.
+                위치 데이터가 없는 경우엔 동네 기본 좌표(미금역 인근)로 폴백한다. */}
+            <div className="mt-3 overflow-hidden rounded-[10px] border border-holo-line-2">
+              <LocationMap
+                location={
+                  post.location ?? {
+                    lat: 37.3504,
+                    lng: 127.1094,
+                    placeName: place,
+                  }
+                }
+                className="h-[180px]"
               />
-            )}
+            </div>
 
             <div className="mt-3 flex items-center gap-[15px] text-holo-ink-2">
               <button
                 type="button"
                 aria-label={liked ? "좋아요 취소" : "좋아요"}
                 aria-pressed={liked}
-                onClick={() => setLiked((p) => !p)}
+                onClick={() => togglePostLike(post.id)}
                 className="flex items-center gap-1"
               >
                 <HeartIcon filled={liked} />
@@ -358,7 +363,7 @@ export function BoardDetailScreen() {
                 type="button"
                 aria-label={liked ? "좋아요 취소" : "좋아요"}
                 aria-pressed={liked}
-                onClick={() => setLiked((prev) => !prev)}
+                onClick={() => togglePostLike(post.id)}
                 className="flex items-center gap-1"
               >
                 <HeartIcon filled={liked} />

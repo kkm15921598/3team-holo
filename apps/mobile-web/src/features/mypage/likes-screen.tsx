@@ -1,12 +1,25 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { POSTS } from "@/shared/mock/data";
 import { ManagedList } from "./managed-list";
+import { setPostLiked, useLikedSet } from "@/shared/stores/likes-store";
 
 export function LikesScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
-  const [likes, setLikes] = useState(() => POSTS.slice(0, 5));
+  const likedSet = useLikedSet();
+
+  // store 의 liked id set 으로 실제 좋아요한 게시글만 노출
+  const items = useMemo(
+    () => POSTS.filter((p) => likedSet.has(p.id)),
+    [likedSet],
+  );
+
+  // "관리하기" → "삭제" 시 likes-store 에서 해당 id 들을 좋아요 해제
+  const handleDelete = (ids: string[]) => {
+    ids.forEach((id) => setPostLiked(id, false));
+  };
+
   return (
     <main className="flex flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center px-4">
@@ -19,8 +32,8 @@ export function LikesScreen() {
         title="내가 누른 좋아요 목록"
         manage={manage}
         onToggleManage={() => setManage((v) => !v)}
-        items={likes}
-        onDelete={(ids) => setLikes((prev) => prev.filter((p) => !ids.includes(p.id)))}
+        items={items}
+        onDelete={handleDelete}
       />
     </main>
   );

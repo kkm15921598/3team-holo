@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { setPhoneVerified } from "@/shared/stores/verification-store";
 
 const CARRIERS = ["SKT", "KT", "LG U+", "SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"];
 const CURRENT_PHONE = "010-****-1234";
@@ -27,7 +28,10 @@ export function PhoneChangeScreen() {
     if (codeValid) setVerified(true);
   };
   const handleSubmit = () => {
-    if (verified) setDone(true);
+    if (verified) {
+      setPhoneVerified(true);
+      setDone(true);
+    }
   };
 
   return (

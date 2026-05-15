@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getNotificationSettings,
   subscribeNotificationSettings,
@@ -16,6 +17,7 @@ type Notification = {
   body: string;
   time: string;
   read: boolean;
+  link: string;
 };
 
 const ALL_NOTIFICATIONS: Notification[] = [
@@ -26,6 +28,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     body: "홀로빌리지님이 내 글에 댓글을 달았어요. \"저도 같이 하고 싶어요!\"",
     time: "방금 전",
     read: false,
+    link: "/board/1",
   },
   {
     id: "n2",
@@ -34,6 +37,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     body: "단무지팬님이 내 글 \"점심 번개 같이 해요\"에 좋아요를 눌렀어요.",
     time: "5분 전",
     read: false,
+    link: "/board/1",
   },
   {
     id: "n3",
@@ -42,6 +46,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     body: "보드게임왕님이 친구 요청을 보냈어요.",
     time: "12분 전",
     read: false,
+    link: "/mypage/friends",
   },
   {
     id: "n4",
@@ -50,6 +55,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     body: "스터디카페 채팅방에 새 메시지가 도착했어요. \"내일 몇 시에 오세요?\"",
     time: "30분 전",
     read: true,
+    link: "/chat",
   },
   {
     id: "n5",
@@ -58,6 +64,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     body: "\"강아지 산책 친구\" 모임에 새 멤버가 합류했어요.",
     time: "1시간 전",
     read: true,
+    link: "/board/3",
   },
   {
     id: "n6",
@@ -66,6 +73,7 @@ const ALL_NOTIFICATIONS: Notification[] = [
     body: "오늘의 출석 체크를 완료하고 포인트를 받아가세요! 🎁",
     time: "오전 9:00",
     read: true,
+    link: "/event/attendance",
   },
 ];
 
@@ -89,6 +97,7 @@ const TYPE_TO_SETTING: Record<NotifType, keyof ReturnType<typeof getNotification
 };
 
 export function NotificationPanel({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate();
   const [nSettings, setNSettings] = useState(getNotificationSettings);
   const [readSet, setReadSet] = useState(() => getReadIds());
 
@@ -99,7 +108,11 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
     }),
   []);
 
-  const handleMarkRead = (id: string) => markRead(id);
+  const handleNotificationClick = (n: Notification) => {
+    markRead(n.id);
+    onClose();
+    navigate(n.link);
+  };
   const handleMarkAllRead = () =>
     markAllRead(ALL_NOTIFICATIONS.map((n) => n.id));
 
@@ -156,7 +169,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
               <li key={n.id}>
                 <button
                   type="button"
-                  onClick={() => handleMarkRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                   className={`flex w-full items-start gap-3 px-4 py-3 text-left transition ${
                     n.read ? "bg-white" : "bg-holo-lilac-card-2"
                   }`}

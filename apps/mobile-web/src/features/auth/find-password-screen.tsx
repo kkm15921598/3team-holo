@@ -2,18 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { PasswordToggle } from "@/shared/components/password-toggle";
-import {
-  PasswordStrength,
-  passwordIncludesForbidden,
-} from "@/shared/components/password-strength";
+import { PasswordStrength } from "@/shared/components/password-strength";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 
-const MOCK_ID = "test1234";
+const MOCK_NAME = "홍길동";
 const MOCK_PHONE = "01012345678";
-
-const ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/;
-const isValidId = (value: string) => ID_PATTERN.test(value);
 
 type Step = "verify" | "reset" | "done";
 
@@ -21,12 +15,11 @@ export function FindPasswordScreen() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("verify");
 
-  const [userId, setUserId] = useState("");
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [verifyError, setVerifyError] = useState("");
-  const [idError, setIdError] = useState("");
 
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent && step === "verify");
@@ -40,22 +33,15 @@ export function FindPasswordScreen() {
   const newPwCaps = useCapsLock();
   const confirmPwCaps = useCapsLock();
 
-  const isIdFilled = userId.length > 0 && isValidId(userId);
+  const isNameValid = name.trim().length >= 2;
   const isPhoneValid = phone.length >= 10;
-  const baseFilled = isIdFilled && isPhoneValid;
+  const baseFilled = isNameValid && isPhoneValid;
   const canSubmitVerify = codeSent ? code.length >= 6 : baseFilled;
 
   const PW_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+\-=]{8,16}$/;
   const isPwValid = PW_PATTERN.test(newPw);
   const isPwMatch = !!confirmPw && newPw === confirmPw;
-  const newPwIncludesId = passwordIncludesForbidden(newPw, userId);
-  const canSubmitReset = isPwValid && isPwMatch && !newPwIncludesId;
-
-  const handleIdBlur = () => {
-    if (userId && !isValidId(userId)) {
-      setIdError("아이디를 다시 입력해주세요.");
-    }
-  };
+  const canSubmitReset = isPwValid && isPwMatch;
 
   const handleVerifySubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -73,7 +59,7 @@ export function FindPasswordScreen() {
       return;
     }
 
-    if (userId === MOCK_ID && phone === MOCK_PHONE && code === "123456") {
+    if (name.trim() === MOCK_NAME && phone === MOCK_PHONE && code === "123456") {
       setStep("reset");
     } else {
       setVerifyError("일치하는 정보를 찾을 수 없습니다.");
@@ -92,10 +78,6 @@ export function FindPasswordScreen() {
 
     if (!isPwValid) {
       setPwError("영문, 숫자를 포함한 8~16자로 입력해주세요.");
-      return;
-    }
-    if (newPwIncludesId) {
-      setPwError("보안을 위해 비밀번호에 아이디를 포함하지 마세요.");
       return;
     }
     if (!isPwMatch) {
@@ -189,11 +171,7 @@ export function FindPasswordScreen() {
                 <PasswordToggle visible={showNewPw} onClick={() => setShowNewPw((s) => !s)} />
               </div>
               <CapsLockBadge visible={newPwCaps.capsOn} />
-              <PasswordStrength
-                password={newPw}
-                forbiddenSubstring={userId}
-                forbiddenLabel="아이디"
-              />
+              <PasswordStrength password={newPw} />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -269,37 +247,22 @@ export function FindPasswordScreen() {
           본인 확인 후 재설정할 수 있어요.
         </h1>
         <p className="mt-2 text-[14px] text-holo-ink-3">
-          가입한 아이디와 휴대폰 번호를 입력해주세요.
+          가입한 이름과 휴대폰 번호를 입력해주세요.
         </p>
 
         <div className="mt-7 flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <input
-              type="text"
-              inputMode="text"
-              autoComplete="username"
-              placeholder="아이디 입력 (test1234)"
-              value={userId}
-              onChange={(e) => {
-                setUserId(e.target.value.slice(0, 16));
-                setIdError("");
-                setVerifyError("");
-              }}
-              onBlur={handleIdBlur}
-              maxLength={16}
-              className={`h-[62px] rounded-holo-input px-5 text-[15px] outline-none ${
-                idError
-                  ? "border-2 border-holo-error"
-                  : userId && isValidId(userId)
-                    ? "border-2 border-holo-purple-mid text-holo-purple-mid"
-                    : "border border-holo-ink-4 placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
-              }`}
-            />
-            {idError && (
-              <p className="pl-2 text-[13px] text-holo-error">{idError}</p>
-            )}
-          </div>
-
+          <Input
+            placeholder="이름 입력"
+            value={name}
+            onChange={(v) => {
+              setName(v.slice(0, 20));
+              setVerifyError("");
+            }}
+            inputMode="text"
+            autoComplete="name"
+            valid={isNameValid}
+            maxLength={20}
+          />
           <Input
             placeholder="휴대폰 번호 입력 (010-1234-5678)"
             value={formatPhone(phone)}

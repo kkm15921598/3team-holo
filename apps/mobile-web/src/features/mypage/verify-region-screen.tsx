@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
+import { setRegionVerified } from "@/shared/stores/verification-store";
 
 type Phase = "permission" | "detecting" | "confirm" | "success";
 
@@ -24,7 +25,10 @@ export function VerifyRegionScreen() {
   }, [phase]);
 
   const grant = () => setPhase("detecting");
-  const confirm = () => setPhase("success");
+  const confirm = () => {
+    setRegionVerified(true);
+    setPhase("success");
+  };
   const finish = () => navigate(-1);
 
   const pickedLabel =

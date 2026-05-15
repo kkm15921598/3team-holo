@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { useSignup, genderFromIdNum } from "@/shared/contexts/signup-context";
+import { setGender as setGlobalGender } from "@/shared/stores/verification-store";
 import { PasswordToggle } from "@/shared/components/password-toggle";
 import { SignupLayout } from "./signup-layout";
 
@@ -99,7 +100,10 @@ export function VerificationScreen() {
               const next = parseIdInput(v, idNum, !showIdNum);
               update("idNum", next);
               // 뒷자리 첫 숫자가 입력되면 성별 자동 인식
-              update("gender", genderFromIdNum(next));
+              const g = genderFromIdNum(next);
+              update("gender", g);
+              // 전역 인증 store 에도 반영하여 프로필 편집의 캐릭터 필터에 사용
+              if (g) setGlobalGender(g);
             }}
             inputMode="numeric"
             valid={isIdValid}

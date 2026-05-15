@@ -5,33 +5,32 @@ import { draftsStore, type Draft } from "./drafts-store";
 export function BoardDraftsScreen() {
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<Draft[]>(draftsStore.getDrafts());
-  const [manageMode, setManageMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [manage, setManage] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     return draftsStore.subscribe(() => setDrafts(draftsStore.getDrafts()));
   }, []);
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+  const toggle = (id: string) => {
+    setSelected((s) => {
+      const next = new Set(s);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
   };
 
-  const handleManageButton = () => {
-    if (manageMode && selectedIds.size > 0) {
-      // Delete selected drafts and exit manage mode
-      draftsStore.remove(Array.from(selectedIds));
-      setSelectedIds(new Set());
-      setManageMode(false);
-    } else {
-      // Toggle manage mode (also resets selection on entering/exiting)
-      setManageMode((m) => !m);
-      setSelectedIds(new Set());
-    }
+  const handleToggleManage = () => {
+    setManage((m) => !m);
+    setSelected(new Set());
+  };
+
+  const handleDelete = () => {
+    if (selected.size === 0) return;
+    draftsStore.remove(Array.from(selected));
+    setSelected(new Set());
+    setManage(false);
   };
 
   const openDraft = (d: Draft) => {
@@ -40,80 +39,73 @@ export function BoardDraftsScreen() {
     });
   };
 
-  const showDeleteLabel = manageMode && selectedIds.size > 0;
-  const buttonLabel = showDeleteLabel ? "삭제" : "관리하기";
-
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center justify-between px-4">
-        <div className="flex items-center">
-          <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
-            <BackIcon />
-          </button>
-          <h1 className="ml-2 text-[16px] font-semibold text-holo-ink">임시 보관함</h1>
-        </div>
-        {drafts.length > 0 && (
-          <button
-            type="button"
-            onClick={handleManageButton}
-            className={`text-[14px] ${
-              showDeleteLabel ? "font-semibold text-[#E04646]" : "text-holo-purple-mid"
-            }`}
-          >
-            {buttonLabel}
-          </button>
-        )}
+      <header className="flex h-12 shrink-0 items-center px-4">
+        <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
+          <BackIcon />
+        </button>
+        <h1 className="ml-2 text-[16px] font-semibold text-holo-ink">임시 보관함</h1>
       </header>
+
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line-3 px-4">
+        <span className="text-[14px] font-semibold text-holo-ink">
+          {manage ? "삭제할 게시글을 선택해 주세요" : "임시 보관함"}
+        </span>
+        {drafts.length > 0 && (
+          manage ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={selected.size === 0}
+              className={`rounded-full px-3 py-1 text-[13px] font-semibold text-white ${
+                selected.size === 0 ? "bg-holo-ink-4" : "bg-holo-purple-mid"
+              }`}
+            >
+              삭제하기
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleToggleManage}
+              className="text-[13px] text-holo-ink-2"
+            >
+              관리하기
+            </button>
+          )
+        )}
+      </div>
 
       {drafts.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-[14px] text-holo-ink-3">
           임시 보관된 게시글이 없습니다.
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto">
+        <ul className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
           {drafts.map((d) => {
-            const selected = selectedIds.has(d.id);
+            const on = selected.has(d.id);
             return (
-              <li key={d.id} className="border-b border-holo-line">
+              <li key={d.id}>
                 <button
                   type="button"
-                  onClick={() => (manageMode ? toggleSelect(d.id) : openDraft(d))}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                  onClick={() => (manage ? toggle(d.id) : openDraft(d))}
+                  className={`relative flex w-full items-start gap-3 rounded-holo-card bg-white p-4 text-left shadow-holo-card ${
+                    manage && on ? "ring-2 ring-holo-purple-mid" : ""
+                  }`}
                 >
-                  {manageMode && (
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                        selected
-                          ? "border-holo-purple-mid bg-holo-purple-mid"
-                          : "border-holo-line bg-white"
-                      }`}
-                      aria-hidden
-                    >
-                      {selected && (
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      )}
-                    </span>
-                  )}
-                  <div className="h-16 w-16 shrink-0 rounded bg-holo-line-3" />
-                  <div className="flex flex-1 flex-col justify-center">
-                    <span className="text-[15px] font-semibold text-holo-ink">
+                  <div className="flex flex-1 flex-col">
+                    <span className="text-[16px] font-normal text-[#000000]">
                       {d.title || "(제목 없음)"}
                     </span>
-                    <p className="mt-1 line-clamp-1 text-[13px] text-holo-ink-3">
+                    <span className="mt-1 text-[14px] font-normal text-[#979797]">
                       {d.description}
-                    </p>
+                    </span>
                   </div>
+                  {!manage && (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-full bg-holo-lilac-light text-white">
+                      <ArrowChip />
+                    </span>
+                  )}
                 </button>
               </li>
             );
@@ -121,6 +113,25 @@ export function BoardDraftsScreen() {
         </ul>
       )}
     </main>
+  );
+}
+
+function ArrowChip() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="white"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M7 17 17 7" />
+      <path d="M8 7h9v9" />
+    </svg>
   );
 }
 

@@ -1,10 +1,23 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ME } from "@/shared/mock/data";
+import { ME_PERSONA } from "@/features/home/home-faces";
+import {
+  getVerification,
+  subscribeVerification,
+} from "@/shared/stores/verification-store";
 
 export function AccountScreen() {
   const navigate = useNavigate();
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [verification, setVerification] = useState(getVerification);
+
+  useEffect(() => {
+    const unsub = subscribeVerification(() => setVerification(getVerification()));
+    return unsub;
+  }, []);
+
+  const verified = verification.phoneVerified && verification.regionVerified;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -19,16 +32,25 @@ export function AccountScreen() {
         <p className="text-[12px] text-holo-ink-3">로그인 계정</p>
         <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-holo-card">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-holo-yellow-room text-[18px]">
-              👧
-            </span>
+            <img
+              src={ME_PERSONA.face}
+              alt={ME_PERSONA.name}
+              className="h-9 w-9 rounded-full object-cover"
+              draggable={false}
+            />
             <div className="flex flex-col">
               <span className="text-[14px] font-semibold text-holo-ink">{ME.nickname}</span>
               <span className="text-[12px] text-holo-ink-3">ID : {ME.friendCode}</span>
             </div>
           </div>
-          <span className="rounded-full bg-holo-lilac-card px-2 py-0.5 text-[11px] font-semibold text-holo-purple-mid">
-            카카오
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+              verified
+                ? "bg-holo-lilac-card text-holo-purple-mid"
+                : "bg-holo-line-2/50 text-holo-ink-3"
+            }`}
+          >
+            {verified ? "인증완료" : "미인증"}
           </span>
         </div>
       </section>

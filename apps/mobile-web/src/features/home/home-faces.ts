@@ -54,3 +54,14 @@ export const ME_PERSONA: Persona = {
   name: "무지는 단무지",
   face: enc("woman/girl", "ggx8izggx8izggx8 8"),
 };
+
+/** 프로필 편집에서 사용하는 성별별 캐릭터 후보 (얼굴만 추려서 노출).
+ *  본인인증 시 판별된 성별에 따라 한 쪽 리스트만 노출된다. */
+export const FEMALE_FACES: string[] = [
+  ME_PERSONA.face,
+  ...PERSONAS.filter((p) => p.face.includes("/woman/")).map((p) => p.face),
+];
+
+export const MALE_FACES: string[] = PERSONAS.filter((p) =>
+  p.face.includes("/man/"),
+).map((p) => p.face);

@@ -15,6 +15,7 @@ import type { CatalogItem } from "../myroom/myroom-data";
 import { CATALOG } from "../myroom/myroom-catalog";
 import { getPlacementWidth } from "../myroom/myroom-dimensions";
 import { RoomEditorView } from "../myroom/myroom-room-view";
+import { setMyroomItems, purchaseItem } from "../myroom/myroom-store";
 
 const MAX_BUY_COUNT = 2;
 const TUTORIAL_LEVEL = 1;
@@ -172,6 +173,14 @@ export function RoomScreen() {
     setShowError(true);
     return;
   }
+
+  // 회원가입 마지막 단계에서 배치/구매한 가구를 myroom store 에 저장.
+  // → 홈 화면 RoomScene 과 마이룸 화면에 동일한 배치가 그대로 노출된다.
+  setMyroomItems(items);
+  ownedKeys.forEach((key) => {
+    const [kind, variant] = key.split(":");
+    if (kind && variant) purchaseItem(kind, variant);
+  });
 
   localStorage.setItem(
     "holoUser",

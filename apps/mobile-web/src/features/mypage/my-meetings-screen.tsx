@@ -24,42 +24,56 @@ export function MyMeetingsScreen() {
             <p className="text-[13px] text-holo-ink-3">이웃들과 함께하는 모임을 찾아보세요!</p>
           </div>
         ) : (
-          MY_MEETINGS.map((room) => (
-            <div
-              key={room.id}
-              className="rounded-[14px] border border-holo-line bg-white p-4"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex flex-1 flex-col gap-1 min-w-0">
-                  <span className="truncate text-[15px] font-semibold text-holo-ink">
-                    {room.name}
-                  </span>
-                  <span className="text-[12px] text-holo-ink-3">{room.subtitle}</span>
-                </div>
-                <span className="shrink-0 rounded-full bg-holo-purple-mid/10 px-2.5 py-1 text-[11px] font-semibold text-holo-purple-mid">
-                  {room.memberCount}명
-                </span>
-              </div>
-
-              {room.meeting && (
-                <div className="mt-3 flex items-center gap-2 rounded-[10px] bg-holo-surface-2 px-3 py-2">
-                  <CalendarIcon />
-                  <span className="text-[12px] text-holo-ink-3">
-                    {room.meeting.date} {room.meeting.time}
-                  </span>
-                  <span className="mx-1 h-3 w-px bg-holo-line" />
-                  <span className="truncate text-[12px] text-holo-ink-3">
-                    {room.meeting.place}
+          MY_MEETINGS.map((room) => {
+            // 오늘 활동(오전/오후 X:XX)이면 진행 중, 그 외(어제, 날짜)는 종료된 모임으로 간주
+            const isOngoing = /^(오전|오후)\s/.test(room.lastTime);
+            return (
+              <div
+                key={room.id}
+                className={`rounded-[14px] bg-white p-4 ${
+                  isOngoing
+                    ? "border-[1.5px] border-holo-purple-mid"
+                    : "border border-holo-line"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-1 flex-col gap-1 min-w-0">
+                    <span className="truncate text-[15px] font-semibold text-holo-ink">
+                      {room.name}
+                    </span>
+                    <span className="text-[12px] text-holo-ink-3">{room.subtitle}</span>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-holo-purple-mid/10 px-2.5 py-1 text-[11px] font-semibold text-holo-purple-mid">
+                    {room.memberCount}명
                   </span>
                 </div>
-              )}
 
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-[12px] text-holo-ink-3">{room.lastMessage}</span>
-                <span className="text-[11px] text-holo-ink-4">{room.lastTime}</span>
+                {room.meeting && (
+                  <div className="mt-3 flex items-center gap-2 rounded-[10px] bg-holo-surface-2 px-3 py-2">
+                    <CalendarIcon />
+                    <span className="text-[12px] text-holo-ink-3">
+                      {room.meeting.date} {room.meeting.time}
+                    </span>
+                    <span className="mx-1 h-3 w-px bg-holo-line" />
+                    <span className="truncate text-[12px] text-holo-ink-3">
+                      {room.meeting.place}
+                    </span>
+                  </div>
+                )}
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span
+                    className={`text-[12px] ${
+                      isOngoing ? "text-holo-ink-3" : "font-medium text-holo-ink-4"
+                    }`}
+                  >
+                    {isOngoing ? room.lastMessage : "종료된 모임입니다."}
+                  </span>
+                  <span className="text-[11px] text-holo-ink-4">{room.lastTime}</span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </section>
     </main>

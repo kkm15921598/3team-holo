@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { setNickname as storeSetNickname } from "@/shared/stores/profile-store";
+import {
+  FEMALE_FACES,
+  MALE_FACES,
+  ME_PERSONA,
+} from "@/features/home/home-faces";
+import {
+  getVerification,
+  subscribeVerification,
+} from "@/shared/stores/verification-store";
 
-const HAIR_COUNT = 6;
 const BG_COLORS = [
   "#DDC0FF",
   "#FCEBB5",
@@ -21,11 +29,27 @@ export function ProfileEditScreen() {
   const profile = useProfile();
   const [nickname, setNickname] = useState(profile.nickname);
   const [check, setCheck] = useState<"ok" | "fail" | null>(null);
-  const [hair, setHair] = useState(2);
+
+  // 본인인증 시 판별된 성별에 따라 캐릭터 후보를 필터링한다.
+  const [verification, setVerification] = useState(getVerification);
+  useEffect(() => {
+    const unsub = subscribeVerification(() => setVerification(getVerification()));
+    return unsub;
+  }, []);
+  const characterOptions =
+    verification.gender === "M" ? MALE_FACES : FEMALE_FACES;
+
+  const currentFaceIndex = Math.max(
+    0,
+    characterOptions.findIndex((f) => f === ME_PERSONA.face),
+  );
+  const [character, setCharacter] = useState(currentFaceIndex);
   const [bg, setBg] = useState(1);
   const handleCheck = () => {
     setCheck(nickname === "감자는 감자" ? "fail" : "ok");
   };
+
+  const selectedFace = characterOptions[character] ?? characterOptions[0];
 
   return (
     <main className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -79,50 +103,66 @@ export function ProfileEditScreen() {
       {/* Profile image */}
       <section className="px-4">
         <p className="text-[14px] font-semibold text-holo-ink">프로필 이미지</p>
-        <div className="mt-3 flex items-start gap-4">
+
+        {/* 미리보기 — 선택한 캐릭터를 선택한 배경색 위에 둥근 원으로 표시 */}
+        <div className="mt-4 flex justify-center">
           <div
-            className="flex h-[140px] w-[120px] items-center justify-center rounded-[18px]"
+            className="flex h-[160px] w-[160px] items-center justify-center rounded-full"
             style={{ background: BG_COLORS[bg] }}
           >
-            <div className="h-20 w-20 rounded-full bg-holo-yellow-room" />
+            <img
+              src={selectedFace}
+              alt="선택된 캐릭터 미리보기"
+              className="h-[150px] w-[150px] rounded-full object-cover"
+              draggable={false}
+            />
           </div>
-          <div className="flex flex-1 flex-col gap-3">
-            <div>
-              <p className="text-[13px] font-semibold text-holo-ink">헤어</p>
-              <div className="mt-2 flex gap-2">
-                {Array.from({ length: HAIR_COUNT }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setHair(i)}
-                    className={`relative h-10 w-10 rounded-full bg-holo-yellow-room ${
-                      hair === i ? "ring-2 ring-holo-purple-mid ring-offset-1" : ""
-                    }`}
-                  >
-                    {hair === i && (
-                      <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-holo-purple-mid">
-                        <CheckMini />
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[13px] font-semibold text-holo-ink">배경색</p>
-              <div className="mt-2 flex gap-2">
-                {BG_COLORS.slice(0, 6).map((c, i) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setBg(i)}
-                    className={`h-6 w-6 rounded-full ${bg === i ? "ring-2 ring-holo-ink ring-offset-1" : ""}`}
-                    style={{ background: c }}
-                    aria-label={`배경 ${i}`}
+        </div>
+
+        {/* 캐릭터 — 가로 스크롤(드래그) 가능 */}
+        <div className="mt-6">
+          <p className="text-[13px] font-semibold text-holo-ink">캐릭터</p>
+          <div className="-mx-4 mt-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex gap-[10px]">
+              {characterOptions.map((face, i) => (
+                <button
+                  key={face}
+                  type="button"
+                  onClick={() => setCharacter(i)}
+                  className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-full transition ${
+                    character === i ? "ring-[2px] ring-holo-purple-mid" : "opacity-80"
+                  }`}
+                >
+                  <img
+                    src={face}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    draggable={false}
                   />
-                ))}
-              </div>
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
+
+        {/* 배경색 */}
+        <div className="mt-5">
+          <p className="text-[13px] font-semibold text-holo-ink">배경색</p>
+          <div className="mt-3 flex gap-[10px]">
+            {BG_COLORS.slice(0, 6).map((c, i) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setBg(i)}
+                className={`h-7 w-7 rounded-full transition ${
+                  bg === i
+                    ? "ring-[2px] ring-holo-purple-mid ring-offset-1"
+                    : ""
+                }`}
+                style={{ background: c }}
+                aria-label={`배경 ${i}`}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -138,13 +178,6 @@ function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-function CheckMini() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m4 12 6 6 10-14" />
     </svg>
   );
 }

@@ -160,10 +160,6 @@ export function LoginScreen() {
           회원가입
         </button>
         <span className="h-3 w-px bg-holo-line" />
-        <button type="button" onClick={() => navigate("/auth/find-id")}>
-          아이디 찾기
-        </button>
-        <span className="h-3 w-px bg-holo-line" />
         <button type="button" onClick={() => navigate("/auth/find-password")}>
           비밀번호 찾기
         </button>

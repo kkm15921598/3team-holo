@@ -10,7 +10,7 @@ export function BoardMainScreen() {
     <main className="flex flex-1 flex-col gap-3 px-4 pt-2 pb-4">
       {/* 실시간 TOP */}
       <Link
-        to="/board/list"
+        to="/board/list?top=live"
         className="relative flex h-[110px] items-center justify-between overflow-hidden rounded-[20px] border border-holo-top-live-bd bg-holo-top-live-bg pl-5 pr-3"
       >
         <div>
@@ -29,7 +29,7 @@ export function BoardMainScreen() {
 
       {/* 주간 TOP */}
       <Link
-        to="/board/list"
+        to="/board/list?top=weekly"
         className="relative flex h-[110px] items-center justify-between overflow-hidden rounded-[20px] border border-holo-lilac-deep bg-holo-lilac-card pl-5 pr-3"
       >
         <div>
@@ -72,7 +72,7 @@ export function BoardMainScreen() {
           />
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3">
+        <div className="mt-2 grid grid-cols-[auto_auto] justify-start gap-x-8 gap-y-3">
           {visibleCategories.map((c) => (
             <Link
               key={c.id}

@@ -183,10 +183,10 @@ export function MapScreen() {
                 <div className="text-[16px] font-bold text-holo-ink line-clamp-1 break-keep pr-[40px]">
                   {p.title}
                 </div>
-                <div className="mt-[3px] text-[12px] font-medium text-holo-purple-mid opacity-80">
+                <div className="mt-[5px] text-[12px] font-medium text-holo-purple-mid opacity-80">
                   {p.distance} · {p.duration}
                 </div>
-                <p className="mt-2 line-clamp-2 max-h-[40px] max-w-[94px] text-[13px] leading-[1.4] text-[#333]">
+                <p className="mt-[10px] line-clamp-2 text-[13px] leading-[1.45] text-[#333]">
                   {p.description}
                 </p>
                 <Link

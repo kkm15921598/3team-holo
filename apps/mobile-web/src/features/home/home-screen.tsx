@@ -5,7 +5,8 @@ import { ME_PERSONA } from "./home-faces";
 import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickRandomMeetups } from "./home-meetups-data";
-import { useStatusMessage } from "../myroom/myroom-store";
+import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
+import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
 import { ME } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
 
@@ -14,6 +15,7 @@ const LEVEL = ME.level;
 export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
   const status = useStatusMessage();
+  const statusPos = useStatusPosition();
   const profile = useProfile();
   const equippedBadge = getBadgeById(profile.equippedBadgeId);
 
@@ -88,21 +90,28 @@ export function HomeScreen() {
           style={{ backgroundImage: "url(/illustrations/home-hero.png)" }}
         >
           <div className="absolute left-0 right-0 top-[10px] flex justify-center">
-            <RoomScene />
-          </div>
-
-          <div className="absolute right-[42px] top-[148px] z-[5] whitespace-nowrap rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]">
-            {status}
-            <span
-              className="absolute h-0 w-0"
-              style={{
-                bottom: "-8px",
-                left: "12px",
-                borderLeft: "5px solid transparent",
-                borderRight: "5px solid transparent",
-                borderTop: "8px solid #fff",
-              }}
-            />
+            {/* 룸 좌표계(ROOM_W × ROOM_H)와 동일한 래퍼 안에서 RoomScene 과
+                상태 메시지를 함께 렌더링하여, 마이룸 편집 화면에서 드래그한
+                상태 메시지 위치가 홈에도 동일한 좌표로 노출되도록 한다. */}
+            <div className="relative" style={{ width: ROOM_W, height: ROOM_H }}>
+              <RoomScene />
+              <div
+                className="absolute z-[5] whitespace-nowrap rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]"
+                style={{ left: statusPos.x, top: statusPos.y }}
+              >
+                {status}
+                <span
+                  className="absolute h-0 w-0"
+                  style={{
+                    bottom: "-8px",
+                    left: "12px",
+                    borderLeft: "5px solid transparent",
+                    borderRight: "5px solid transparent",
+                    borderTop: "8px solid #fff",
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="absolute -bottom-[44px] left-1/2 z-[6] flex h-[88px] w-[319px] -translate-x-1/2 items-center gap-[14px] rounded-[20px] bg-holo-surface px-4 shadow-[0_4px_16px_rgba(116,72,221,0.1)]">

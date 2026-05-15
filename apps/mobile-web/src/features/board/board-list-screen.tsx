@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BOARD_CATEGORIES,
@@ -17,9 +17,39 @@ function avatarFor(nickname: string): string {
 
 const DRAG_THRESHOLD = 4;
 
+/**
+ * "방금 전 / N분 전 / N시간 전 / N일 전" 등을 분 단위 수치로 환산.
+ * 실시간 TOP 정렬에서 "최신"을 가중치로 쓰기 위함.
+ */
+function parseTimeAgoMinutes(timeAgo: string): number {
+  if (!timeAgo) return Number.POSITIVE_INFINITY;
+  if (/방금/.test(timeAgo)) return 0;
+  const m = timeAgo.match(/(\d+)\s*(분|시간|일|주)/);
+  if (!m) return Number.POSITIVE_INFINITY;
+  const n = Number(m[1]);
+  switch (m[2]) {
+    case "분":
+      return n;
+    case "시간":
+      return n * 60;
+    case "일":
+      return n * 60 * 24;
+    case "주":
+      return n * 60 * 24 * 7;
+    default:
+      return Number.POSITIVE_INFINITY;
+  }
+}
+
+const TOP_LIMIT = 10;
+const WEEK_MINUTES = 60 * 24 * 7;
+
 export function BoardListScreen() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const keyword = (searchParams.get("q") ?? "").trim();
+  const topMode = searchParams.get("top"); // "live" | "weekly" | null
+  const isTopView = topMode === "live" || topMode === "weekly";
   const [activeCat, setActiveCat] = useState<string>("all");
   const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
 
@@ -30,6 +60,12 @@ export function BoardListScreen() {
   const clearKeyword = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
+
+  const clearTop = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("top");
     setSearchParams(next, { replace: true });
   };
 
@@ -71,6 +107,31 @@ export function BoardListScreen() {
   };
 
   const visible = useMemo(() => {
+    // ── 실시간 TOP / 주간 TOP 모드 ─────────────────────────────
+    // 카테고리 탭/검색 키워드는 무시하고 전체 글에서 정렬·상위 N개만 노출
+    if (topMode === "live") {
+      // 최근성 가중치 + 좋아요/댓글 합산으로 "지금 뜨거운" 글 산정
+      return [...posts]
+        .map((p) => {
+          const minutes = parseTimeAgoMinutes(p.timeAgo);
+          // 최근일수록 큰 가중치 (24시간 이상은 1)
+          const recency = minutes <= 60 * 24 ? 60 * 24 - minutes : 1;
+          const score = p.likes * 4 + p.comments * 3 + recency * 0.05;
+          return { p, score };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, TOP_LIMIT)
+        .map((x) => x.p);
+    }
+    if (topMode === "weekly") {
+      // 최근 7일 이내 글 중 좋아요+댓글이 많은 순서
+      return [...posts]
+        .filter((p) => parseTimeAgoMinutes(p.timeAgo) <= WEEK_MINUTES)
+        .sort((a, b) => b.likes + b.comments - (a.likes + a.comments))
+        .slice(0, TOP_LIMIT);
+    }
+
+    // ── 기본 모드 (카테고리 / 검색) ─────────────────────────
     let list = activeCat === "all" ? posts : posts.filter((p) => p.category === activeCat);
     if (keyword) {
       const lq = keyword.toLowerCase();
@@ -82,39 +143,80 @@ export function BoardListScreen() {
       );
     }
     return list;
-  }, [posts, activeCat, keyword]);
+  }, [posts, activeCat, keyword, topMode]);
 
   return (
     <main className="flex flex-1 flex-col">
-      <div
-        ref={tabsRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        className="overflow-x-auto px-4 py-2 [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none", cursor: "grab" }}
-      >
-        <div className="flex w-max gap-2">
-          {BOARD_CATEGORIES.map((c) => {
-            const on = activeCat === c.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => handleTabClick(c.id)}
-                className={`shrink-0 rounded-[20px] px-4 py-1.5 text-[16px] font-medium ${
-                  on ? "bg-holo-lilac-card text-holo-purple-mid" : "text-holo-ink-3"
-                }`}
-              >
-                {c.label}
-              </button>
-            );
-          })}
+      {isTopView ? (
+        // 실시간 TOP / 주간 TOP 전용 헤더 — 카테고리 탭 대신 표시
+        <div
+          className={`flex items-center gap-2 border-b px-3 py-3 ${
+            topMode === "live"
+              ? "border-holo-top-live-bd bg-holo-top-live-bg"
+              : "border-holo-lilac-deep bg-holo-lilac-card"
+          }`}
+        >
+          <button
+            type="button"
+            aria-label="뒤로"
+            onClick={() => navigate(-1)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center"
+          >
+            <BackIcon />
+          </button>
+          <div className="flex flex-1 flex-col">
+            <span className="text-[15px] font-bold text-holo-ink">
+              {topMode === "live" ? "실시간 TOP" : "주간 TOP"}
+            </span>
+            <span
+              className={`text-[11px] ${
+                topMode === "live" ? "text-holo-error" : "text-holo-purple-mid"
+              }`}
+            >
+              {topMode === "live"
+                ? "지금 이 순간 가장 뜨거운 글"
+                : "이번 주 가장 많이 본 글"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={clearTop}
+            className="text-[12px] text-holo-purple-mid underline"
+          >
+            전체보기
+          </button>
         </div>
-      </div>
+      ) : (
+        <div
+          ref={tabsRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className="overflow-x-auto px-4 py-2 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none", cursor: "grab" }}
+        >
+          <div className="flex w-max gap-2">
+            {BOARD_CATEGORIES.map((c) => {
+              const on = activeCat === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => handleTabClick(c.id)}
+                  className={`shrink-0 rounded-[20px] px-4 py-1.5 text-[16px] font-medium ${
+                    on ? "bg-holo-lilac-card text-holo-purple-mid" : "text-holo-ink-3"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-      {keyword && (
+      {keyword && !isTopView && (
         <div className="flex items-center justify-between border-b border-holo-line bg-holo-lilac-soft/40 px-4 py-2 text-[12px] text-holo-ink-2">
           <span>
             <span className="font-semibold text-holo-purple-mid">‘{keyword}’</span> 검색 결과 {visible.length}건
@@ -131,7 +233,9 @@ export function BoardListScreen() {
 
       {visible.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-[14px] text-holo-ink-3">
-          {keyword ? (
+          {isTopView ? (
+            <span>표시할 글이 없습니다.</span>
+          ) : keyword ? (
             <>
               <span>‘{keyword}’에 대한 검색 결과가 없습니다.</span>
               <span className="text-[12px]">다른 검색어로 다시 시도해 보세요.</span>
@@ -142,8 +246,12 @@ export function BoardListScreen() {
         </div>
       ) : (
         <ul className="flex-1 overflow-y-auto">
-          {visible.map((p) => (
-            <PostCard key={p.id} post={p} />
+          {visible.map((p, i) => (
+            <PostCard
+              key={p.id}
+              post={p}
+              rank={isTopView ? i + 1 : undefined}
+            />
           ))}
         </ul>
       )}
@@ -159,12 +267,13 @@ export function BoardListScreen() {
   );
 }
 
-function PostCard({ post }: { post: Post }) {
+function PostCard({ post, rank }: { post: Post; rank?: number }) {
   // 자유게시판/추천해요는 상태 블록을 숨기되, 자리는 비워둠 → 탭 이동 시 카드 높이가 동일하게 유지됨
   const isSimple =
     post.category === "recommend" || post.category === "free";
-  // Category badge before the title appears ONLY on 자유게시판 posts.
-  const showCategoryBadge = post.category === "free";
+  // 제목 앞 카테고리 배지 — 자유게시판/추천해요 글에서 노출 ("자유" / "추천")
+  const showCategoryBadge =
+    post.category === "free" || post.category === "recommend";
 
   const cap = post.peopleCount ?? 5;
   const joined = post.status === "모집완료" ? cap : Math.max(1, cap - 2);
@@ -173,6 +282,7 @@ function PostCard({ post }: { post: Post }) {
   return (
     <li className="border-b border-holo-line">
       <Link to={`/board/${post.id}`} className="flex items-stretch gap-3 px-4 py-3">
+        {rank !== undefined && <RankBadge rank={rank} />}
         <div className="flex shrink-0 flex-col items-center">
           <img
             src={avatarFor(post.authorNickname)}
@@ -195,7 +305,7 @@ function PostCard({ post }: { post: Post }) {
         <div className="flex flex-1 flex-col">
           <div className="flex items-center gap-2">
             {showCategoryBadge && shortLabel && (
-              <CategoryBadge label={shortLabel} />
+              <CategoryBadge label={shortLabel} variant={post.category} />
             )}
             <span className="text-[15px] font-semibold text-holo-ink">
               {post.title}
@@ -222,10 +332,36 @@ function PostCard({ post }: { post: Post }) {
   );
 }
 
-function CategoryBadge({ label }: { label: string }) {
+function CategoryBadge({ label, variant }: { label: string; variant?: string }) {
+  // 자유게시판 글은 회색 톤, 그 외(추천해요 등)는 라일락/보라색 톤 배지
+  const styles =
+    variant === "free"
+      ? "bg-holo-line-3 text-holo-ink-3"
+      : "bg-holo-lilac-soft text-holo-purple-mid";
   return (
-    <span className="shrink-0 rounded-[4px] bg-holo-lilac-soft px-1.5 py-0.5 text-[11px] font-medium text-holo-purple-mid">
+    <span className={`shrink-0 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium ${styles}`}>
       {label}
+    </span>
+  );
+}
+
+/** TOP 화면에서 게시글 좌측에 표시되는 순위 배지.
+ *  1·2·3 위는 메달 색(금/은/동), 4위 이상은 회색 톤. */
+function RankBadge({ rank }: { rank: number }) {
+  const isMedal = rank <= 3;
+  const style: Record<number, string> = {
+    1: "bg-gradient-to-b from-[#FFD66B] to-[#E6A100] text-white shadow-[0_2px_6px_rgba(230,161,0,0.35)]",
+    2: "bg-gradient-to-b from-[#D7DBE2] to-[#9CA3AF] text-white shadow-[0_2px_6px_rgba(156,163,175,0.35)]",
+    3: "bg-gradient-to-b from-[#E8A073] to-[#B86B3C] text-white shadow-[0_2px_6px_rgba(184,107,60,0.35)]",
+  };
+  return (
+    <span
+      className={`flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-full text-[13px] font-bold ${
+        isMedal ? style[rank] : "bg-holo-surface-2 text-holo-ink-2"
+      }`}
+      aria-label={`${rank}위`}
+    >
+      {rank}
     </span>
   );
 }
@@ -288,6 +424,13 @@ function PlusIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>
       <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+function BackIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m15 18-6-6 6-6" />
     </svg>
   );
 }
