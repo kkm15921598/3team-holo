@@ -54,6 +54,8 @@ export type TestAccount = {
   title: string;
   /** 장착 뱃지 id — badge_01 ~ badge_23 */
   equippedBadgeId: string;
+  /** 친구 추가용 고유 ID (5자 영숫자). 계정마다 다르고 친구추가 QR 화면에 노출된다. */
+  friendCode: string;
   /** 프로필 얼굴 URL — 계정별로 고정 얼굴을 지정. 없으면 성별 기본 얼굴 사용. */
   profileFace?: string;
   /** 마이룸 가구 배치 — 계정별 컨셉으로 미리 꾸며둔 룸 */
@@ -75,6 +77,7 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     nickname: "다정한 바리스타",
     title: "#홈트_동기부여",
     equippedBadgeId: "badge_06", // 홈카페 사장님
+    friendCode: "bri07",
     // 성인 남자 풀(man/man) 중 [1] — 웨이브 갈색머리 청년
     profileFace: encodeURI(
       "/illustrations/icons_face/man/man/Gemini_Generated_Image_2yfg492yfg492yfg 5.png",
@@ -112,8 +115,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
         "#동네_보안관",
       ],
       points: 1000,
-      // 참여한 모임 5 — 운동·게임 위주
-      joinedPostIds: ["hm5", "sp11", "sp12", "sp14", "gm11"],
+      // 참여한 모임 4 — 운동 진행중 2개 + 종료된 모임 2개 (end-sp1, end-sp2)
+      joinedPostIds: ["sp11", "sp14", "end-sp1", "end-sp2"],
       // 좋아요 8
       likedPostIds: ["hm3", "hm5", "hm7", "sp11", "sp14", "sp16", "fd14", "r13"],
       // 최근 본 게시물 13 (앞이 가장 최근)
@@ -190,6 +193,7 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     nickname: "달콤한 무지",
     title: "#맛집_네비게이터",
     equippedBadgeId: "badge_21", // 동네 미식가
+    friendCode: "ajhd5",
     // 라일락·핑크 톤 — 책상 + 의자만. 좌표는 floorTopY 기준으로 산정.
     myroomItems: [
       { id: "desk-w1", kind: "desk", variant: "01", flipped: false, x: 117, y: 135, width: 107 },
@@ -225,12 +229,10 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
         "#홈트_동기부여",
       ],
       points: 1000,
-      // 참여한 모임 20
+      // 참여한 모임 10 — 진행중 5개 + 종료된 모임 5개 (end-fd1, end-fd2, end-sh1, end-md1, end-fd3)
       joinedPostIds: [
-        "hm3", "hm4", "hm6", "hm8", "hm10",
-        "fd11", "fd13", "fd15", "sh11", "sh13",
-        "sh15", "sp13", "sp15", "md11", "md12",
-        "md14", "md15", "f1", "f2", "f12",
+        "hm3", "fd11", "sh11", "md11", "f1",
+        "end-fd1", "end-fd2", "end-sh1", "end-md1", "end-fd3",
       ],
       // 좋아요 10
       likedPostIds: [
@@ -387,7 +389,7 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
   },
 };
 
-/** 이름 + 휴대폰 번호로 계정 찾기 (아이디 찾기 화면용) */
+
 export function findAccountByNameAndPhone(name: string, phone: string): TestAccount | undefined {
   const trimmed = name.trim();
   return Object.values(TEST_ACCOUNTS).find(

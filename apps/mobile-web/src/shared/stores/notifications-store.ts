@@ -3,12 +3,37 @@
 // 이 store 는 사용자 행동(친구 요청 전송/수락)이 만들어내는 실시간 알림만 관리한다.
 
 import { useEffect, useState } from "react";
+import { getNotificationSettings } from "@/shared/stores/notification-settings-store";
+import { isInQuietHoursNow } from "@/features/mypage/quiet-hours-store";
+
+/**
+ * 알림 발행 게이트.
+ * - 전체 알림(master) OFF: 무조건 차단
+ * - 방해금지(quietEnabled) ON 인데 현재 시각이 그 시간대 안: 차단
+ * - 종류별 토글(comment/like/friend/chat/meeting/event) OFF: 차단
+ * - 그 외: 허용
+ *
+ * gateKey 는 NotificationSettings 의 종류별 key. friend-* 는 "friend", post/meeting/event 도 적절히 매핑.
+ */
+function isAllowed(
+  gateKey: "comment" | "like" | "friend" | "chat" | "meeting" | "event",
+): boolean {
+  const s = getNotificationSettings();
+  if (!s.master) return false;
+  if (s.quietEnabled && isInQuietHoursNow()) return false;
+  if (!s[gateKey]) return false;
+  return true;
+}
 
 export type DynNotifKind =
   | "friend-received"
   | "friend-accepted"
   | "welcome"
-  | "reward";
+  | "reward"
+  | "post-created"
+  | "meeting-joined"
+  | "comment"
+  | "like";
 
 export type DynNotification = {
   id: string;
@@ -106,11 +131,25 @@ export function markAllDynRead(): void {
   if (changed) notify();
 }
 
+/** 알림이 게이트에 차단됐을 때 push* 가 돌려주는 sentinel — 호출 측이 굳이 검사하지 않아도
+ *  read=true, body="" 처럼 보이지 않게 만들어 자연스럽게 버려진다. */
+const SUPPRESSED: DynNotification = {
+  id: "suppressed",
+  kind: "welcome",
+  title: "",
+  body: "",
+  time: "",
+  createdAt: 0,
+  read: true,
+  link: "",
+};
+
 /** 받은 친구 요청 알림 발행 */
 export function pushFriendRequestReceived(
   nickname: string,
   opts?: { createdAt?: number; id?: string },
 ): DynNotification {
+  if (!isAllowed("friend")) return SUPPRESSED;
   const createdAt = opts?.createdAt ?? Date.now();
   const item: DynNotification = {
     id: opts?.id ?? `dn-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,
@@ -127,8 +166,9 @@ export function pushFriendRequestReceived(
   return item;
 }
 
-/** 가입 환영 알림 */
+/** 가입 환영 알림 — event 범주로 게이트 */
 export function pushWelcomeNotification(nickname: string): DynNotification {
+  if (!isAllowed("event")) return SUPPRESSED;
   const createdAt = Date.now();
   const item: DynNotification = {
     id: `dn-welcome-${createdAt}`,
@@ -151,6 +191,7 @@ export function pushRewardNotification(
   body: string,
   link: string,
 ): DynNotification {
+  if (!isAllowed("event")) return SUPPRESSED;
   const createdAt = Date.now();
   const item: DynNotification = {
     id: `dn-reward-${createdAt}`,
@@ -167,8 +208,100 @@ export function pushRewardNotification(
   return item;
 }
 
+/** 새 글 등록 직후 발행 — 작성한 글로 바로 이동할 수 있는 알림 */
+export function pushPostCreated(
+  title: string,
+  postId: string,
+): DynNotification {
+  // 글 등록 확인 알림은 event 범주로 게이트 (정보성/확인 메시지)
+  if (!isAllowed("event")) return SUPPRESSED;
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-post-${createdAt}`,
+    kind: "post-created",
+    title: "글 등록 완료",
+    body: `"${title}" 글이 등록됐어요. 동네 이웃의 반응을 기다려보세요!`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/board/${postId}`,
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
+/** 모임 참여(함께하기) 직후 발행 — 참여한 모임 상세로 이동 */
+export function pushMeetingJoined(
+  title: string,
+  postId: string,
+): DynNotification {
+  if (!isAllowed("meeting")) return SUPPRESSED;
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-meeting-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,
+    kind: "meeting-joined",
+    title: "모임 참여 완료",
+    body: `"${title}" 모임에 참여했어요. 모임 일정을 잊지 마세요!`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/board/${postId}`,
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
+/** 내 글에 누군가 댓글을 달았을 때 발행 (mock 시뮬레이션 / 실제 다른 사용자 행동에서 호출) */
+export function pushCommentReceived(
+  commenterNickname: string,
+  postTitle: string,
+  postId: string,
+): DynNotification {
+  if (!isAllowed("comment")) return SUPPRESSED;
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-comment-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,
+    kind: "comment",
+    title: "댓글 알림",
+    body: `${commenterNickname}님이 내 글 "${postTitle}"에 댓글을 달았어요.`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/board/${postId}`,
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
+/** 내 글에 누군가 좋아요를 눌렀을 때 발행 (mock 시뮬레이션 / 실제 다른 사용자 행동에서 호출) */
+export function pushLikeReceived(
+  likerNickname: string,
+  postTitle: string,
+  postId: string,
+): DynNotification {
+  if (!isAllowed("like")) return SUPPRESSED;
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-like-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,
+    kind: "like",
+    title: "좋아요 알림",
+    body: `${likerNickname}님이 내 글 "${postTitle}"에 좋아요를 눌렀어요.`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/board/${postId}`,
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
 /** 내가 보낸 요청을 상대가 수락했을 때 알림 발행 */
 export function pushFriendRequestAccepted(nickname: string): DynNotification {
+  if (!isAllowed("friend")) return SUPPRESSED;
   const createdAt = Date.now();
   const item: DynNotification = {
     id: `dn-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,

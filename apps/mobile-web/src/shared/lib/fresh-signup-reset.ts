@@ -21,6 +21,8 @@ import { draftsStore } from "@/features/board/drafts-store";
 import { resetRoomsStore } from "@/features/chat/rooms-store";
 import { clearAllMessages } from "@/features/chat/messages-store";
 import { resetKickedMembers } from "@/features/chat/kicked-members-store";
+import { resetVerification } from "@/shared/stores/verification-store";
+import { resetActivityStore } from "@/shared/stores/activity-store";
 
 /**
  * 신규 가입한 사용자가 깨끗한 시작점에서 출발하도록 모든 store 리셋.
@@ -48,4 +50,9 @@ export function resetAllStoresForFreshSignup(): void {
   clearAllMessages();
   // 모임 강퇴 기록 초기화
   resetKickedMembers();
+  // 위치/휴대폰 인증 — 신규 가입자는 미인증 상태에서 시작.
+  // (이전 세션의 인증이 localStorage 에 남아 자동 인증된 것처럼 보이는 문제 방지)
+  resetVerification();
+  // 가입일 = 오늘 / 접속일수 = 1 로 초기화 (이전 세션의 활동 이력 누설 방지)
+  resetActivityStore();
 }

@@ -5,6 +5,7 @@ import { LocationPicker } from "@/features/map/post-map";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { awardXp } from "@/shared/stores/xp-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
+import { pushPostCreated } from "@/shared/stores/notifications-store";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
 
@@ -215,11 +216,13 @@ export function BoardWriteScreen() {
       }
     } else {
       // New post flow — prepend.
+      const newPostId = `post-${Date.now()}`;
+      const newPostTitle = title.trim() || "(제목 없음)";
       postsStore.prepend({
-        id: `post-${Date.now()}`,
+        id: newPostId,
         category: CATEGORY_NAME_TO_ID[category],
         status: "모집중",
-        title: title.trim() || "(제목 없음)",
+        title: newPostTitle,
         description: content.trim() || "",
         distance: "0m",
         duration: "0분",
@@ -234,6 +237,8 @@ export function BoardWriteScreen() {
         place: postLocation?.placeName ?? incomingState?.place,
         location: postLocation ?? undefined,
       });
+      // 새 게시글 등록 알림 — 알림 패널에서 바로 그 글로 이동할 수 있도록 한 줄 발행.
+      pushPostCreated(newPostTitle, newPostId);
       // 새 게시글 작성 → XP 부여 (일일 cap 적용)
       awardXp("post");
       // 글쓰기 포인트 보상 — 하루 최대 6회(=30P) 까지 적립

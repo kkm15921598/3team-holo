@@ -2,10 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
 import {
+  canEarnRegionVerifyPoints,
   setRegionVerified,
   setVerifiedRegion,
 } from "@/shared/stores/verification-store";
-import { findNearestDongs, type KoreanDong } from "@/shared/data/korean-dongs";
+import {
+  findNearestDongs,
+  searchDongs,
+  type KoreanDong,
+} from "@/shared/data/korean-dongs";
 import { addPoints } from "@/features/myroom/myroom-store";
 
 type Phase = "permission" | "detecting" | "confirm" | "success" | "error";
@@ -19,6 +24,13 @@ export function VerifyRegionScreen() {
   const [nearest, setNearest] = useState<DetectedDong[]>([]);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  // 이번 confirm() 호출에서 +10P 적립이 실제로 발생했는지 — 성공 모달 표시 분기에 사용.
+  // 갱신 주기(90일) 이내 재인증이면 false 가 되어 "+10P" 대신 "이미 적립됨" 안내를 보여준다.
+  const [pointsGranted, setPointsGranted] = useState(false);
+  // GPS 자동 감지 외 — 사용자가 직접 동네를 검색해서 인증할 수 있도록 검색어 보관.
+  // 데이터셋에 없는 지역은 결과가 비고, 안내 메시지를 노출한다.
+  const [query, setQuery] = useState("");
+  const searchResults = searchDongs(query, 30);
 
   // 실제 GPS 좌표 요청 → 가장 가까운 동 3곳 계산
   function detectLocation() {
@@ -57,9 +69,15 @@ export function VerifyRegionScreen() {
   const grant = () => detectLocation();
   const confirm = () => {
     if (!picked) return;
+    // 적립 자격 판정은 setRegionVerified() 호출 전에 해야 한다.
+    // 호출 후엔 lastRegionVerifiedAt 이 now 로 갱신되어 항상 false 가 되기 때문.
+    const eligible = canEarnRegionVerifyPoints();
     setRegionVerified(true);
     setVerifiedRegion(picked);
-    addPoints(10, { title: "동네 인증" });
+    if (eligible) {
+      addPoints(10, { title: "동네 인증" });
+    }
+    setPointsGranted(eligible);
     setPhase("success");
   };
   const finish = () => navigate(-1);
@@ -227,6 +245,67 @@ export function VerifyRegionScreen() {
             다시 감지하기
           </button>
 
+          {/* ── 다른 지역에서 인증하기 ─────────────────────────────
+              GPS 가 잡지 못한 지역(여행/이주 등)을 사용자가 직접 검색해 인증.
+              검색 결과 선택 시 picked 가 갱신되어 위쪽 라디오는 자동으로 해제된다. */}
+          <div className="mt-6 border-t border-holo-line-3 pt-5">
+            <p className="text-[13px] font-semibold text-holo-ink">
+              다른 지역에서 인증하기
+            </p>
+            <p className="mt-1 text-[12px] text-holo-ink-3">
+              현재 위치가 아닌 다른 동네를 검색해서 인증할 수 있어요.
+            </p>
+            <div className="mt-3 flex items-center gap-2 rounded-holo-input border border-holo-line-2 bg-white px-3 py-2.5">
+              <SearchIcon />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="시·구·동 이름으로 검색"
+                className="flex-1 bg-transparent text-[14px] text-holo-ink outline-none placeholder:text-holo-ink-3"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="검색어 지우기"
+                  className="text-[12px] text-holo-ink-3"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {query && searchResults.length > 0 && (
+              <ul className="mt-2 flex max-h-[260px] flex-col divide-y divide-holo-line-3 overflow-y-auto rounded-holo-input bg-white shadow-holo-card">
+                {searchResults.map((d) => {
+                  const active = picked === d.label;
+                  return (
+                    <li key={d.label}>
+                      <button
+                        type="button"
+                        onClick={() => setPicked(d.label)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left"
+                      >
+                        <span className="text-[14px] text-holo-ink">
+                          {d.label}
+                        </span>
+                        <Radio selected={active} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {query && searchResults.length === 0 && (
+              <p className="mt-2 rounded-holo-input bg-holo-surface-2 px-4 py-3 text-[12px] text-holo-ink-3">
+                ‘{query}’ 와 일치하는 동네가 없어요. 시·구 이름을 함께 입력해
+                보세요. (예: 부산 해운대, 제주 노형)
+              </p>
+            )}
+          </div>
+
           <p className="mt-4 text-[11px] leading-5 text-holo-ink-3">
             · 거짓으로 인증하면 서비스 이용이 제한될 수 있어요.
             <br />· 등록한 동네는 3개월 뒤 다시 인증해주세요.
@@ -257,9 +336,16 @@ export function VerifyRegionScreen() {
             <p className="mt-1 text-[14px] text-holo-purple-mid">
               {pickedLabel}
             </p>
-            <p className="mt-3 text-[20px] font-bold text-holo-purple-mid">
-              +10P
-            </p>
+            {/* 갱신 주기(90일) 이내 재인증이면 적립 안내 대신 "이미 적립됨" 노출 */}
+            {pointsGranted ? (
+              <p className="mt-3 text-[20px] font-bold text-holo-purple-mid">
+                +10P
+              </p>
+            ) : (
+              <p className="mt-3 text-[13px] font-medium text-holo-ink-3">
+                이미 적립된 동네 인증입니다
+              </p>
+            )}
             <p className="mt-1 text-[12px] text-holo-ink-3">
               인증은 {nextRenewDate()} 에 다시 해주세요.
             </p>
@@ -342,3 +428,21 @@ function BackIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#979797"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}

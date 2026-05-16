@@ -183,12 +183,12 @@ export const POSTS: Post[] = [
   { id: "hm9", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "산책 메이트", description: "공원 한바퀴 같이 돌 분~", distance: "150m", duration: "40분", likes: 0, comments: 0, timeAgo: "5분 전", authorNickname: "다정한 토끼", authorLevel: 9, location: { lat: 37.4032, lng: 127.107, placeName: "정자일로 공원" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }] },
   { id: "hm10", category: "help", meetupType: "단기성 모임", status: "모집중", title: "독서 모임", description: "이번 주 책 같이 읽어요", distance: "550m", duration: "75분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "정겨운 단풍", authorLevel: 11, location: { lat: 37.3955, lng: 127.1054, placeName: "정자도서관" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }] },
   // 자유게시판 (free)
-  { id: "f1", category: "free", meetupType: "단기성 모임", status: "모집중", title: "떡볶이 어디가 맛있나요?", description: "아파트 근처 분식집이 궁금해요", distance: "0m", duration: "0분", likes: 3, comments: 0, timeAgo: "33분 전", authorNickname: "보송보송한 햄찌", authorLevel: 12 },
-  { id: "f2", category: "free", meetupType: "단기성 모임", status: "모집중", title: "주말에 뭐 하세요?", description: "심심한데 같이 놀 친구 구해요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "1시간 전", authorNickname: "매콤한 떡볶이", authorLevel: 7 },
-  { id: "f3", category: "free", meetupType: "단기성 모임", status: "모집중", title: "근처 카페 추천", description: "공부할 만한 조용한 카페 있나요?", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "달콤한 복숭아", authorLevel: 15 },
+  { id: "f1", category: "free", status: "모집중", title: "떡볶이 어디가 맛있나요?", description: "아파트 근처 분식집이 궁금해요", distance: "0m", duration: "0분", likes: 3, comments: 0, timeAgo: "33분 전", authorNickname: "보송보송한 햄찌", authorLevel: 12 },
+  { id: "f2", category: "free", status: "모집중", title: "주말에 뭐 하세요?", description: "심심한데 같이 놀 친구 구해요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "1시간 전", authorNickname: "매콤한 떡볶이", authorLevel: 7 },
+  { id: "f3", category: "free", status: "모집중", title: "근처 카페 추천", description: "공부할 만한 조용한 카페 있나요?", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "달콤한 복숭아", authorLevel: 15 },
   // 추천해요 (recommend)
-  { id: "r1", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "최근에 본 영화 추천", description: "스릴러 좋아하면 꼭 보세요!", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "10분 전", authorNickname: "고소한 감자", authorLevel: 31 },
-  { id: "r2", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "근처 맛집 추천", description: "골목 안쪽에 숨은 보석 같은 가게", distance: "0m", duration: "0분", likes: 10, comments: 0, timeAgo: "30분 전", authorNickname: "달콤한 복숭아", authorLevel: 15 },
+  { id: "r1", category: "recommend", status: "모집중", title: "최근에 본 영화 추천", description: "스릴러 좋아하면 꼭 보세요!", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "10분 전", authorNickname: "고소한 감자", authorLevel: 31 },
+  { id: "r2", category: "recommend", status: "모집중", title: "근처 맛집 추천", description: "골목 안쪽에 숨은 보석 같은 가게", distance: "0m", duration: "0분", likes: 10, comments: 0, timeAgo: "30분 전", authorNickname: "달콤한 복숭아", authorLevel: 15 },
   // 게임파티 (game)
   { id: "g1", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 같이 해요", description: "주말 저녁 보드게임 카페 모임", distance: "150m", duration: "120분", likes: 9, comments: 5, timeAgo: "20분 전", authorNickname: "보송보송한 햄찌", authorLevel: 12, peopleCount: 6, location: { lat: 37.3873, lng: 127.0896, placeName: "미금역 사거리" } },
   { id: "g2", category: "game", meetupType: "장기성 모임", status: "모집완료", title: "PC방 4명 모집", description: "오버워치 같이 하실 분", distance: "300m", duration: "180분", likes: 0, comments: 10, timeAgo: "1시간 전", authorNickname: "고소한 감자", authorLevel: 31, peopleCount: 4, location: { lat: 37.4023, lng: 127.1154, placeName: "PC방 미금역점" } },
@@ -252,18 +252,29 @@ export const POSTS: Post[] = [
   { id: "md19", category: "media", meetupType: "장기성 모임", status: "모집완료", title: "다큐멘터리 토론", description: "다큐 보고 같이 토론해요", distance: "400m", duration: "120분", likes: 0, comments: 0, timeAgo: "3일 전", authorNickname: "빛나는 해바라기", authorLevel: 21, peopleCount: 6, location: { lat: 37.3798, lng: 127.1149, placeName: "정자도서관" } },
 
   // 자유게시판 (free) — +7
-  { id: "f11", category: "free", meetupType: "단기성 모임", status: "모집중", title: "동네 분리수거 시간", description: "분리수거 시간 아시는 분?", distance: "0m", duration: "0분", likes: 0, comments: 7, timeAgo: "10분 전", authorNickname: "달콤한 복숭아", authorLevel: 15 },
-  { id: "f12", category: "free", meetupType: "단기성 모임", status: "모집중", title: "공원 야간 개방", description: "정자동 공원 야간 개방 시간 아시는 분", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "25분 전", authorNickname: "쫄깃한 단무지", authorLevel: 11 },
-  { id: "f13", category: "free", meetupType: "단기성 모임", status: "모집중", title: "오늘 비 오나요?", description: "외출하려는데 비 올까봐요..", distance: "0m", duration: "0분", likes: 2, comments: 0, timeAgo: "1시간 전", authorNickname: "매콤한 떡볶이", authorLevel: 7 },
-  { id: "f15", category: "free", meetupType: "단기성 모임", status: "모집중", title: "층간소음 고민", description: "어떻게 해결하셨나요?", distance: "0m", duration: "0분", likes: 2, comments: 0, timeAgo: "3시간 전", authorNickname: "포근한 두부", authorLevel: 8 },
-  { id: "f16", category: "free", meetupType: "단기성 모임", status: "모집중", title: "이사 떡 인사", description: "옆집 이사오시면 떡 돌리시나요?", distance: "0m", duration: "0분", likes: 7, comments: 0, timeAgo: "1일 전", authorNickname: "정겨운 김밥", authorLevel: 13 },
-  { id: "f17", category: "free", meetupType: "단기성 모임", status: "모집중", title: "도서관 추천", description: "정자도서관 vs 야탑도서관?", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2일 전", authorNickname: "바삭한 감자", authorLevel: 9 },
+  { id: "f11", category: "free", status: "모집중", title: "동네 분리수거 시간", description: "분리수거 시간 아시는 분?", distance: "0m", duration: "0분", likes: 0, comments: 7, timeAgo: "10분 전", authorNickname: "달콤한 복숭아", authorLevel: 15 },
+  { id: "f12", category: "free", status: "모집중", title: "공원 야간 개방", description: "정자동 공원 야간 개방 시간 아시는 분", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "25분 전", authorNickname: "쫄깃한 단무지", authorLevel: 11 },
+  { id: "f13", category: "free", status: "모집중", title: "오늘 비 오나요?", description: "외출하려는데 비 올까봐요..", distance: "0m", duration: "0분", likes: 2, comments: 0, timeAgo: "1시간 전", authorNickname: "매콤한 떡볶이", authorLevel: 7 },
+  { id: "f15", category: "free", status: "모집중", title: "층간소음 고민", description: "어떻게 해결하셨나요?", distance: "0m", duration: "0분", likes: 2, comments: 0, timeAgo: "3시간 전", authorNickname: "포근한 두부", authorLevel: 8 },
+  { id: "f16", category: "free", status: "모집중", title: "이사 떡 인사", description: "옆집 이사오시면 떡 돌리시나요?", distance: "0m", duration: "0분", likes: 7, comments: 0, timeAgo: "1일 전", authorNickname: "정겨운 김밥", authorLevel: 13 },
+  { id: "f17", category: "free", status: "모집중", title: "도서관 추천", description: "정자도서관 vs 야탑도서관?", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2일 전", authorNickname: "바삭한 감자", authorLevel: 9 },
 
   // 추천해요 (recommend) — +8
-  { id: "r13", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "드라마 추천", description: "최근 본 드라마 중 갓작이에요", distance: "0m", duration: "0분", likes: 30, comments: 0, timeAgo: "1시간 전", authorNickname: "새콤한 망고", authorLevel: 18 },
-  { id: "r14", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "운동복 브랜드", description: "기능 좋은 운동복 브랜드 공유해요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "용감한 곰", authorLevel: 18 },
-  { id: "r15", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "정자동 미용실", description: "친절한 디자이너 있는 곳 추천", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "3시간 전", authorNickname: "노래하는 햇살", authorLevel: 13 },
-  { id: "r17", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "주말 나들이", description: "차 없이 가기 좋은 나들이 장소", distance: "0m", duration: "0분", likes: 0, comments: 1, timeAgo: "1일 전", authorNickname: "사진찍는 사슴", authorLevel: 10 },
+  { id: "r13", category: "recommend", status: "모집중", title: "드라마 추천", description: "최근 본 드라마 중 갓작이에요", distance: "0m", duration: "0분", likes: 30, comments: 0, timeAgo: "1시간 전", authorNickname: "새콤한 망고", authorLevel: 18 },
+  { id: "r14", category: "recommend", status: "모집중", title: "운동복 브랜드", description: "기능 좋은 운동복 브랜드 공유해요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "용감한 곰", authorLevel: 18 },
+  { id: "r15", category: "recommend", status: "모집중", title: "정자동 미용실", description: "친절한 디자이너 있는 곳 추천", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "3시간 전", authorNickname: "노래하는 햇살", authorLevel: 13 },
+  { id: "r17", category: "recommend", status: "모집중", title: "주말 나들이", description: "차 없이 가기 좋은 나들이 장소", distance: "0m", duration: "0분", likes: 0, comments: 1, timeAgo: "1일 전", authorNickname: "사진찍는 사슴", authorLevel: 10 },
+
+  // ── 종료된 모임 (eventDate 가 오늘 이전) ─────────────────
+  // "모임 참여" 화면의 "끝났어요" 분기를 시각화하기 위한 데모 데이터.
+  // 테스트 계정 시드(test-accounts.ts) 의 joinedPostIds 에서 일부를 참여 처리한다.
+  { id: "end-sp1", category: "sport", meetupType: "단기성 모임", status: "모집완료", title: "새벽 등산 모임", description: "남한산성 6시 출발이었어요!", distance: "1.2km", duration: "180분", likes: 5, comments: 3, timeAgo: "5일 전", authorNickname: "용감한 곰", authorLevel: 18, eventDate: "2026-05-11", peopleCount: 4, place: "남한산성 입구" },
+  { id: "end-sp2", category: "sport", meetupType: "단기성 모임", status: "모집완료", title: "주말 풋살", description: "토요일 오후 풋살 한 판!", distance: "800m", duration: "90분", likes: 8, comments: 5, timeAgo: "3일 전", authorNickname: "정겨운 김밥", authorLevel: 13, eventDate: "2026-05-13", peopleCount: 10, place: "분당 풋살장" },
+  { id: "end-fd1", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "봄 브런치 모임", description: "정자동 브런치 카페 모임", distance: "300m", duration: "120분", likes: 7, comments: 6, timeAgo: "1주 전", authorNickname: "춤추는 토끼", authorLevel: 14, eventDate: "2026-05-09", peopleCount: 4, place: "정자동 브런치 카페" },
+  { id: "end-fd2", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "빵집 투어", description: "분당 베이커리 3곳 순회", distance: "600m", duration: "150분", likes: 4, comments: 2, timeAgo: "4일 전", authorNickname: "노래하는 햇살", authorLevel: 13, eventDate: "2026-05-12", peopleCount: 5, place: "분당 베이커리 3곳" },
+  { id: "end-sh1", category: "share", meetupType: "단기성 모임", status: "모집완료", title: "운동복 공구 마감", description: "공구 마감했어요. 픽업만 남았어요!", distance: "0m", duration: "30분", likes: 3, comments: 1, timeAgo: "6일 전", authorNickname: "정겨운 김밥", authorLevel: 13, eventDate: "2026-05-10", peopleCount: 6 },
+  { id: "end-md1", category: "media", meetupType: "단기성 모임", status: "모집완료", title: "주말 영화 모임", description: "주말 신작 같이 보고 후기 나눠요", distance: "400m", duration: "150분", likes: 6, comments: 4, timeAgo: "2일 전", authorNickname: "새콤한 망고", authorLevel: 18, eventDate: "2026-05-14", peopleCount: 5, place: "정자동 CGV" },
+  { id: "end-fd3", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "디저트 클래스", description: "마카롱 만들기 원데이 클래스", distance: "500m", duration: "120분", likes: 12, comments: 8, timeAgo: "3일 전", authorNickname: "노래하는 햇살", authorLevel: 13, eventDate: "2026-05-13", peopleCount: 4, place: "정자동 베이킹 스튜디오" },
 ];
 
 // 자동 생성된 mock 500개 (자유70/추천30/위치별400) — bulk-posts.ts 참조.

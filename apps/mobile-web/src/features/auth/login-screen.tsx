@@ -9,6 +9,7 @@ import {
   setNickname,
   setTitle,
   setEquippedBadgeId,
+  setFriendCode,
 } from "@/shared/stores/profile-store";
 import { defaultFaceForGender } from "@/features/home/home-faces";
 import { setMyroomItems, setStatusMessage } from "@/features/myroom/myroom-store";
@@ -99,6 +100,7 @@ export function LoginScreen() {
       setNickname(account.nickname);
       setTitle(saved.title ?? account.title);
       setEquippedBadgeId(saved.equippedBadgeId ?? account.equippedBadgeId);
+      setFriendCode(account.friendCode);
       setMyroomItems(account.myroomItems);
       setStatusMessage(account.statusMessage);
       // 데모용 mock 데이터(통계·포인트·게시글·댓글·좋아요·참여·최근본글) 시드

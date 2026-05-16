@@ -118,6 +118,7 @@ function CategoryIcon({ id }: { id: string }) {
     </span>
   );
 }
+
 function PlusIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>

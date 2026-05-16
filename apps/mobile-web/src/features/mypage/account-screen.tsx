@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { ME } from "@/shared/mock/data";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
 import {
   getVerification,
   subscribeVerification,
 } from "@/shared/stores/verification-store";
+import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
 
 export function AccountScreen() {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ export function AccountScreen() {
             />
             <div className="flex flex-col">
               <span className="text-[14px] font-semibold text-holo-ink">{profile.nickname}</span>
-              <span className="text-[12px] text-holo-ink-3">ID : {ME.friendCode}</span>
+              <span className="text-[12px] text-holo-ink-3">ID : {profile.friendCode}</span>
             </div>
           </div>
           <span
@@ -61,7 +61,7 @@ export function AccountScreen() {
       <section className="mt-4 px-4">
         <p className="text-[12px] text-holo-ink-3">계정 보안</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <Row label="이메일 변경" hint="user@holo.app" onClick={() => navigate("/mypage/account/email")} />
+          {/* 이메일 변경 항목은 휴대폰 본인인증 기반 가입이라 의미가 없어 제거 */}
           <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
           <Row label="휴대폰 번호 변경" hint="010-****-1234" onClick={() => navigate("/mypage/account/phone")} />
         </ul>
@@ -98,8 +98,11 @@ export function AccountScreen() {
               <button
                 type="button"
                 onClick={() => {
+                  // 모든 사용자 store 초기화 — 글/댓글/좋아요/참여/친구/마이룸/포인트/인증/접속이력 등.
+                  // 로그인 화면으로 보낼 때 잔여 데이터가 다음 가입자에게 누설되지 않게 한다.
+                  resetAllStoresForFreshSignup();
                   setShowWithdraw(false);
-                  navigate("/login");
+                  navigate("/login", { replace: true });
                 }}
                 className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
               >

@@ -61,8 +61,10 @@ export function FreePointsScreen() {
     comment: getDailyCount("comment"),
   };
 
-  // 동네 인증은 verification-store 결과 사용
-  const verifiedRegion = !!verification.verifiedRegion;
+  // 동네 인증 완료 여부 — verification-store 의 캐노니컬 boolean 사용.
+  // (이전엔 verifiedRegion 문자열의 truthy 여부를 봤지만, regionVerified 가 의미상
+  //  더 명확하고 향후 두 필드가 어긋나는 상황(예: 동네 라벨만 비우고 재인증)에도 안전.)
+  const isRegionVerified = verification.regionVerified;
 
   const [toast, setToast] = useState<string | null>(null);
   const [showAd, setShowAd] = useState<{ remaining: number } | null>(null);
@@ -114,7 +116,7 @@ export function FreePointsScreen() {
   };
 
   const handleVerify = () => {
-    if (verifiedRegion) {
+    if (isRegionVerified) {
       showToast("이미 인증된 동네예요.");
       return;
     }
@@ -196,10 +198,11 @@ export function FreePointsScreen() {
       <section className="mt-4 px-4">
         <SectionTitle title="일회성 적립" hint="딱 한 번만 받을 수 있어요" />
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+          {/* 동네 인증 / 첫 글 작성 — 완료 시 둘 다 동일하게 "완료" 회색 비활성 버튼으로 표시 */}
           <MissionRow
             m={ONETIME[0]}
-            done={verifiedRegion}
-            label={verifiedRegion ? "완료" : "인증"}
+            done={isRegionVerified}
+            label={isRegionVerified ? "완료" : "인증"}
             onClick={handleVerify}
           />
           <MissionRow

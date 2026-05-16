@@ -18,6 +18,7 @@ import {
   useViewCounts,
 } from "@/shared/stores/view-count-store";
 import { awardXp } from "@/shared/stores/xp-store";
+import { pushMeetingJoined } from "@/shared/stores/notifications-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
 
 type CommentReply = {
@@ -268,6 +269,8 @@ export function BoardDetailScreen() {
     joinPost(post.id);
     ensureMeetupRoom(post);
     awardXp("join");
+    // 모임 참여 알림 — 알림 패널에서 그 모임으로 바로 이동할 수 있도록 한 줄 발행.
+    pushMeetingJoined(post.title, post.id);
     setShowJoinBanner(true);
   };
 

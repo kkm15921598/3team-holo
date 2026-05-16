@@ -1,5 +1,10 @@
 // 알림설정 상태를 공유하는 모듈 레벨 store
-// NotificationsScreen ↔ NotificationPanel ↔ AppHeader 모두 사용
+// NotificationsScreen ↔ NotificationPanel ↔ AppHeader 모두 사용.
+//
+// 영속화:
+// localStorage 에 저장되어 새로고침/재로그인에도 사용자가 켜/끈 설정이 유지된다.
+// 또한 notifications-store 의 push* 함수가 이 설정을 보고 알림 생성 자체를 게이트하므로,
+// 사용자가 OFF 한 종류의 알림은 패널에서 필터링되는 게 아니라 애초에 발행되지 않는다.
 
 export type NotificationSettings = {
   master: boolean;
@@ -10,9 +15,14 @@ export type NotificationSettings = {
   meeting: boolean;
   event: boolean;
   marketing: boolean;
+  /** 방해 금지 모드 ON/OFF — 시간 범위는 quiet-hours-store 가 관리 */
+  quietEnabled: boolean;
 };
 
-let _state: NotificationSettings = {
+const SETTINGS_KEY = "holo.notif.settings.v1";
+const READ_KEY = "holo.notif.read.v1";
+
+const DEFAULT_SETTINGS: NotificationSettings = {
   master: true,
   comment: true,
   like: true,
@@ -21,12 +31,55 @@ let _state: NotificationSettings = {
   meeting: true,
   event: false,
   marketing: false,
+  quietEnabled: false,
 };
 
-// 읽음 처리된 알림 ID 집합
-let _readIds: Set<string> = new Set();
+function loadSettings(): NotificationSettings {
+  if (typeof window === "undefined") return { ...DEFAULT_SETTINGS };
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    const parsed = JSON.parse(raw) as Partial<NotificationSettings>;
+    return { ...DEFAULT_SETTINGS, ...parsed };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
 
+function loadReadIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(READ_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set<string>(arr);
+  } catch {
+    // ignore
+  }
+  return new Set();
+}
+
+let _state: NotificationSettings = loadSettings();
+let _readIds: Set<string> = loadReadIds();
 const listeners = new Set<() => void>();
+
+function persistSettings() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(_state));
+  } catch {
+    // ignore quota
+  }
+}
+
+function persistReadIds() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(READ_KEY, JSON.stringify([..._readIds]));
+  } catch {
+    // ignore quota
+  }
+}
 
 function notify() {
   listeners.forEach((l) => l());
@@ -38,6 +91,7 @@ export function getNotificationSettings(): NotificationSettings {
 
 export function setNotificationSettings(next: Partial<NotificationSettings>) {
   _state = { ..._state, ...next };
+  persistSettings();
   notify();
 }
 
@@ -53,10 +107,15 @@ export function getReadIds(): Set<string> {
 
 export function markRead(id: string) {
   _readIds = new Set(_readIds).add(id);
+  persistReadIds();
   notify();
 }
 
 export function markAllRead(ids: string[]) {
-  _readIds = new Set(ids);
+  // 기존 읽음 + 새로 들어온 ID 들의 합집합
+  const merged = new Set(_readIds);
+  for (const id of ids) merged.add(id);
+  _readIds = merged;
+  persistReadIds();
   notify();
 }

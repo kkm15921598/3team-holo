@@ -27,21 +27,30 @@ export function MypageScreen() {
       <section className="-mx-4">
         <div className="bg-holo-lilac-card-2 p-4">
           <div className="flex items-center gap-3">
-            <img
-              src={profile.profileFace ?? ME_PERSONA.face}
-              alt={profile.nickname}
-              className="h-14 w-14 shrink-0 rounded-full bg-holo-yellow-room object-cover"
-              draggable={false}
-            />
-            <div className="flex flex-1 flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-[20px] font-semibold text-holo-ink">{profile.nickname}</span>
-                {badgeSrc && (
-                  <img src={badgeSrc} alt="장착 뱃지" className="h-6 w-6 object-contain" />
-                )}
+            {/* 아바타+닉네임+칭호 영역 — 클릭 시 친구 프로필과 동일한 상세 화면(/profile/{nickname}) 으로 이동.
+                isMe 분기로 본인 룸/스탯/실데이터가 표시된다.
+                편집 아이콘은 별도 Link 라 stopPropagation 없이도 분리 동작. */}
+            <Link
+              to={`/profile/${encodeURIComponent(profile.nickname)}`}
+              className="flex flex-1 items-center gap-3 active:opacity-80"
+              aria-label="내 프로필 보기"
+            >
+              <img
+                src={profile.profileFace ?? ME_PERSONA.face}
+                alt={profile.nickname}
+                className="h-14 w-14 shrink-0 rounded-full bg-holo-yellow-room object-cover"
+                draggable={false}
+              />
+              <div className="flex flex-1 flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-[20px] font-semibold text-holo-ink">{profile.nickname}</span>
+                  {badgeSrc && (
+                    <img src={badgeSrc} alt="장착 뱃지" className="h-6 w-6 object-contain" />
+                  )}
+                </div>
+                <span className="text-[15px] text-holo-ink-3">{profile.title}</span>
               </div>
-              <span className="text-[15px] text-holo-ink-3">{profile.title}</span>
-            </div>
+            </Link>
             <Link to="/mypage/edit" aria-label="프로필 편집">
               <EditIcon />
             </Link>

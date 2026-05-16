@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
+import { useProfile } from "@/shared/hooks/use-profile";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import {
   MAX_FRIENDS,
@@ -18,6 +18,7 @@ type Mode = "view" | "block" | "report" | "delete";
 
 export function FriendsScreen() {
   const navigate = useNavigate();
+  const profile = useProfile();
   const friends = useFriends();
   const blocked = useBlocked();
   const receivedRequests = useReceivedRequests();
@@ -127,7 +128,7 @@ export function FriendsScreen() {
           )}
         </span>
         {mode === "view" && (
-          <span className="text-[12px] text-holo-ink-3">내 코드 : {ME.friendCode}</span>
+          <span className="text-[12px] text-holo-ink-3">내 코드 : {profile.friendCode}</span>
         )}
       </div>
 
@@ -497,7 +498,6 @@ function TrashIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
-      <path d="M10 11v6M14 11v6" />
     </svg>
   );
 }

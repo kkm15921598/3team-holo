@@ -116,6 +116,23 @@ export function setTotalXp(xp: number): void {
   emit();
 }
 
+/**
+ * 여러 날짜에 "출석" 기록을 한꺼번에 시드 (테스트 계정용).
+ * 각 ISO 날짜(YYYY-MM-DD) 에 attendance 카운트를 1 로 기록.
+ * 이미 출석 기록이 있는 날짜는 덮어쓰지 않는다 (오늘 이미 출석한 사용자 보호).
+ */
+export function seedAttendanceDates(dates: string[]): void {
+  const nextDaily = { ...state.daily };
+  for (const iso of dates) {
+    const cur = nextDaily[iso] ?? {};
+    if ((cur.attendance ?? 0) > 0) continue;
+    nextDaily[iso] = { ...cur, attendance: 1 };
+  }
+  state = { ...state, daily: nextDaily };
+  persist();
+  emit();
+}
+
 /** 모든 XP 초기화 (신규 가입자 / 다른 계정 로그인 시) */
 export function resetXp(): void {
   state = DEFAULT_STATE;
@@ -148,12 +165,13 @@ function ymd(d: Date): string {
 }
 
 /**
- * 출석 사이클(1~7일차) 상의 오늘 위치.
- * 연속 출석 일수(streak)를 기준으로 계산되며, 신규 사용자는 1일차에서 시작해
- * 출석 1회마다 다음 일차로 진행. 7일차 완료 후 8일째에는 다시 1일차로 사이클이 돌아간다.
+ * 출석 사이클(1~7일차) 상의 오늘 위치 — 연속 출석(streak) 기반.
+ * 신규 사용자는 1일차에서 시작해 출석 1회마다 다음 일차로 진행하고,
+ * 7일차 완료 후 8일째에는 다시 1일차로 사이클이 돌아간다.
+ * 연속이 끊기면 streak 가 0 으로 떨어지므로 자연히 다시 1일차부터 시작된다.
  *
- * - 오늘 아직 출석 전: todayPosition = (streak % 7) + 1
- * - 오늘 이미 출석함:   todayPosition = ((streak - 1) % 7) + 1
+ *  - 오늘 아직 출석 전: todayPosition = (streak % 7) + 1
+ *  - 오늘 이미 출석함:   todayPosition = ((streak - 1) % 7) + 1
  *
  * 각 카드의 checked 는 "현재 사이클에서 오늘 이전 일차" 또는 "오늘인데 이미 출석함" 일 때 true.
  */

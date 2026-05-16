@@ -18,8 +18,17 @@ export function NotificationsScreen() {
     setNotificationSettings({ [key]: v });
   };
 
-  const { master, comment, like, friend, chat, meeting, event, marketing } = settings;
-  const [quiet, setQuiet] = useState(false);
+  const {
+    master,
+    comment,
+    like,
+    friend,
+    chat,
+    meeting,
+    event,
+    marketing,
+    quietEnabled,
+  } = settings;
   const [quietHours, setQuietHoursState] = useState(getQuietHours);
 
   useEffect(() => subscribeQuietHours(() => setQuietHoursState(getQuietHours())), []);
@@ -83,10 +92,10 @@ export function NotificationsScreen() {
           <ToggleRow
             label="방해 금지 모드"
             hint={`${quietLabel} 동안 알림이 오지 않아요`}
-            value={quiet}
-            onChange={setQuiet}
+            value={quietEnabled}
+            onChange={set("quietEnabled")}
           />
-          {quiet && (
+          {quietEnabled && (
             <li>
               <button
                 type="button"

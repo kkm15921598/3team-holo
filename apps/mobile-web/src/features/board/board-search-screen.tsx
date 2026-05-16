@@ -84,6 +84,18 @@ export function BoardSearchScreen() {
             const q = keyword.trim();
             const params = new URLSearchParams();
             if (q) params.set("q", q);
+            // 다중 선택 필터들을 모두 콤마 구분 문자열로 URL 에 실어 보낸다.
+            // 목록 화면이 이 값을 파싱해 배너로 표시하고, 가능한 필터(게시판/모임 유형/성별) 는
+            // 실제로 적용해 결과를 좁힌다. 거리/나이대는 mock 단계에선 배너 표시용으로만 사용.
+            const putList = (key: string, group: string) => {
+              const set = selected[group];
+              if (!set || set.size === 0) return;
+              params.set(key, [...set].join(","));
+            };
+            putList("type", "type");
+            putList("board", "board");
+            putList("distance", "distance");
+            putList("age", "age");
             // 성별 필터: "남자" / "여자" 만 단일 선택했을 때 적용
             // "상관없음" 또는 미선택은 필터 없음
             const genderSet = selected["gender"];
@@ -125,8 +137,6 @@ function FilterGroup({
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const on = selected?.has(o);
-          // 16px Regular text with leading-tight + py-1.5 keeps the rendered
-          // height close to the original (13px text * 1.5 leading + py-1.5 ≈ 16px * 1.25 + py-1.5).
           return (
             <button
               key={o}

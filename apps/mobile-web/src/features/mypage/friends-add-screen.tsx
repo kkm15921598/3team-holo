@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
 import { sendFriendRequest } from "./friends-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 
@@ -85,9 +84,9 @@ export function FriendsAddScreen() {
         {tab === "qr" ? (
           <div className="flex w-full max-w-[260px] flex-col items-center rounded-holo-card bg-white p-5">
             <p className="self-start text-[16px] font-semibold text-holo-ink">{profile.nickname}</p>
-            <p className="self-start text-[14px] text-holo-ink-3">ID : {ME.friendCode}</p>
-            <div className="mt-4 flex h-[200px] w-[200px] items-center justify-center rounded-holo-card bg-holo-ink-4">
-              <QrPlaceholder />
+            <p className="self-start text-[14px] text-holo-ink-3">ID : {profile.friendCode}</p>
+            <div className="mt-4 flex h-[200px] w-[200px] items-center justify-center rounded-holo-card bg-white p-2 ring-1 ring-holo-line-3">
+              <HoloQrCode code={profile.friendCode} size={180} />
             </div>
           </div>
         ) : (
@@ -154,23 +153,78 @@ function QrIcon() {
     </svg>
   );
 }
-function QrPlaceholder() {
+/**
+ * 친구 코드(friendCode) 를 기반으로 결정론적으로 그려지는 QR-style 패턴.
+ * 같은 코드 = 항상 같은 시각 패턴, 다른 코드 = 다른 패턴이라 계정마다 고유한 QR 로 보인다.
+ * 실제 스캔 가능한 QR 표준 인코딩은 아니고 mock 표시용 — Phase D 에서 실제 QR 라이브러리로 교체 예정.
+ */
+function HoloQrCode({ code, size = 180 }: { code: string; size?: number }) {
+  const N = 21; // QR v1 과 동일한 21x21 격자
+  const cell = size / N;
+
+  // 셀 매트릭스 초기화
+  const matrix: boolean[][] = Array.from({ length: N }, () => Array(N).fill(false));
+
+  // 3개 코너에 QR 의 finder pattern (7x7 외곽 검정 + 3x3 중앙 검정) 배치
+  const placeFinder = (row: number, col: number) => {
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 7; c++) {
+        const rr = row + r;
+        const cc = col + c;
+        if (rr < 0 || cc < 0 || rr >= N || cc >= N) continue;
+        const isEdge = r === 0 || r === 6 || c === 0 || c === 6;
+        const isCenter = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        matrix[rr][cc] = isEdge || isCenter;
+      }
+    }
+  };
+  placeFinder(0, 0);
+  placeFinder(0, N - 7);
+  placeFinder(N - 7, 0);
+
+  let h = 2166136261;
+  for (let i = 0; i < code.length; i++) {
+    h ^= code.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const nextBit = (): boolean => {
+    h = Math.imul(h ^ (h >>> 13), 0x5bd1e995);
+    h = (h ^ (h >>> 15)) >>> 0;
+    return (h & 1) === 1;
+  };
+
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      const inTL = r < 8 && c < 8;
+      const inTR = r < 8 && c >= N - 8;
+      const inBL = r >= N - 8 && c < 8;
+      if (inTL || inTR || inBL) continue;
+      if (nextBit()) matrix[r][c] = true;
+    }
+  }
+
   return (
-    <svg width="140" height="140" viewBox="0 0 140 140" fill="none" aria-hidden>
-      <rect width="140" height="140" fill="#fff" />
-      <g fill="#000">
-        <rect x="10" y="10" width="30" height="30" />
-        <rect x="100" y="10" width="30" height="30" />
-        <rect x="10" y="100" width="30" height="30" />
-        <rect x="50" y="50" width="10" height="10" />
-        <rect x="70" y="50" width="10" height="10" />
-        <rect x="60" y="70" width="20" height="10" />
-        <rect x="50" y="90" width="10" height="10" />
-        <rect x="80" y="90" width="20" height="10" />
-        <rect x="100" y="60" width="10" height="20" />
-        <rect x="120" y="80" width="10" height="20" />
-        <rect x="50" y="110" width="40" height="10" />
-      </g>
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      aria-label={`친구 QR 코드: ${code}`}
+    >
+      <rect width={size} height={size} fill="white" />
+      {matrix.map((row, r) =>
+        row.map((on, c) =>
+          on ? (
+            <rect
+              key={`${r}-${c}`}
+              x={c * cell}
+              y={r * cell}
+              width={cell}
+              height={cell}
+              fill="#1A1A1A"
+            />
+          ) : null,
+        ),
+      )}
     </svg>
   );
 }

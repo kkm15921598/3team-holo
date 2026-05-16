@@ -90,6 +90,28 @@ export function getDaysActive(): number {
   return state.activeDates.length;
 }
 
+/**
+ * activity 상태를 통째로 교체 — 테스트 계정 로그인 시 가입일(joinedAt) 부터
+ * 오늘까지의 활동 이력을 한꺼번에 시드할 때 사용. activeDates 는 중복 제거 후 정렬한다.
+ */
+export function setActivityState(next: ActivityState): void {
+  const unique = Array.from(new Set(next.activeDates)).sort();
+  state = { signupDate: next.signupDate, activeDates: unique };
+  persist();
+  emit();
+}
+
+/**
+ * activity 상태를 기본값으로 되돌림 (signupDate=오늘, activeDates=[오늘]).
+ * 신규 가입자/계정 전환 시 호출.
+ */
+export function resetActivityStore(): void {
+  const today = todayISO();
+  state = { signupDate: today, activeDates: [today] };
+  persist();
+  emit();
+}
+
 const subscribe = (cb: () => void) => {
   listeners.add(cb);
   return () => {

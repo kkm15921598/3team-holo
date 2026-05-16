@@ -18,11 +18,65 @@ import { setLikedIds } from "@/shared/stores/likes-store";
 import { setJoinedIds } from "@/shared/stores/joined-store";
 import { setViewedIds } from "@/shared/stores/viewed-posts-store";
 import { setComments } from "@/shared/stores/comments-store";
-import { setPoints } from "@/features/myroom/myroom-store";
+import { setPoints, clearPointHistory } from "@/features/myroom/myroom-store";
 import { postsStore } from "@/features/board/posts-store";
 import { ensureMeetupRoom } from "@/features/board/meetup-utils";
 import { clearMeetupRooms } from "@/features/chat/rooms-store";
-import { resetXp, setTotalXp } from "@/shared/stores/xp-store";
+import {
+  resetXp,
+  setTotalXp,
+  seedAttendanceDates,
+} from "@/shared/stores/xp-store";
+import { resetVerification } from "@/shared/stores/verification-store";
+import {
+  resetActivityStore,
+  setActivityState,
+} from "@/shared/stores/activity-store";
+
+/** Date → "YYYY-MM-DD" ISO 문자열 */
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * 가입일(start) 부터 오늘까지의 모든 날짜를 ISO 문자열 배열로 반환.
+ * 가입일이 오늘 이후거나 같으면 [오늘] 만.
+ */
+function datesBetween(start: Date): string[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cursor = new Date(start);
+  cursor.setHours(0, 0, 0, 0);
+  if (cursor.getTime() > today.getTime()) return [ymd(today)];
+  const out: string[] = [];
+  while (cursor.getTime() <= today.getTime()) {
+    out.push(ymd(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
+/**
+ * 이번 주 월요일 ~ 어제까지의 날짜 (오늘은 제외).
+ * 테스트 계정의 "이번 주 출석체크 일부 완료" 상태를 시드할 때 사용.
+ * 오늘이 월요일이면 빈 배열 — 사용자가 첫 출석을 직접 하도록 둔다.
+ */
+function thisWeekUpToYesterday(): string[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dow = today.getDay(); // 일=0, 월=1, ..., 토=6
+  const offsetFromMonday = dow === 0 ? 6 : dow - 1; // 월=0, 화=1, ..., 일=6
+  const out: string[] = [];
+  for (let i = 0; i < offsetFromMonday; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (offsetFromMonday - i));
+    out.push(ymd(d));
+  }
+  return out;
+}
 
 /** "YYYY.MM.DD" 형식의 joinedAt 을 Date 로 파싱. 형식이 어긋나면 오늘로 폴백. */
 function parseJoinedAt(s: string): Date {
@@ -32,6 +86,13 @@ function parseJoinedAt(s: string): Date {
 }
 
 export function seedAccount(account: TestAccount): void {
+  // 계정 전환 시 이전 계정에서 누설될 수 있는 상태를 먼저 정리한다.
+  // - 포인트 이용 내역 (이전 계정의 적립/차감 기록이 그대로 남는 문제)
+  // - 위치 인증 (이전 계정의 verifiedRegion 이 새 계정에 그대로 노출되는 문제)
+  // 두 항목 모두 localStorage 영속이라 이전 세션의 잔여 데이터를 명시적으로 지워야 한다.
+  clearPointHistory();
+  resetVerification();
+
   const seed = account.seedData;
   if (!seed) {
     // 시드 데이터 없는 계정 — 기본값으로 리셋만 한다.
@@ -41,6 +102,7 @@ export function seedAccount(account: TestAccount): void {
     setViewedIds([]);
     setComments([]);
     resetXp();
+    resetActivityStore();
     return;
   }
 
@@ -76,6 +138,19 @@ export function seedAccount(account: TestAccount): void {
   setPoints(seed.points);
   // 레벨에 맞춰 XP 시드 — (level-1) * 500 + 340 로 "다음 레벨까지 160 XP" 상태 재현
   setTotalXp(Math.max(0, (seed.level - 1) * 500 + 340));
+
+  // 접속일수 시드 — 가입일 ~ 오늘 사이 모든 날짜를 활동 일자로 기록.
+  // joinedAt 이 오래된 계정(예: 5/8 가입 → 오늘이 5/16 이면 9일)일수록 큰 숫자가 나옴.
+  const activeDates = datesBetween(joinedAt);
+  setActivityState({
+    signupDate: ymd(joinedAt),
+    activeDates,
+  });
+
+  // 이번 주 출석 시드 — 월~어제 까지는 모두 출석한 것으로 가정.
+  // 오늘은 시드하지 않아 사용자가 직접 "오늘 출석" 버튼으로 적립을 체험할 수 있게 한다.
+  // (월요일이면 빈 배열이라 시드 없음 → 사용자가 오늘이 첫 출석)
+  seedAttendanceDates(thisWeekUpToYesterday());
 
   // 좋아요 / 참여 / 최근 본 글
   setLikedIds(seed.likedPostIds);

@@ -17,6 +17,14 @@ import {
 import { awardXp } from "@/shared/stores/xp-store";
 import { RoomSceneView, randomRoomFurniture } from "@/features/home/home-illustrations";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
+import { useAccountStats } from "@/shared/stores/account-stats-store";
+import { useMyroomItems } from "@/features/myroom/myroom-store";
+import { ME_PERSONA } from "@/features/home/home-faces";
+import { postsStore } from "@/features/board/posts-store";
+import { useUserComments } from "@/shared/stores/comments-store";
+import { useActivityState } from "@/shared/stores/activity-store";
 
 function hashString(s: string): number {
   let h = 2166136261;
@@ -55,7 +63,58 @@ export function ProfileDetailScreen() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const nickname = id ? decodeURIComponent(id) : "샬랄라 움밤바";
-  const user = useMemo(() => buildOtherUser(nickname), [nickname]);
+
+  // 내 프로필 데이터 (실제 store) — isMe 분기에서 가짜 buildOtherUser 대신 사용.
+  const myProfile = useProfile();
+  const myStats = useAccountStats();
+  const myroomItems = useMyroomItems();
+  const userComments = useUserComments();
+  // 접속일수 — activity-store 의 activeDates.length 를 단일 진실 소스로 사용.
+  // 내 활동 화면(activity-screen) 과 항상 같은 값이 노출된다.
+  const myActivity = useActivityState();
+  // URL 닉네임이 현재 로그인 계정의 닉네임과 같으면 "내 프로필 보기" 모드.
+  const isMe = nickname === myProfile.nickname;
+
+  // 내 게시글/댓글 수 — 실제 활동 데이터에서 집계.
+  // (페이지 진입 시점의 스냅샷 — 페이지가 짧게 노출되는 화면이라 라이브 갱신 불필요)
+  const myPostsCount = useMemo(
+    () =>
+      postsStore
+        .getPosts()
+        .filter((p) => p.authorNickname === myProfile.nickname).length,
+    [myProfile.nickname],
+  );
+  const myCommentsCount = userComments.length;
+
+  // 내 프로필 표시용 user 객체 — buildOtherUser 와 동일한 shape 로 만들어 렌더 분기를 줄임.
+  const meUser = useMemo(() => {
+    const equippedBadge = BADGE_LIB.find(
+      (b) => b.id === myProfile.equippedBadgeId,
+    );
+    return {
+      nickname: myProfile.nickname,
+      level: myStats.level,
+      title: myProfile.title,
+      badgeId: equippedBadge?.id ?? "",
+      badgeSrc: equippedBadge?.src ?? getEquippedBadgeSrc() ?? undefined,
+      badgeName: equippedBadge?.name ?? "",
+      postsCount: myPostsCount,
+      commentsCount: myCommentsCount,
+      // 접속일수 — activity-store 의 누적 활동 일수. 내 활동 화면과 일치하도록 동일 소스 사용.
+      daysActive: Math.max(1, myActivity.activeDates.length),
+    };
+  }, [
+    myProfile.nickname,
+    myProfile.title,
+    myProfile.equippedBadgeId,
+    myStats.level,
+    myPostsCount,
+    myCommentsCount,
+    myActivity.activeDates.length,
+  ]);
+
+  const otherUser = useMemo(() => buildOtherUser(nickname), [nickname]);
+  const user = isMe ? meUser : otherUser;
 
   const friends = useFriends();
   const sentRequests = useSentRequests();
@@ -84,10 +143,12 @@ export function ProfileDetailScreen() {
         ? "received"
         : "none";
 
-  const friendRoom = useMemo(
+  const otherRoom = useMemo(
     () => randomRoomFurniture(nickname, user.level),
     [nickname, user.level],
   );
+  // 내 프로필이면 실제 마이룸 가구 배치를 보여주고, 그 외엔 닉네임 해시 기반 랜덤룸.
+  const roomItems = isMe ? myroomItems : otherRoom;
 
   const [confirm, setConfirm] = useState<{
     message: ReactNode;
@@ -270,13 +331,17 @@ export function ProfileDetailScreen() {
         </button>
 
         <div className="flex h-[340px] w-full items-start justify-center pt-[10px]">
-          <RoomSceneView items={friendRoom} />
+          <RoomSceneView items={roomItems} />
         </div>
       </section>
 
       <section className="absolute left-0 right-0 top-[306px] z-20 flex flex-col items-center px-4">
         <img
-          src={getAvatarUrl(user.nickname)}
+          src={
+            isMe
+              ? myProfile.profileFace ?? ME_PERSONA.face
+              : getAvatarUrl(user.nickname)
+          }
           alt=""
           className="h-[88px] w-[88px] rounded-full border-4 border-white bg-holo-yellow-room object-cover"
         />
@@ -309,7 +374,16 @@ export function ProfileDetailScreen() {
         </div>
 
         <div className="mt-7 flex w-full gap-2">
-          {buttonState === "received" ? (
+          {isMe ? (
+            // 내 프로필 모드 — 친구/채팅 버튼 자리에 "프로필 편집" 단독 버튼만 노출
+            <button
+              type="button"
+              onClick={() => navigate("/mypage/edit")}
+              className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill bg-holo-purple-mid text-[15px] font-semibold text-white"
+            >
+              프로필 편집
+            </button>
+          ) : buttonState === "received" ? (
             <div className="flex flex-1 gap-2">
               <button
                 type="button"
@@ -354,33 +428,38 @@ export function ProfileDetailScreen() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={goToChat}
-            aria-label="1:1 채팅"
-            className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill border border-holo-purple-mid text-[15px] font-semibold text-holo-purple-mid"
-          >
-            <ChatBubbleIcon /> 1:1 채팅
-          </button>
+          {!isMe && (
+            <button
+              type="button"
+              onClick={goToChat}
+              aria-label="1:1 채팅"
+              className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill border border-holo-purple-mid text-[15px] font-semibold text-holo-purple-mid"
+            >
+              <ChatBubbleIcon /> 1:1 채팅
+            </button>
+          )}
         </div>
 
-        <div className="mt-6 flex w-full items-center justify-around pb-5 text-[14px] text-holo-ink-3">
-          <button
-            type="button"
-            className="flex items-center gap-1"
-            onClick={askBlock}
-          >
-            <BlockIcon /> 차단하기
-          </button>
+        {/* 차단/신고 — 다른 사용자 프로필에만 표시. 내 프로필에서는 의미가 없어 숨김. */}
+        {!isMe && (
+          <div className="mt-6 flex w-full items-center justify-around pb-5 text-[14px] text-holo-ink-3">
+            <button
+              type="button"
+              className="flex items-center gap-1"
+              onClick={askBlock}
+            >
+              <BlockIcon /> 차단하기
+            </button>
 
-          <button
-            type="button"
-            className="flex items-center gap-1"
-            onClick={askReport}
-          >
-            <FlagIcon /> 신고하기
-          </button>
-        </div>
+            <button
+              type="button"
+              className="flex items-center gap-1"
+              onClick={askReport}
+            >
+              <FlagIcon /> 신고하기
+            </button>
+          </div>
+        )}
       </section>
 
       <ConfirmModal
@@ -494,7 +573,7 @@ function ChatBubbleIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z" />
     </svg>
   );
 }
@@ -507,12 +586,12 @@ function BlockIcon() {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
       strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
     >
       <circle cx="12" cy="12" r="10" />
-      <path d="m4.93 4.93 14.14 14.14" />
+      <path d="m5 5 14 14" />
     </svg>
   );
 }
@@ -530,7 +609,8 @@ function FlagIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M4 21V4l14 4-7 3 7 4z" />
+      <path d="M4 22V4" />
+      <path d="M4 4h13l-2 4 2 4H4" />
     </svg>
   );
 }

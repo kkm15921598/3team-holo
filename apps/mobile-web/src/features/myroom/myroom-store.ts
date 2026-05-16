@@ -396,13 +396,13 @@ export type PointEvent = {
 
 const HISTORY_KEY = "holo:myroom:pointHistory";
 
-/** 화면 시안 재현용 기본 내역 — 신규 동작이 누적되면 최상단에 쌓인다. */
-const DEFAULT_HISTORY: PointEvent[] = [
-  { id: "seed-1", date: "26.05.16", title: "친구 초대", amount: 50 },
-  { id: "seed-2", date: "26.05.15", title: "단기 모임 참여", note: "바퀴 벌레 잡아 주실분", amount: 20 },
-  { id: "seed-3", date: "26.05.10", title: "아이템 구매", note: "노란 원목 침대", amount: -100 },
-  { id: "seed-4", date: "26.05.05", title: "아이템 구매", note: "핑크 의자", amount: -50 },
-];
+/**
+ * 기본 포인트 이용 내역 — 빈 배열.
+ * 이전엔 4건의 시안 재현용 더미를 깔아 두었지만, 그 결과 로그인하지 않은
+ * 첫 진입자/신규 가입자/테스트 계정 모두에게 같은 내역이 노출되는 문제가 있었다.
+ * 이제는 사용자가 실제 활동할 때만 항목이 쌓이도록 빈 배열로 시작한다.
+ */
+const DEFAULT_HISTORY: PointEvent[] = [];
 
 function loadHistory(): PointEvent[] {
   if (typeof window === "undefined") return DEFAULT_HISTORY;
@@ -459,6 +459,16 @@ function appendPointEvent(entry: Omit<PointEvent, "id" | "date"> & { date?: stri
 /** 외부에서 직접 내역만 남기고 싶을 때 (테스트 시드 등) */
 export function addPointHistoryEntry(entry: Omit<PointEvent, "id" | "date"> & { date?: string }): void {
   appendPointEvent(entry);
+}
+
+/**
+ * 포인트 이용 내역 전체 비우기 — 계정 전환 시 이전 계정의 내역이 누설되지
+ * 않도록 seedAccount 등에서 호출. resetMyroomStore 와 달리 가구/포인트는 건드리지 않는다.
+ */
+export function clearPointHistory(): void {
+  historyState = [];
+  persistHistory();
+  emitHistory();
 }
 
 /** 현재 내역 (구독 안 함) */

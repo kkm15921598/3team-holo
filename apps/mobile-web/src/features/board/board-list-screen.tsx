@@ -10,7 +10,11 @@ import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
 import { useProfile } from "@/shared/hooks/use-profile";
-import { getAuthorGender } from "@/shared/lib/author-gender";
+import {
+  getAuthorGender,
+  getAuthorAgeAtPost,
+  ageRangeForFilterLabel,
+} from "@/shared/lib/author-gender";
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
@@ -88,6 +92,31 @@ export function BoardListScreen() {
   const catParam = searchParams.get("cat");
   const isValidCat = BOARD_CATEGORIES.some((c) => c.id === catParam);
   const genderParam = searchParams.get("gender"); // "M" | "F" | null
+  // 검색 화면(board-search-screen) 에서 넘어온 다중 선택 필터들 — 콤마 구분.
+  // 게시판 유형(라벨) / 모임 유형 / 거리 / 나이대 가 각각 별도 파라미터로 들어온다.
+  // 비어있으면 모두 빈 배열로 폴백 — 필터링/배너 모두 건너뜀.
+  const parseCsv = (v: string | null) =>
+    v ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const typeFilters = parseCsv(searchParams.get("type"));
+  const boardFilters = parseCsv(searchParams.get("board"));
+  const distanceFilters = parseCsv(searchParams.get("distance"));
+  const ageFilters = parseCsv(searchParams.get("age"));
+  // 게시판 라벨(예: "게임파티") → 카테고리 id(예: "game") 역매핑 — 필터링용
+  const boardLabelToId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of BOARD_CATEGORIES) m.set(c.label, c.id);
+    return m;
+  }, []);
+  const boardFilterIds = boardFilters
+    .map((label) => boardLabelToId.get(label))
+    .filter((id): id is string => Boolean(id));
+  const hasAnyFilter =
+    typeFilters.length > 0 ||
+    boardFilters.length > 0 ||
+    distanceFilters.length > 0 ||
+    ageFilters.length > 0 ||
+    genderParam === "M" ||
+    genderParam === "F";
   const [activeCat, setActiveCat] = useState<string>(
     isValidCat ? (catParam as string) : "all",
   );
@@ -122,6 +151,23 @@ export function BoardListScreen() {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
   }, []);
 
+  /**
+   * 활성 카테고리 탭이 가로 스크롤 컨테이너 안에서 항상 보이도록 자동 스크롤.
+   * 게임파티/같이 운동해요 같은 뒤쪽 카테고리로 진입하면 기본 scrollLeft=0 이라
+   * 활성 탭이 화면 밖으로 숨어 있어서 사용자가 어디에 와 있는지 알기 어려웠다.
+   * data-cat 어트리뷰트로 활성 버튼을 찾아 inline:"center" 로 가운데 정렬.
+   */
+  useEffect(() => {
+    if (isTopView) return;
+    const container = tabsRef.current;
+    if (!container) return;
+    const active = container.querySelector<HTMLButtonElement>(
+      `[data-cat="${activeCat}"]`,
+    );
+    if (!active) return;
+    active.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+  }, [activeCat, isTopView]);
+
   const clearKeyword = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("q");
@@ -131,6 +177,20 @@ export function BoardListScreen() {
   const clearTop = () => {
     const next = new URLSearchParams(searchParams);
     next.delete("top");
+    setSearchParams(next, { replace: true });
+  };
+
+  /**
+   * 검색 화면에서 넘어온 필터 파라미터(type/board/distance/age/gender) 모두 제거.
+   * "필터 지우기" 버튼이 클릭됐을 때 호출 — keyword 와 cat 같은 다른 컨텍스트는 보존.
+   */
+  const clearFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("type");
+    next.delete("board");
+    next.delete("distance");
+    next.delete("age");
+    next.delete("gender");
     setSearchParams(next, { replace: true });
   };
 
@@ -169,6 +229,18 @@ export function BoardListScreen() {
       return;
     }
     setActiveCat(catId);
+    // URL 의 ?cat= 도 같이 동기화.
+    // 그렇지 않으면 게시글 상세에서 뒤로가기 시 BoardListScreen 이 다시 마운트되며
+    // useState 초기값이 catParam 기반으로 평가되어 activeCat 이 "all" 로 리셋됨.
+    // → 사용자가 "자유게시판" 탭에서 글을 보다가 뒤로가면 "전체" 탭으로 튕기는 버그.
+    // 히스토리에 탭 클릭이 쌓이지 않도록 replace 로 갱신한다 (뒤로가기는 게시판→이전 화면).
+    const next = new URLSearchParams(searchParams);
+    if (catId === "all") {
+      next.delete("cat");
+    } else {
+      next.set("cat", catId);
+    }
+    setSearchParams(next, { replace: true });
   };
 
   const visible = useMemo(() => {
@@ -227,6 +299,31 @@ export function BoardListScreen() {
     if (genderParam === "M" || genderParam === "F") {
       list = list.filter((p) => getAuthorGender(p.authorNickname) === genderParam);
     }
+    // 게시판 유형 필터 (검색 화면 다중 선택) — 한 개 이상이면 카테고리 id 가 그 중 하나여야 통과
+    if (boardFilterIds.length > 0) {
+      const set = new Set(boardFilterIds);
+      list = list.filter((p) => set.has(p.category));
+    }
+    // 모임 유형 필터 (단기성/장기성) — 다중 선택. 둘 다 고르면 사실상 필터 없음.
+    if (typeFilters.length > 0 && typeFilters.length < 2) {
+      const set = new Set(typeFilters);
+      list = list.filter((p) => p.meetupType && set.has(p.meetupType));
+    }
+    // 나이대 필터 — "10대"/"20대"/"30대"/"40대 이상" 다중 선택. 선택된 범위 중 하나에라도
+    // 작성자 나이(getAuthorAge 가 currentYear - birthYear 로 계산)가 들어가면 통과.
+    if (ageFilters.length > 0) {
+      const ranges = ageFilters
+        .map(ageRangeForFilterLabel)
+        .filter((r): r is [number, number] => r !== null);
+      if (ranges.length > 0) {
+        list = list.filter((p) => {
+          // 작성 시점 나이 — 글이 한 번 쓰이면 작성자가 나이를 먹어도 버킷은 고정.
+          // (19살에 쓴 글은 작성자가 20세가 돼도 "10대 필터" 에 그대로 남는다)
+          const age = getAuthorAgeAtPost(p.authorNickname, p.timeAgo);
+          return ranges.some(([lo, hi]) => age >= lo && age <= hi);
+        });
+      }
+    }
     // 거리 필터 — 위치 있는 글은 10km 이내만, 위치 없는 글(자유/추천)은 전부 노출.
     // GPS fix 가 아직 없으면 (userPos === null) 필터 건너뛰고 전체 노출.
     if (userPos) {
@@ -238,7 +335,17 @@ export function BoardListScreen() {
       });
     }
     return list;
-  }, [posts, activeCat, keyword, topMode, genderParam, userPos]);
+  }, [
+    posts,
+    activeCat,
+    keyword,
+    topMode,
+    genderParam,
+    userPos,
+    boardFilterIds,
+    typeFilters,
+    ageFilters,
+  ]);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -298,6 +405,7 @@ export function BoardListScreen() {
                 <button
                   key={c.id}
                   type="button"
+                  data-cat={c.id}
                   onClick={() => handleTabClick(c.id)}
                   className={`shrink-0 rounded-[20px] px-4 py-1.5 text-[16px] font-medium ${
                     on ? "bg-holo-lilac-card text-holo-purple-mid" : "text-holo-ink-3"
@@ -326,6 +434,41 @@ export function BoardListScreen() {
         </div>
       )}
 
+      {/* 필터 검색 배너 — 검색 화면에서 다중 선택 필터로 진입했을 때 어떤 필터가 적용됐는지 노출.
+          게시판/유형/거리/나이대/성별을 칩으로 한눈에 보여주고, "필터 지우기" 로 전체 해제. */}
+      {hasAnyFilter && !isTopView && (
+        <div className="flex flex-col gap-2 border-b border-holo-line bg-holo-lilac-soft/40 px-4 py-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-holo-ink-2">
+              <span className="font-semibold text-holo-purple-mid">필터</span> 검색 결과 {visible.length}건
+            </span>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-[12px] text-holo-purple-mid underline"
+            >
+              필터 지우기
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {boardFilters.map((label) => (
+              <FilterChip key={`b-${label}`} label={label} />
+            ))}
+            {typeFilters.map((label) => (
+              <FilterChip key={`t-${label}`} label={label} />
+            ))}
+            {distanceFilters.map((label) => (
+              <FilterChip key={`d-${label}`} label={label} />
+            ))}
+            {ageFilters.map((label) => (
+              <FilterChip key={`a-${label}`} label={label} />
+            ))}
+            {genderParam === "M" && <FilterChip label="남자" />}
+            {genderParam === "F" && <FilterChip label="여자" />}
+          </div>
+        </div>
+      )}
+
       {visible.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-[14px] text-holo-ink-3">
           {isTopView ? (
@@ -349,6 +492,8 @@ export function BoardListScreen() {
               liked={likedSet.has(p.id)}
               commentCount={getCommentCount(p)}
               joined={joinedSet.has(p.id)}
+              // '전체' 탭에서만 모든 카테고리 배지를 노출 (TOP/검색은 기존 동작 유지)
+              showAllCategoryBadges={!isTopView && activeCat === "all"}
             />
           ))}
         </ul>
@@ -371,19 +516,26 @@ function PostCard({
   liked = false,
   commentCount,
   joined = false,
+  showAllCategoryBadges = false,
 }: {
   post: Post;
   rank?: number;
   liked?: boolean;
   commentCount: number;
   joined?: boolean;
+  /**
+   * '전체' 탭처럼 여러 카테고리가 섞여 노출되는 화면에서 true.
+   * true 면 모든 카테고리 글의 제목 앞에 짧은 카테고리 배지(추천/소분/산책 등)를 표시한다.
+   * 개별 카테고리 탭에서는 이미 탭 자체가 카테고리를 나타내므로 중복 회피를 위해 false 로 둔다.
+   */
+  showAllCategoryBadges?: boolean;
 }) {
   // 자유게시판/추천해요는 상태 블록을 숨기되, 자리는 비워둠 → 탭 이동 시 카드 높이가 동일하게 유지됨
   const isSimple =
     post.category === "recommend" || post.category === "free";
-  // 제목 앞 카테고리 배지 — 자유게시판/추천해요 글에서 노출 ("자유" / "추천")
-  const showCategoryBadge =
-    post.category === "free" || post.category === "recommend";
+  // 제목 앞 카테고리 배지 — '전체' 탭(showAllCategoryBadges)에서만 노출.
+  // 개별 카테고리 탭은 탭 자체가 카테고리를 표시하므로 중복 정보 회피를 위해 숨김.
+  const showCategoryBadge = showAllCategoryBadges;
 
   const { capacity, baseJoined } = calcJoined(post);
   // 게시글 상세와 동일한 계산식: baseJoined + (현재 사용자 참여 여부)
@@ -446,12 +598,37 @@ function PostCard({
   );
 }
 
+/**
+ * 카테고리별 배지 색상 팔레트.
+ * '전체' 탭처럼 여러 카테고리가 섞여 보이는 화면에서 한눈에 구분할 수 있도록
+ * 각 카테고리마다 파스텔 톤의 배경/텍스트 컬러를 부여한다.
+ * - 채도는 낮춰서 라일락 톤(앱 메인 컬러)과 조화를 이루게 함
+ * - 텍스트는 진한 톤으로 잡아 작은 글자(11px) 가독성 확보
+ */
+const CATEGORY_BADGE_STYLES: Record<string, string> = {
+  // 자유: 회색 — 카테고리 구분이 약한 잡담성 글
+  free: "bg-holo-line-3 text-holo-ink-3",
+  // 추천: 라일락/보라 (앱 메인 컬러)
+  recommend: "bg-holo-lilac-soft text-holo-purple-mid",
+  // 소분/공구: 하늘색 — 거래·나눔 톤
+  share: "bg-[#DBEAFE] text-[#1D4ED8]",
+  // 게임: 핑크 — 활기찬 톤
+  game: "bg-[#FCE7F3] text-[#BE185D]",
+  // 운동: 초록 — 산책·운동의 자연스러운 톤
+  sport: "bg-[#DCFCE7] text-[#15803D]",
+  // 영화·드라마: 인디고 — 어두운 톤의 시청 콘텐츠 느낌
+  media: "bg-[#E0E7FF] text-[#4338CA]",
+  // 맛집·먹거리: 오렌지 — 식욕 자극 톤
+  food: "bg-[#FFEDD5] text-[#C2410C]",
+  // 도와주세요: 레드 — 긴급·주목 톤
+  help: "bg-[#FEE2E2] text-[#B91C1C]",
+};
+
 function CategoryBadge({ label, variant }: { label: string; variant?: string }) {
-  // 자유게시판 글은 회색 톤, 그 외(추천해요 등)는 라일락/보라색 톤 배지
+  // 정의되지 않은 카테고리는 기본 라일락 톤으로 폴백
   const styles =
-    variant === "free"
-      ? "bg-holo-line-3 text-holo-ink-3"
-      : "bg-holo-lilac-soft text-holo-purple-mid";
+    (variant && CATEGORY_BADGE_STYLES[variant]) ??
+    "bg-holo-lilac-soft text-holo-purple-mid";
   return (
     <span className={`shrink-0 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium ${styles}`}>
       {label}
@@ -499,6 +676,15 @@ function StatusText({ status }: { status: "모집중" | "모집완료" }) {
   return (
     <span className="block text-[11px] font-medium leading-none text-[#000000]">
       {status}
+    </span>
+  );
+}
+
+/** 필터 검색 배너에 나란히 늘어놓는 필터 칩 — 라일락 톤 둥근 pill */
+function FilterChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-holo-purple-mid ring-1 ring-holo-lilac-deep/60">
+      {label}
     </span>
   );
 }
