@@ -23,6 +23,8 @@ export function ReviewScreen() {
 
   const handleComplete = () => {
     // TODO: POST /auth/signup with `data`
+    // 실제 가입 확정과 보상 발급(뱃지/칭호/포인트)은 마지막 단계인 room-screen 에서 처리한다.
+    // (이전 테스트 계정 데이터를 일괄 리셋한 직후에 발급해야 안전함)
     setShowWelcome(true);
   };
 

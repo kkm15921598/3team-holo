@@ -4,7 +4,11 @@
 
 import { useEffect, useState } from "react";
 
-export type DynNotifKind = "friend-received" | "friend-accepted";
+export type DynNotifKind =
+  | "friend-received"
+  | "friend-accepted"
+  | "welcome"
+  | "reward";
 
 export type DynNotification = {
   id: string;
@@ -82,6 +86,13 @@ export function markDynRead(id: string): void {
   if (changed) notify();
 }
 
+/** 신규 가입 시 동적 알림 모두 삭제 */
+export function clearAllDynNotifications(): void {
+  if (_list.length === 0) return;
+  _list = [];
+  notify();
+}
+
 /** 모두 읽음 처리 */
 export function markAllDynRead(): void {
   let changed = false;
@@ -110,6 +121,46 @@ export function pushFriendRequestReceived(
     createdAt,
     read: false,
     link: "/mypage/friends/requests",
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
+/** 가입 환영 알림 */
+export function pushWelcomeNotification(nickname: string): DynNotification {
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-welcome-${createdAt}`,
+    kind: "welcome",
+    title: "환영해요!",
+    body: `${nickname}님, HOLO 가입을 축하해요. 오늘부터 동네 이웃이에요 🎉`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: "/mypage",
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
+/** 가입 보상 포인트 도착 알림 — 무료 포인트 페이지로 유도 */
+export function pushRewardNotification(
+  title: string,
+  body: string,
+  link: string,
+): DynNotification {
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-reward-${createdAt}`,
+    kind: "reward",
+    title,
+    body,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link,
   };
   _list = [item, ..._list];
   notify();

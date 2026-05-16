@@ -71,7 +71,7 @@ function seedRequests(): FriendRequest[] {
   return [
     {
       id: "req-seed-1",
-      nickname: "두부의 단단함",
+      nickname: "포근한 두부",
       avatarBg: "#C7BDFF",
       direction: "received",
       timeAgo: "10분 전",
@@ -79,7 +79,7 @@ function seedRequests(): FriendRequest[] {
     },
     {
       id: "req-seed-2",
-      nickname: "지윤",
+      nickname: "노래하는 햇살",
       avatarBg: "#FCEBB5",
       direction: "received",
       timeAgo: "2시간 전",
@@ -344,6 +344,17 @@ export function useFriends(): Friend[] {
     };
   }, []);
   return list;
+}
+
+/**
+ * 신규 가입 시 친구 관련 상태를 모두 비움.
+ * 친구 / 차단 / 보낸·받은 요청 모두 초기화한다.
+ */
+export function resetFriendsStore(): void {
+  _friends = [];
+  _blocked = [];
+  _requests = [];
+  notify();
 }
 
 export function useBlocked(): Friend[] {

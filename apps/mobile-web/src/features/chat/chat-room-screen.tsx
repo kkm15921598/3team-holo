@@ -16,15 +16,24 @@ import {
 import {
   addMembersToRoom,
   getRoom,
+  getRooms,
   leaveRoomById,
   markRoomRead,
+  setRooms,
   useRooms,
 } from "./rooms-store";
 import {
+  appendMessageToRoom,
   getMessagesForRoom,
   persistWithoutUnreadDivider,
 } from "./messages-store";
+import {
+  addKickedMember,
+  useKickedMap,
+} from "./kicked-members-store";
+import { postsStore } from "@/features/board/posts-store";
 import { getAvatarUrl } from "./avatars";
+import { GroupAvatar } from "./group-avatar";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
@@ -71,17 +80,17 @@ function buildMembersFor(room: ChatRoom): Member[] {
   } else {
     // 2) 없으면 pool에서 memberCount-1만큼 채움 (mock 기존 방)
     const pool = [
-      "감자튀김",
-      "껍질은 달걀껍질",
-      "멜론은 키위",
-      "감자 없는 카레",
-      "닭볶음탕수",
-      "참치는 등푸른",
-      "라면 한 봉지",
-      "치즈볶이",
-      "수박나라",
-      "토마토킹",
-      "당근소년",
+      "고소한 감자",
+      "보송보송한 햄찌",
+      "새콤한 망고",
+      "매콤한 떡볶이",
+      "촉촉한 푸딩",
+      "고소한 호빵",
+      "쫄깃한 라면",
+      "매콤한 만두",
+      "달콤한 수박",
+      "새콤한 토마토",
+      "씩씩한 당근",
     ];
     const otherCount = Math.max(0, room.memberCount - 1);
     nicknames = [];
@@ -94,7 +103,11 @@ function buildMembersFor(room: ChatRoom): Member[] {
     id: `m-${room.id}-${i}`,
     nickname,
     isMe: false,
-    isHost: i === 0, // 첫 번째 멤버를 방장으로
+    // 방장 판정 — 모임방은 hostNickname(게시글 작성자) 과 일치하는 멤버.
+    // hostNickname 이 없는 레거시 방은 첫 번째 멤버를 방장으로 fallback.
+    isHost: room.hostNickname
+      ? nickname === room.hostNickname
+      : i === 0,
     isFriend: friendNicks.has(nickname),
   }));
   return [me, ...others];
@@ -102,8 +115,15 @@ function buildMembersFor(room: ChatRoom): Member[] {
 
 // 방마다 다른 더미 메시지를 보여주기 위해 id 기반으로 살짝 변형
 function buildMessagesFor(room: ChatRoom): ChatMessage[] {
-  const memberPool = ["감자튀김", "껍질은 달걀껍질", "멜론은 키위", "감자 없는 카레"];
-  const speaker = (i: number) => (room.isGroup ? memberPool[i % memberPool.length] : room.name);
+  // 더미 메시지를 누가 보낸 것처럼 보일지 결정 — 실제 방 멤버(memberNames) 를 우선 사용.
+  // 없으면 fallback 풀. 그래서 헤더 아바타·정보 모달 멤버와 채팅 본문의 닉네임이 어긋나지 않음.
+  const fallbackPool = ["고소한 감자", "보송보송한 햄찌", "새콤한 망고", "매콤한 떡볶이"];
+  const pool =
+    room.memberNames && room.memberNames.length > 0
+      ? room.memberNames
+      : fallbackPool;
+  const speaker = (i: number) =>
+    room.isGroup ? pool[i % pool.length] : room.name;
 
   // 방금 생성된 새 방은 시스템 메시지만 (lastMessage 플레이스홀더로 식별)
   const isNewRoom = room.lastMessage === "(대화를 시작해보세요)";
@@ -245,8 +265,27 @@ export function ChatRoomScreen() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactionTarget, setReactionTarget] = useState<string | null>(null);
   const [actionTarget, setActionTarget] = useState<ChatMessage | null>(null);
+  /** 전달 대상으로 선택된 메시지 — 비어있지 않으면 ForwardSheet 열림 */
+  const [forwardTarget, setForwardTarget] = useState<ChatMessage | null>(null);
+  /** 사진 풀스크린 뷰어 — 비어있지 않으면 모달 열림 */
+  const [photoViewer, setPhotoViewer] = useState<{
+    images: string[];
+    index: number;
+  } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  /** 메시지 액션 토스트 — 짧게 떴다 사라지는 안내 */
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 1600);
+  };
   const [showInvite, setShowInvite] = useState(false);
   const [showMeeting, setShowMeeting] = useState(false);
+  /** 퇴장 투표 진행 상태 — 비어있지 않으면 모달 표시 */
+  const [voteKick, setVoteKick] = useState<{
+    target: string;
+    /** "voting" → 진행중, "passed" → 만장일치, "rejected" → 부결 */
+    phase: "selecting" | "voting" | "passed" | "rejected";
+  } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [alert, setAlert] = useState<{ title: string; description?: string; onConfirm?: () => void; danger?: boolean } | null>(null);
@@ -281,9 +320,61 @@ export function ChatRoomScreen() {
     return () => window.clearTimeout(t);
   }, [id]);
 
+  // 마운트 시점의 마지막 메시지 id — 단순 입장만 했을 때는 updatedAt 을 갱신하지 않기 위함.
+  const initialLastIdRef = useRef<string | null>(null);
+
   // 메시지가 바뀔 때마다 store에 저장 (안 읽음 구분선은 제외 → 재진입 시 안 보임)
+  // + 채팅 리스트에 표시될 lastMessage / lastTime 도 같이 갱신
   useEffect(() => {
-    if (id) persistWithoutUnreadDivider(id, messages);
+    if (!id) return;
+    persistWithoutUnreadDivider(id, messages);
+
+    // 시스템 메시지는 제외하고 가장 최근 메시지를 lastMessage 로 사용
+    const lastReal = [...messages]
+      .reverse()
+      .find((m) => m.type !== "system");
+    if (!lastReal) return;
+
+    // 마운트 직후 첫 호출에서는 기준점만 잡고 updatedAt 갱신은 건너뛴다.
+    const isFirstRun = initialLastIdRef.current === null;
+    if (isFirstRun) {
+      initialLastIdRef.current = lastReal.id;
+    }
+    const isNewActivity = !isFirstRun && lastReal.id !== initialLastIdRef.current;
+
+    const preview =
+      lastReal.type === "image"
+        ? "[사진]"
+        : lastReal.type === "file"
+          ? `[파일] ${lastReal.fileName ?? ""}`
+          : lastReal.type === "location"
+            ? "[위치]"
+            : lastReal.content || "";
+
+    // 내가 방금 보낸 메시지면 현재 시각을 "오후 H:MM" 형식으로 갱신,
+    // 그 외 (mock 초기 데이터 등) 는 기존 lastTime 유지.
+    let nextLastTime: string | undefined;
+    if (lastReal.mine) {
+      const now = new Date();
+      const h = now.getHours();
+      const m = String(now.getMinutes()).padStart(2, "0");
+      const ampm = h < 12 ? "오전" : "오후";
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      nextLastTime = `${ampm} ${h12}:${m}`;
+    }
+
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              lastMessage: preview,
+              lastTime: nextLastTime ?? r.lastTime,
+              updatedAt: isNewActivity ? Date.now() : r.updatedAt,
+            }
+          : r,
+      ),
+    );
   }, [id, messages]);
   const [text, setText] = useState("");
   const [reply, setReply] = useState<ReplyTarget>(null);
@@ -385,19 +476,90 @@ export function ChatRoomScreen() {
     }).length;
   }, [messages, searchQuery]);
 
+  // 강퇴된 닉네임 set — 채팅방 멤버 리스트에서 제외하기 위해 구독
+  const kickedMap = useKickedMap();
+  const postIdFromRoom =
+    room?.id.startsWith("meetup-") === true
+      ? room.id.slice("meetup-".length)
+      : undefined;
+  const kickedSet = useMemo(() => {
+    if (!postIdFromRoom) return new Set<string>();
+    return new Set(kickedMap[postIdFromRoom] ?? []);
+  }, [kickedMap, postIdFromRoom]);
+
+  // 모임방의 경우 게시글에서 작성자를 가져와 멤버 리스트의 방장이 항상 작성자와 일치하도록 보장.
+  // (옛 데이터는 room.hostNickname 이 비어있거나 memberNames 에서 작성자가 빠져있을 수 있음)
+  const [postsTick, setPostsTick] = useState(0);
+  useEffect(() => {
+    return postsStore.subscribe(() => setPostsTick((t) => t + 1));
+  }, []);
+  void postsTick;
+
   const members = useMemo(() => {
     if (!room) return [];
 
-    const baseMembers = buildMembersFor(room);
+    let baseMembers = buildMembersFor(room);
+
+    // 모임방이면 게시글 작성자가 항상 멤버 리스트에 포함되고 방장으로 표시되도록 자동 보정
+    if (postIdFromRoom) {
+      const post = postsStore
+        .getPosts()
+        .find((p) => p.id === postIdFromRoom);
+      const authorNick = room.hostNickname ?? post?.authorNickname;
+      const myNick = getProfile().nickname;
+      if (authorNick && authorNick !== myNick) {
+        const hasAuthor = baseMembers.some(
+          (m) => m.nickname === authorNick,
+        );
+        if (!hasAuthor) {
+          // 멤버 리스트에 작성자가 빠져있으면 me 바로 뒤에 추가
+          const myIdx = baseMembers.findIndex((m) => m.isMe);
+          const friendNicks = new Set(getFriends().map((f) => f.nickname));
+          const insertPos = myIdx + 1;
+          baseMembers = [
+            ...baseMembers.slice(0, insertPos),
+            {
+              id: `m-${room.id}-host`,
+              nickname: authorNick,
+              isMe: false,
+              isHost: true,
+              isFriend: friendNicks.has(authorNick),
+            },
+            ...baseMembers.slice(insertPos),
+          ];
+        }
+        // 모임방 멤버의 isHost 는 무조건 authorNick 한 명만 true
+        baseMembers = baseMembers.map((m) => ({
+          ...m,
+          isHost: !m.isMe && m.nickname === authorNick,
+        }));
+      }
+    }
+
+    // 강퇴된 멤버는 멤버 리스트에서 제외
+    if (kickedSet.size > 0) {
+      baseMembers = baseMembers.filter((m) => !kickedSet.has(m.nickname));
+    }
     if (newlyAddedFriends.size === 0) return baseMembers;
     // 친구로 새로 등록한 멤버는 isFriend=true 로 덮어써서 "친구 추가" 버튼이 사라지게 함.
     return baseMembers.map((m) =>
       newlyAddedFriends.has(m.nickname) ? { ...m, isFriend: true } : m,
     );
-  }, [room, newlyAddedFriends]);
+  }, [room, newlyAddedFriends, kickedSet, postIdFromRoom, postsTick]);
 
   const displayRoomName = useMemo(() => {
     if (!room) return "채팅방";
+    // 1:1 → 그룹으로 전환된 방은 memberNames 의 첫 번째가 원래 1:1 상대(room.name)와 같다.
+    // 이 경우 제목에 "외 N명" 을 덧붙여 추가된 인원이 있음을 알린다.
+    if (
+      room.isGroup &&
+      room.memberNames &&
+      room.memberNames.length > 1 &&
+      room.memberNames[0] === room.name
+    ) {
+      const others = room.memberNames.length - 1;
+      return `${room.name} 외 ${others}명`;
+    }
     return room.name;
   }, [room]);
 
@@ -610,64 +772,14 @@ export function ChatRoomScreen() {
             </button>
             <div className="relative">
               {room?.isGroup ? (
-                (() => {
-                  // 실제 멤버 닉네임(자기 제외)을 시드로 사용. 멤버 수만큼만 렌더하고
-                  // 레이아웃은 count 에 따라 변경: 1=원형 단일, 2=좌우 분할, 3~4=2x2 그리드.
-                  // 레거시 mock 방(memberNames 없음) 은 방 이름 시드로 4 슬롯 fallback.
-                  const names = room?.memberNames;
-                  const seeds =
-                    names && names.length > 0
-                      ? names.slice(0, 4)
-                      : [0, 1, 2, 3].map((i) => (room?.name ?? "") + "_g" + i);
-
-                  if (seeds.length === 1) {
-                    return (
-                      <img
-                        src={getAvatarUrl(seeds[0])}
-                        alt=""
-                        className="block h-9 w-9 rounded-full bg-holo-surface-2 object-cover"
-                      />
-                    );
-                  }
-                  if (seeds.length === 2) {
-                    return (
-                      <div className="flex h-9 w-9 gap-0.5 overflow-hidden rounded-[7px] bg-holo-surface-2 p-0.5">
-                        {seeds.map((seed, i) => (
-                          <img
-                            key={i}
-                            src={getAvatarUrl(seed)}
-                            alt=""
-                            className="h-full w-full rounded-[3px] object-cover"
-                          />
-                        ))}
-                      </div>
-                    );
-                  }
-                  // 3 or 4 → 2x2 grid (3일 경우 마지막 슬롯 빈칸)
-                  return (
-                    <div className="grid h-9 w-9 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden rounded-[7px] bg-holo-surface-2 p-0.5">
-                      {seeds.map((seed, i) => (
-                        <img
-                          key={i}
-                          src={getAvatarUrl(seed)}
-                          alt=""
-                          className="h-full w-full rounded-[3px] object-cover"
-                        />
-                      ))}
-                    </div>
-                  );
-                })()
+                <GroupAvatar room={room} size="sm" />
               ) : (
                 <button
                   type="button"
                   aria-label={`${room?.name} 프로필 보기`}
                   onClick={() => room && navigate(`/profile/${encodeURIComponent(room.name)}`)}
                 >
-                  <img
-                    src={getAvatarUrl(room?.name)}
-                    alt=""
-                    className="block h-9 w-9 rounded-full bg-holo-yellow-room object-cover"
-                  />
+                  {room && <GroupAvatar room={room} size="sm" />}
                 </button>
               )}
               {room?.online && (
@@ -759,13 +871,26 @@ export function ChatRoomScreen() {
               <MessageItem
                 key={m.id}
                 message={m}
-                onLongPress={(target) => setReactionTarget(target.id)}
+                onLongPress={(target) => setActionTarget(target)}
                 onReact={() => setReactionTarget(m.id)}
                 showReactionPicker={reactionTarget === m.id}
                 onPickEmoji={(e) => addReaction(m.id, e)}
                 onProfileClick={(nickname) =>
                   navigate(`/profile/${encodeURIComponent(nickname)}`)
                 }
+                onImageTap={(target) => {
+                  // 현재 방의 모든 이미지 URL 을 시간순으로 모아서 뷰어에 넘김
+                  const all = messages
+                    .filter(
+                      (mm) => mm.type === "image" && !!mm.imageUrl,
+                    )
+                    .map((mm) => mm.imageUrl as string);
+                  const idx = all.indexOf(target.imageUrl ?? "");
+                  setPhotoViewer({
+                    images: all,
+                    index: idx >= 0 ? idx : 0,
+                  });
+                }}
               />
             );
           })}
@@ -938,11 +1063,77 @@ export function ChatRoomScreen() {
           roomName={displayRoomName}
           meeting={room.meeting}
           members={members}
+          // 채팅방 id 가 "meetup-{postId}" 형식이면 해당 게시글로 이동 가능.
+          postId={
+            room && room.id.startsWith("meetup-")
+              ? room.id.slice("meetup-".length)
+              : undefined
+          }
           onClose={() => setShowMeeting(false)}
+          onGoToPost={(postId) => {
+            setShowMeeting(false);
+            navigate(`/board/${postId}`);
+          }}
+          onVoteKick={() => {
+            // 모임 정보 모달은 닫고 투표 모달로 전환
+            setShowMeeting(false);
+            setVoteKick({ target: "", phase: "selecting" });
+          }}
           onProfileClick={(nickname) => {
             setShowMeeting(false);
             navigate(`/profile/${encodeURIComponent(nickname)}`);
           }}
+        />
+      )}
+
+      {voteKick && room && (
+        <VoteKickModal
+          phase={voteKick.phase}
+          target={voteKick.target}
+          // 본인 제외한 멤버만 후보
+          candidates={members.filter((m) => !m.isMe).map((m) => m.nickname)}
+          onSelectTarget={(nickname) => {
+            setVoteKick({ target: nickname, phase: "voting" });
+            // 데모 시뮬레이션 — 3초 뒤 70% 확률로 만장일치 통과
+            window.setTimeout(() => {
+              const passed = Math.random() > 0.3;
+              setVoteKick({
+                target: nickname,
+                phase: passed ? "passed" : "rejected",
+              });
+              // 통과 시 실제 강퇴 처리
+              if (passed && postIdFromRoom) {
+                addKickedMember(postIdFromRoom, nickname);
+                // 채팅방 자체에서도 memberNames 갱신
+                setRooms((prev) =>
+                  prev.map((r) =>
+                    r.id === room.id
+                      ? {
+                          ...r,
+                          memberCount: Math.max(1, r.memberCount - 1),
+                          memberNames: (r.memberNames ?? []).filter(
+                            (n) => n !== nickname,
+                          ),
+                        }
+                      : r,
+                  ),
+                );
+                // 시스템 메시지로 안내
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: `kick-${Date.now()}`,
+                    nickname: "",
+                    content: `${nickname}님이 퇴장 투표 결과로 채팅방에서 나갔습니다`,
+                    time: "",
+                    mine: false,
+                    type: "system",
+                  },
+                ]);
+              }
+            }, 3000);
+          }}
+          onClose={() => setVoteKick(null)}
         />
       )}
 
@@ -1113,16 +1304,317 @@ export function ChatRoomScreen() {
             setActionTarget(null);
           }}
           onCopy={() => {
-            navigator.clipboard?.writeText(actionTarget.content || "").catch(() => {});
+            const text = actionTarget.content || "";
+            navigator.clipboard
+              ?.writeText(text)
+              .then(() => showToast("메시지를 복사했어요"))
+              .catch(() => showToast("복사에 실패했어요"));
+            setActionTarget(null);
+          }}
+          onForward={() => {
+            setForwardTarget(actionTarget);
+            setActionTarget(null);
+          }}
+          onSave={() => {
+            if (actionTarget.type === "image" && actionTarget.imageUrl) {
+              // 이미지는 새 탭에서 열어 저장 유도
+              window.open(actionTarget.imageUrl, "_blank");
+              showToast("이미지가 새 탭에서 열렸어요");
+            } else {
+              showToast("저장 기능은 곧 지원돼요");
+            }
+            setActionTarget(null);
+          }}
+          onDelete={() => {
+            const targetId = actionTarget.id;
+            setAlert({
+              title: "이 메시지를 삭제할까요?",
+              description: "삭제한 메시지는 복구할 수 없어요.",
+              danger: true,
+              onConfirm: () => {
+                setMessages((prev) => prev.filter((m) => m.id !== targetId));
+                showToast("메시지를 삭제했어요");
+              },
+            });
+            setActionTarget(null);
+          }}
+          onReport={() => {
+            const nickname = actionTarget.nickname || "상대";
+            setAlert({
+              title: `${nickname}님의 메시지를 신고할까요?`,
+              description: "운영팀에서 검토 후 조치해 드려요.",
+              onConfirm: () => showToast("신고가 접수되었어요"),
+            });
             setActionTarget(null);
           }}
           onReact={(e) => {
             addReaction(actionTarget.id, e);
             setActionTarget(null);
+            showToast(`${e} 반응을 남겼어요`);
           }}
         />
       )}
+
+      {forwardTarget && (
+        <ForwardSheet
+          target={forwardTarget}
+          currentRoomId={id ?? ""}
+          onClose={() => setForwardTarget(null)}
+          onSelect={(targetRoomId, targetRoomName) => {
+            // 전달할 메시지 사본 만들기 — 새 id, 내가 보낸 것으로 표시, "전달" 플래그
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, "0");
+            const mm = String(now.getMinutes()).padStart(2, "0");
+            const forwarded: ChatMessage = {
+              ...forwardTarget,
+              id: `fwd-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              mine: true,
+              nickname: "",
+              time: `${hh}:${mm}`,
+              date: undefined,
+              read: false,
+              readBy: undefined,
+              reactions: undefined,
+              replyTo: undefined,
+              forwarded: true,
+            };
+
+            // 미리보기 텍스트 — 채팅 목록에 노출되는 lastMessage 용
+            const preview =
+              forwardTarget.type === "image"
+                ? "[사진]"
+                : forwardTarget.type === "file"
+                  ? `[파일] ${forwardTarget.fileName ?? ""}`
+                  : forwardTarget.type === "location"
+                    ? "[위치]"
+                    : forwardTarget.content || "";
+
+            // 1) 대상 방이 현재 방이면 화면 메시지 배열에 바로 추가
+            if (targetRoomId === id) {
+              setMessages((prev) => [...prev, forwarded]);
+            } else {
+              // 2) 다른 방이면 messages-store 에 append
+              appendMessageToRoom(targetRoomId, forwarded);
+            }
+
+            // 3) rooms-store 에 lastMessage / lastTime / updatedAt 반영
+            setRooms((prev) =>
+              prev.map((r) =>
+                r.id === targetRoomId
+                  ? {
+                      ...r,
+                      lastMessage: preview,
+                      lastTime: "방금",
+                      updatedAt: Date.now(),
+                    }
+                  : r,
+              ),
+            );
+
+            setForwardTarget(null);
+            showToast(`${targetRoomName}(으)로 전달했어요`);
+          }}
+        />
+      )}
+
+      {photoViewer && (
+        <PhotoViewer
+          images={photoViewer.images}
+          initialIndex={photoViewer.index}
+          onClose={() => setPhotoViewer(null)}
+        />
+      )}
+
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex justify-center px-6">
+          <div className="rounded-full bg-black/80 px-4 py-2 text-[13px] text-white">
+            {toast}
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+/**
+ * 풀스크린 사진 뷰어 — 좌우 스와이프(터치/드래그) 또는 화살표 키로 이전·다음 사진 이동.
+ * 채팅방 안의 모든 이미지 메시지 URL 을 시간순으로 받아서 표시한다.
+ */
+function PhotoViewer({
+  images,
+  initialIndex,
+  onClose,
+}: {
+  images: string[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(
+    Math.min(Math.max(0, initialIndex), Math.max(0, images.length - 1)),
+  );
+  const [dragX, setDragX] = useState(0);
+  const startX = useRef<number | null>(null);
+
+  const goTo = (next: number) => {
+    if (next < 0 || next >= images.length) return;
+    setIndex(next);
+    setDragX(0);
+  };
+  const goPrev = () => goTo(index - 1);
+  const goNext = () => goTo(index + 1);
+
+  // 키보드 ← → ESC 지원
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // index 변화에 따라 goPrev/goNext 가 갱신되도록 의도적으로 의존성 명시 안함
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+
+  const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+    startX.current =
+      "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+  };
+  const handleTouchMove = (e: React.TouchEvent | React.MouseEvent) => {
+    if (startX.current === null) return;
+    const x =
+      "touches" in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    setDragX(x - startX.current);
+  };
+  const handleTouchEnd = () => {
+    if (startX.current === null) return;
+    const threshold = 60;
+    if (dragX > threshold) goPrev();
+    else if (dragX < -threshold) goNext();
+    else setDragX(0);
+    startX.current = null;
+  };
+
+  if (images.length === 0) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex flex-col bg-black/95"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* 상단 바 — 인덱스 표시 + 닫기 */}
+      <div className="flex h-12 shrink-0 items-center justify-between px-4 text-white">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="닫기"
+          className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-white/10"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden
+          >
+            <path d="m6 6 12 12M6 18 18 6" />
+          </svg>
+        </button>
+        <span className="text-[13px] text-white/80">
+          {index + 1} / {images.length}
+        </span>
+        <span className="h-8 w-8" aria-hidden />
+      </div>
+
+      {/* 이미지 영역 — 스와이프 제스처 */}
+      <div
+        className="flex flex-1 select-none items-center justify-center overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleTouchStart}
+        onMouseMove={(e) => {
+          if (startX.current !== null) handleTouchMove(e);
+        }}
+        onMouseUp={handleTouchEnd}
+        onMouseLeave={() => {
+          if (startX.current !== null) handleTouchEnd();
+        }}
+      >
+        <img
+          src={images[index]}
+          alt={`사진 ${index + 1}`}
+          draggable={false}
+          className="max-h-full max-w-full object-contain transition-transform"
+          style={{ transform: `translateX(${dragX}px)` }}
+        />
+      </div>
+
+      {/* 데스크톱용 좌우 화살표 (모바일에선 스와이프) */}
+      {index > 0 && (
+        <button
+          type="button"
+          onClick={goPrev}
+          aria-label="이전 사진"
+          className="absolute left-2 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 md:flex"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+      )}
+      {index < images.length - 1 && (
+        <button
+          type="button"
+          onClick={goNext}
+          aria-label="다음 사진"
+          className="absolute right-2 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 md:flex"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="m9 6 6 6-6 6" />
+          </svg>
+        </button>
+      )}
+
+      {/* 페이지 인디케이터 */}
+      {images.length > 1 && (
+        <div className="flex shrink-0 justify-center gap-1.5 py-4">
+          {images.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${
+                i === index ? "w-6 bg-white" : "w-1.5 bg-white/40"
+              }`}
+              aria-hidden
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1133,6 +1625,7 @@ function MessageItem({
   showReactionPicker,
   onPickEmoji,
   onProfileClick,
+  onImageTap,
 }: {
   message: ChatMessage;
   onLongPress: (m: ChatMessage) => void;
@@ -1140,6 +1633,7 @@ function MessageItem({
   showReactionPicker: boolean;
   onPickEmoji: (e: string) => void;
   onProfileClick: (nickname: string) => void;
+  onImageTap?: (m: ChatMessage) => void;
 }) {
   const longPressTimer = useRef<number | null>(null);
   const longPressFired = useRef(false);
@@ -1182,12 +1676,25 @@ function MessageItem({
   const renderBody = (mine: boolean) => {
     const maxW = mine ? "max-w-[230px]" : "max-w-[210px]";
     if (message.type === "image" && message.imageUrl) {
+      // pressProps 의 onClick(handleClick)을 확장 — long-press 가 발화되지 않았으면
+      // 사진 풀스크린 뷰어를 연다.
+      const imageProps = {
+        ...pressProps,
+        onClick: (e: React.MouseEvent) => {
+          if (longPressFired.current) {
+            e.stopPropagation();
+            longPressFired.current = false;
+            return;
+          }
+          onImageTap?.(message);
+        },
+      };
       return (
         <img
           src={message.imageUrl}
           alt=""
-          className={`${maxW} rounded-2xl`}
-          {...pressProps}
+          className={`${maxW} cursor-zoom-in rounded-2xl`}
+          {...imageProps}
         />
       );
     }
@@ -1263,6 +1770,7 @@ function MessageItem({
             <span className="text-[10px] text-holo-ink-3">{message.time}</span>
           </div>
           <div className="relative">
+            {message.forwarded && <ForwardedLabel align="end" />}
             {message.replyTo && <ReplyPreview reply={message.replyTo} />}
             {renderBody(true)}
             {showReactionPicker && <ReactionPicker onPick={onPickEmoji} align="end" />}
@@ -1302,6 +1810,7 @@ function MessageItem({
           </button>
           <div className="mt-1 flex items-end gap-2">
             <div className="relative">
+              {message.forwarded && <ForwardedLabel />}
               {message.replyTo && <ReplyPreview reply={message.replyTo} />}
               {renderBody(false)}
               {showReactionPicker && <ReactionPicker onPick={onPickEmoji} />}
@@ -1435,40 +1944,93 @@ function MessageActionSheet({
   onClose,
   onReply,
   onCopy,
+  onForward,
+  onSave,
+  onDelete,
+  onReport,
   onReact,
 }: {
   target: ChatMessage;
   onClose: () => void;
   onReply: () => void;
   onCopy: () => void;
+  onForward: () => void;
+  onSave: () => void;
+  onDelete: () => void;
+  onReport: () => void;
   onReact: (e: string) => void;
 }) {
+  // 텍스트가 아닌 메시지(이미지/파일/위치)는 복사 메뉴를 숨긴다.
+  const hasText = !target.type || target.type === "text";
+  // 이미지·파일만 저장 가능
+  const canSave = target.type === "image" || target.type === "file";
+
   return (
     <div className="fixed inset-0 z-30 bg-black/40" onClick={onClose}>
       <div
-        className="absolute bottom-0 left-1/2 w-full -translate-x-1/2 rounded-t-2xl bg-white p-4 md:max-w-[360px]"
+        className="absolute bottom-0 left-1/2 w-full -translate-x-1/2 rounded-t-2xl bg-white p-4 pb-6 md:max-w-[360px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-3 h-1 w-10 rounded bg-holo-line-3" />
-        <div className="mb-3 flex justify-between">
+
+        {/* 이모지 반응 행 — 기존 인라인 피커와 동일 이모지 세트 */}
+        <div className="mb-2 flex justify-between rounded-2xl bg-holo-surface-2 px-3 py-2">
           {CHAT_QUICK_EMOJIS.map((e) => (
             <button
               key={e}
               type="button"
-              className="text-[24px]"
+              aria-label={`${e} 반응`}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[22px] transition active:scale-90 active:bg-white"
               onClick={() => onReact(e)}
             >
               {e}
             </button>
           ))}
         </div>
+
+        {/* 미리보기 — 어떤 메시지에 대한 액션인지 보여줌 */}
+        <div className="mt-3 mb-1 rounded-xl bg-holo-surface-2 px-3 py-2">
+          <p className="text-[11px] text-holo-ink-3">
+            {target.mine ? "나" : target.nickname || "상대"}
+          </p>
+          <p className="line-clamp-2 text-[12px] text-holo-ink-2">
+            {target.type === "image"
+              ? "[사진]"
+              : target.type === "file"
+                ? `[파일] ${target.fileName ?? ""}`
+                : target.type === "location"
+                  ? "[위치]"
+                  : target.content}
+          </p>
+        </div>
+
         <div className="flex flex-col divide-y divide-holo-line">
-          <SheetItem onClick={onReply}>답장하기</SheetItem>
-          <SheetItem onClick={onCopy}>복사하기</SheetItem>
-          <SheetItem onClick={onClose}>전달하기</SheetItem>
-          <SheetItem onClick={onClose}>저장하기</SheetItem>
-          {!target.mine && <SheetItem onClick={onClose} danger>신고하기</SheetItem>}
-          {target.mine && <SheetItem onClick={onClose} danger>삭제하기</SheetItem>}
+          <SheetItem icon={<ReplyIcon />} onClick={onReply}>
+            답장하기
+          </SheetItem>
+          {hasText && (
+            <SheetItem icon={<CopyIcon />} onClick={onCopy}>
+              복사하기
+            </SheetItem>
+          )}
+          <SheetItem icon={<ForwardIcon />} onClick={onForward}>
+            전달하기
+          </SheetItem>
+          {canSave && (
+            <SheetItem icon={<SaveIcon />} onClick={onSave}>
+              저장하기
+            </SheetItem>
+          )}
+          {!target.mine && (
+            <SheetItem icon={<FlagIcon />} onClick={onReport} danger>
+              신고하기
+            </SheetItem>
+          )}
+          {target.mine && (
+            <SheetItem icon={<TrashIcon />} onClick={onDelete} danger>
+              삭제하기
+            </SheetItem>
+          )}
         </div>
       </div>
     </div>
@@ -1476,10 +2038,12 @@ function MessageActionSheet({
 }
 
 function SheetItem({
+  icon,
   onClick,
   danger,
   children,
 }: {
+  icon?: React.ReactNode;
   onClick: () => void;
   danger?: boolean;
   children: React.ReactNode;
@@ -1488,10 +2052,351 @@ function SheetItem({
     <button
       type="button"
       onClick={onClick}
-      className={`py-3 text-left text-[14px] ${danger ? "text-red-500" : "text-holo-ink"}`}
+      className={`flex items-center gap-3 py-3 text-left text-[14px] ${danger ? "text-red-500" : "text-holo-ink"}`}
     >
-      {children}
+      {icon && (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+          {icon}
+        </span>
+      )}
+      <span>{children}</span>
     </button>
+  );
+}
+
+function ForwardedLabel({ align = "start" }: { align?: "start" | "end" }) {
+  return (
+    <div
+      className={`mb-1 flex items-center gap-1 text-[10px] text-holo-ink-3 ${
+        align === "end" ? "justify-end" : ""
+      }`}
+    >
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="m15 17 5-5-5-5" />
+        <path d="M20 12H9a5 5 0 0 0-5 5v2" />
+      </svg>
+      <span>전달된 메시지</span>
+    </div>
+  );
+}
+
+function ForwardSheet({
+  target,
+  currentRoomId,
+  onClose,
+  onSelect,
+}: {
+  target: ChatMessage;
+  currentRoomId: string;
+  onClose: () => void;
+  onSelect: (roomId: string, roomName: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  // 현재 방 제외 + 핀된 방 우선 정렬
+  const rooms = getRooms()
+    .filter((r) => r.id !== currentRoomId)
+    .filter((r) =>
+      query.trim()
+        ? r.name.toLowerCase().includes(query.trim().toLowerCase())
+        : true,
+    )
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+
+  const preview =
+    target.type === "image"
+      ? "[사진]"
+      : target.type === "file"
+        ? `[파일] ${target.fileName ?? ""}`
+        : target.type === "location"
+          ? "[위치]"
+          : target.content || "";
+
+  return (
+    <div className="fixed inset-0 z-40 bg-black/40" onClick={onClose}>
+      <div
+        className="absolute bottom-0 left-1/2 flex max-h-[80vh] w-full -translate-x-1/2 flex-col rounded-t-2xl bg-white p-4 pb-6 md:max-w-[360px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded bg-holo-line-3" />
+        <p className="shrink-0 text-[15px] font-semibold text-holo-ink">
+          전달할 채팅방 선택
+        </p>
+
+        {/* 전달할 메시지 미리보기 */}
+        <div className="mt-2 shrink-0 rounded-xl bg-holo-surface-2 px-3 py-2">
+          <p className="text-[11px] text-holo-ink-3">
+            {target.mine ? "나" : target.nickname || "상대"}
+          </p>
+          <p className="line-clamp-2 text-[12px] text-holo-ink-2">{preview}</p>
+        </div>
+
+        {/* 검색 */}
+        <div className="mt-3 shrink-0">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="채팅방 이름 검색"
+            className="h-10 w-full rounded-full border border-holo-line bg-holo-surface-2 px-4 text-[13px] outline-none placeholder:text-holo-ink-3 focus:border-holo-purple-mid"
+          />
+        </div>
+
+        {/* 채팅방 목록 */}
+        <div className="mt-2 min-h-0 flex-1 overflow-y-auto">
+          {rooms.length === 0 ? (
+            <div className="flex h-[160px] items-center justify-center text-[13px] text-holo-ink-3">
+              전달할 수 있는 채팅방이 없어요
+            </div>
+          ) : (
+            <ul className="flex flex-col">
+              {rooms.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(r.id, r.name)}
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition active:bg-holo-surface-2"
+                  >
+                    <img
+                      src={getAvatarUrl(r.name)}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-full object-cover"
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="flex items-center gap-1 truncate text-[14px] font-medium text-holo-ink">
+                        {r.name}
+                        {r.isGroup && (
+                          <span className="text-[11px] text-holo-ink-3">
+                            ({r.memberCount})
+                          </span>
+                        )}
+                        {r.pinned && (
+                          <span className="text-[10px] text-holo-purple-mid">
+                            📌
+                          </span>
+                        )}
+                      </span>
+                      <span className="truncate text-[11px] text-holo-ink-3">
+                        {r.subtitle}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-3 h-10 shrink-0 rounded-full border border-holo-line text-[13px] text-holo-ink-2"
+        >
+          취소
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReplyIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M9 17 4 12l5-5" />
+      <path d="M4 12h11a5 5 0 0 1 5 5v2" />
+    </svg>
+  );
+}
+function CopyIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+    </svg>
+  );
+}
+function ForwardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m15 17 5-5-5-5" />
+      <path d="M20 12H9a5 5 0 0 0-5 5v2" />
+    </svg>
+  );
+}
+function SaveIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  );
+}
+function FlagIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 21V4l14 4-7 3 7 4z" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+/**
+ * 모임 채팅방 퇴장 투표 모달.
+ * - selecting: 강퇴할 멤버 선택
+ * - voting: 다른 멤버들이 투표하는 동안 진행률 애니메이션
+ * - passed: 만장일치 통과 안내
+ * - rejected: 일부 반대로 부결 안내
+ */
+function VoteKickModal({
+  phase,
+  target,
+  candidates,
+  onSelectTarget,
+  onClose,
+}: {
+  phase: "selecting" | "voting" | "passed" | "rejected";
+  target: string;
+  candidates: string[];
+  onSelectTarget: (nickname: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4"
+      onClick={phase === "selecting" || phase !== "voting" ? onClose : undefined}
+    >
+      <div
+        className="w-full max-w-[330px] rounded-[15px] bg-white p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between">
+          <span className="text-[16px] font-semibold text-holo-ink">
+            퇴장 투표
+          </span>
+          {phase !== "voting" && (
+            <button type="button" aria-label="닫기" onClick={onClose}>
+              <CloseIcon />
+            </button>
+          )}
+        </header>
+
+        {/* 1) 대상 선택 */}
+        {phase === "selecting" && (
+          <>
+            <p className="mt-3 text-[12px] text-holo-ink-3">
+              퇴장 투표를 시작할 멤버를 선택해 주세요. 만장일치 찬성 시 채팅방에서 퇴장돼요.
+            </p>
+            {candidates.length === 0 ? (
+              <p className="my-6 text-center text-[13px] text-holo-ink-3">
+                투표할 수 있는 멤버가 없어요
+              </p>
+            ) : (
+              <ul className="mt-3 flex max-h-[260px] flex-col gap-2 overflow-y-auto rounded-holo-card bg-holo-surface-2 p-3">
+                {candidates.map((nickname) => (
+                  <li key={nickname}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectTarget(nickname)}
+                      className="flex w-full items-center gap-3 rounded-md p-2 text-left transition hover:bg-white"
+                    >
+                      <img
+                        src={memberAvatarSrc(nickname)}
+                        alt=""
+                        className="h-8 w-8 rounded-full bg-holo-yellow-room object-cover"
+                      />
+                      <span className="flex-1 text-[14px] text-holo-ink">
+                        {nickname}
+                      </span>
+                      <span className="text-[12px] text-holo-error">
+                        투표 시작
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+
+        {/* 2) 투표 진행 중 */}
+        {phase === "voting" && (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-holo-lilac-card-2">
+              <span className="text-[28px]">🗳️</span>
+            </div>
+            <p className="text-[15px] font-semibold text-holo-ink">
+              <strong>{target}</strong>님 퇴장 투표 진행 중
+            </p>
+            <p className="text-center text-[12px] text-holo-ink-3">
+              다른 멤버들이 투표하고 있어요.
+              <br />
+              잠시만 기다려주세요…
+            </p>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-holo-line-3">
+              <div className="h-full animate-pulse rounded-full bg-holo-purple-mid" />
+            </div>
+          </div>
+        )}
+
+        {/* 3) 만장일치 통과 */}
+        {phase === "passed" && (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <span className="text-[40px]">✅</span>
+            <p className="text-[15px] font-semibold text-holo-ink">
+              만장일치 찬성!
+            </p>
+            <p className="text-[13px] text-holo-ink-3">
+              <strong>{target}</strong>님이 채팅방에서 퇴장되었어요.
+              <br />
+              모집 인원도 1명 줄어듭니다.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-3 h-10 w-full rounded-holo-pill bg-holo-purple-mid text-[13px] font-semibold text-white"
+            >
+              확인
+            </button>
+          </div>
+        )}
+
+        {/* 4) 부결 */}
+        {phase === "rejected" && (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <span className="text-[40px]">🙅</span>
+            <p className="text-[15px] font-semibold text-holo-ink">투표 부결</p>
+            <p className="text-[13px] text-holo-ink-3">
+              일부 멤버가 반대해 <strong>{target}</strong>님은
+              <br />
+              계속 채팅방에 머무릅니다.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-3 h-10 w-full rounded-holo-pill bg-holo-ink text-[13px] font-semibold text-white"
+            >
+              확인
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1499,13 +2404,19 @@ function MeetingInfoModal({
   roomName,
   meeting,
   members,
+  postId,
   onClose,
+  onGoToPost,
+  onVoteKick,
   onProfileClick,
 }: {
   roomName: string;
   meeting: MeetingInfo;
   members: Member[];
+  postId?: string;
   onClose: () => void;
+  onGoToPost?: (postId: string) => void;
+  onVoteKick?: () => void;
   onProfileClick?: (nickname: string) => void;
 }) {
   return (
@@ -1539,6 +2450,59 @@ function MeetingInfoModal({
             <span className="text-[13px] font-semibold text-holo-ink">{meeting.place}</span>
           </div>
         </div>
+
+        {/* 액션 버튼들 — 게시글 이동 + 퇴장 투표. 둘 다 모임방에서만 노출. */}
+        {postId && (onGoToPost || onVoteKick) && (
+          <div className="mt-3 flex gap-2">
+            {onGoToPost && (
+              <button
+                type="button"
+                onClick={() => onGoToPost(postId)}
+                className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-holo-pill border border-holo-purple-mid bg-white text-[12px] font-semibold text-holo-purple-mid transition active:scale-[0.98]"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <rect x="5" y="3" width="14" height="18" rx="2" />
+                  <path d="M9 7h6M9 11h6M9 15h4" />
+                </svg>
+                모임 게시글
+              </button>
+            )}
+            {onVoteKick && members.length > 1 && (
+              <button
+                type="button"
+                onClick={onVoteKick}
+                className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-holo-pill border border-holo-error/60 bg-white text-[12px] font-semibold text-holo-error transition active:scale-[0.98]"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M16 17l5-5-5-5" />
+                  <path d="M21 12H9" />
+                  <path d="M9 21V3" />
+                </svg>
+                퇴장 투표
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 참여자 */}
         <div className="mt-4 flex items-center justify-between">

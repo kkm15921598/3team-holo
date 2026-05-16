@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
-import {
-  sendFriendRequest,
-  useReceivedRequests,
-  useSentRequests,
-} from "./friends-store";
+import { sendFriendRequest } from "./friends-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 
 export function FriendsAddScreen() {
@@ -13,8 +9,6 @@ export function FriendsAddScreen() {
   const [tab, setTab] = useState<"id" | "qr">("id");
   const [input, setInput] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const received = useReceivedRequests();
-  const sent = useSentRequests();
   // 표시되는 내 닉네임은 현재 로그인 계정의 프로필을 따른다 — ME 는 데모용 고정값.
   const profile = useProfile();
 
@@ -98,27 +92,6 @@ export function FriendsAddScreen() {
           </div>
         ) : (
           <div className="flex w-full max-w-[300px] flex-col gap-3">
-            {(received.length > 0 || sent.length > 0) && (
-              <button
-                type="button"
-                onClick={() => navigate("/mypage/friends/requests")}
-                className="flex items-center justify-between rounded-holo-card bg-holo-lilac-card-2 px-4 py-3 text-left"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-[18px]">🤝</span>
-                  <span className="flex flex-col">
-                    <span className="text-[13px] font-semibold text-holo-ink">
-                      친구 요청 {received.length > 0 ? `${received.length}건` : "확인"}
-                    </span>
-                    <span className="text-[11px] text-holo-ink-3">
-                      받은 {received.length} · 보낸 {sent.length}
-                    </span>
-                  </span>
-                </span>
-                <ChevronRightIcon />
-              </button>
-            )}
-
             <div className="flex w-full flex-col rounded-holo-card bg-white p-5">
               <p className="text-[14px] font-semibold text-holo-ink">친구 ID 입력</p>
               <p className="mt-1 text-[12px] text-holo-ink-3">
@@ -160,13 +133,6 @@ function CloseIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" aria-hidden>
       <path d="m6 6 12 12M6 18 18 6" />
-    </svg>
-  );
-}
-function ChevronRightIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }

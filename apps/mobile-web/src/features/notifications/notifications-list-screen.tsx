@@ -12,6 +12,11 @@ import {
   markDynRead,
   useDynNotifications,
 } from "@/shared/stores/notifications-store";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { postsStore } from "@/features/board/posts-store";
+import { type Post } from "@/shared/mock/data";
+import { useRooms } from "@/features/chat/rooms-store";
+import { useJoinedSet } from "@/shared/stores/joined-store";
 
 type NotifType = "comment" | "like" | "friend" | "chat" | "meeting" | "event";
 
@@ -30,53 +35,73 @@ type Notification = {
   dynamic?: boolean;
 };
 
-// 정적 mock 알림 — 실제 존재하는 게시글/채팅방/페이지로 연결되도록 데이터를 맞춤.
-const STATIC_NOTIFICATIONS: Notification[] = [
-  {
-    id: "n1",
-    type: "comment",
-    title: "댓글 알림",
-    // 게시글 id "1" = "점심 번개" — POST_COMMENTS["1"] 에 실제 댓글 존재
-    body: "껍질은 달걀껍질님이 내 글 \"점심 번개\"에 댓글을 달았어요. \"저요! 저요!\"",
-    time: "방금 전",
-    ageMs: 30 * 1000,
-    read: false,
-    link: "/board/1",
-  },
-  {
-    id: "n2",
-    type: "like",
-    title: "좋아요 알림",
-    // 게시글 id "1" 의 실제 제목과 매칭
-    body: "단무지팬님이 내 글 \"점심 번개\"에 좋아요를 눌렀어요.",
-    time: "5분 전",
-    ageMs: 5 * 60 * 1000,
-    read: false,
-    link: "/board/1",
-  },
-  {
-    id: "n4",
-    type: "chat",
-    title: "채팅 알림",
-    // 채팅방 id "3" = "동네 떡볶이 모임" (CHATROOMS 에 실재)
-    body: "\"동네 떡볶이 모임\" 채팅방에 새 메시지가 도착했어요. \"맛있겠다 ㅋㅋㅋ\"",
-    time: "30분 전",
-    ageMs: 30 * 60 * 1000,
-    read: true,
-    link: "/chat/3",
-  },
-  {
-    id: "n5",
-    type: "meeting",
-    title: "모임 알림",
-    // 게시글 id "3" = "강아지 산책친구 구해요"
-    body: "\"강아지 산책친구 구해요\" 모임에 새 멤버가 합류했어요.",
-    time: "1시간 전",
-    ageMs: 60 * 60 * 1000,
-    read: true,
-    link: "/board/3",
-  },
-  {
+/**
+ * 정적 mock 알림 빌더.
+ * 현재 로그인한 사용자 상태(작성 글 / 채팅방 / 참여 모임)에 따라 동적으로 알림을 구성한다:
+ * - 댓글/좋아요 알림: 내가 작성한 글이 있을 때만
+ * - 채팅 알림: "동네 떡볶이 모임" 채팅방(id "3") 에 참여 중일 때만
+ * - 모임 알림: "강아지 산책친구 구해요"(post "3") 에 참여 중일 때만
+ * - 이벤트 알림: 항상 표시
+ *
+ * 신규 가입자처럼 채팅방 / 참여글이 없는 사용자에겐 어색한 거짓 알림이 안 뜨도록 보장.
+ */
+function buildStaticNotifications(
+  myPost: Post | null,
+  hasChatRoom3: boolean,
+  hasJoinedPost3: boolean,
+): Notification[] {
+  const list: Notification[] = [];
+
+  if (myPost) {
+    list.push({
+      id: `n1-${myPost.id}`,
+      type: "comment",
+      title: "댓글 알림",
+      body: `보송보송한 햄찌님이 내 글 "${myPost.title}"에 댓글을 달았어요. "저요! 저요!"`,
+      time: "방금 전",
+      ageMs: 30 * 1000,
+      read: false,
+      link: `/board/${myPost.id}`,
+    });
+    list.push({
+      id: `n2-${myPost.id}`,
+      type: "like",
+      title: "좋아요 알림",
+      body: `단무지팬님이 내 글 "${myPost.title}"에 좋아요를 눌렀어요.`,
+      time: "5분 전",
+      ageMs: 5 * 60 * 1000,
+      read: false,
+      link: `/board/${myPost.id}`,
+    });
+  }
+
+  if (hasChatRoom3) {
+    list.push({
+      id: "n4",
+      type: "chat",
+      title: "채팅 알림",
+      body: "\"동네 떡볶이 모임\" 채팅방에 새 메시지가 도착했어요. \"맛있겠다 ㅋㅋㅋ\"",
+      time: "30분 전",
+      ageMs: 30 * 60 * 1000,
+      read: true,
+      link: "/chat/3",
+    });
+  }
+
+  if (hasJoinedPost3) {
+    list.push({
+      id: "n5",
+      type: "meeting",
+      title: "모임 알림",
+      body: "\"강아지 산책친구 구해요\" 모임에 새 멤버가 합류했어요.",
+      time: "1시간 전",
+      ageMs: 60 * 60 * 1000,
+      read: true,
+      link: "/board/3",
+    });
+  }
+
+  list.push({
     id: "n6",
     type: "event",
     title: "이벤트 알림",
@@ -85,8 +110,10 @@ const STATIC_NOTIFICATIONS: Notification[] = [
     ageMs: 8 * 60 * 60 * 1000,
     read: true,
     link: "/event/attendance",
-  },
-];
+  });
+
+  return list;
+}
 
 const TYPE_TO_SETTING: Record<NotifType, keyof ReturnType<typeof getNotificationSettings>> = {
   comment: "comment",
@@ -114,6 +141,18 @@ export function NotificationsListScreen() {
   const [readSet, setReadSet] = useState(() => getReadIds());
   const dynNotifications = useDynNotifications();
   const [filter, setFilter] = useState<FilterTab>("all");
+  const profile = useProfile();
+
+  // postsStore 변경(새 글 등록 등)에 반응하도록 게시글 목록을 state 로 보관.
+  const [posts, setPosts] = useState(postsStore.getPosts);
+  useEffect(() => {
+    return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
+  }, []);
+
+  // 현재 로그인한 사용자가 작성한 게시글 중 가장 최신 한 건 — 알림 카피의 "내 글" 대상으로 사용.
+  const myPost: Post | null = useMemo(() => {
+    return posts.find((p) => p.authorNickname === profile.nickname) ?? null;
+  }, [posts, profile.nickname]);
 
   useEffect(() =>
     subscribeNotificationSettings(() => {
@@ -122,12 +161,27 @@ export function NotificationsListScreen() {
     }),
   []);
 
-  // 동적 알림 → 공통 형식으로 매핑
+  // 채팅방 / 참여 게시글 상태 — 신규 가입자는 모두 비어있어 어색한 mock 알림이 안 뜬다.
+  const rooms = useRooms();
+  const joinedSet = useJoinedSet();
+  const hasChatRoom3 = useMemo(() => rooms.some((r) => r.id === "3"), [rooms]);
+  const hasJoinedPost3 = useMemo(() => joinedSet.has("3"), [joinedSet]);
+
+  // 정적 알림은 사용자 상태 기준으로 그때그때 빌드 — 관련 데이터가 없으면 항목 자체가 빠진다.
+  const staticItems: Notification[] = useMemo(
+    () => buildStaticNotifications(myPost, hasChatRoom3, hasJoinedPost3),
+    [myPost, hasChatRoom3, hasJoinedPost3],
+  );
+
+  // 동적 알림 → 공통 형식으로 매핑. friend 외 kind 는 event 카테고리로 분류.
   const dynItems: Notification[] = useMemo(
     () =>
       dynNotifications.map((d) => ({
         id: d.id,
-        type: "friend" as const,
+        type:
+          d.kind === "friend-received" || d.kind === "friend-accepted"
+            ? ("friend" as const)
+            : ("event" as const),
         title: d.title,
         body: d.body,
         time: d.time,
@@ -142,7 +196,7 @@ export function NotificationsListScreen() {
   // 설정 + 필터 적용
   const visible: Notification[] = useMemo(() => {
     if (!nSettings.master) return [];
-    const merged = [...dynItems, ...STATIC_NOTIFICATIONS]
+    const merged = [...dynItems, ...staticItems]
       .filter((n) => nSettings[TYPE_TO_SETTING[n.type]])
       .filter((n) => matchFilter(n.type, filter))
       .map((n) => ({
@@ -151,7 +205,7 @@ export function NotificationsListScreen() {
       }));
     merged.sort((a, b) => a.ageMs - b.ageMs);
     return merged;
-  }, [nSettings, dynItems, readSet, filter]);
+  }, [nSettings, dynItems, staticItems, readSet, filter]);
 
   const unreadCount = visible.filter((n) => !n.read).length;
 
@@ -173,7 +227,7 @@ export function NotificationsListScreen() {
   };
 
   const handleMarkAllRead = () => {
-    markAllRead(STATIC_NOTIFICATIONS.map((n) => n.id));
+    markAllRead(staticItems.map((n) => n.id));
     markAllDynRead();
   };
 

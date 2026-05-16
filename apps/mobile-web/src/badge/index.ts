@@ -1,5 +1,5 @@
 /**
- * HOLO 뱃지 라이브러리 — 23종
+ * HOLO 뱃지 라이브러리 — 26종
  * badge_NN.png ↔ 한글 이름 매핑
  */
 import b01 from "./badge_01.png";
@@ -25,9 +25,12 @@ import b20 from "./badge_20.png";
 import b21 from "./badge_21.png";
 import b22 from "./badge_22.png";
 import b23 from "./badge_23.png";
+import b24 from "./badge_24.png";
+import b25 from "./badge_25.png";
+import b26 from "./badge_26.png";
 
 export type Badge = {
-  id: string; // "badge_01" ~ "badge_23"
+  id: string; // "badge_01" ~ "badge_26"
   name: string; // 한글 이름
   englishTitle: string; // 영문 (뱃지 이미지 안의 라벨)
   wittyCopy: string; // 위트 있는 한 줄 문구
@@ -58,6 +61,9 @@ export const BADGES: Badge[] = [
   { id: "badge_21", name: "동네 미식가",    englishTitle: "LOCAL FOODIE",      wittyCopy: "우리 동네가 사실 맛집 성지",          src: b21 },
   { id: "badge_22", name: "동네 소통가",    englishTitle: "NEIGHBOR TALK",     wittyCopy: "말 한마디로 이웃을 만든다",           src: b22 },
   { id: "badge_23", name: "HOLO 수호신",   englishTitle: "HOLO GUARDIAN",     wittyCopy: "HOLO와 함께라면 나는 무적",           src: b23 },
+  { id: "badge_24", name: "홀로 입주자",    englishTitle: "MOVED IN",          wittyCopy: "오늘부터 이 동네 주민입니다",          src: b24 },
+  { id: "badge_25", name: "작은 쇼룸 주인", englishTitle: "TINY SHOWROOM",     wittyCopy: "내 방이 곧 인테리어 화보",            src: b25 },
+  { id: "badge_26", name: "1년째 입주민",   englishTitle: "ONE YEAR HERE",     wittyCopy: "벌써 한 해, 정 들었어요",            src: b26 },
 ];
 
 /** 한글 이름으로 뱃지 조회 */

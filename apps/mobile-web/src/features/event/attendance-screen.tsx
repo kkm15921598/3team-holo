@@ -1,15 +1,55 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ATTENDANCE_DAYS, ATTENDANCE_STREAK } from "@/shared/mock/data";
-import { awardXp } from "@/shared/stores/xp-store";
+import {
+  awardXp,
+  getAttendanceCycleStatus,
+  getAttendanceDayCount,
+  getCurrentStreak,
+} from "@/shared/stores/xp-store";
 import { addPoints } from "@/features/myroom/myroom-store";
+import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
 
-type Day = (typeof ATTENDANCE_DAYS)[number];
+/** 주간 일차별 보상 — 1~7일차의 포인트 / 보너스 라벨. */
+const WEEKLY_REWARDS: { points: number; label?: string }[] = [
+  { points: 5 },
+  { points: 5 },
+  { points: 15, label: "연속보너스" },
+  { points: 5 },
+  { points: 25, label: "연속보너스" },
+  { points: 5 },
+  { points: 55, label: "스페셜 보너스" },
+];
+
+type Day = {
+  day: number;       // 1~7
+  points: number;
+  checked: boolean;
+  isToday: boolean;
+  label?: string;
+};
 
 export function AttendanceScreen() {
   const navigate = useNavigate();
   const [toast, setToast] = useState<string | null>(null);
-  const todayDay = ATTENDANCE_DAYS.find((d) => d.isToday);
+  // 매 렌더마다 최신 상태를 새로 계산 — 출석 직후 화면이 즉시 갱신됨
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  // 연속 출석 사이클(1~7일차) 기준으로 동적 빌드.
+  // 신규 사용자는 1일차에서 시작, 출석 1회마다 다음 일차로 진행.
+  const cycle = getAttendanceCycleStatus();
+  const attendanceDays: Day[] = cycle.days.map((r, i) => ({
+    day: r.day,
+    points: WEEKLY_REWARDS[i].points,
+    label: WEEKLY_REWARDS[i].label,
+    checked: r.checked,
+    isToday: r.isToday,
+  }));
+  const streak = getCurrentStreak();
+  const todayDay = attendanceDays.find((d) => d.isToday);
+  const checkedCount = attendanceDays.filter((d) => d.checked).length;
+  const firstRow = attendanceDays.slice(0, 4);
+  const secondRow = attendanceDays.slice(4, 7);
+
   const handleAttendance = () => {
     const result = awardXp("attendance");
     if (result.capped) {
@@ -18,16 +58,26 @@ export function AttendanceScreen() {
       const pts = todayDay?.points ?? 5;
       addPoints(pts, {
         title: "출석체크",
-        note: todayDay ? `${todayDay.day}일차${todayDay.label ? ` · ${todayDay.label}` : ""}` : undefined,
+        note: todayDay
+          ? `${todayDay.day}일차${todayDay.label ? ` · ${todayDay.label}` : ""}`
+          : undefined,
       });
+      // 출석일 누적 365일 달성 → "1년째 입주민" 뱃지 자동 발급
+      if (getAttendanceDayCount() >= 365) {
+        const newlyAcquired = recordBadgeAcquired("badge_26");
+        if (newlyAcquired) {
+          setToast("🎉 '1년째 입주민' 뱃지를 획득했어요!");
+          window.setTimeout(() => setToast(null), 2400);
+          return;
+        }
+      }
       setToast(`출석 완료! +${result.gained} XP / +${pts}P`);
     }
+    setRefreshTick((t) => t + 1);
     window.setTimeout(() => setToast(null), 1800);
   };
-  const checkedCount = ATTENDANCE_DAYS.filter((d) => d.checked).length;
-
-  const firstRow = ATTENDANCE_DAYS.slice(0, 4);
-  const secondRow = ATTENDANCE_DAYS.slice(4, 7);
+  // refreshTick 은 useState 의존성 체결만을 위한 트리거 — 명시적 참조로 lint 회피
+  void refreshTick;
 
   return (
     <main className="flex flex-1 flex-col bg-[#F7F6FB] pb-6 overflow-y-auto">
@@ -57,7 +107,7 @@ export function AttendanceScreen() {
               <span className="text-holo-purple">{checkedCount} / 7</span>
             </p>
             <div className="mt-3 flex gap-2">
-              {ATTENDANCE_DAYS.map((d) => (
+              {attendanceDays.map((d) => (
                 <span
                   key={d.day}
                   className={`block h-3 w-3 rounded-full ${
@@ -71,11 +121,17 @@ export function AttendanceScreen() {
               ))}
             </div>
             <p className="mt-3 text-[12px] text-gray-500">
-              현재{" "}
-              <span className="font-bold text-holo-purple">
-                {ATTENDANCE_STREAK}일
-              </span>{" "}
-              연속 출석 중
+              {streak > 0 ? (
+                <>
+                  현재{" "}
+                  <span className="font-bold text-holo-purple">
+                    {streak}일
+                  </span>{" "}
+                  연속 출석 중
+                </>
+              ) : (
+                <>오늘 출석하고 시작해보세요</>
+              )}
             </p>
           </div>
           <CalendarIllustration />

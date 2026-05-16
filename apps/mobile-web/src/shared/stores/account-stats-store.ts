@@ -24,10 +24,15 @@ export type AccountStats = {
   acquiredBadgeDates: Record<string, string>;
 };
 
+/**
+ * 신규 가입자 기본값.
+ * - 뱃지: "홀로 입주자"(badge_24) 가입 즉시 발급
+ * - 칭호: "#홀로_입주자" 가입 즉시 발급
+ */
 const DEFAULT_STATS: AccountStats = {
   level: 1,
-  acquiredBadgeIds: [],
-  acquiredTitles: [],
+  acquiredBadgeIds: ["badge_24"],
+  acquiredTitles: ["#홀로_입주자"],
   acquiredBadgeDates: {},
 };
 
@@ -92,24 +97,44 @@ export function setStats(stats: Partial<AccountStats> & Pick<AccountStats, "leve
 }
 
 /**
- * 실제 앱에서 뱃지가 발급될 때 호출 — 오늘 날짜(YYYY-MM-DD)를 기록한다.
- * 이미 기록된 뱃지면 no-op (최초 획득일 보존).
+ * 실제 앱에서 뱃지가 발급될 때 호출 — 오늘 날짜(YYYY-MM-DD)를 기록하고
+ * acquiredBadgeIds 목록에도 추가한다. 이미 보유 중인 뱃지면 no-op.
+ * 발급에 성공해서 새로 추가됐다면 true 를 반환 (UI 토스트 분기용).
  */
-export function recordBadgeAcquired(badgeId: string): void {
-  if (state.acquiredBadgeDates[badgeId]) return;
+export function recordBadgeAcquired(badgeId: string): boolean {
+  if (state.acquiredBadgeIds.includes(badgeId)) return false;
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   state = {
     ...state,
-    acquiredBadgeDates: { ...state.acquiredBadgeDates, [badgeId]: today },
+    acquiredBadgeIds: [...state.acquiredBadgeIds, badgeId],
+    acquiredBadgeDates: state.acquiredBadgeDates[badgeId]
+      ? state.acquiredBadgeDates
+      : { ...state.acquiredBadgeDates, [badgeId]: today },
   };
   persist();
   emit();
+  return true;
 }
 
 /** 뱃지 획득일 lookup — store 에 기록된 실제 날짜를 우선 반환 */
 export function getBadgeAcquiredDate(badgeId: string): string | undefined {
   return state.acquiredBadgeDates[badgeId];
+}
+
+/**
+ * 칭호 발급 — acquiredTitles 에 추가. 이미 보유 중이면 no-op.
+ * 새로 발급됐으면 true, 이미 있었으면 false.
+ */
+export function recordTitleAcquired(titleName: string): boolean {
+  if (state.acquiredTitles.includes(titleName)) return false;
+  state = {
+    ...state,
+    acquiredTitles: [...state.acquiredTitles, titleName],
+  };
+  persist();
+  emit();
+  return true;
 }
 
 /** 신규 가입자 기본값(1/1/1) 으로 리셋 */

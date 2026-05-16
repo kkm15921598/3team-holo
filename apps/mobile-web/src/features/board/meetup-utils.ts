@@ -5,6 +5,7 @@ import { POST_COMMENTS, type ChatRoom, type Post } from "@/shared/mock/data";
 import { MEETUP_POOL } from "@/features/home/home-meetups-data";
 import { addRoom, getRoom } from "@/features/chat/rooms-store";
 import { getProfile } from "@/shared/stores/profile-store";
+import { getKickedCount } from "@/features/chat/kicked-members-store";
 
 /** 모임 게시글에 대응되는 채팅방 id (게시글당 단일 채팅방). */
 export function meetupRoomId(postId: string): string {
@@ -20,23 +21,28 @@ export function meetupRoomId(postId: string): string {
  */
 export function calcJoined(post: Post): { capacity: number; baseJoined: number } {
   const capacity = post.peopleCount ?? 5;
-  if (post.status === "모집완료") return { capacity, baseJoined: capacity };
+  // 강퇴된 인원수만큼 baseJoined 를 차감 (음수 방지)
+  const kicked = getKickedCount(post.id);
+  if (post.status === "모집완료") {
+    return { capacity, baseJoined: Math.max(0, capacity - kicked) };
+  }
   const fromParticipants = post.participants?.length;
   const raw =
     fromParticipants !== undefined
       ? fromParticipants
       : Math.max(1, capacity - 2);
-  return { capacity, baseJoined: Math.min(capacity, raw) };
+  const adjusted = Math.max(0, raw - kicked);
+  return { capacity, baseJoined: Math.min(capacity, adjusted) };
 }
 
 /** MEETUP_POOL / POST_COMMENTS 로 채울 수 없을 때 쓰는 대체 닉네임 풀. */
 export const MEMBER_FALLBACK_POOL = [
-  "감자튀김",
-  "껍질은 달걀껍질",
-  "멜론은 키위를 좋아해",
-  "감자 없는 카레",
-  "두부의 단단함",
-  "포도껍질",
+  "고소한 감자",
+  "보송보송한 햄찌",
+  "새콤한 망고",
+  "매콤한 떡볶이",
+  "포근한 두부",
+  "달콤한 복숭아",
 ];
 
 /**
@@ -101,6 +107,9 @@ export function ensureMeetupRoom(post: Post): string {
     isGroup: true,
     memberCount,
     memberNames,
+    // 모임방 방장은 게시글 작성자로 고정 — 채팅 멤버 리스트의 호스트 표시가
+    // 항상 작성자와 일치하도록 보장.
+    hostNickname: post.authorNickname,
     // 채팅방 화면(buildMessagesFor) 이 "(대화를 시작해보세요)" 를 새 방 플래그로
     // 사용한다. 이 값을 그대로 써야 더미 채팅이 안 깔리고 시스템 메시지만 보인다.
     lastMessage: "(대화를 시작해보세요)",

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_ROOM, type PlacedFurniture } from "./myroom-data";
+import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
 
 const STORAGE_KEY = "holo:myroom:v1";
 
@@ -45,6 +46,35 @@ export function getMyroomItems(): PlacedFurniture[] {
 
 export function resetMyroomItems() {
   setMyroomItems(DEFAULT_ROOM);
+}
+
+/**
+ * 신규 가입 시 마이룸 관련 상태를 전부 비움.
+ * - 배치된 가구: 빈 방 (DEFAULT_ROOM 대신 빈 배열) — 가입 튜토리얼이 직접 채움
+ * - 소유 가구: 빈 set
+ * - 포인트: 0
+ * - 포인트 이용 내역: 빈 배열
+ * - 상태 메시지: 기본값
+ */
+export function resetMyroomStore(): void {
+  state = [];
+  persist();
+  emit();
+  ownedState = new Set();
+  persistOwned();
+  emitOwned();
+  pointsState = 0;
+  persistPoints();
+  emitPoints();
+  historyState = [];
+  persistHistory();
+  emitHistory();
+  statusState = DEFAULT_STATUS;
+  persistStatus();
+  emitStatus();
+  // 일일 cap 리셋
+  dailyCaps = { date: todayKey(), counts: {} };
+  persistDailyCaps();
 }
 
 const subscribe = (listener: () => void) => {
@@ -133,13 +163,17 @@ function emitOwned() {
   ownedListeners.forEach((l) => l());
 }
 
-/** 구매 → 소유 목록에 추가 */
+/** 구매 → 소유 목록에 추가. 소유 가구가 20개를 처음 넘기면 "작은 쇼룸 주인" 뱃지 발급. */
 export function purchaseItem(kind: string, variant: string): void {
   const next = new Set(ownedState);
   next.add(`${kind}:${variant}`);
   ownedState = next;
   persistOwned();
   emitOwned();
+  // 가구 20개 수집 달성 → badge_25 자동 발급 (이미 보유 시 no-op)
+  if (next.size >= 20) {
+    recordBadgeAcquired("badge_25");
+  }
 }
 
 /** 소유 여부 조회 */

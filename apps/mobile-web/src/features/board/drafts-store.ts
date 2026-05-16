@@ -46,4 +46,9 @@ export const draftsStore = {
     _drafts = _drafts.filter((d) => !set.has(d.id));
     notify();
   },
+  /** 신규 가입 시 임시저장 모두 비움 */
+  clearAll(): void {
+    _drafts = [];
+    notify();
+  },
 };

@@ -18,6 +18,7 @@ import {
   useViewCounts,
 } from "@/shared/stores/view-count-store";
 import { awardXp } from "@/shared/stores/xp-store";
+import { tryDailyEarn } from "@/features/myroom/myroom-store";
 
 type CommentReply = {
   id: string;
@@ -37,8 +38,20 @@ type CommentThread = {
   replies: CommentReply[];
 };
 
-// Categories that use the simplified detail layout (no map / 함께하기 / etc.).
+// Categories that use the simplified detail layout (no map / 함께하기 / etc.) by default.
+// 단, 게시글에 모임 메타데이터(meetupType / location / place / eventDate / peopleCount) 가
+// 하나라도 있으면 simple 로 취급하지 않고 모임 레이아웃을 보여준다.
 const SIMPLE_CATEGORIES = new Set(["free", "recommend"]);
+
+function hasMeetingMetadata(post: Post): boolean {
+  return !!(
+    post.meetupType ||
+    post.location ||
+    post.place ||
+    post.eventDate ||
+    (post.peopleCount !== undefined && post.peopleCount !== null)
+  );
+}
 
 /**
  * "방금 전" / "10분 전" / "3시간 전" / "2일 전" / "1주 전" 같은 timeAgo 를
@@ -183,7 +196,9 @@ export function BoardDetailScreen() {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  const isSimple = SIMPLE_CATEGORIES.has(post.category);
+  // free / recommend 인데도 모임 정보가 붙어있으면 모임 게시글로 본다.
+  const isSimple =
+    SIMPLE_CATEGORIES.has(post.category) && !hasMeetingMetadata(post);
   const likes = liked ? post.likes + 1 : post.likes;
   const joined = Math.min(capacity, baseJoined + (joining ? 1 : 0));
   const displayStatus: "모집중" | "모집완료" =
@@ -209,6 +224,11 @@ export function BoardDetailScreen() {
       timeAgo: "방금 전",
     });
     awardXp("comment");
+    // 댓글 작성 보상 — 하루 최대 10회(=10P) 까지 적립
+    tryDailyEarn("comment", 10, 1, {
+      title: "댓글 작성",
+      note: post.title,
+    });
     setCommentText("");
   };
 
@@ -226,6 +246,11 @@ export function BoardDetailScreen() {
       hasPhoto: replyHasPhoto,
     });
     awardXp("comment");
+    // 대댓글도 댓글로 카운트 — 같은 daily cap 공유
+    tryDailyEarn("comment", 10, 1, {
+      title: "댓글 작성",
+      note: post.title,
+    });
     // Keep replyingTo open so the user can add multiple replies in a row.
     setReplyText("");
     setReplyHasPhoto(false);

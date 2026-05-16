@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { type ChatRoom } from "@/shared/mock/data";
+import { type ChatRoom, TITLES_META } from "@/shared/mock/data";
+import { BADGES as BADGE_LIB } from "@/badge";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
 import {
@@ -26,16 +27,24 @@ function hashString(s: string): number {
   return h >>> 0;
 }
 
-const TITLE_POOL = ["#미식가", "#반찬_요정", "#집밥_나눔왕", "#동네_명사", "#골목_대장", "#수다왕"];
-const BADGE_POOL = ["🍩", "🥗", "🍰", "🌟", "🎯", "🏆"];
-
+/**
+ * 다른 사용자 프로필 — 닉네임 해시로 결정론적으로 빌드.
+ * 칭호는 실제 TITLES_META 풀(가입 칭호 제외, 41 중 일반·희귀·전설)에서 선택,
+ * 뱃지는 BADGE_LIB(26종 전체) 에서 선택하여 마이페이지의 뱃지·칭호 시스템과 일관성 확보.
+ */
 function buildOtherUser(nickname: string) {
   const h = hashString(nickname);
+  // starter(가입 칭호)는 모두가 가진 거라 다른 사용자 프로필에 노출하긴 어색 → 제외
+  const TITLE_POOL = TITLES_META.filter((t) => t.tier !== "starter");
+  const title = TITLE_POOL[h % TITLE_POOL.length]?.name ?? "#홀로_입주자";
+  const badge = BADGE_LIB[(h >>> 3) % BADGE_LIB.length];
   return {
     nickname,
     level: 1 + (h % 30),
-    title: TITLE_POOL[h % TITLE_POOL.length],
-    badgeIcon: BADGE_POOL[(h >>> 3) % BADGE_POOL.length],
+    title,
+    badgeId: badge?.id ?? "badge_24",
+    badgeSrc: badge?.src,
+    badgeName: badge?.name ?? "",
     postsCount: 1 + (h % 80),
     commentsCount: 5 + ((h >>> 2) % 150),
     daysActive: 1 + ((h >>> 5) % 60),
@@ -280,8 +289,15 @@ export function ProfileDetailScreen() {
           {user.nickname}
         </p>
 
-        <p className="mt-1 text-[14px] text-holo-ink-2">
-          {user.title} <span>{user.badgeIcon}</span>
+        <p className="mt-1 flex items-center gap-1.5 text-[14px] text-holo-ink-2">
+          <span>{user.title}</span>
+          {user.badgeSrc && (
+            <img
+              src={user.badgeSrc}
+              alt={user.badgeName}
+              className="h-5 w-5 object-contain"
+            />
+          )}
         </p>
 
         <div className="mt-6 flex w-full items-center">

@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { addPoints } from "@/features/myroom/myroom-store";
+import { getDailyCount, tryDailyEarn } from "@/features/myroom/myroom-store";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { postsStore } from "@/features/board/posts-store";
+import { useVerification } from "@/shared/stores/verification-store";
 
 type Mission = {
   id: string;
@@ -12,16 +15,15 @@ type Mission = {
 };
 
 const DAILY: Mission[] = [
-  { id: "login", category: "daily", label: "매일 접속", hint: "하루 1회 자동 적립", reward: 5, emoji: "📅" },
-  { id: "ad", category: "daily", label: "광고 시청", hint: "30초 광고 1편당", reward: 5, emoji: "🎬" },
-  { id: "survey", category: "daily", label: "오늘의 설문", hint: "1분이면 끝나요", reward: 20, emoji: "📝" },
-  { id: "post", category: "daily", label: "글쓰기", hint: "하루 최대 30P", reward: 5, emoji: "✏️" },
+  { id: "login",   category: "daily", label: "매일 접속", hint: "하루 1회 자동 적립",       reward: 5, emoji: "📅" },
+  { id: "ad",      category: "daily", label: "광고 시청", hint: "30초 광고 1편당",          reward: 5, emoji: "🎬" },
+  { id: "post",    category: "daily", label: "글쓰기",    hint: "하루 최대 30P",            reward: 5, emoji: "✏️" },
+  { id: "comment", category: "daily", label: "댓글 달기", hint: "하루 최대 10P",            reward: 1, emoji: "💬" },
 ];
 
 const ONETIME: Mission[] = [
-  { id: "verify", category: "onetime", label: "동네 인증", hint: "현재 위치로 동네 인증하기", reward: 10, emoji: "📍" },
-  { id: "first-post", category: "onetime", label: "첫 글 작성", hint: "어떤 게시판이든 OK", reward: 20, emoji: "🎯" },
-  { id: "first-furniture", category: "onetime", label: "첫 가구 배치", hint: "마이룸을 꾸며보세요", reward: 10, emoji: "🪑" },
+  { id: "verify",     category: "onetime", label: "동네 인증",  hint: "현재 위치로 동네 인증하기", reward: 10, emoji: "📍" },
+  { id: "first-post", category: "onetime", label: "첫 글 작성", hint: "어떤 게시판이든 OK",       reward: 20, emoji: "🎯" },
 ];
 
 const ONGOING: Mission[] = [
@@ -30,38 +32,64 @@ const ONGOING: Mission[] = [
   { id: "long-meeting", category: "ongoing", label: "장기 모임 참여", hint: "모임 1회 완료 시", reward: 20, emoji: "🤝" },
 ];
 
-// 데일리 진행도 mock
-const DAILY_PROGRESS: Record<string, { done: number; cap: number }> = {
-  login: { done: 1, cap: 1 },
-  ad: { done: 2, cap: 5 },
-  survey: { done: 0, cap: 1 },
-  post: { done: 1, cap: 6 },
-};
+/** 데일리 적립 cap — myroom-store 의 tryDailyEarn 키와 일치해야 함 */
+const DAILY_CAP = { ad: 5, post: 6, comment: 10 } as const;
+
+/** 매일 가능 미션 합산 최대치 = 5(접속) + 25(광고) + 30(글) + 10(댓글) = 70P */
+const MAX_DAILY_POINTS = 70;
 
 export function FreePointsScreen() {
   const navigate = useNavigate();
-  const [claimedToday, setClaimedToday] = useState<Record<string, boolean>>({
-    login: true, // 자동 적립됨
-  });
-  const [completed, setCompleted] = useState<Record<string, boolean>>({
-    "first-post": true,
-    "first-furniture": true,
-  });
+  const profile = useProfile();
+  const verification = useVerification();
+
+  // postsStore 변경(새 글 작성 등)에 반응하여 "첫 글 작성" 미션 자동 완료 판정
+  const [posts, setPosts] = useState(postsStore.getPosts);
+  useEffect(() => {
+    return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
+  }, []);
+  const hasAuthoredPost = useMemo(
+    () => posts.some((p) => p.authorNickname === profile.nickname),
+    [posts, profile.nickname],
+  );
+
+  // 매일 가능 미션의 일일 진행도 — myroom-store 의 일일 cap 카운터 사용
+  const dailyDone = {
+    login: getDailyCount("login"),
+    ad: getDailyCount("ad"),
+    post: getDailyCount("post"),
+    comment: getDailyCount("comment"),
+  };
+
+  // 동네 인증은 verification-store 결과 사용
+  const verifiedRegion = !!verification.verifiedRegion;
+
   const [toast, setToast] = useState<string | null>(null);
   const [showAd, setShowAd] = useState<{ remaining: number } | null>(null);
+  // 새로 적립할 때 화면을 강제 리렌더
+  const [refreshTick, setRefreshTick] = useState(0);
+  void refreshTick;
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
   };
 
+  const claimLogin = () => {
+    const ok = tryDailyEarn("login", 1, 5, { title: "매일 접속" });
+    if (!ok) {
+      showToast("이미 적립됐어요!");
+      return;
+    }
+    setRefreshTick((t) => t + 1);
+    showToast("출석 보상 +5P 적립");
+  };
+
   const handleAd = () => {
-    const p = DAILY_PROGRESS.ad;
-    if (p.done >= p.cap) {
+    if (dailyDone.ad >= DAILY_CAP.ad) {
       showToast("오늘 광고 시청은 모두 완료했어요!");
       return;
     }
-    // 광고 모달
     setShowAd({ remaining: 30 });
     const interval = setInterval(() => {
       setShowAd((prev) => {
@@ -71,9 +99,13 @@ export function FreePointsScreen() {
         }
         if (prev.remaining <= 1) {
           clearInterval(interval);
-          DAILY_PROGRESS.ad.done += 1;
-          addPoints(5, { title: "광고 시청", note: `${DAILY_PROGRESS.ad.done}/${DAILY_PROGRESS.ad.cap}` });
-          showToast("광고 시청 완료! +5P 적립");
+          const ok = tryDailyEarn("ad", DAILY_CAP.ad, 5, {
+            title: "광고 시청",
+            note: `${getDailyCount("ad") + 1}/${DAILY_CAP.ad}`,
+          });
+          setRefreshTick((t) => t + 1);
+          if (ok) showToast("광고 시청 완료! +5P 적립");
+          else showToast("오늘 광고 시청은 모두 완료했어요!");
           return null;
         }
         return { remaining: prev.remaining - 1 };
@@ -81,25 +113,12 @@ export function FreePointsScreen() {
     }, 1000);
   };
 
-  const handleSurvey = () => {
-    if (claimedToday.survey) {
-      showToast("오늘 설문은 이미 완료했어요!");
-      return;
-    }
-    setClaimedToday((prev) => ({ ...prev, survey: true }));
-    DAILY_PROGRESS.survey.done = 1;
-    addPoints(20, { title: "오늘의 설문" });
-    showToast("설문 완료! +20P 적립");
-  };
-
   const handleVerify = () => {
-    if (completed.verify) {
+    if (verifiedRegion) {
       showToast("이미 인증된 동네예요.");
       return;
     }
-    setCompleted((prev) => ({ ...prev, verify: true }));
-    addPoints(10, { title: "동네 인증" });
-    showToast("동네 인증 완료! +10P 적립");
+    navigate("/mypage/verify-region");
   };
 
   const handleInvite = () => {
@@ -111,13 +130,8 @@ export function FreePointsScreen() {
   };
 
   const handleFirstPost = () => {
-    if (completed["first-post"]) return;
+    if (hasAuthoredPost) return;
     navigate("/board/write");
-  };
-
-  const handleFirstFurniture = () => {
-    if (completed["first-furniture"]) return;
-    navigate("/myroom");
   };
 
   return (
@@ -134,7 +148,7 @@ export function FreePointsScreen() {
       {/* 헤더 카드 */}
       <section className="mx-4 mt-2 rounded-holo-card bg-holo-gradient-soft p-4 text-white">
         <p className="text-[12px] opacity-90">오늘 모을 수 있는 포인트</p>
-        <p className="mt-1 text-[28px] font-bold">최대 95P</p>
+        <p className="mt-1 text-[28px] font-bold">최대 {MAX_DAILY_POINTS}P</p>
         <p className="mt-1 text-[12px] opacity-90">
           미션을 완료하고 포인트를 받아가세요!
         </p>
@@ -144,43 +158,36 @@ export function FreePointsScreen() {
       <section className="mt-4 px-4">
         <SectionTitle title="매일 가능" hint="자정에 초기화돼요" />
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+          {/* 매일 접속 — 클릭 시 +5P */}
           <MissionRow
             m={DAILY[0]}
-            done={claimedToday.login}
-            label={claimedToday.login ? "완료" : "받기"}
-            onClick={() => {
-              if (!claimedToday.login) {
-                setClaimedToday((p) => ({ ...p, login: true }));
-                addPoints(5, { title: "매일 접속" });
-                showToast("출석 보상 +5P 적립");
-              } else {
-                showToast("이미 적립됐어요!");
-              }
-            }}
+            done={dailyDone.login >= 1}
+            label={dailyDone.login >= 1 ? "완료" : "받기"}
+            onClick={claimLogin}
           />
+          {/* 광고 시청 — 5회 까지 */}
           <MissionRow
             m={DAILY[1]}
-            progress={DAILY_PROGRESS.ad}
-            done={DAILY_PROGRESS.ad.done >= DAILY_PROGRESS.ad.cap}
-            label={
-              DAILY_PROGRESS.ad.done >= DAILY_PROGRESS.ad.cap
-                ? "완료"
-                : "시청"
-            }
+            progress={{ done: dailyDone.ad, cap: DAILY_CAP.ad }}
+            done={dailyDone.ad >= DAILY_CAP.ad}
+            label={dailyDone.ad >= DAILY_CAP.ad ? "완료" : "시청"}
             onClick={handleAd}
           />
+          {/* 글쓰기 — 6회 까지 (board-write-screen 에서 자동 적립) */}
           <MissionRow
             m={DAILY[2]}
-            done={!!claimedToday.survey}
-            label={claimedToday.survey ? "완료" : "참여"}
-            onClick={handleSurvey}
-          />
-          <MissionRow
-            m={DAILY[3]}
-            progress={DAILY_PROGRESS.post}
-            done={DAILY_PROGRESS.post.done >= DAILY_PROGRESS.post.cap}
+            progress={{ done: dailyDone.post, cap: DAILY_CAP.post }}
+            done={dailyDone.post >= DAILY_CAP.post}
             label="쓰기"
             onClick={() => navigate("/board/write")}
+          />
+          {/* 댓글 달기 — 10회 까지 (board-detail-screen 에서 자동 적립) */}
+          <MissionRow
+            m={DAILY[3]}
+            progress={{ done: dailyDone.comment, cap: DAILY_CAP.comment }}
+            done={dailyDone.comment >= DAILY_CAP.comment}
+            label="작성"
+            onClick={() => navigate("/board")}
           />
         </ul>
       </section>
@@ -191,21 +198,15 @@ export function FreePointsScreen() {
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
           <MissionRow
             m={ONETIME[0]}
-            done={!!completed.verify}
-            label={completed.verify ? "완료" : "인증"}
+            done={verifiedRegion}
+            label={verifiedRegion ? "완료" : "인증"}
             onClick={handleVerify}
           />
           <MissionRow
             m={ONETIME[1]}
-            done={!!completed["first-post"]}
-            label={completed["first-post"] ? "완료" : "쓰기"}
+            done={hasAuthoredPost}
+            label={hasAuthoredPost ? "완료" : "쓰기"}
             onClick={handleFirstPost}
-          />
-          <MissionRow
-            m={ONETIME[2]}
-            done={!!completed["first-furniture"]}
-            label={completed["first-furniture"] ? "완료" : "꾸미기"}
-            onClick={handleFirstFurniture}
           />
         </ul>
       </section>

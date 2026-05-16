@@ -21,7 +21,8 @@ type ProfileState = {
 const DEFAULT_STATE: ProfileState = {
   nickname: ME.nickname,
   title: ME.title,
-  equippedBadgeId: "badge_01",
+  // 신규 가입 시 자동으로 장착되는 기본 뱃지 — "홀로 입주자"
+  equippedBadgeId: "badge_24",
   profileFace: null,
 };
 

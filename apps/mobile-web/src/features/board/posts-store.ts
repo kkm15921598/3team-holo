@@ -80,4 +80,9 @@ export const postsStore = {
     _posts = _posts.filter((p) => !set.has(p.id));
     notify();
   },
+  /** 신규 가입 시 게시글을 mock 초기값으로 되돌림 (테스트 계정이 prepend 한 글 제거) */
+  resetToInitial(): void {
+    _posts = sortByRecency(INITIAL_POSTS);
+    notify();
+  },
 };

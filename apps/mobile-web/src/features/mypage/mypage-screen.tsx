@@ -56,8 +56,8 @@ export function MypageScreen() {
         </Link>
       </section>
 
-      {/* Stats */}
-      <section className="flex justify-around rounded-holo-input bg-white p-3">
+      {/* Stats — 박스 없이 양 끝까지 균등 배치 (가장자리 22px padding) */}
+      <section className="-mx-4 flex items-center justify-between px-[22px] py-2">
         <StatLink to="/mypage/level" label="나의 레벨" value={stats.level} />
         <span className="h-10 w-px bg-holo-line" />
         <StatLink to="/mypage/badges" label="나의 뱃지" value={stats.acquiredBadgeIds.length} />
@@ -173,7 +173,7 @@ function ChevronRightIcon() {
 
 function StatLink({ to, label, value }: { to: string; label: string; value: number }) {
   return (
-    <Link to={to} className="flex flex-1 flex-col items-center active:opacity-70">
+    <Link to={to} className="flex flex-col items-center active:opacity-70">
       <span className="text-[12px] text-holo-ink-3">{label}</span>
       <span className="mt-0.5 text-[18px] font-bold text-holo-ink">{value}</span>
     </Link>

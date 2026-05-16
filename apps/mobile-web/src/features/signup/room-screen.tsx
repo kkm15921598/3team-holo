@@ -19,7 +19,18 @@ import { setMyroomItems, purchaseItem, addPoints } from "../myroom/myroom-store"
 import {
   setNickname,
   setProfileFace,
+  setEquippedBadgeId,
+  setTitle as setEquippedTitle,
 } from "@/shared/stores/profile-store";
+import {
+  recordBadgeAcquired,
+  recordTitleAcquired,
+} from "@/shared/stores/account-stats-store";
+import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
+import {
+  pushRewardNotification,
+  pushWelcomeNotification,
+} from "@/shared/stores/notifications-store";
 
 const SIGNUP_BONUS_POINTS = 500;
 
@@ -39,6 +50,9 @@ export function RoomScreen() {
   const [pendingPurchase, setPendingPurchase] = useState<CatalogItem | null>(null);
   const [limitAlertOpen, setLimitAlertOpen] = useState(false);
   const [showError, setShowError] = useState(false);
+  /** 카탈로그 드로어 펼침 상태 — 가구 클릭/스크롤 시 룸 영역이 100px 줄어 카탈로그가 위로 올라옴 */
+  const [catalogExpanded, setCatalogExpanded] = useState(false);
+  const expandCatalog = () => setCatalogExpanded(true);
 
   const filtered = useMemo(() => {
     const levelOneItems = CATALOG.filter(
@@ -180,7 +194,17 @@ export function RoomScreen() {
     return;
   }
 
-  // 회원가입 마지막 단계에서 배치/구매한 가구를 myroom store 에 저장.
+  // 1) 모든 사용자 store 를 가입 직전 상태로 리셋 — 이전 테스트 계정 데이터 등을 정리.
+  //    이 호출 이후에 가입 보상을 발급해야 reset 으로 지워지지 않는다.
+  resetAllStoresForFreshSignup();
+
+  // 2) 가입 보상 — "홀로 입주자" 뱃지 / 칭호 자동 발급 + 기본 장착
+  recordBadgeAcquired("badge_24");
+  setEquippedBadgeId("badge_24");
+  recordTitleAcquired("#홀로_입주자");
+  setEquippedTitle("#홀로_입주자");
+
+  // 3) 회원가입 마지막 단계에서 배치/구매한 가구를 myroom store 에 저장.
   // → 홈 화면 RoomScene 과 마이룸 화면에 동일한 배치가 그대로 노출된다.
   setMyroomItems(items);
   ownedKeys.forEach((key) => {
@@ -188,12 +212,21 @@ export function RoomScreen() {
     if (kind && variant) purchaseItem(kind, variant);
   });
 
-  // 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
+  // 4) 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
   if (data.nickname.trim()) setNickname(data.nickname.trim());
   if (data.profileFace) setProfileFace(data.profileFace);
 
-  // 가입 보너스 포인트 적립
-  addPoints(SIGNUP_BONUS_POINTS);
+  // 5) 가입 보너스 포인트 적립
+  addPoints(SIGNUP_BONUS_POINTS, { title: "가입 보너스" });
+
+  // 6) 알림 발행 — 환영 인사 + 무료 포인트 안내 (둘 다 알림창에 즉시 노출)
+  const finalNickname = data.nickname.trim() || "회원";
+  pushWelcomeNotification(finalNickname);
+  pushRewardNotification(
+    "가입 축하 포인트",
+    `${SIGNUP_BONUS_POINTS}P가 도착했어요! 무료 포인트 미션으로 더 모아보세요.`,
+    "/mypage/points/free",
+  );
 
   localStorage.setItem(
     "holoUser",
@@ -229,11 +262,22 @@ export function RoomScreen() {
         마음에 드는 가구 2개를 구매하고 방에 배치해보세요.
       </p>
 
-      <div className="relative -mx-4 mt-4 flex h-[340px] shrink-0 justify-center overflow-hidden">
+      <div
+        onClick={() => {
+          if (catalogExpanded) setCatalogExpanded(false);
+        }}
+        className={`relative -mx-4 mt-4 flex shrink-0 justify-center overflow-hidden transition-[height] duration-300 ${
+          catalogExpanded ? "h-[240px]" : "h-[340px]"
+        }`}
+      >
         <RoomEditorView
           items={items}
           selectedId={selectedId}
-          onSelect={handleSelectInRoom}
+          onSelect={(id) => {
+            handleSelectInRoom(id);
+            // 방 안의 가구를 선택하면 드로어를 다시 내려 가구가 가려지지 않게 함
+            if (id !== null) setCatalogExpanded(false);
+          }}
           onRemove={handleRemove}
           onFlip={handleFlip}
           onMove={handleMove}
@@ -242,7 +286,10 @@ export function RoomScreen() {
         />
       </div>
 
-      <div className="no-scrollbar -mx-4 mt-2 shrink-0 overflow-x-auto px-4 py-2">
+      <div
+        onClick={expandCatalog}
+        className="no-scrollbar -mx-4 mt-2 shrink-0 overflow-x-auto px-4 py-2"
+      >
         <div className="flex w-max gap-2">
           {CATEGORIES.map((c) => {
             const on = activeCat === c.key;
@@ -265,7 +312,11 @@ export function RoomScreen() {
         </div>
       </div>
 
-      <div className="no-scrollbar -mx-4 flex flex-1 min-h-0 flex-col overflow-y-auto px-4 pb-2">
+      <div
+        onClick={expandCatalog}
+        onScroll={expandCatalog}
+        className="no-scrollbar -mx-4 flex flex-1 min-h-0 flex-col overflow-y-auto px-4 pb-2"
+      >
         <div className="grid grid-cols-2 gap-x-3 gap-y-4">
           {filtered.map((it) => {
             const ownedKey = `${it.kind}:${it.variant}`;

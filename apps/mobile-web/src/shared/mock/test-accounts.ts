@@ -73,7 +73,7 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     id: "test1234",
     joinedAt: "2026.05.15",
     nickname: "다정한 바리스타",
-    title: "#카페_지도",
+    title: "#홈트_동기부여",
     equippedBadgeId: "badge_06", // 홈카페 사장님
     // 성인 남자 풀(man/man) 중 [1] — 웨이브 갈색머리 청년
     profileFace: encodeURI(
@@ -98,12 +98,13 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
       level: 7,
       // 5개 — 운동·홈오피스 컨셉 + 장착 중인 badge_19 포함
       acquiredBadgeIds: ["badge_06", "badge_08", "badge_14", "badge_15", "badge_19"],
-      // 9개 — 장착 중 "#카페_지도" 포함
+      // 10개 — 가입 시 자동 발급되는 #홀로_입주자 + 홈트·홈오피스 컨셉 일반 칭호 9개
       acquiredTitles: [
-        "#카페_지도",
+        "#홀로_입주자",
         "#홈트_동기부여",
+        "#운동메이트",
         "#슬기로운_혼삶",
-        "#공구의_주인",
+        "#공구의_주인공",
         "#못박기_달인",
         "#조립식가구_장인",
         "#전등교체_마법사",
@@ -186,7 +187,7 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     gender: "F",
     id: "test1234",
     joinedAt: "2026.05.08",
-    nickname: "무지는 단무지",
+    nickname: "달콤한 무지",
     title: "#맛집_네비게이터",
     equippedBadgeId: "badge_21", // 동네 미식가
     // 라일락·핑크 톤 — 책상 + 의자만. 좌표는 floorTopY 기준으로 산정.
@@ -204,17 +205,18 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
         "badge_11", "badge_12", "badge_13", "badge_14", "badge_15",
         "badge_16", "badge_17", "badge_21",
       ],
-      // 15개 — 장착 중 "#맛집_네비게이터" 포함
+      // 16개 — 가입 #홀로_입주자 + 맛집·디저트 컨셉의 일반 칭호 15개
       acquiredTitles: [
+        "#홀로_입주자",
         "#맛집_네비게이터",
-        "#반찬_요정",
         "#집밥_나눔왕",
-        "#디저트_큐레이터",
-        "#카페_지도",
+        "#오늘은_내가요리사",
+        "#냉장고_탐험가",
+        "#배달비_절약러",
+        "#공구의_주인공",
+        "#소분_마스터",
         "#슬기로운_혼삶",
-        "#정글_집사",
         "#프로_공구러",
-        "#공구의_주인",
         "#분리수거_박사",
         "#동네_보안관",
         "#조립식가구_장인",

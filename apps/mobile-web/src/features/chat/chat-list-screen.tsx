@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { FRIENDS, type ChatRoom } from "@/shared/mock/data";
+import { type ChatRoom } from "@/shared/mock/data";
+import { useFriends } from "@/features/mypage/friends-store";
 import {
   addRoom,
   leaveRoomById,
@@ -11,6 +12,7 @@ import {
 } from "./rooms-store";
 import { getMessagesForRoom } from "./messages-store";
 import { getAvatarUrl } from "./avatars";
+import { GroupAvatar } from "./group-avatar";
 
 type Filter = "all" | "unread" | "groups" | "meetings";
 
@@ -92,8 +94,13 @@ export function ChatListScreen() {
     if (filter === "groups") list = list.filter((r) => r.isGroup && !r.meeting);
     // "모임"은 게시판에서 생성된 모임 정보 있는 채팅방
     if (filter === "meetings") list = list.filter((r) => r.isGroup && !!r.meeting);
-    // 핀 고정 우선 정렬
-    list.sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
+    // 핀 고정 우선 → 같은 그룹 내에서는 최신 활동(updatedAt) 내림차순.
+    // updatedAt 이 없는 방(레거시 데이터)은 가장 오래된 것으로 취급해 맨 뒤로.
+    list.sort((a, b) => {
+      const pinDiff = Number(!!b.pinned) - Number(!!a.pinned);
+      if (pinDiff !== 0) return pinDiff;
+      return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+    });
     return list;
   }, [query, filter, allRooms]);
 
@@ -268,15 +275,17 @@ function NewChatSheet({
     }, 220);
   };
 
-  // 동일 이름이 여럿이라 첫 등장만 사용
+  // 실제 친구 store 에서 가져옴 — 신규 가입자(친구 0명)는 빈 리스트가 나온다.
+  // 닉네임 중복은 첫 등장만 사용.
+  const realFriends = useFriends();
   const uniqueFriends = useMemo(() => {
     const seen = new Set<string>();
-    return FRIENDS.filter((f) => {
+    return realFriends.filter((f) => {
       if (seen.has(f.nickname)) return false;
       seen.add(f.nickname);
       return true;
     });
-  }, []);
+  }, [realFriends]);
 
   const filtered = useMemo(() => {
     if (!q.trim()) return uniqueFriends;
@@ -565,7 +574,7 @@ function RoomRow({
         onPointerCancel={cancelPress}
         onPointerLeave={cancelPress}
       >
-        <Thumbnail group={room.isGroup} online={room.online} name={room.name} />
+        <Thumbnail room={room} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex items-center gap-1">
             {room.pinned && (
@@ -669,7 +678,7 @@ function RoomActionSheet({
 
         {/* 채팅방 정보 헤더 */}
         <div className="flex items-center gap-3 border-b border-holo-line px-5 pb-3">
-          <Thumbnail group={room.isGroup} online={room.online} name={room.name} />
+          <Thumbnail room={room} />
           <div className="flex flex-col">
             <span className="text-[15px] font-semibold text-holo-ink">{room.name}</span>
             <span className="text-[12px] text-holo-ink-3">{room.subtitle}</span>
@@ -743,37 +752,11 @@ function SheetItem({
   );
 }
 
-function Thumbnail({
-  group,
-  online,
-  name,
-}: {
-  group: boolean;
-  online?: boolean;
-  name?: string;
-}) {
+function Thumbnail({ room }: { room: ChatRoom }) {
   return (
     <div className="relative">
-      {group ? (
-        // 그룹: 4개 아바타를 2x2 그리드로 (방 이름 시드로 다른 얼굴)
-        <div className="grid h-10 w-10 shrink-0 grid-cols-2 gap-0.5 overflow-hidden rounded-[8px] bg-holo-surface-2 p-0.5">
-          {[0, 1, 2, 3].map((i) => (
-            <img
-              key={i}
-              src={getAvatarUrl((name ?? "") + "_g" + i)}
-              alt=""
-              className="h-full w-full rounded-[3px] object-cover"
-            />
-          ))}
-        </div>
-      ) : (
-        <img
-          src={getAvatarUrl(name)}
-          alt=""
-          className="h-10 w-10 shrink-0 rounded-full bg-holo-yellow-room object-cover"
-        />
-      )}
-      {online && (
+      <GroupAvatar room={room} size="md" />
+      {room.online && (
         <span className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500" />
       )}
     </div>

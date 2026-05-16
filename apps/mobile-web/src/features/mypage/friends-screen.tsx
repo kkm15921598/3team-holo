@@ -10,6 +10,7 @@ import {
   useBlocked,
   useFriends,
   useReceivedRequests,
+  useSentRequests,
   type Friend,
 } from "./friends-store";
 
@@ -20,6 +21,7 @@ export function FriendsScreen() {
   const friends = useFriends();
   const blocked = useBlocked();
   const receivedRequests = useReceivedRequests();
+  const sentRequests = useSentRequests();
   const [showMenu, setShowMenu] = useState(false);
   const [mode, setMode] = useState<Mode>("view");
   const [showBlockedView, setShowBlockedView] = useState(false);
@@ -129,29 +131,29 @@ export function FriendsScreen() {
         )}
       </div>
 
-      {mode === "view" && receivedRequests.length > 0 && (
-        <button
-          type="button"
-          onClick={() => navigate("/mypage/friends/requests")}
-          className="flex items-center justify-between border-b border-holo-line-3 bg-holo-lilac-card-2 px-4 py-3 text-left active:opacity-80"
-        >
-          <span className="flex items-center gap-2">
-            <span className="text-[18px]">🤝</span>
-            <span className="flex flex-col">
-              <span className="text-[13px] font-semibold text-holo-ink">
-                받은 친구 요청 {receivedRequests.length}건
-              </span>
-              <span className="text-[11px] text-holo-ink-3">
-                새 친구가 기다리고 있어요
+      {mode === "view" &&
+        (receivedRequests.length > 0 || sentRequests.length > 0) && (
+          <button
+            type="button"
+            onClick={() => navigate("/mypage/friends/requests")}
+            className="mx-4 mt-3 flex items-center justify-between rounded-holo-card bg-holo-lilac-card-2 px-4 py-3 text-left active:opacity-80"
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-[18px]">🤝</span>
+              <span className="flex flex-col">
+                <span className="text-[13px] font-semibold text-holo-ink">
+                  친구 요청 확인
+                </span>
+                <span className="text-[11px] text-holo-ink-3">
+                  받은 {receivedRequests.length} · 보낸 {sentRequests.length}
+                </span>
               </span>
             </span>
-          </span>
-          <span className="flex items-center gap-1 text-[12px] font-semibold text-holo-purple-mid">
-            확인하기
-            <ChevronRightIcon />
-          </span>
-        </button>
-      )}
+            <span className="text-holo-purple-mid">
+              <ChevronRightIcon />
+            </span>
+          </button>
+        )}
 
       {visibleFriends.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center text-[14px] text-holo-ink-3">

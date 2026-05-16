@@ -127,6 +127,84 @@ export function getXpState(): XpState {
   return state;
 }
 
+/**
+ * "출석" 액션이 기록된 고유 날짜의 개수.
+ * "1년째 입주민" 뱃지(badge_26) 조건 충족 여부를 판단할 때 사용한다.
+ */
+export function getAttendanceDayCount(): number {
+  let count = 0;
+  for (const day of Object.keys(state.daily)) {
+    if ((state.daily[day]?.attendance ?? 0) > 0) count += 1;
+  }
+  return count;
+}
+
+/** YYYY-MM-DD 포맷 헬퍼 */
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * 출석 사이클(1~7일차) 상의 오늘 위치.
+ * 연속 출석 일수(streak)를 기준으로 계산되며, 신규 사용자는 1일차에서 시작해
+ * 출석 1회마다 다음 일차로 진행. 7일차 완료 후 8일째에는 다시 1일차로 사이클이 돌아간다.
+ *
+ * - 오늘 아직 출석 전: todayPosition = (streak % 7) + 1
+ * - 오늘 이미 출석함:   todayPosition = ((streak - 1) % 7) + 1
+ *
+ * 각 카드의 checked 는 "현재 사이클에서 오늘 이전 일차" 또는 "오늘인데 이미 출석함" 일 때 true.
+ */
+export function getAttendanceCycleStatus(): {
+  todayPosition: number;
+  attendedToday: boolean;
+  days: { day: number; checked: boolean; isToday: boolean }[];
+} {
+  const todayStr = ymd(new Date());
+  const attendedToday = (state.daily[todayStr]?.attendance ?? 0) > 0;
+  const streak = getCurrentStreak();
+  const todayPosition = attendedToday
+    ? ((streak - 1) % 7) + 1
+    : (streak % 7) + 1;
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const pos = i + 1;
+    const isToday = pos === todayPosition;
+    // 과거 일차 = 이미 완료 / 오늘 = 출석했으면 완료 / 미래 = 미완료
+    const checked =
+      pos < todayPosition || (pos === todayPosition && attendedToday);
+    return { day: pos, checked, isToday };
+  });
+
+  return { todayPosition, attendedToday, days };
+}
+
+/**
+ * 오늘을 기준으로 한 연속 출석일 수.
+ * 오늘 출석을 안 했으면 어제부터 거꾸로 카운트.
+ */
+export function getCurrentStreak(): number {
+  const todayStr = ymd(new Date());
+  const cursor = new Date();
+  if (!((state.daily[todayStr]?.attendance ?? 0) > 0)) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  let count = 0;
+  // 가입한 지 얼마 안 된 사용자의 무한 루프 방지용 상한 (10000일)
+  for (let i = 0; i < 10000; i++) {
+    const iso = ymd(cursor);
+    if ((state.daily[iso]?.attendance ?? 0) > 0) {
+      count += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return count;
+}
+
 /** 오늘 해당 액션의 남은 cap 횟수 */
 export function getDailyRemaining(action: XpAction): number {
   const cfg = XP_CONFIG[action];
