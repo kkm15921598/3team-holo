@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
 import { usePoints } from "@/features/myroom/myroom-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
+import { useVerification } from "@/shared/stores/verification-store";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -17,6 +17,10 @@ export function MypageScreen() {
   const joinedSet = useJoinedSet();
   const meetupCount = joinedSet.size;
   const stats = useAccountStats();
+  // 동네 인증 화면에서 저장한 동(洞) 이 있으면 그걸 표시, 없으면 인증 유도 문구.
+  const verification = useVerification();
+  const isRegionUnset = !verification.verifiedRegion;
+  const regionLabel = verification.verifiedRegion ?? "동네를 인증해주세요";
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
       {/* Profile card + Points (connected, full-width edge-to-edge) */}
@@ -65,15 +69,23 @@ export function MypageScreen() {
 
       {/* Region verify */}
       <section className="flex items-center justify-between rounded-holo-input bg-white px-4 py-3 shadow-holo-card">
-        <span className="flex items-center gap-2 text-[14px] text-holo-ink">
-          <PinIcon /> {ME.region}
+        <span
+          className={`flex items-center gap-2 text-[14px] ${
+            isRegionUnset ? "text-holo-ink-3" : "text-holo-ink"
+          }`}
+        >
+          <PinIcon /> {regionLabel}
         </span>
         <button
           type="button"
           onClick={() => navigate("/mypage/verify-region")}
-          className="rounded-full bg-holo-purple-mid px-3 py-1 text-[13px] font-semibold text-white"
+          className={`rounded-full px-3 py-1 text-[13px] font-semibold ${
+            verification.regionVerified
+              ? "border border-holo-purple-mid text-holo-purple-mid"
+              : "bg-holo-purple-mid text-white"
+          }`}
         >
-          인증하기
+          {verification.regionVerified ? "재인증" : "인증하기"}
         </button>
       </section>
 

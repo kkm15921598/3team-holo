@@ -364,10 +364,10 @@ const HISTORY_KEY = "holo:myroom:pointHistory";
 
 /** 화면 시안 재현용 기본 내역 — 신규 동작이 누적되면 최상단에 쌓인다. */
 const DEFAULT_HISTORY: PointEvent[] = [
-  { id: "seed-1", date: "26.04.08", title: "친구 초대", amount: 50 },
-  { id: "seed-2", date: "26.04.07", title: "단기 모임 참여", note: "바퀴 벌레 잡아 주실분", amount: 20 },
-  { id: "seed-3", date: "26.04.01", title: "아이템 구매", note: "노란 원목 침대", amount: -100 },
-  { id: "seed-4", date: "26.03.27", title: "아이템 구매", note: "핑크 의자", amount: -50 },
+  { id: "seed-1", date: "26.05.16", title: "친구 초대", amount: 50 },
+  { id: "seed-2", date: "26.05.15", title: "단기 모임 참여", note: "바퀴 벌레 잡아 주실분", amount: 20 },
+  { id: "seed-3", date: "26.05.10", title: "아이템 구매", note: "노란 원목 침대", amount: -100 },
+  { id: "seed-4", date: "26.05.05", title: "아이템 구매", note: "핑크 의자", amount: -50 },
 ];
 
 function loadHistory(): PointEvent[] {

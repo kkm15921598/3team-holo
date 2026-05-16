@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { COMMENTS, ME, POST_COMMENTS, type Post } from "@/shared/mock/data";
+import { POST_COMMENTS, type Post } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
 import { StatusBadge } from "./board-list-screen";
 import { LocationMap } from "@/features/map/post-map";
@@ -12,6 +12,11 @@ import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, useJoinedSet } from "@/shared/stores/joined-store";
 import { addComment, useUserComments } from "@/shared/stores/comments-store";
 import { markPostViewed } from "@/shared/stores/viewed-posts-store";
+import {
+  getTotalViews,
+  incrementViewCount,
+  useViewCounts,
+} from "@/shared/stores/view-count-store";
 import { awardXp } from "@/shared/stores/xp-store";
 
 type CommentReply = {
@@ -34,6 +39,43 @@ type CommentThread = {
 
 // Categories that use the simplified detail layout (no map / 함께하기 / etc.).
 const SIMPLE_CATEGORIES = new Set(["free", "recommend"]);
+
+/**
+ * "방금 전" / "10분 전" / "3시간 전" / "2일 전" / "1주 전" 같은 timeAgo 를
+ * 현재 시각 기준으로 역산해 작성일 Date 로 변환.
+ */
+function parseTimeAgoToDate(timeAgo: string): Date {
+  const now = new Date();
+  if (!timeAgo || /방금/.test(timeAgo)) return now;
+  const m = timeAgo.match(/(\d+)\s*(분|시간|일|주)/);
+  if (!m) return now;
+  const n = Number(m[1]);
+  const out = new Date(now);
+  switch (m[2]) {
+    case "분":
+      out.setMinutes(out.getMinutes() - n);
+      break;
+    case "시간":
+      out.setHours(out.getHours() - n);
+      break;
+    case "일":
+      out.setDate(out.getDate() - n);
+      break;
+    case "주":
+      out.setDate(out.getDate() - n * 7);
+      break;
+  }
+  return out;
+}
+
+/** YYYY.MM.DD 형식 (게시글 작성일 노출용) */
+function formatPostDate(timeAgo: string): string {
+  const d = parseTimeAgoToDate(timeAgo);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
+}
 
 export function BoardDetailScreen() {
   const navigate = useNavigate();
@@ -58,8 +100,8 @@ export function BoardDetailScreen() {
   const joinedSet = useJoinedSet();
   const joining = joinedSet.has(post.id);
   const [commentText, setCommentText] = useState("");
-  // Pull context-appropriate comments per post if present, fall back to COMMENTS.
-  const initialComments = POST_COMMENTS[post.id] ?? COMMENTS;
+  // POST_COMMENTS 에 등록된 글만 더미 댓글이 보이고, 그 외엔 빈 배열 — 진짜 "댓글 0" 상태.
+  const initialComments = POST_COMMENTS[post.id] ?? [];
   // 사용자가 작성한 댓글/대댓글은 store 에서 가져와 mock 과 합친다.
   const userComments = useUserComments();
   const comments = useMemo<CommentThread[]>(() => {
@@ -113,10 +155,21 @@ export function BoardDetailScreen() {
 
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 게시글 진입 시 "최근 본 글" 에 기록 (마이페이지 목록의 원천)
+  // 게시글 진입 시 "최근 본 글" 에 기록 (마이페이지 목록의 원천) + 조회수 +1.
+  // React 18 StrictMode 에서는 effect 가 mount-unmount-mount 로 두 번 실행되므로
+  // 이미 카운트한 post.id 는 ref 에 기록해 중복 증가를 막는다.
+  const viewedOnceRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (post?.id) markPostViewed(post.id);
+    if (!post?.id) return;
+    if (viewedOnceRef.current.has(post.id)) return;
+    viewedOnceRef.current.add(post.id);
+    markPostViewed(post.id);
+    incrementViewCount(post.id);
   }, [post?.id]);
+
+  // 조회수 (baseline + 사용자 증분) — 증분이 변경되면 자동 재렌더
+  useViewCounts();
+  const views = getTotalViews(post);
 
   // Close dots menu on outside click.
   useEffect(() => {
@@ -143,14 +196,15 @@ export function BoardDetailScreen() {
   );
   const hasCommentText = commentText.trim().length > 0;
   const hasReplyText = replyText.trim().length > 0;
-  const isMine = post.authorNickname === ME.nickname;
+  // "내 글" 여부는 현재 로그인 계정 닉네임(profile-store)과 비교한다.
+  const isMine = post.authorNickname === profile.nickname;
 
   const handleSendComment = () => {
     if (!hasCommentText) return;
     addComment({
       id: `c-${Date.now()}`,
       postId: post.id,
-      nickname: ME.nickname,
+      nickname: profile.nickname,
       content: commentText.trim(),
       timeAgo: "방금 전",
     });
@@ -164,10 +218,10 @@ export function BoardDetailScreen() {
       id: `r-${Date.now()}`,
       postId: post.id,
       parentId,
-      nickname: ME.nickname,
+      nickname: profile.nickname,
       content: replyText.trim(),
       timeAgo: "방금 전",
-      isAuthor: ME.nickname === post.authorNickname,
+      isAuthor: profile.nickname === post.authorNickname,
       hasMap: replyHasMap,
       hasPhoto: replyHasPhoto,
     });
@@ -269,22 +323,34 @@ export function BoardDetailScreen() {
           <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
             <BackIcon />
           </button>
-          <img
-            src={
-              post.authorNickname === ME.nickname
-                ? (profile.profileFace ?? ME_PERSONA.face)
-                : getAvatarUrl(post.authorNickname)
-            }
-            alt={post.authorNickname}
-            className="ml-1 h-9 w-9 shrink-0 rounded-full bg-holo-yellow-room object-cover"
-            draggable={false}
-          />
-          <span className="rounded-[4px] bg-holo-gradient px-2 py-0.5 text-[11px] font-semibold text-white">
-            Lv.{post.authorLevel}
-          </span>
-          <span className="text-[14px] font-semibold text-holo-ink">
-            {post.authorNickname}
-          </span>
+          {/* 아바타 + Lv + 닉네임 영역 — 본인이 아니면 클릭 시 상대 프로필로 이동 */}
+          <button
+            type="button"
+            disabled={isMine}
+            onClick={() => {
+              if (isMine) return;
+              navigate(`/profile/${encodeURIComponent(post.authorNickname)}`);
+            }}
+            aria-label={isMine ? undefined : `${post.authorNickname} 프로필 보기`}
+            className="flex items-center gap-2 disabled:cursor-default"
+          >
+            <img
+              src={
+                post.authorNickname === profile.nickname
+                  ? (profile.profileFace ?? ME_PERSONA.face)
+                  : getAvatarUrl(post.authorNickname)
+              }
+              alt={post.authorNickname}
+              className="ml-1 h-9 w-9 shrink-0 rounded-full bg-holo-yellow-room object-cover"
+              draggable={false}
+            />
+            <span className="rounded-[4px] bg-holo-gradient px-2 py-0.5 text-[11px] font-semibold text-white">
+              Lv.{post.authorLevel}
+            </span>
+            <span className="text-[14px] font-semibold text-holo-ink">
+              {post.authorNickname}
+            </span>
+          </button>
 
           <div ref={menuRef} className="relative z-[1000] ml-auto">
             <button
@@ -321,14 +387,23 @@ export function BoardDetailScreen() {
 
         <div className="mt-3 h-px w-full bg-holo-surface-3" />
 
+        {/* Meta row — 작성일 · 상대시간(좌) / 조회수(우 정렬) */}
+        <div className="mt-2 flex items-center gap-1.5 text-[12px] text-holo-ink-3">
+          <span>{formatPostDate(post.timeAgo)}</span>
+          <span className="text-holo-line-2" aria-hidden>
+            ·
+          </span>
+          <span>{post.timeAgo}</span>
+          <span className="ml-auto" aria-label={`조회 ${views}`}>
+            조회 {views.toLocaleString()}
+          </span>
+        </div>
+
         {/* Title row */}
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           {!isSimple && <StatusBadge status={displayStatus} />}
           <span className="text-[16px] font-semibold text-holo-ink">
             {post.title}
-          </span>
-          <span className="ml-auto text-[12px] text-holo-ink-3">
-            {post.timeAgo}
           </span>
         </div>
 
@@ -463,7 +538,23 @@ export function BoardDetailScreen() {
                     className="w-full py-3 text-left"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-holo-ink">
+                      <span
+                        role="link"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (c.nickname === profile.nickname) return;
+                          navigate(`/profile/${encodeURIComponent(c.nickname)}`);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            if (c.nickname === profile.nickname) return;
+                            navigate(`/profile/${encodeURIComponent(c.nickname)}`);
+                          }
+                        }}
+                        className="text-[13px] font-semibold text-holo-ink hover:underline"
+                      >
                         {c.nickname}
                       </span>
                       <span className="text-[11px] text-holo-ink-3">
@@ -482,7 +573,23 @@ export function BoardDetailScreen() {
                         <ReplyArrowIcon />
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[13px] font-semibold text-holo-ink">
+                            <span
+                              role="link"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (r.nickname === profile.nickname) return;
+                                navigate(`/profile/${encodeURIComponent(r.nickname)}`);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.stopPropagation();
+                                  if (r.nickname === profile.nickname) return;
+                                  navigate(`/profile/${encodeURIComponent(r.nickname)}`);
+                                }
+                              }}
+                              className="text-[13px] font-semibold text-holo-ink hover:underline"
+                            >
                               {r.nickname}
                             </span>
                             {r.isAuthor && (

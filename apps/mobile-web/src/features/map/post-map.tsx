@@ -195,6 +195,18 @@ type MapViewProps = {
    * 없으면 서울 시청을 fallback 으로 잡는다.
    */
   initialCenter?: { lat: number; lng: number };
+  /** 마운트 시 초기 줌. 미지정 시 16. 직전에 사용자가 줌인/아웃 했던 값을 복원할 때 사용. */
+  initialZoom?: number;
+  /**
+   * 사용자가 지도를 드래그/줌하여 view 가 바뀐 직후 호출.
+   * 상위에서 sessionStorage 등으로 영속화하여 재진입 시 같은 view 를 복원하는 데 사용.
+   */
+  onViewChange?: (view: { lat: number; lng: number; zoom: number }) => void;
+  /**
+   * GPS fix 가 들어오면 자동으로 그 좌표로 지도 중심을 이동할지 여부. 기본 true.
+   * 직전 view 를 복원해야 하는 경우(모달 재진입) 에는 false 로 전달해 자동 센터링 차단.
+   */
+  centerOnFix?: boolean;
 };
 
 export function MapView({
@@ -202,22 +214,34 @@ export function MapView({
   visiblePosts,
   onMarkerClick,
   initialCenter,
+  initialZoom,
+  onViewChange,
+  centerOnFix = true,
 }: MapViewProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
-  // 초기 중심은 한 번 캡쳐 — useLayoutEffect 의존성에 넣지 않고 mount 시점 값만 사용
+  // 초기 중심/줌/센터링 정책은 한 번 캡쳐 — useLayoutEffect 의존성에 넣지 않고
+  // mount 시점 값만 사용. 부모 re-render 로 인해 지도가 통째로 리마운트되는 것 방지.
   const initialCenterRef = useRef(initialCenter);
+  const initialZoomRef = useRef(initialZoom);
+  const centerOnFixRef = useRef(centerOnFix);
+  // onViewChange 는 매 렌더마다 새 함수가 올 수 있으므로 ref 로 묶어두고 effect 의존성에서 제외
+  const onViewChangeRef = useRef(onViewChange);
+  useEffect(() => {
+    onViewChangeRef.current = onViewChange;
+  }, [onViewChange]);
 
   useLayoutEffect(() => {
     if (!elRef.current || mapRef.current) return;
 
     // 상위에서 GPS 좌표를 넘겨줬으면 그쪽에서 시작, 아니면 서울 시청 fallback.
     const initial = initialCenterRef.current ?? SEOUL_FALLBACK_CENTER;
+    const zoom = initialZoomRef.current ?? 16;
 
     const map = L.map(elRef.current, {
       center: [initial.lat, initial.lng],
-      zoom: 16,
+      zoom,
       minZoom: 14,
       maxZoom: 18,
       // 컨트롤 UI 는 양쪽 모두 숨김 — 표준 지도 앱처럼 제스처로만 줌
@@ -257,14 +281,26 @@ export function MapView({
     const cleanupNudges = attachResizeNudges(map, tiles, elRef.current);
     // 실시간 GPS 위치 추적 — fix 가 들어오면 그때 user marker 생성/이동.
     // initialPosition 이 있으면 마커가 즉시 그려지므로 모달 열자마자 위치 표시됨.
-    // 미리보기와 풀맵 모두 사용자 GPS 위치로 중심을 이동시킨다.
+    // centerOnFix=false 인 경우 마커만 그리고 지도 중심은 사용자가 마지막에 본 위치로 유지.
     const cleanupLocate = attachLiveUserLocation(map, {
       preview,
-      centerOnFix: true,
+      centerOnFix: centerOnFixRef.current ?? true,
       initialPosition: initialCenterRef.current,
     });
 
+    // 사용자 드래그/줌이 끝날 때마다 부모에게 view 보고 → 영속화 가능
+    const handleMoveEnd = () => {
+      const fn = onViewChangeRef.current;
+      if (!fn) return;
+      const c = map.getCenter();
+      fn({ lat: c.lat, lng: c.lng, zoom: map.getZoom() });
+    };
+    map.on("moveend", handleMoveEnd);
+    map.on("zoomend", handleMoveEnd);
+
     return () => {
+      map.off("moveend", handleMoveEnd);
+      map.off("zoomend", handleMoveEnd);
       cleanupNudges();
       cleanupLocate();
       clusterGroup.clearLayers();
@@ -272,6 +308,9 @@ export function MapView({
       mapRef.current = null;
       clusterGroupRef.current = null;
     };
+    // centerOnFix 는 ref 로 처리하므로 deps 에 포함하지 않음 — 부모 re-render 시
+    // 값이 바뀌어도 지도가 리마운트되지 않게 한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preview]);
 
   // 게시물 마커 동기화 — clusterGroup 에 add/remove 만 하면 클러스터링은 라이브러리가 처리

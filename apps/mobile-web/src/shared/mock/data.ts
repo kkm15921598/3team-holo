@@ -1,4 +1,5 @@
 // 시안에서 추출한 mock 데이터 — Phase D에서 Supabase로 교체 예정
+import { BULK_POSTS } from "./bulk-posts";
 
 export const ME = {
   nickname: "무지는 단무지",
@@ -92,8 +93,8 @@ export const POSTS: Post[] = [
     description: "오피스 단지 떡볶이 메이트!",
     distance: "120m",
     duration: "20분",
-    likes: 5,
-    comments: 3,
+    likes: 1,
+    comments: 0,
     timeAgo: "33분 전",
     authorNickname: "수정",
     authorLevel: 14,
@@ -113,8 +114,8 @@ export const POSTS: Post[] = [
     description: "마트에서 산 큰 수박 나눌 분~",
     distance: "300m",
     duration: "15분",
-    likes: 12,
-    comments: 7,
+    likes: 1,
+    comments: 0,
     timeAgo: "33분 전",
     authorNickname: "지윤",
     authorLevel: 13,
@@ -138,8 +139,8 @@ export const POSTS: Post[] = [
     description: "매주 주말 한강공원 산책",
     distance: "250m",
     duration: "60분",
-    likes: 12,
-    comments: 7,
+    likes: 0,
+    comments: 2,
     timeAgo: "33분 전",
     authorNickname: "두부의 단단함",
     authorLevel: 8,
@@ -158,8 +159,8 @@ export const POSTS: Post[] = [
     description: "꾸준히 같이 가실 분 구해요",
     distance: "400m",
     duration: "60분",
-    likes: 12,
-    comments: 7,
+    likes: 3,
+    comments: 0,
     timeAgo: "33분 전",
     authorNickname: "감자튀김",
     authorLevel: 31,
@@ -173,97 +174,101 @@ export const POSTS: Post[] = [
     ],
   },
   // 홈 추천 모임 카드와 매칭되는 게시글 (id: hm3 ~ hm10)
-  { id: "hm3", category: "food", meetupType: "단기성 모임", status: "모집중", title: "편의점 야식", description: "혼자 먹긴 많아서요 ㅎㅎ", distance: "120m", duration: "5분", likes: 3, comments: 1, timeAgo: "10분 전", authorNickname: "재민", authorLevel: 10, location: { lat: 37.3827, lng: 127.1216, placeName: "GS25 미금역점" }, participants: [{ avatarBg: "#FCEBB5" }] },
-  { id: "hm4", category: "share", meetupType: "단기성 모임", status: "모집중", title: "코스트코 소분", description: "코스트코에서 함께 장 보고 나눌 분~", distance: "700m", duration: "50분", likes: 8, comments: 2, timeAgo: "20분 전", authorNickname: "준호", authorLevel: 15, location: { lat: 37.3859, lng: 127.1247, placeName: "코스트코 분당점" }, participants: [{ avatarBg: "#C7BDFF" }, { avatarBg: "#FCEBB5" }] },
-  { id: "hm5", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "러닝 메이트", description: "오늘 저녁에 같이 뛰어요!", distance: "200m", duration: "60분", likes: 11, comments: 4, timeAgo: "15분 전", authorNickname: "민호", authorLevel: 18, peopleCount: 6, location: { lat: 37.3929, lng: 127.1378, placeName: "탄천 산책로" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }, { avatarBg: "#DDC0FF" }] },
-  { id: "hm6", category: "help", meetupType: "단기성 모임", status: "모집중", title: "스터디 카페", description: "조용히 공부할 분 모집해요", distance: "400m", duration: "120분", likes: 6, comments: 2, timeAgo: "30분 전", authorNickname: "유나", authorLevel: 22, location: { lat: 37.4131, lng: 127.1254, placeName: "토즈 스터디카페" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }] },
-  { id: "hm7", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 모임", description: "할리갈리 마피아 환영해요", distance: "650m", duration: "90분", likes: 14, comments: 3, timeAgo: "40분 전", authorNickname: "지호", authorLevel: 19, peopleCount: 8, location: { lat: 37.4137, lng: 127.1308, placeName: "보드앤플레이 보드게임카페" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }, { avatarBg: "#DDC0FF" }, { avatarBg: "#CAE4B9" }] },
-  { id: "hm8", category: "food", meetupType: "단기성 모임", status: "모집중", title: "카페 투어", description: "동네 신상 카페 같이 가요", distance: "800m", duration: "180분", likes: 7, comments: 1, timeAgo: "1시간 전", authorNickname: "수정", authorLevel: 14, location: { lat: 37.3938, lng: 127.1094, placeName: "정자동 카페거리" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }] },
-  { id: "hm9", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "산책 메이트", description: "공원 한바퀴 같이 돌 분~", distance: "150m", duration: "40분", likes: 5, comments: 1, timeAgo: "5분 전", authorNickname: "정희", authorLevel: 9, location: { lat: 37.4032, lng: 127.107, placeName: "정자일로 공원" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }] },
-  { id: "hm10", category: "help", meetupType: "단기성 모임", status: "모집중", title: "독서 모임", description: "이번 주 책 같이 읽어요", distance: "550m", duration: "75분", likes: 9, comments: 2, timeAgo: "2시간 전", authorNickname: "옥자", authorLevel: 11, location: { lat: 37.3955, lng: 127.1054, placeName: "정자도서관" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }] },
+  { id: "hm3", category: "food", meetupType: "단기성 모임", status: "모집중", title: "편의점 야식", description: "혼자 먹긴 많아서요 ㅎㅎ", distance: "120m", duration: "5분", likes: 3, comments: 0, timeAgo: "10분 전", authorNickname: "재민", authorLevel: 10, location: { lat: 37.3827, lng: 127.1216, placeName: "GS25 미금역점" }, participants: [{ avatarBg: "#FCEBB5" }] },
+  { id: "hm4", category: "share", meetupType: "단기성 모임", status: "모집중", title: "코스트코 소분", description: "코스트코에서 함께 장 보고 나눌 분~", distance: "700m", duration: "50분", likes: 0, comments: 0, timeAgo: "20분 전", authorNickname: "준호", authorLevel: 15, location: { lat: 37.3859, lng: 127.1247, placeName: "코스트코 분당점" }, participants: [{ avatarBg: "#C7BDFF" }, { avatarBg: "#FCEBB5" }] },
+  { id: "hm5", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "러닝 메이트", description: "오늘 저녁에 같이 뛰어요!", distance: "200m", duration: "60분", likes: 0, comments: 0, timeAgo: "15분 전", authorNickname: "민호", authorLevel: 18, peopleCount: 6, location: { lat: 37.3929, lng: 127.1378, placeName: "탄천 산책로" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }, { avatarBg: "#DDC0FF" }] },
+  { id: "hm6", category: "help", meetupType: "단기성 모임", status: "모집중", title: "스터디 카페", description: "조용히 공부할 분 모집해요", distance: "400m", duration: "120분", likes: 0, comments: 0, timeAgo: "30분 전", authorNickname: "유나", authorLevel: 22, location: { lat: 37.4131, lng: 127.1254, placeName: "토즈 스터디카페" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }] },
+  { id: "hm7", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 모임", description: "할리갈리 마피아 환영해요", distance: "650m", duration: "90분", likes: 0, comments: 0, timeAgo: "40분 전", authorNickname: "지호", authorLevel: 19, peopleCount: 8, location: { lat: 37.4137, lng: 127.1308, placeName: "보드앤플레이 보드게임카페" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }, { avatarBg: "#DDC0FF" }, { avatarBg: "#CAE4B9" }] },
+  { id: "hm8", category: "food", meetupType: "단기성 모임", status: "모집중", title: "카페 투어", description: "동네 신상 카페 같이 가요", distance: "800m", duration: "180분", likes: 0, comments: 3, timeAgo: "1시간 전", authorNickname: "수정", authorLevel: 14, location: { lat: 37.3938, lng: 127.1094, placeName: "정자동 카페거리" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }] },
+  { id: "hm9", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "산책 메이트", description: "공원 한바퀴 같이 돌 분~", distance: "150m", duration: "40분", likes: 0, comments: 0, timeAgo: "5분 전", authorNickname: "정희", authorLevel: 9, location: { lat: 37.4032, lng: 127.107, placeName: "정자일로 공원" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }] },
+  { id: "hm10", category: "help", meetupType: "단기성 모임", status: "모집중", title: "독서 모임", description: "이번 주 책 같이 읽어요", distance: "550m", duration: "75분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "옥자", authorLevel: 11, location: { lat: 37.3955, lng: 127.1054, placeName: "정자도서관" }, participants: [{ avatarBg: "#FCEBB5" }, { avatarBg: "#C7BDFF" }, { avatarBg: "#FFCFCF" }, { avatarBg: "#CCBCE0" }] },
   // 자유게시판 (free)
-  { id: "f1", category: "free", meetupType: "단기성 모임", status: "모집중", title: "떡볶이 어디가 맛있나요?", description: "아파트 근처 분식집이 궁금해요", distance: "0m", duration: "0분", likes: 12, comments: 3, timeAgo: "33분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12 },
-  { id: "f2", category: "free", meetupType: "단기성 모임", status: "모집중", title: "주말에 뭐 하세요?", description: "심심한데 같이 놀 친구 구해요", distance: "0m", duration: "0분", likes: 8, comments: 2, timeAgo: "1시간 전", authorNickname: "감자 없는 카레", authorLevel: 7 },
-  { id: "f3", category: "free", meetupType: "단기성 모임", status: "모집중", title: "근처 카페 추천", description: "공부할 만한 조용한 카페 있나요?", distance: "0m", duration: "0분", likes: 5, comments: 1, timeAgo: "2시간 전", authorNickname: "포도껍질", authorLevel: 15 },
+  { id: "f1", category: "free", meetupType: "단기성 모임", status: "모집중", title: "떡볶이 어디가 맛있나요?", description: "아파트 근처 분식집이 궁금해요", distance: "0m", duration: "0분", likes: 3, comments: 0, timeAgo: "33분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12 },
+  { id: "f2", category: "free", meetupType: "단기성 모임", status: "모집중", title: "주말에 뭐 하세요?", description: "심심한데 같이 놀 친구 구해요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "1시간 전", authorNickname: "감자 없는 카레", authorLevel: 7 },
+  { id: "f3", category: "free", meetupType: "단기성 모임", status: "모집중", title: "근처 카페 추천", description: "공부할 만한 조용한 카페 있나요?", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "포도껍질", authorLevel: 15 },
   // 추천해요 (recommend)
-  { id: "r1", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "최근에 본 영화 추천", description: "스릴러 좋아하면 꼭 보세요!", distance: "0m", duration: "0분", likes: 25, comments: 2, timeAgo: "10분 전", authorNickname: "감자튀김", authorLevel: 31 },
-  { id: "r2", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "근처 맛집 추천", description: "골목 안쪽에 숨은 보석 같은 가게", distance: "0m", duration: "0분", likes: 18, comments: 1, timeAgo: "30분 전", authorNickname: "포도껍질", authorLevel: 15 },
+  { id: "r1", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "최근에 본 영화 추천", description: "스릴러 좋아하면 꼭 보세요!", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "10분 전", authorNickname: "감자튀김", authorLevel: 31 },
+  { id: "r2", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "근처 맛집 추천", description: "골목 안쪽에 숨은 보석 같은 가게", distance: "0m", duration: "0분", likes: 10, comments: 0, timeAgo: "30분 전", authorNickname: "포도껍질", authorLevel: 15 },
   // 게임파티 (game)
-  { id: "g1", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 같이 해요", description: "주말 저녁 보드게임 카페 모임", distance: "150m", duration: "120분", likes: 15, comments: 2, timeAgo: "20분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12, peopleCount: 6, location: { lat: 37.3873, lng: 127.0896, placeName: "미금역 사거리" } },
-  { id: "g2", category: "game", meetupType: "장기성 모임", status: "모집완료", title: "PC방 4명 모집", description: "오버워치 같이 하실 분", distance: "300m", duration: "180분", likes: 10, comments: 1, timeAgo: "1시간 전", authorNickname: "감자튀김", authorLevel: 31, peopleCount: 4, location: { lat: 37.4023, lng: 127.1154, placeName: "PC방 미금역점" } },
+  { id: "g1", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 같이 해요", description: "주말 저녁 보드게임 카페 모임", distance: "150m", duration: "120분", likes: 9, comments: 5, timeAgo: "20분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12, peopleCount: 6, location: { lat: 37.3873, lng: 127.0896, placeName: "미금역 사거리" } },
+  { id: "g2", category: "game", meetupType: "장기성 모임", status: "모집완료", title: "PC방 4명 모집", description: "오버워치 같이 하실 분", distance: "300m", duration: "180분", likes: 0, comments: 10, timeAgo: "1시간 전", authorNickname: "감자튀김", authorLevel: 31, peopleCount: 4, location: { lat: 37.4023, lng: 127.1154, placeName: "PC방 미금역점" } },
   // 드라마 · 영화 (media)
-  { id: "m1", category: "media", meetupType: "장기성 모임", status: "모집중", title: "넷플릭스 같이 정주행", description: "주말마다 같이 정주행할 분 모집", distance: "100m", duration: "240분", likes: 14, comments: 1, timeAgo: "45분 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18, peopleCount: 4, location: { lat: 37.3756, lng: 127.1318, placeName: "분당 정자동" } },
+  { id: "m1", category: "media", meetupType: "장기성 모임", status: "모집중", title: "넷플릭스 같이 정주행", description: "주말마다 같이 정주행할 분 모집", distance: "100m", duration: "240분", likes: 0, comments: 0, timeAgo: "45분 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18, peopleCount: 4, location: { lat: 37.3756, lng: 127.1318, placeName: "분당 정자동" } },
   // 도와주세요! (help)
-  { id: "h1", category: "help", meetupType: "단기성 모임", status: "모집중", title: "이사 짐 옮길 분", description: "오후 시간 잠깐 도와주실 분 구해요", distance: "120m", duration: "30분", likes: 3, comments: 1, timeAgo: "5분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12, peopleCount: 2, location: { lat: 37.3928, lng: 127.1354, placeName: "분당 정자동 아파트" } },
+  { id: "h1", category: "help", meetupType: "단기성 모임", status: "모집중", title: "이사 짐 옮길 분", description: "오후 시간 잠깐 도와주실 분 구해요", distance: "120m", duration: "30분", likes: 0, comments: 0, timeAgo: "5분 전", authorNickname: "껍질은 달걀껍질", authorLevel: 12, peopleCount: 2, location: { lat: 37.3928, lng: 127.1354, placeName: "분당 정자동 아파트" } },
 
   // ── 카테고리별 10개 보장을 위한 추가 게시글 ─────────────────────
   // 맛집 & 먹거리 (food) — +6
-  { id: "fd11", category: "food", meetupType: "단기성 모임", status: "모집중", title: "마라탕 메이트", description: "오늘 저녁 마라탕 같이 드실 분", distance: "250m", duration: "60분", likes: 9, comments: 2, timeAgo: "25분 전", authorNickname: "수정", authorLevel: 14, peopleCount: 4, location: { lat: 37.366, lng: 127.1122, placeName: "탕화쿵푸 정자점" } },
-  { id: "fd12", category: "food", meetupType: "단기성 모임", status: "모집중", title: "치킨 한 마리", description: "야식 같이 시켜 먹어요", distance: "180m", duration: "45분", likes: 6, comments: 1, timeAgo: "50분 전", authorNickname: "재민", authorLevel: 10, peopleCount: 3, location: { lat: 37.3813, lng: 127.1175, placeName: "BHC 정자점" } },
-  { id: "fd13", category: "food", meetupType: "단기성 모임", status: "모집중", title: "브런치 카페", description: "주말 브런치 같이 가요", distance: "550m", duration: "90분", likes: 11, comments: 3, timeAgo: "3시간 전", authorNickname: "예린", authorLevel: 16, peopleCount: 4, location: { lat: 37.3394, lng: 127.105, placeName: "라이크라이크 카페" } },
-  { id: "fd14", category: "food", meetupType: "단기성 모임", status: "모집중", title: "삼겹살 회식", description: "퇴근 후 가볍게 삼겹살 어때요", distance: "320m", duration: "120분", likes: 8, comments: 2, timeAgo: "4시간 전", authorNickname: "준호", authorLevel: 15, peopleCount: 6, location: { lat: 37.3484, lng: 127.1076, placeName: "정자 고기굽는집" } },
-  { id: "fd15", category: "food", meetupType: "단기성 모임", status: "모집중", title: "초밥 점심", description: "맛있는 초밥집 같이 가실 분", distance: "420m", duration: "70분", likes: 14, comments: 4, timeAgo: "1일 전", authorNickname: "민지", authorLevel: 19, peopleCount: 4, location: { lat: 37.3433, lng: 127.1084, placeName: "스시노믹 정자점" } },
-  { id: "fd16", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "김치찌개 점심", description: "정자동 김치찌개 맛집 출발해요", distance: "230m", duration: "60분", likes: 7, comments: 2, timeAgo: "2일 전", authorNickname: "옥자", authorLevel: 11, peopleCount: 3, location: { lat: 37.3646, lng: 127.1042, placeName: "어머니 김치찌개" } },
+  { id: "fd11", category: "food", meetupType: "단기성 모임", status: "모집중", title: "마라탕 메이트", description: "오늘 저녁 마라탕 같이 드실 분", distance: "250m", duration: "60분", likes: 1, comments: 0, timeAgo: "25분 전", authorNickname: "수정", authorLevel: 14, peopleCount: 4, location: { lat: 37.366, lng: 127.1122, placeName: "탕화쿵푸 정자점" } },
+  { id: "fd12", category: "food", meetupType: "단기성 모임", status: "모집중", title: "치킨 한 마리", description: "야식 같이 시켜 먹어요", distance: "180m", duration: "45분", likes: 0, comments: 1, timeAgo: "50분 전", authorNickname: "재민", authorLevel: 10, peopleCount: 3, location: { lat: 37.3813, lng: 127.1175, placeName: "BHC 정자점" } },
+  { id: "fd13", category: "food", meetupType: "단기성 모임", status: "모집중", title: "브런치 카페", description: "주말 브런치 같이 가요", distance: "550m", duration: "90분", likes: 0, comments: 0, timeAgo: "3시간 전", authorNickname: "예린", authorLevel: 16, peopleCount: 4, location: { lat: 37.3394, lng: 127.105, placeName: "라이크라이크 카페" } },
+  { id: "fd14", category: "food", meetupType: "단기성 모임", status: "모집중", title: "삼겹살 회식", description: "퇴근 후 가볍게 삼겹살 어때요", distance: "320m", duration: "120분", likes: 8, comments: 1, timeAgo: "4시간 전", authorNickname: "준호", authorLevel: 15, peopleCount: 6, location: { lat: 37.3484, lng: 127.1076, placeName: "정자 고기굽는집" } },
+  { id: "fd15", category: "food", meetupType: "단기성 모임", status: "모집중", title: "초밥 점심", description: "맛있는 초밥집 같이 가실 분", distance: "420m", duration: "70분", likes: 0, comments: 0, timeAgo: "1일 전", authorNickname: "민지", authorLevel: 19, peopleCount: 4, location: { lat: 37.3433, lng: 127.1084, placeName: "스시노믹 정자점" } },
+  { id: "fd16", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "김치찌개 점심", description: "정자동 김치찌개 맛집 출발해요", distance: "230m", duration: "60분", likes: 0, comments: 0, timeAgo: "2일 전", authorNickname: "옥자", authorLevel: 11, peopleCount: 3, location: { lat: 37.3646, lng: 127.1042, placeName: "어머니 김치찌개" } },
 
   // 공동구매 / 소분하기 (share) — +7
-  { id: "sh11", category: "share", meetupType: "단기성 모임", status: "모집중", title: "딸기 한 박스 나눔", description: "농장 직배송 딸기 박스 나눠요", distance: "300m", duration: "20분", likes: 10, comments: 3, timeAgo: "1시간 전", authorNickname: "지윤", authorLevel: 13, peopleCount: 4, location: { lat: 37.3677, lng: 127.1075, placeName: "도깨비 식자재마트" } },
-  { id: "sh12", category: "share", meetupType: "단기성 모임", status: "모집중", title: "휴지 대용량", description: "코스트코 휴지 대용량 나눌 분", distance: "700m", duration: "60분", likes: 6, comments: 1, timeAgo: "2시간 전", authorNickname: "준호", authorLevel: 15, peopleCount: 3, location: { lat: 37.3814, lng: 127.113, placeName: "코스트코 분당점" } },
-  { id: "sh13", category: "share", meetupType: "단기성 모임", status: "모집중", title: "참외 박스", description: "참외 한 박스 나누실 분~", distance: "260m", duration: "25분", likes: 5, comments: 2, timeAgo: "3시간 전", authorNickname: "서아", authorLevel: 14, peopleCount: 3, location: { lat: 37.3841, lng: 127.126, placeName: "정자동 농수산물직판장" } },
-  { id: "sh14", category: "share", meetupType: "단기성 모임", status: "모집중", title: "쌀 20kg 분할", description: "쌀 5kg씩 나누실 분 구해요", distance: "190m", duration: "15분", likes: 4, comments: 1, timeAgo: "5시간 전", authorNickname: "현우", authorLevel: 17, peopleCount: 4, location: { lat: 37.3859, lng: 127.1251, placeName: "정자동 미곡상" } },
-  { id: "sh15", category: "share", meetupType: "단기성 모임", status: "모집중", title: "샴푸 박스", description: "코스트코 샴푸 박스 나눠요", distance: "700m", duration: "60분", likes: 7, comments: 2, timeAgo: "1일 전", authorNickname: "유나", authorLevel: 22, peopleCount: 3, location: { lat: 37.3926, lng: 127.1387, placeName: "코스트코 분당점" } },
-  { id: "sh16", category: "share", meetupType: "단기성 모임", status: "모집완료", title: "한라봉 박스", description: "제주산 한라봉 5kg 박스 나눠요", distance: "320m", duration: "25분", likes: 12, comments: 4, timeAgo: "2일 전", authorNickname: "정희", authorLevel: 9, peopleCount: 4, location: { lat: 37.4092, lng: 127.1277, placeName: "정자동 청과상" } },
-  { id: "sh17", category: "share", meetupType: "단기성 모임", status: "모집중", title: "세제 대용량", description: "세제 대용량 같이 사실 분", distance: "450m", duration: "40분", likes: 3, comments: 1, timeAgo: "3일 전", authorNickname: "성훈", authorLevel: 20, peopleCount: 3, location: { lat: 37.4148, lng: 127.1304, placeName: "이마트 정자점" } },
+  { id: "sh11", category: "share", meetupType: "단기성 모임", status: "모집중", title: "딸기 한 박스 나눔", description: "농장 직배송 딸기 박스 나눠요", distance: "300m", duration: "20분", likes: 0, comments: 0, timeAgo: "1시간 전", authorNickname: "지윤", authorLevel: 13, peopleCount: 4, location: { lat: 37.3677, lng: 127.1075, placeName: "도깨비 식자재마트" } },
+  { id: "sh12", category: "share", meetupType: "단기성 모임", status: "모집중", title: "휴지 대용량", description: "코스트코 휴지 대용량 나눌 분", distance: "700m", duration: "60분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "준호", authorLevel: 15, peopleCount: 3, location: { lat: 37.3814, lng: 127.113, placeName: "코스트코 분당점" } },
+  { id: "sh13", category: "share", meetupType: "단기성 모임", status: "모집중", title: "참외 박스", description: "참외 한 박스 나누실 분~", distance: "260m", duration: "25분", likes: 12, comments: 12, timeAgo: "3시간 전", authorNickname: "서아", authorLevel: 14, peopleCount: 3, location: { lat: 37.3841, lng: 127.126, placeName: "정자동 농수산물직판장" } },
+  { id: "sh14", category: "share", meetupType: "단기성 모임", status: "모집중", title: "쌀 20kg 분할", description: "쌀 5kg씩 나누실 분 구해요", distance: "190m", duration: "15분", likes: 3, comments: 0, timeAgo: "5시간 전", authorNickname: "현우", authorLevel: 17, peopleCount: 4, location: { lat: 37.3859, lng: 127.1251, placeName: "정자동 미곡상" } },
+  { id: "sh15", category: "share", meetupType: "단기성 모임", status: "모집중", title: "샴푸 박스", description: "코스트코 샴푸 박스 나눠요", distance: "700m", duration: "60분", likes: 2, comments: 0, timeAgo: "1일 전", authorNickname: "유나", authorLevel: 22, peopleCount: 3, location: { lat: 37.3926, lng: 127.1387, placeName: "코스트코 분당점" } },
+  { id: "sh16", category: "share", meetupType: "단기성 모임", status: "모집완료", title: "한라봉 박스", description: "제주산 한라봉 5kg 박스 나눠요", distance: "320m", duration: "25분", likes: 3, comments: 0, timeAgo: "2일 전", authorNickname: "정희", authorLevel: 9, peopleCount: 4, location: { lat: 37.4092, lng: 127.1277, placeName: "정자동 청과상" } },
+  { id: "sh17", category: "share", meetupType: "단기성 모임", status: "모집중", title: "세제 대용량", description: "세제 대용량 같이 사실 분", distance: "450m", duration: "40분", likes: 0, comments: 0, timeAgo: "3일 전", authorNickname: "성훈", authorLevel: 20, peopleCount: 3, location: { lat: 37.4148, lng: 127.1304, placeName: "이마트 정자점" } },
 
   // 같이 운동해요 (sport) — +6
-  { id: "sp11", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "테니스 메이트", description: "주말 아침 테니스 같이 쳐요", distance: "320m", duration: "90분", likes: 9, comments: 2, timeAgo: "1시간 전", authorNickname: "도윤", authorLevel: 18, peopleCount: 4, location: { lat: 37.3951, lng: 127.1126, placeName: "정자 테니스장" } },
-  { id: "sp12", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "주말 풋살", description: "토요일 풋살 같이 차요", distance: "600m", duration: "120분", likes: 15, comments: 5, timeAgo: "2시간 전", authorNickname: "민호", authorLevel: 18, peopleCount: 10, location: { lat: 37.4026, lng: 127.1097, placeName: "분당 풋살파크" } },
-  { id: "sp13", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "필라테스 메이트", description: "주 2회 필라테스 같이 갈 분", distance: "250m", duration: "60분", likes: 7, comments: 1, timeAgo: "3시간 전", authorNickname: "은채", authorLevel: 15, peopleCount: 3, location: { lat: 37.3963, lng: 127.105, placeName: "더 핏 필라테스" } },
-  { id: "sp14", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "새벽 수영", description: "새벽 수영 메이트 구해요", distance: "350m", duration: "60분", likes: 5, comments: 1, timeAgo: "5시간 전", authorNickname: "지호", authorLevel: 19, peopleCount: 2, location: { lat: 37.3841, lng: 127.0876, placeName: "분당 스포츠센터" } },
-  { id: "sp15", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "탁구 한판", description: "동네 탁구장 같이 가실 분", distance: "180m", duration: "75분", likes: 4, comments: 2, timeAgo: "1일 전", authorNickname: "병태", authorLevel: 9, peopleCount: 4, location: { lat: 37.3988, lng: 127.1167, placeName: "정자 탁구장" } },
-  { id: "sp16", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "자전거 라이딩", description: "한강 라이딩 같이 가요", distance: "400m", duration: "180분", likes: 18, comments: 6, timeAgo: "2일 전", authorNickname: "태양", authorLevel: 21, peopleCount: 8, location: { lat: 37.3777, lng: 127.1279, placeName: "탄천 자전거도로" } },
+  { id: "sp11", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "테니스 메이트", description: "주말 아침 테니스 같이 쳐요", distance: "320m", duration: "90분", likes: 2, comments: 1, timeAgo: "1시간 전", authorNickname: "도윤", authorLevel: 18, peopleCount: 4, location: { lat: 37.3951, lng: 127.1126, placeName: "정자 테니스장" } },
+  { id: "sp12", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "주말 풋살", description: "토요일 풋살 같이 차요", distance: "600m", duration: "120분", likes: 33, comments: 10, timeAgo: "2시간 전", authorNickname: "민호", authorLevel: 18, peopleCount: 10, location: { lat: 37.4026, lng: 127.1097, placeName: "분당 풋살파크" } },
+  { id: "sp13", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "필라테스 메이트", description: "주 2회 필라테스 같이 갈 분", distance: "250m", duration: "60분", likes: 7, comments: 0, timeAgo: "3시간 전", authorNickname: "은채", authorLevel: 15, peopleCount: 3, location: { lat: 37.3963, lng: 127.105, placeName: "더 핏 필라테스" } },
+  { id: "sp14", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "새벽 수영", description: "새벽 수영 메이트 구해요", distance: "350m", duration: "60분", likes: 0, comments: 0, timeAgo: "5시간 전", authorNickname: "지호", authorLevel: 19, peopleCount: 2, location: { lat: 37.3841, lng: 127.0876, placeName: "분당 스포츠센터" } },
+  { id: "sp15", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "탁구 한판", description: "동네 탁구장 같이 가실 분", distance: "180m", duration: "75분", likes: 2, comments: 0, timeAgo: "1일 전", authorNickname: "병태", authorLevel: 9, peopleCount: 4, location: { lat: 37.3988, lng: 127.1167, placeName: "정자 탁구장" } },
+  { id: "sp16", category: "sport", meetupType: "장기성 모임", status: "모집중", title: "자전거 라이딩", description: "한강 라이딩 같이 가요", distance: "400m", duration: "180분", likes: 0, comments: 0, timeAgo: "2일 전", authorNickname: "태양", authorLevel: 21, peopleCount: 8, location: { lat: 37.3777, lng: 127.1279, placeName: "탄천 자전거도로" } },
 
   // 도와주세요! (help) — +7
-  { id: "hp11", category: "help", meetupType: "단기성 모임", status: "모집중", title: "택배 받아주실 분", description: "오후 시간대 택배 대신 받아주세요", distance: "100m", duration: "10분", likes: 2, comments: 1, timeAgo: "20분 전", authorNickname: "치즈복이", authorLevel: 8, peopleCount: 1, location: { lat: 37.3944, lng: 127.1345, placeName: "정자동 우편함 앞" } },
-  { id: "hp12", category: "help", meetupType: "단기성 모임", status: "모집중", title: "강아지 산책 부탁", description: "오늘 저녁 산책 대신 부탁드려요", distance: "200m", duration: "30분", likes: 4, comments: 2, timeAgo: "1시간 전", authorNickname: "토마토킹", authorLevel: 13, peopleCount: 1, location: { lat: 37.3665, lng: 127.1113, placeName: "정자일로 공원" } },
-  { id: "hp13", category: "help", meetupType: "단기성 모임", status: "모집중", title: "노트북 추천 부탁", description: "100만원대 노트북 추천 부탁드려요", distance: "150m", duration: "20분", likes: 6, comments: 3, timeAgo: "3시간 전", authorNickname: "참치는 등푸른", authorLevel: 7, peopleCount: 2, location: { lat: 37.3777, lng: 127.1155, placeName: "정자동 전자상가" } },
-  { id: "hp15", category: "help", meetupType: "단기성 모임", status: "모집중", title: "잃어버린 지갑", description: "정자동 카페 근처에서 지갑 잃어버렸어요", distance: "300m", duration: "30분", likes: 8, comments: 4, timeAgo: "1일 전", authorNickname: "라면 한 봉지", authorLevel: 10, peopleCount: 1, location: { lat: 37.3505, lng: 127.1113, placeName: "투썸플레이스" } },
-  { id: "hp16", category: "help", meetupType: "단기성 모임", status: "모집중", title: "고양이 임시 보호", description: "주말 동안 고양이 봐주실 분", distance: "150m", duration: "60분", likes: 5, comments: 2, timeAgo: "2일 전", authorNickname: "수박나라", authorLevel: 12, peopleCount: 1, location: { lat: 37.3452, lng: 127.1083, placeName: "정자동 아파트" } },
-  { id: "hp17", category: "help", meetupType: "단기성 모임", status: "모집중", title: "정형외과 추천", description: "근처 정형외과 추천해 주세요", distance: "0m", duration: "0분", likes: 4, comments: 2, timeAgo: "3일 전", authorNickname: "닭볶음탕수", authorLevel: 11, peopleCount: 1, location: { lat: 37.37, lng: 127.1056, placeName: "정자동 메디컬센터" } },
+  { id: "hp11", category: "help", meetupType: "단기성 모임", status: "모집중", title: "택배 받아주실 분", description: "오후 시간대 택배 대신 받아주세요", distance: "100m", duration: "10분", likes: 0, comments: 2, timeAgo: "20분 전", authorNickname: "치즈복이", authorLevel: 8, peopleCount: 1, location: { lat: 37.3944, lng: 127.1345, placeName: "정자동 우편함 앞" } },
+  { id: "hp12", category: "help", meetupType: "단기성 모임", status: "모집중", title: "강아지 산책 부탁", description: "오늘 저녁 산책 대신 부탁드려요", distance: "200m", duration: "30분", likes: 3, comments: 7, timeAgo: "1시간 전", authorNickname: "토마토킹", authorLevel: 13, peopleCount: 1, location: { lat: 37.3665, lng: 127.1113, placeName: "정자일로 공원" } },
+  { id: "hp13", category: "help", meetupType: "단기성 모임", status: "모집중", title: "노트북 추천 부탁", description: "100만원대 노트북 추천 부탁드려요", distance: "150m", duration: "20분", likes: 21, comments: 1, timeAgo: "3시간 전", authorNickname: "참치는 등푸른", authorLevel: 7, peopleCount: 2, location: { lat: 37.3777, lng: 127.1155, placeName: "정자동 전자상가" } },
+  { id: "hp15", category: "help", meetupType: "단기성 모임", status: "모집중", title: "잃어버린 지갑", description: "정자동 카페 근처에서 지갑 잃어버렸어요", distance: "300m", duration: "30분", likes: 0, comments: 2, timeAgo: "1일 전", authorNickname: "라면 한 봉지", authorLevel: 10, peopleCount: 1, location: { lat: 37.3505, lng: 127.1113, placeName: "투썸플레이스" } },
+  { id: "hp16", category: "help", meetupType: "단기성 모임", status: "모집중", title: "고양이 임시 보호", description: "주말 동안 고양이 봐주실 분", distance: "150m", duration: "60분", likes: 3, comments: 26, timeAgo: "2일 전", authorNickname: "수박나라", authorLevel: 12, peopleCount: 1, location: { lat: 37.3452, lng: 127.1083, placeName: "정자동 아파트" } },
+  { id: "hp17", category: "help", meetupType: "단기성 모임", status: "모집중", title: "정형외과 추천", description: "근처 정형외과 추천해 주세요", distance: "0m", duration: "0분", likes: 1, comments: 0, timeAgo: "3일 전", authorNickname: "닭볶음탕수", authorLevel: 11, peopleCount: 1, location: { lat: 37.37, lng: 127.1056, placeName: "정자동 메디컬센터" } },
 
   // 게임파티 (game) — +7
-  { id: "gm11", category: "game", meetupType: "장기성 모임", status: "모집중", title: "롤 듀오 구해요", description: "골드 듀오 파트너 모집", distance: "100m", duration: "120분", likes: 12, comments: 3, timeAgo: "30분 전", authorNickname: "당근소년", authorLevel: 17, peopleCount: 2, location: { lat: 37.3644, lng: 127.1056, placeName: "PC방 미금역점" } },
-  { id: "gm12", category: "game", meetupType: "장기성 모임", status: "모집중", title: "마인크래프트 서버", description: "같이 서버 운영하실 분 찾아요", distance: "0m", duration: "0분", likes: 7, comments: 1, timeAgo: "1시간 전", authorNickname: "지호", authorLevel: 19, peopleCount: 6, location: { lat: 37.3799, lng: 127.1155, placeName: "온라인" } },
-  { id: "gm13", category: "game", meetupType: "장기성 모임", status: "모집중", title: "스팀 협동게임", description: "협동 무료게임 같이 해요", distance: "0m", duration: "0분", likes: 5, comments: 2, timeAgo: "2시간 전", authorNickname: "도윤", authorLevel: 18, peopleCount: 4, location: { lat: 37.3873, lng: 127.1229, placeName: "온라인" } },
-  { id: "gm14", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 카페", description: "보드게임 카페 같이 가실 분", distance: "650m", duration: "120분", likes: 9, comments: 3, timeAgo: "3시간 전", authorNickname: "정희", authorLevel: 9, peopleCount: 6, location: { lat: 37.3824, lng: 127.1237, placeName: "보드앤플레이 보드게임카페" } },
-  { id: "gm15", category: "game", meetupType: "장기성 모임", status: "모집중", title: "철권 매칭 메이트", description: "오프라인 격투게임 메이트 구해요", distance: "180m", duration: "150분", likes: 6, comments: 1, timeAgo: "5시간 전", authorNickname: "성훈", authorLevel: 20, peopleCount: 4, location: { lat: 37.3976, lng: 127.1375, placeName: "정자 PC방" } },
-  { id: "gm16", category: "game", meetupType: "장기성 모임", status: "모집중", title: "방탈출 카페", description: "어려운 방탈출 도전 같이!", distance: "400m", duration: "90분", likes: 11, comments: 4, timeAgo: "1일 전", authorNickname: "옥자", authorLevel: 11, peopleCount: 4, location: { lat: 37.414, lng: 127.1306, placeName: "이스케이프 룸 정자점" } },
-  { id: "gm17", category: "game", meetupType: "장기성 모임", status: "모집완료", title: "포커 친목", description: "친목 포커 같이 하실 분", distance: "220m", duration: "180분", likes: 8, comments: 2, timeAgo: "2일 전", authorNickname: "재민", authorLevel: 10, peopleCount: 6, location: { lat: 37.409, lng: 127.1309, placeName: "정자동 카페" } },
+  { id: "gm11", category: "game", meetupType: "장기성 모임", status: "모집중", title: "롤 듀오 구해요", description: "골드 듀오 파트너 모집", distance: "100m", duration: "120분", likes: 0, comments: 2, timeAgo: "30분 전", authorNickname: "당근소년", authorLevel: 17, peopleCount: 2, location: { lat: 37.3644, lng: 127.1056, placeName: "PC방 미금역점" } },
+  { id: "gm12", category: "game", meetupType: "장기성 모임", status: "모집중", title: "마인크래프트 서버", description: "같이 서버 운영하실 분 찾아요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "1시간 전", authorNickname: "지호", authorLevel: 19, peopleCount: 6, location: { lat: 37.3799, lng: 127.1155, placeName: "온라인" } },
+  { id: "gm13", category: "game", meetupType: "장기성 모임", status: "모집중", title: "스팀 협동게임", description: "협동 무료게임 같이 해요", distance: "0m", duration: "0분", likes: 22, comments: 0, timeAgo: "2시간 전", authorNickname: "도윤", authorLevel: 18, peopleCount: 4, location: { lat: 37.3873, lng: 127.1229, placeName: "온라인" } },
+  { id: "gm14", category: "game", meetupType: "장기성 모임", status: "모집중", title: "보드게임 카페", description: "보드게임 카페 같이 가실 분", distance: "650m", duration: "120분", likes: 3, comments: 0, timeAgo: "3시간 전", authorNickname: "정희", authorLevel: 9, peopleCount: 6, location: { lat: 37.3824, lng: 127.1237, placeName: "보드앤플레이 보드게임카페" } },
+  { id: "gm15", category: "game", meetupType: "장기성 모임", status: "모집중", title: "철권 매칭 메이트", description: "오프라인 격투게임 메이트 구해요", distance: "180m", duration: "150분", likes: 0, comments: 0, timeAgo: "5시간 전", authorNickname: "성훈", authorLevel: 20, peopleCount: 4, location: { lat: 37.3976, lng: 127.1375, placeName: "정자 PC방" } },
+  { id: "gm16", category: "game", meetupType: "장기성 모임", status: "모집중", title: "방탈출 카페", description: "어려운 방탈출 도전 같이!", distance: "400m", duration: "90분", likes: 1, comments: 0, timeAgo: "1일 전", authorNickname: "옥자", authorLevel: 11, peopleCount: 4, location: { lat: 37.414, lng: 127.1306, placeName: "이스케이프 룸 정자점" } },
+  { id: "gm17", category: "game", meetupType: "장기성 모임", status: "모집완료", title: "포커 친목", description: "친목 포커 같이 하실 분", distance: "220m", duration: "180분", likes: 0, comments: 0, timeAgo: "2일 전", authorNickname: "재민", authorLevel: 10, peopleCount: 6, location: { lat: 37.409, lng: 127.1309, placeName: "정자동 카페" } },
 
   // 드라마 · 영화 (media) — +9
-  { id: "md11", category: "media", meetupType: "장기성 모임", status: "모집중", title: "오징어 게임 시즌2", description: "넷플릭스 동시 시청해요!", distance: "0m", duration: "0분", likes: 16, comments: 4, timeAgo: "20분 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18, peopleCount: 6, location: { lat: 37.3959, lng: 127.1117, placeName: "온라인 / 분당 정자동" } },
-  { id: "md12", category: "media", meetupType: "장기성 모임", status: "모집중", title: "어벤져스 정주행", description: "마블 시리즈 정주행 메이트", distance: "150m", duration: "240분", likes: 11, comments: 2, timeAgo: "1시간 전", authorNickname: "민지", authorLevel: 19, peopleCount: 4, location: { lat: 37.3991, lng: 127.1088, placeName: "분당 정자동" } },
-  { id: "md13", category: "media", meetupType: "장기성 모임", status: "모집중", title: "주말 신작 영화", description: "주말 신작 영화 같이 봐요", distance: "550m", duration: "150분", likes: 14, comments: 3, timeAgo: "2시간 전", authorNickname: "서아", authorLevel: 14, peopleCount: 4, location: { lat: 37.3956, lng: 127.1074, placeName: "CGV 분당" } },
-  { id: "md14", category: "media", meetupType: "장기성 모임", status: "모집중", title: "공포영화 메이트", description: "혼자 보기 무서운 공포영화 같이!", distance: "200m", duration: "120분", likes: 9, comments: 2, timeAgo: "3시간 전", authorNickname: "현우", authorLevel: 17, peopleCount: 4, location: { lat: 37.3849, lng: 127.0917, placeName: "분당 정자동" } },
-  { id: "md15", category: "media", meetupType: "장기성 모임", status: "모집중", title: "디즈니플러스 공유", description: "디플 같이 결제할 분 (3인)", distance: "0m", duration: "0분", likes: 7, comments: 1, timeAgo: "5시간 전", authorNickname: "은채", authorLevel: 15, peopleCount: 3, location: { lat: 37.4028, lng: 127.1126, placeName: "온라인" } },
-  { id: "md16", category: "media", meetupType: "장기성 모임", status: "모집중", title: "독립영화 상영회", description: "독립영화 상영회 같이 가요", distance: "700m", duration: "180분", likes: 6, comments: 2, timeAgo: "6시간 전", authorNickname: "예린", authorLevel: 16, peopleCount: 5, location: { lat: 37.3754, lng: 127.1271, placeName: "분당 아트홀" } },
-  { id: "md17", category: "media", meetupType: "장기성 모임", status: "모집중", title: "고전영화 모임", description: "흑백영화 함께 보는 모임", distance: "250m", duration: "150분", likes: 5, comments: 1, timeAgo: "1일 전", authorNickname: "병태", authorLevel: 9, peopleCount: 4, location: { lat: 37.396, lng: 127.1373, placeName: "정자동 카페" } },
-  { id: "md18", category: "media", meetupType: "장기성 모임", status: "모집중", title: "리뷰 클럽", description: "본 영화 리뷰 같이 쓰는 모임", distance: "300m", duration: "90분", likes: 4, comments: 2, timeAgo: "2일 전", authorNickname: "철수", authorLevel: 23, peopleCount: 4, location: { lat: 37.3628, lng: 127.1123, placeName: "정자동 스터디카페" } },
-  { id: "md19", category: "media", meetupType: "장기성 모임", status: "모집완료", title: "다큐멘터리 토론", description: "다큐 보고 같이 토론해요", distance: "400m", duration: "120분", likes: 8, comments: 3, timeAgo: "3일 전", authorNickname: "태양", authorLevel: 21, peopleCount: 6, location: { lat: 37.3798, lng: 127.1149, placeName: "정자도서관" } },
+  { id: "md11", category: "media", meetupType: "장기성 모임", status: "모집중", title: "오징어 게임 시즌2", description: "넷플릭스 동시 시청해요!", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "20분 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18, peopleCount: 6, location: { lat: 37.3959, lng: 127.1117, placeName: "온라인 / 분당 정자동" } },
+  { id: "md12", category: "media", meetupType: "장기성 모임", status: "모집중", title: "어벤져스 정주행", description: "마블 시리즈 정주행 메이트", distance: "150m", duration: "240분", likes: 0, comments: 0, timeAgo: "1시간 전", authorNickname: "민지", authorLevel: 19, peopleCount: 4, location: { lat: 37.3991, lng: 127.1088, placeName: "분당 정자동" } },
+  { id: "md13", category: "media", meetupType: "장기성 모임", status: "모집중", title: "주말 신작 영화", description: "주말 신작 영화 같이 봐요", distance: "550m", duration: "150분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "서아", authorLevel: 14, peopleCount: 4, location: { lat: 37.3956, lng: 127.1074, placeName: "CGV 분당" } },
+  { id: "md14", category: "media", meetupType: "장기성 모임", status: "모집중", title: "공포영화 메이트", description: "혼자 보기 무서운 공포영화 같이!", distance: "200m", duration: "120분", likes: 0, comments: 5, timeAgo: "3시간 전", authorNickname: "현우", authorLevel: 17, peopleCount: 4, location: { lat: 37.3849, lng: 127.0917, placeName: "분당 정자동" } },
+  { id: "md15", category: "media", meetupType: "장기성 모임", status: "모집중", title: "디즈니플러스 공유", description: "디플 같이 결제할 분 (3인)", distance: "0m", duration: "0분", likes: 25, comments: 0, timeAgo: "5시간 전", authorNickname: "은채", authorLevel: 15, peopleCount: 3, location: { lat: 37.4028, lng: 127.1126, placeName: "온라인" } },
+  { id: "md16", category: "media", meetupType: "장기성 모임", status: "모집중", title: "독립영화 상영회", description: "독립영화 상영회 같이 가요", distance: "700m", duration: "180분", likes: 1, comments: 0, timeAgo: "6시간 전", authorNickname: "예린", authorLevel: 16, peopleCount: 5, location: { lat: 37.3754, lng: 127.1271, placeName: "분당 아트홀" } },
+  { id: "md17", category: "media", meetupType: "장기성 모임", status: "모집중", title: "고전영화 모임", description: "흑백영화 함께 보는 모임", distance: "250m", duration: "150분", likes: 2, comments: 0, timeAgo: "1일 전", authorNickname: "병태", authorLevel: 9, peopleCount: 4, location: { lat: 37.396, lng: 127.1373, placeName: "정자동 카페" } },
+  { id: "md18", category: "media", meetupType: "장기성 모임", status: "모집중", title: "리뷰 클럽", description: "본 영화 리뷰 같이 쓰는 모임", distance: "300m", duration: "90분", likes: 9, comments: 0, timeAgo: "2일 전", authorNickname: "철수", authorLevel: 23, peopleCount: 4, location: { lat: 37.3628, lng: 127.1123, placeName: "정자동 스터디카페" } },
+  { id: "md19", category: "media", meetupType: "장기성 모임", status: "모집완료", title: "다큐멘터리 토론", description: "다큐 보고 같이 토론해요", distance: "400m", duration: "120분", likes: 0, comments: 0, timeAgo: "3일 전", authorNickname: "태양", authorLevel: 21, peopleCount: 6, location: { lat: 37.3798, lng: 127.1149, placeName: "정자도서관" } },
 
   // 자유게시판 (free) — +7
-  { id: "f11", category: "free", meetupType: "단기성 모임", status: "모집중", title: "동네 분리수거 시간", description: "분리수거 시간 아시는 분?", distance: "0m", duration: "0분", likes: 4, comments: 2, timeAgo: "10분 전", authorNickname: "포도껍질", authorLevel: 15 },
-  { id: "f12", category: "free", meetupType: "단기성 모임", status: "모집중", title: "공원 야간 개방", description: "정자동 공원 야간 개방 시간 아시는 분", distance: "0m", duration: "0분", likes: 3, comments: 1, timeAgo: "25분 전", authorNickname: "단무지가 부럽다", authorLevel: 11 },
-  { id: "f13", category: "free", meetupType: "단기성 모임", status: "모집중", title: "오늘 비 오나요?", description: "외출하려는데 비 올까봐요..", distance: "0m", duration: "0분", likes: 5, comments: 3, timeAgo: "1시간 전", authorNickname: "감자 없는 카레", authorLevel: 7 },
-  { id: "f15", category: "free", meetupType: "단기성 모임", status: "모집중", title: "층간소음 고민", description: "어떻게 해결하셨나요?", distance: "0m", duration: "0분", likes: 9, comments: 6, timeAgo: "3시간 전", authorNickname: "두부의 단단함", authorLevel: 8 },
-  { id: "f16", category: "free", meetupType: "단기성 모임", status: "모집중", title: "이사 떡 인사", description: "옆집 이사오시면 떡 돌리시나요?", distance: "0m", duration: "0분", likes: 6, comments: 4, timeAgo: "1일 전", authorNickname: "깻잎쟁이", authorLevel: 13 },
-  { id: "f17", category: "free", meetupType: "단기성 모임", status: "모집중", title: "도서관 추천", description: "정자도서관 vs 야탑도서관?", distance: "0m", duration: "0분", likes: 7, comments: 3, timeAgo: "2일 전", authorNickname: "점심은 감튀", authorLevel: 9 },
+  { id: "f11", category: "free", meetupType: "단기성 모임", status: "모집중", title: "동네 분리수거 시간", description: "분리수거 시간 아시는 분?", distance: "0m", duration: "0분", likes: 0, comments: 7, timeAgo: "10분 전", authorNickname: "포도껍질", authorLevel: 15 },
+  { id: "f12", category: "free", meetupType: "단기성 모임", status: "모집중", title: "공원 야간 개방", description: "정자동 공원 야간 개방 시간 아시는 분", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "25분 전", authorNickname: "단무지가 부럽다", authorLevel: 11 },
+  { id: "f13", category: "free", meetupType: "단기성 모임", status: "모집중", title: "오늘 비 오나요?", description: "외출하려는데 비 올까봐요..", distance: "0m", duration: "0분", likes: 2, comments: 0, timeAgo: "1시간 전", authorNickname: "감자 없는 카레", authorLevel: 7 },
+  { id: "f15", category: "free", meetupType: "단기성 모임", status: "모집중", title: "층간소음 고민", description: "어떻게 해결하셨나요?", distance: "0m", duration: "0분", likes: 2, comments: 0, timeAgo: "3시간 전", authorNickname: "두부의 단단함", authorLevel: 8 },
+  { id: "f16", category: "free", meetupType: "단기성 모임", status: "모집중", title: "이사 떡 인사", description: "옆집 이사오시면 떡 돌리시나요?", distance: "0m", duration: "0분", likes: 7, comments: 0, timeAgo: "1일 전", authorNickname: "깻잎쟁이", authorLevel: 13 },
+  { id: "f17", category: "free", meetupType: "단기성 모임", status: "모집중", title: "도서관 추천", description: "정자도서관 vs 야탑도서관?", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2일 전", authorNickname: "점심은 감튀", authorLevel: 9 },
 
   // 추천해요 (recommend) — +8
-  { id: "r13", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "드라마 추천", description: "최근 본 드라마 중 갓작이에요", distance: "0m", duration: "0분", likes: 19, comments: 5, timeAgo: "1시간 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18 },
-  { id: "r14", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "운동복 브랜드", description: "기능 좋은 운동복 브랜드 공유해요", distance: "0m", duration: "0분", likes: 11, comments: 3, timeAgo: "2시간 전", authorNickname: "민호", authorLevel: 18 },
-  { id: "r15", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "정자동 미용실", description: "친절한 디자이너 있는 곳 추천", distance: "0m", duration: "0분", likes: 14, comments: 2, timeAgo: "3시간 전", authorNickname: "지윤", authorLevel: 13 },
-  { id: "r17", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "주말 나들이", description: "차 없이 가기 좋은 나들이 장소", distance: "0m", duration: "0분", likes: 13, comments: 3, timeAgo: "1일 전", authorNickname: "혜진", authorLevel: 10 },
+  { id: "r13", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "드라마 추천", description: "최근 본 드라마 중 갓작이에요", distance: "0m", duration: "0분", likes: 30, comments: 0, timeAgo: "1시간 전", authorNickname: "멜론은 키위를 좋아해", authorLevel: 18 },
+  { id: "r14", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "운동복 브랜드", description: "기능 좋은 운동복 브랜드 공유해요", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "2시간 전", authorNickname: "민호", authorLevel: 18 },
+  { id: "r15", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "정자동 미용실", description: "친절한 디자이너 있는 곳 추천", distance: "0m", duration: "0분", likes: 0, comments: 0, timeAgo: "3시간 전", authorNickname: "지윤", authorLevel: 13 },
+  { id: "r17", category: "recommend", meetupType: "단기성 모임", status: "모집중", title: "주말 나들이", description: "차 없이 가기 좋은 나들이 장소", distance: "0m", duration: "0분", likes: 0, comments: 1, timeAgo: "1일 전", authorNickname: "혜진", authorLevel: 10 },
 ];
+
+// 자동 생성된 mock 500개 (자유70/추천30/위치별400) — bulk-posts.ts 참조.
+// 모듈 로드 시점에 한 번만 push 되어 게시판/지도/홈에서 자연스럽게 노출.
+POSTS.push(...BULK_POSTS);
 
 // 게시글 ID 별로 보여줄 댓글 (board-detail 화면에서 사용)
 export const POST_COMMENTS: Record<string, { id: string; nickname: string; content: string; timeAgo: string }[]> = {
@@ -627,13 +632,13 @@ export type ChatRoom = {
 };
 
 export const CHATROOMS: ChatRoom[] = [
-  { id: "1", name: "다같이 러닝해요", subtitle: "무지는 단무지", isGroup: true, memberCount: 6, lastMessage: "내일 7시 한강에서 만나요!", lastTime: "오후 3:15", unread: 3, pinned: true, online: true, meeting: { date: "5/10 (화)", time: "오후 7:00", place: "반포 한강공원 8번 출구" } },
+  { id: "1", name: "다같이 러닝해요", subtitle: "무지는 단무지", isGroup: true, memberCount: 6, lastMessage: "내일 7시 한강에서 만나요!", lastTime: "오후 3:15", unread: 3, pinned: true, online: true, meeting: { date: "5/18 (월)", time: "오후 7:00", place: "반포 한강공원 8번 출구" } },
   { id: "2", name: "껍질은 달걀껍질", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "사진 보내드렸어요 📸", lastTime: "오후 2:48", unread: 1, online: true },
-  { id: "3", name: "동네 떡볶이 모임", subtitle: "무지는 단무지, 외 4명", isGroup: true, memberCount: 5, lastMessage: "맛있겠다 ㅋㅋㅋ", lastTime: "오후 1:30", unread: 0, pinned: true, meeting: { date: "5/11 (수)", time: "오후 6:30", place: "정자동 떡볶이천국" } },
+  { id: "3", name: "동네 떡볶이 모임", subtitle: "무지는 단무지, 외 4명", isGroup: true, memberCount: 5, lastMessage: "맛있겠다 ㅋㅋㅋ", lastTime: "오후 1:30", unread: 0, pinned: true, meeting: { date: "5/19 (화)", time: "오후 6:30", place: "정자동 떡볶이천국" } },
   { id: "4", name: "감자 없는 카레", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "넵 알겠습니다~", lastTime: "오전 11:20", unread: 0, muted: true },
-  { id: "5", name: "주말 등산 크루", subtitle: "무지는 단무지, 외 7명", isGroup: true, memberCount: 8, lastMessage: "이번주는 패스할게요!", lastTime: "어제", unread: 12, meeting: { date: "5/14 (토)", time: "오전 6:00", place: "관악산 사당역 입구" } },
+  { id: "5", name: "주말 등산 크루", subtitle: "무지는 단무지, 외 7명", isGroup: true, memberCount: 8, lastMessage: "이번주는 패스할게요!", lastTime: "어제", unread: 12, meeting: { date: "5/23 (토)", time: "오전 6:00", place: "관악산 사당역 입구" } },
   { id: "6", name: "멜론은 키위를 좋아해", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "감사합니다 :)", lastTime: "어제", unread: 0 },
-  { id: "7", name: "공구러 모임 🛒", subtitle: "무지는 단무지, 외 12명", isGroup: true, memberCount: 13, lastMessage: "수박 소분 마감입니다", lastTime: "5/7", unread: 0, muted: true, meeting: { date: "5/9 (월)", time: "오후 8:00", place: "분당 정자동 마트 앞" } },
+  { id: "7", name: "공구러 모임 🛒", subtitle: "무지는 단무지, 외 12명", isGroup: true, memberCount: 13, lastMessage: "수박 소분 마감입니다", lastTime: "5/14", unread: 0, muted: true, meeting: { date: "5/17 (일)", time: "오후 8:00", place: "분당 정자동 마트 앞" } },
   { id: "8", name: "토마토킹", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "다음에 또 봐요!", lastTime: "5/5", unread: 0 },
 ];
 
@@ -680,10 +685,10 @@ export const CHAT_MEMBERS = [
 ];
 
 export const POINT_HISTORY = [
-  { id: "1", date: "26.04.08", title: "친구 초대", note: "", amount: 50 },
-  { id: "2", date: "26.04.07", title: "단기 모임 참여", note: "바퀴 벌레 잡아 주실분", amount: 20 },
-  { id: "3", date: "26.04.01", title: "아이템 구매", note: "노란 원목 침대", amount: -100 },
-  { id: "4", date: "26.03.27", title: "아이템 구매", note: "핑크 의자", amount: -50 },
+  { id: "1", date: "26.05.16", title: "친구 초대", note: "", amount: 50 },
+  { id: "2", date: "26.05.15", title: "단기 모임 참여", note: "바퀴 벌레 잡아 주실분", amount: 20 },
+  { id: "3", date: "26.05.10", title: "아이템 구매", note: "노란 원목 침대", amount: -100 },
+  { id: "4", date: "26.05.05", title: "아이템 구매", note: "핑크 의자", amount: -50 },
 ];
 
 export const POINT_GUIDE_ONCE = [
@@ -727,18 +732,20 @@ export type Badge = {
 };
 
 export const BADGES: Badge[] = [
-  { id: "badge_01", label: "빨래 요정",      condition: "세탁 관련 게시글을 5개 이상 작성하세요.",           date: "2025.10.11" },
-  { id: "badge_02", label: "장보기 달인",    condition: "공동구매 모임에 3회 이상 참여하세요.",              date: "2025.09.22" },
-  { id: "badge_03", label: "분리수거 요원",  condition: "분리수거 관련 글을 5개 이상 작성하세요.",           date: "2025.08.07" },
-  { id: "badge_04", label: "설거지 명수",    condition: "음식 나눔 후기를 3개 이상 작성하세요.",             date: "2025.06.30" },
-  { id: "badge_05", label: "재료 손질 장인", condition: "집밥 관련 게시글을 10개 이상 작성하세요.",          date: "2025.05.10" },
-  { id: "badge_06", label: "홈카페 사장님",  condition: "카페 모임에 5회 이상 참여하세요.",                  date: "2025.04.01" },
-  { id: "badge_07", label: "다정한 이웃",    condition: "이웃에게 댓글을 50개 이상 달아주세요.",             date: "2025.03.15" },
-  { id: "badge_08", label: "꿀잠 수호자",    condition: "출석 체크를 30일 연속 달성하세요.",                 date: "2025.02.18" },
-  { id: "badge_09", label: "먼지 사냥꾼",    condition: "청소 관련 게시글을 5개 이상 작성하세요.",           date: "2025.01.20" },
-  { id: "badge_10", label: "지구 지킴이",    condition: "환경 관련 모임에 3회 이상 참여하세요.",             date: "2024.12.05" },
-  { id: "badge_11", label: "집밥 고수",      condition: "음식 나눔 모임에 5회 이상 참여하세요.",             date: "2024.11.11" },
-  { id: "badge_12", label: "방구석 독서가",  condition: "독서 모임에 3회 이상 참여하세요.",                  date: "2024.10.10" },
+  // mock(기본) ME 사용자의 뱃지 획득일 — 2026.05.01 ~ 2026.05.16 범위로 분포.
+  // 테스트 계정 로그인 시엔 seed-account 가 joinedAt 기준으로 재계산해서 덮어씀.
+  { id: "badge_01", label: "빨래 요정",      condition: "세탁 관련 게시글을 5개 이상 작성하세요.",           date: "2026.05.16" },
+  { id: "badge_02", label: "장보기 달인",    condition: "공동구매 모임에 3회 이상 참여하세요.",              date: "2026.05.15" },
+  { id: "badge_03", label: "분리수거 요원",  condition: "분리수거 관련 글을 5개 이상 작성하세요.",           date: "2026.05.14" },
+  { id: "badge_04", label: "설거지 명수",    condition: "음식 나눔 후기를 3개 이상 작성하세요.",             date: "2026.05.13" },
+  { id: "badge_05", label: "재료 손질 장인", condition: "집밥 관련 게시글을 10개 이상 작성하세요.",          date: "2026.05.12" },
+  { id: "badge_06", label: "홈카페 사장님",  condition: "카페 모임에 5회 이상 참여하세요.",                  date: "2026.05.11" },
+  { id: "badge_07", label: "다정한 이웃",    condition: "이웃에게 댓글을 50개 이상 달아주세요.",             date: "2026.05.09" },
+  { id: "badge_08", label: "꿀잠 수호자",    condition: "출석 체크를 30일 연속 달성하세요.",                 date: "2026.05.08" },
+  { id: "badge_09", label: "먼지 사냥꾼",    condition: "청소 관련 게시글을 5개 이상 작성하세요.",           date: "2026.05.06" },
+  { id: "badge_10", label: "지구 지킴이",    condition: "환경 관련 모임에 3회 이상 참여하세요.",             date: "2026.05.04" },
+  { id: "badge_11", label: "집밥 고수",      condition: "음식 나눔 모임에 5회 이상 참여하세요.",             date: "2026.05.03" },
+  { id: "badge_12", label: "방구석 독서가",  condition: "독서 모임에 3회 이상 참여하세요.",                  date: "2026.05.01" },
   { id: "badge_13", label: "정주행의 달인",  condition: "TV·영화 게시판에 글을 10개 이상 작성하세요.",       date: undefined },
   { id: "badge_14", label: "산책 대장",      condition: "산책 모임에 5회 이상 참여하세요.",                  date: undefined },
   { id: "badge_15", label: "릴렉스 마스터",  condition: "힐링 모임에 3회 이상 참여하세요.",                  date: undefined },

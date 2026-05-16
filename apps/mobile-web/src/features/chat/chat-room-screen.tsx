@@ -34,12 +34,14 @@ type ReplyTarget = { nickname: string; content: string } | null;
 type Member = { id: string; nickname: string; isMe: boolean; isHost: boolean; isFriend: boolean };
 
 /**
- * 멤버/메시지 아바타 url — 본인(무지는 단무지) 은 홈/마이페이지와 동일한
- * ME_PERSONA.face 이미지를 쓰고, 그 외는 닉네임 시드 기반 아바타로 폴백한다.
+ * 멤버/메시지 아바타 url — 본인(현재 로그인 계정 닉네임) 은 홈/마이페이지와 동일한
+ * profile-store 의 얼굴을 쓰고, 그 외는 닉네임 시드 기반 아바타로 폴백한다.
+ * ME_PERSONA.name 은 데모용 고정값이라 테스트 계정에선 어긋난다.
  */
 function memberAvatarSrc(nickname: string): string {
-  if (nickname === ME_PERSONA.name) {
-    return getProfile().profileFace ?? ME_PERSONA.face;
+  const profile = getProfile();
+  if (nickname === profile.nickname) {
+    return profile.profileFace ?? ME_PERSONA.face;
   }
   return getAvatarUrl(nickname);
 }
@@ -47,7 +49,8 @@ function memberAvatarSrc(nickname: string): string {
 // 방 정보로 멤버 리스트 동적 생성
 function buildMembersFor(room: ChatRoom): Member[] {
   const friendNicks = new Set(getFriends().map((f) => f.nickname));
-  const me: Member = { id: "me", nickname: "무지는 단무지", isMe: true, isHost: false, isFriend: false };
+  // 본인 멤버의 닉네임은 현재 로그인 계정(profile-store)을 사용한다.
+  const me: Member = { id: "me", nickname: getProfile().nickname, isMe: true, isHost: false, isFriend: false };
   if (!room.isGroup) {
     return [
       me,

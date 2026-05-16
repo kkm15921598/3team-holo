@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
+import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { ME_PERSONA } from "../home/home-faces";
 import { CATEGORIES, clampPlacement, DEFAULT_PLACEMENT, furnitureSrc, type CategoryKey, type PlacedFurniture } from "./myroom-data";
@@ -28,6 +28,8 @@ export function MyroomScreen() {
   const owned = useOwnedSet();
   const points = usePoints();
   const profile = useProfile();
+  // 실제 로그인 계정 레벨 — ME.level 은 mock 고정값(1)이라 가구 해금/Lv 표시가 어긋남.
+  const { level } = useAccountStats();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState<CategoryKey>("all");
   /** 구매 확인 다이얼로그 대상 (null = 닫힘) */
@@ -48,7 +50,7 @@ export function MyroomScreen() {
     if (id !== null) setCatalogExpanded(false);
   };
   // 화면 진입 시점의 lastSeenLevel 을 캡쳐 → 이번 화면에서는 NEW 가 유지됨
-  const [lastSeen] = useState(() => getLastSeenLevel(ME.level));
+  const [lastSeen] = useState(() => getLastSeenLevel(level));
 
   const confirmPurchase = () => {
     if (!pendingPurchase) return;
@@ -68,7 +70,7 @@ export function MyroomScreen() {
 
   /** "네" — 변경사항 그대로 저장 (이미 store 에 영구 저장됨) */
   const confirmDone = () => {
-    setLastSeenLevel(ME.level); // NEW 뱃지 초기화
+    setLastSeenLevel(level); // NEW 뱃지 초기화
     setConfirmDoneOpen(false);
     navigate(-1);
   };
@@ -138,7 +140,7 @@ export function MyroomScreen() {
 
   /** 카탈로그 카드 클릭 → 마이룸에 배치하거나 이미 있으면 선택 */
   const handlePlaceFromCatalog = (item: CatalogItem) => {
-    const isLocked = item.lockedAt !== undefined && item.lockedAt > ME.level;
+    const isLocked = item.lockedAt !== undefined && item.lockedAt > level;
     const ownedKey = `${item.kind}:${item.variant}`;
     if (isLocked || !owned.has(ownedKey)) return;
 
@@ -192,7 +194,7 @@ export function MyroomScreen() {
         <div className="flex flex-1 flex-col">
           <div className="flex items-center gap-2">
             <span className="rounded-[4px] bg-holo-gradient-soft px-2 py-0.5 text-[11px] font-semibold text-white">
-              Lv.{ME.level}
+              Lv.{level}
             </span>
             <span className="text-[15px] font-semibold text-holo-ink">{profile.nickname}</span>
           </div>
@@ -258,7 +260,7 @@ export function MyroomScreen() {
         <div className="grid grid-cols-2 gap-x-3 gap-y-4">
         {filtered.map((it) => {
           const ownedKey = `${it.kind}:${it.variant}`;
-          const isLocked = it.lockedAt !== undefined && it.lockedAt > ME.level;
+          const isLocked = it.lockedAt !== undefined && it.lockedAt > level;
           const isItemOwned = owned.has(ownedKey);
           const canPlace = isItemOwned && !isLocked;
           return (
@@ -271,7 +273,7 @@ export function MyroomScreen() {
               }}
               className={`relative flex aspect-square flex-col overflow-hidden rounded-holo-input bg-holo-surface-2 p-3 ${canPlace ? "cursor-pointer transition-shadow hover:shadow-md" : ""}`}
             >
-              {isNewlyUnlocked(it.lockedAt, ME.level, lastSeen) && (
+              {isNewlyUnlocked(it.lockedAt, level, lastSeen) && (
                 <span className="absolute left-2 top-2 z-10 rounded-[10px] bg-holo-gradient-soft px-2 py-0.5 text-[10px] font-semibold text-white">
                   NEW
                 </span>
@@ -283,7 +285,7 @@ export function MyroomScreen() {
                   className="max-h-full max-w-full object-contain"
                 />
               </div>
-              {it.lockedAt !== undefined && it.lockedAt > ME.level && (
+              {it.lockedAt !== undefined && it.lockedAt > level && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-holo-input bg-black/40">
                   <LockIcon />
                 </div>
@@ -305,7 +307,7 @@ export function MyroomScreen() {
               )}
             </article>
             <span className="mt-2 text-center text-[13px] font-medium text-holo-ink">
-              {it.lockedAt !== undefined && it.lockedAt > ME.level
+              {it.lockedAt !== undefined && it.lockedAt > level
                 ? `Lv.${it.lockedAt} 달성 시 해금`
                 : it.label}
             </span>

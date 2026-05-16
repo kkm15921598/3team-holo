@@ -110,7 +110,13 @@ function CategoryIcon({ id }: { id: string }) {
     food: "🍴",
     help: "🆘",
   };
-  return <span className="text-[16px] text-holo-purple-mid">{map[id] ?? "•"}</span>;
+  // 이모지마다 폰트상 가로 폭이 달라서 아이콘↔텍스트 간격이 어긋남 (특히 🆘 가 가장 넓음).
+  // 고정 너비 컨테이너로 모든 행 간격을 통일.
+  return (
+    <span className="inline-flex w-[18px] shrink-0 justify-center text-[16px] leading-none text-holo-purple-mid">
+      {map[id] ?? "•"}
+    </span>
+  );
 }
 function PlusIcon() {
   return (

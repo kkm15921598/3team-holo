@@ -54,7 +54,7 @@ const HISTORY: LoginRecord[] = [
     device: "iPhone 15 Pro",
     os: "iOS 18.1",
     location: "성남시 분당구",
-    date: "2026.04.28 08:15",
+    date: "2026.05.01 08:15",
   },
 ];
 

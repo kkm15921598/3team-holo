@@ -57,8 +57,12 @@ export const postsStore = {
       listeners.delete(fn);
     };
   },
+  /**
+   * 새 글 추가. 추가 후 항상 최신순(timeAgo 분 단위 오름차순)으로 재정렬.
+   * 시드 계정에서 여러 글이 연속 prepend 돼도 timeAgo 기준으로 올바르게 노출됨.
+   */
   prepend(post: Post): void {
-    _posts = [post, ..._posts];
+    _posts = sortByRecency([post, ..._posts]);
     notify();
   },
   update(post: Post): void {
@@ -66,7 +70,8 @@ export const postsStore = {
     if (idx >= 0) {
       const next = [..._posts];
       next[idx] = post;
-      _posts = next;
+      // timeAgo 가 바뀌었을 수도 있으니 업데이트 후에도 재정렬
+      _posts = sortByRecency(next);
       notify();
     }
   },

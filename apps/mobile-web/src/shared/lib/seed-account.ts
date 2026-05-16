@@ -11,7 +11,7 @@
  * 다른 계정 로그인 시 같은 함수가 다시 호출되며 store 들을 덮어쓴다.
  * 일반(테스트가 아닌) 계정은 seedData 가 없어 아무 일도 일어나지 않는다.
  */
-import { BADGES, type Post } from "@/shared/mock/data";
+import { type Post } from "@/shared/mock/data";
 import type { TestAccount } from "@/shared/mock/test-accounts";
 import { setStats, resetStats } from "@/shared/stores/account-stats-store";
 import { setLikedIds } from "@/shared/stores/likes-store";
@@ -23,6 +23,13 @@ import { postsStore } from "@/features/board/posts-store";
 import { ensureMeetupRoom } from "@/features/board/meetup-utils";
 import { clearMeetupRooms } from "@/features/chat/rooms-store";
 import { resetXp, setTotalXp } from "@/shared/stores/xp-store";
+
+/** "YYYY.MM.DD" 형식의 joinedAt 을 Date 로 파싱. 형식이 어긋나면 오늘로 폴백. */
+function parseJoinedAt(s: string): Date {
+  const m = s?.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
+  if (!m) return new Date();
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
 
 export function seedAccount(account: TestAccount): void {
   const seed = account.seedData;
@@ -37,22 +44,26 @@ export function seedAccount(account: TestAccount): void {
     return;
   }
 
-  // 획득한 뱃지에 대해 날짜 시드 — mock 의 b.date 가 있으면 그것을 우선, 없으면
-  // 시드 시점 기준으로 인덱스에 따라 적당한 과거 날짜를 생성한다 (데모용).
+  // 획득한 뱃지에 대해 날짜 시드 — 가입일(joinedAt) ~ 오늘 사이로 균등하게 분포.
+  // mock BADGES.date 는 무시 (그건 기본 ME 사용자의 가상 날짜라 테스트 계정 가입 스토리와 안 맞음).
+  // index 0 = 가입 직후 획득, 마지막 index = 오늘 획득 으로 시간 순서가 자연스럽도록 한다.
   const acquiredBadgeDates: Record<string, string> = {};
+  const joinedAt = parseJoinedAt(account.joinedAt);
+  const today = new Date();
+  // 가입 시점이 오늘과 같거나 미래면 0 으로 클램프 → 모두 오늘 획득
+  const spanDays = Math.max(
+    0,
+    Math.floor((today.getTime() - joinedAt.getTime()) / 86400000),
+  );
+  const n = seed.acquiredBadgeIds.length;
   seed.acquiredBadgeIds.forEach((id, i) => {
-    const mockBadge = BADGES.find((b) => b.id === id);
-    if (mockBadge?.date) {
-      acquiredBadgeDates[id] = mockBadge.date;
-    } else {
-      const daysAgo = (seed.acquiredBadgeIds.length - i) * 30 + 5;
-      const d = new Date();
-      d.setDate(d.getDate() - daysAgo);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      acquiredBadgeDates[id] = `${y}.${m}.${day}`;
-    }
+    const offset = n <= 1 ? spanDays : Math.round((i * spanDays) / (n - 1));
+    const d = new Date(joinedAt);
+    d.setDate(d.getDate() + offset);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    acquiredBadgeDates[id] = `${y}.${m}.${day}`;
   });
 
   // 통계 / 포인트

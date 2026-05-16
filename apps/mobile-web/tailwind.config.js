@@ -69,10 +69,34 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.85" },
         },
+        // 로그인 로고용: 위아래 6px 둥실 float (드롭섀도우 없이 깔끔하게)
+        "holo-logo": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
+        // 로그인 진입 시 한 번 톡 떠오르는 모션 (페이지 로드 직후)
+        "holo-logo-in": {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(20px) scale(0.85)",
+          },
+          "60%": {
+            opacity: "1",
+            transform: "translateY(-4px) scale(1.05)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0) scale(1)",
+          },
+        },
       },
       animation: {
         // 기본 animate-pulse(1↔0.5)보다 부드러운 펄스 — 1↔0.85, 3초 주기
         "holo-pulse": "holo-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        // 로그인 로고용 — 둥실 float, 4초 주기, ease-in-out
+        "holo-logo": "holo-logo 4s ease-in-out infinite",
+        // 로그인 진입 모션 — 0.8초 한 번
+        "holo-logo-in": "holo-logo-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both",
       },
     },
   },

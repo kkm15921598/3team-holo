@@ -6,6 +6,7 @@ import {
   useReceivedRequests,
   useSentRequests,
 } from "./friends-store";
+import { useProfile } from "@/shared/hooks/use-profile";
 
 export function FriendsAddScreen() {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ export function FriendsAddScreen() {
   const [toast, setToast] = useState<string | null>(null);
   const received = useReceivedRequests();
   const sent = useSentRequests();
+  // 표시되는 내 닉네임은 현재 로그인 계정의 프로필을 따른다 — ME 는 데모용 고정값.
+  const profile = useProfile();
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -87,7 +90,7 @@ export function FriendsAddScreen() {
       <div className="flex flex-1 flex-col items-center justify-center px-6">
         {tab === "qr" ? (
           <div className="flex w-full max-w-[260px] flex-col items-center rounded-holo-card bg-white p-5">
-            <p className="self-start text-[16px] font-semibold text-holo-ink">{ME.nickname}</p>
+            <p className="self-start text-[16px] font-semibold text-holo-ink">{profile.nickname}</p>
             <p className="self-start text-[14px] text-holo-ink-3">ID : {ME.friendCode}</p>
             <div className="mt-4 flex h-[200px] w-[200px] items-center justify-center rounded-holo-card bg-holo-ink-4">
               <QrPlaceholder />

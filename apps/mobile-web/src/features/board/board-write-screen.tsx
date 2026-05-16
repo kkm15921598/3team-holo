@@ -82,14 +82,14 @@ export function BoardWriteScreen() {
     incomingState?.meetupType ?? null,
   );
   const [date, setDate] = useState<string>(
-    incomingState?.eventDate ?? "2026-04-27",
+    incomingState?.eventDate ?? "2026-05-18",
   );
   const [endDate, setEndDate] = useState<string>(
-    incomingState?.eventDate ?? "2026-04-27",
+    incomingState?.eventDate ?? "2026-05-18",
   );
   const [rangeMode, setRangeMode] = useState<"start" | "end">("start");
   const [calMonth, setCalMonth] = useState<Date>(
-    () => parseYMD(incomingState?.eventDate ?? "2026-04-27") ?? new Date(),
+    () => parseYMD(incomingState?.eventDate ?? "2026-05-18") ?? new Date(),
   );
   const [peopleCount, setPeopleCount] = useState<number | null>(
     incomingState?.peopleCount ?? null,

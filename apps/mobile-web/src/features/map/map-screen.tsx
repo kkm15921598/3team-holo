@@ -10,19 +10,78 @@ import {
   type GeoPosition,
 } from "@/shared/hooks/use-geolocation";
 
-/** 지도에서 노출되는 게시글의 최대 반경 — 정책 텍스트와 일치시킨다. */
-const NEARBY_RADIUS_M = 1000;
+/** 미리보기에서 보이는 최대 반경 — 안내 문구와 일치 */
+const PREVIEW_RADIUS_M = 1000;
+/** 확장 모달(모임 지도)에서 토글 가능한 반경 옵션. 기본값은 5km. */
+const MODAL_RADIUS_OPTIONS = [5000, 10000] as const;
+type ModalRadius = (typeof MODAL_RADIUS_OPTIONS)[number];
+const RADIUS_LABEL: Record<ModalRadius, string> = {
+  5000: "5km",
+  10000: "10km",
+};
 
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
 
-function filterPosts(filter: Filter, userPos: GeoPosition | null): Post[] {
+// ─── 모달 상태 영속화 ───────────────────────────────────────
+// 게시글 상세로 이동했다 뒤로가기로 돌아왔을 때 모달 / 반경 / 지도 view 가
+// 그대로 복원되도록 sessionStorage 에 저장. 탭 닫으면 사라짐 → 새 세션엔 초기화.
+type ModalMapState = {
+  expanded: boolean;
+  radius: ModalRadius;
+  view?: { lat: number; lng: number; zoom: number };
+};
+
+const MODAL_STORAGE_KEY = "holo:map:modal";
+
+function loadModalState(): ModalMapState {
+  if (typeof window === "undefined") {
+    return { expanded: false, radius: 5000 };
+  }
+  try {
+    const raw = window.sessionStorage.getItem(MODAL_STORAGE_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && typeof p === "object" && MODAL_RADIUS_OPTIONS.includes(p.radius)) {
+        return {
+          expanded: !!p.expanded,
+          radius: p.radius as ModalRadius,
+          view:
+            p.view &&
+            typeof p.view.lat === "number" &&
+            typeof p.view.lng === "number" &&
+            typeof p.view.zoom === "number"
+              ? p.view
+              : undefined,
+        };
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { expanded: false, radius: 5000 };
+}
+
+function persistModalState(s: ModalMapState) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(MODAL_STORAGE_KEY, JSON.stringify(s));
+  } catch {
+    // ignore (quota / private mode)
+  }
+}
+
+function filterPosts(
+  filter: Filter,
+  userPos: GeoPosition | null,
+  radiusM: number,
+): Post[] {
   let list = POSTS.filter((p) => !!p.location);
   // GPS 있을 때만 거리 필터링 — 아직 fix 가 없으면 전체 표시
   if (userPos) {
     list = list.filter((p) => {
       if (!p.location) return false;
-      return distanceMeters(userPos, p.location) <= NEARBY_RADIUS_M;
+      return distanceMeters(userPos, p.location) <= radiusM;
     });
   }
   // 모임 유형 필터: 지금바로=단기성, 계속 함께=장기성
@@ -38,13 +97,47 @@ function filterPosts(filter: Filter, userPos: GeoPosition | null): Post[] {
 export function MapScreen() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>("전체");
-  const [expanded, setExpanded] = useState(false);
+  // 모달 상태는 sessionStorage 에서 한 번 로드. 같은 mount 동안에는
+  // 이 초기값을 기준으로 view 가 변해도 MapView 가 리마운트되지 않게 한다.
+  const initialModalState = useMemo(loadModalState, []);
+  const [expanded, setExpanded] = useState(initialModalState.expanded);
+  const [modalRadius, setModalRadius] = useState<ModalRadius>(
+    initialModalState.radius,
+  );
+  // view 는 ref 로만 관리 — pan/zoom 마다 storage 동기화하되 re-render 없음.
+  // (MapView 의 initialCenter / initialZoom 은 mount 시점의 ref 값을 읽으므로
+  //  반경 토글 등으로 부모가 re-render 되어도 지도 view 는 안 흔들림.)
+  const viewRef = useRef(initialModalState.view);
+  const handleModalViewChange = (view: {
+    lat: number;
+    lng: number;
+    zoom: number;
+  }) => {
+    viewRef.current = view;
+    persistModalState({ expanded, radius: modalRadius, view });
+  };
+  // expanded / radius 가 바뀔 때마다 storage 갱신 (view 도 함께 기록)
+  useEffect(() => {
+    persistModalState({
+      expanded,
+      radius: modalRadius,
+      view: viewRef.current,
+    });
+  }, [expanded, modalRadius]);
+
   const userPos = useGeolocation();
 
-  const visiblePosts = useMemo(
-    () => filterPosts(filter, userPos),
+  // 미리보기/카드 영역은 1km 고정, 확장 모달은 사용자가 선택한 반경(5km/10km).
+  const previewPosts = useMemo(
+    () => filterPosts(filter, userPos, PREVIEW_RADIUS_M),
     [filter, userPos],
   );
+  const modalPosts = useMemo(
+    () => filterPosts(filter, userPos, modalRadius),
+    [filter, userPos, modalRadius],
+  );
+  // 이후 코드에서 visiblePosts 라는 이름은 카드/필터 안내 등에서 그대로 사용됨.
+  const visiblePosts = previewPosts;
 
   // ESC로 모달 닫기
   useEffect(() => {
@@ -65,8 +158,9 @@ export function MapScreen() {
   }
 
   function handleMarkerClick(id: string) {
-    setExpanded(false); // 모달 닫고
-    goToPost(id);       // 게시물로 이동
+    // 모달은 닫지 않음 — sessionStorage 에 expanded:true 가 남아 있어야
+    // 뒤로가기로 돌아왔을 때 동일 위치에서 모달이 자동 복원된다.
+    goToPost(id);
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -140,11 +234,11 @@ export function MapScreen() {
       </div>
 
       <p className="mt-2 px-4 text-center text-[12px] font-medium text-holo-ink-4">
-        ※ 정책상 반경 1km 거리 내 위치만 표시됩니다
+        ※ 내 주변 1km 안의 모임만 보여드려요
       </p>
 
       {/* 필터 */}
-      <section className="mt-5 px-4">
+      <section className="mt-3 px-4">
         <div className="flex h-[50px] w-full items-center rounded-holo-pill bg-[#F1ECF9] p-[5px]">
           {FILTERS.map((f) => {
             const on = filter === f;
@@ -290,13 +384,54 @@ export function MapScreen() {
             <span className="text-[15px] font-bold text-holo-ink">모임 지도</span>
             <span className="h-8 w-8" />
           </header>
-          <div className="min-h-0 flex-1 p-4">
+
+          {/* 반경 선택 — 5km / 10km 세그먼트 토글 */}
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3">
+            <span className="text-[12px] font-medium text-holo-ink-3">
+              내 주변 {RADIUS_LABEL[modalRadius]} 안의 모임
+              <span className="ml-1 text-holo-purple-mid">{modalPosts.length}</span>
+              <span className="text-holo-ink-4">개</span>
+            </span>
+            <div className="flex h-[32px] items-center rounded-full border border-holo-line-2 bg-white p-[3px]">
+              {MODAL_RADIUS_OPTIONS.map((r) => {
+                const on = modalRadius === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setModalRadius(r)}
+                    className={
+                      "h-full rounded-full px-3 text-[12px] transition " +
+                      (on
+                        ? "bg-holo-purple-mid font-bold text-white shadow-[0_1px_4px_rgba(116,72,221,0.35)]"
+                        : "font-medium text-holo-ink-3")
+                    }
+                  >
+                    {RADIUS_LABEL[r]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 p-4 pt-3">
             <div className="relative h-full w-full overflow-hidden rounded-holo-tile shadow-[0_4px_20px_rgba(84,43,180,0.10)]">
               <MapView
                 preview={false}
-                visiblePosts={visiblePosts}
+                visiblePosts={modalPosts}
                 onMarkerClick={handleMarkerClick}
-                initialCenter={userPos ?? undefined}
+                // 직전 view 가 저장돼 있으면 그 좌표/줌으로 복원, 없으면 GPS 위치.
+                // viewRef 는 mount 시점에 한 번만 읽혀 MapView 내부 ref 로 캡쳐되므로
+                // 이후 ref 가 갱신돼도 지도 view 가 끌려다니지 않음.
+                initialCenter={
+                  viewRef.current
+                    ? { lat: viewRef.current.lat, lng: viewRef.current.lng }
+                    : (userPos ?? undefined)
+                }
+                initialZoom={viewRef.current?.zoom}
+                onViewChange={handleModalViewChange}
+                // 저장된 view 가 있을 땐 GPS fix 자동 센터링 차단.
+                centerOnFix={!viewRef.current}
               />
             </div>
           </div>

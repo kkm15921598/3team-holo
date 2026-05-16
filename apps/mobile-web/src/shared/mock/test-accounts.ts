@@ -54,6 +54,8 @@ export type TestAccount = {
   title: string;
   /** 장착 뱃지 id — badge_01 ~ badge_23 */
   equippedBadgeId: string;
+  /** 프로필 얼굴 URL — 계정별로 고정 얼굴을 지정. 없으면 성별 기본 얼굴 사용. */
+  profileFace?: string;
   /** 마이룸 가구 배치 — 계정별 컨셉으로 미리 꾸며둔 룸 */
   myroomItems: PlacedFurniture[];
   /** 마이룸 상태 메시지 (말풍선) */
@@ -69,22 +71,36 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     name: "김민준",
     gender: "M",
     id: "test1234",
-    joinedAt: "2024.03.15",
-    nickname: "용감한 펭귄",
-    title: "#홈트_동기부여",
-    equippedBadgeId: "badge_19", // 오운완 실천가
-    // 네이비/모던 톤 — 책상 + 의자만. 좌표는 floorTopY 기준으로 산정.
+    joinedAt: "2026.05.15",
+    nickname: "다정한 바리스타",
+    title: "#카페_지도",
+    equippedBadgeId: "badge_06", // 홈카페 사장님
+    // 성인 남자 풀(man/man) 중 [1] — 웨이브 갈색머리 청년
+    profileFace: encodeURI(
+      "/illustrations/icons_face/man/man/Gemini_Generated_Image_2yfg492yfg492yfg 5.png",
+    ),
+    // 홈카페 톤 — 원목 유리 책장 + 노란 1인 소파 + 미니 책상 + 원목 스탠드 조명 + 포스터 액자
+    // 배열 순서가 곧 z-order 이므로 조명을 마지막에 두어 책상 위로 렌더.
     myroomItems: [
-      { id: "desk-m1", kind: "desk", variant: "08", flipped: false, x: 96, y: 150, width: 148 },
-      { id: "chair-m1", kind: "chair", variant: "08", flipped: true, x: 246, y: 176, width: 58 },
+      // 뒷벽 포스터 액자 세트 (Lv.5 해금)
+      { id: "wall-m1", kind: "wall", variant: "03", flipped: false, x: 110, y: 30, width: 75 },
+      // 좌측 원목 유리 책장 — 바닥에 닿도록 y 내림
+      { id: "bookshelf-m1", kind: "bookshelf", variant: "02", flipped: false, x: 60, y: 140, width: 70 },
+      // 중앙 좌측 노란 1인 소파
+      { id: "chair-m1", kind: "chair", variant: "02", flipped: false, x: 140, y: 200, width: 58 },
+      // 우측 원목 미니 책상 (Lv.7 해금)
+      { id: "desk-m1", kind: "desk", variant: "04", flipped: true, x: 240, y: 190, width: 80 },
+      // 책상 위 원목 스탠드 조명 — 책상 상판에 얹히도록 y 를 170 으로 조정
+      { id: "lighting-m1", kind: "lighting", variant: "01", flipped: false, x: 265, y: 170, width: 22 },
     ],
-    statusMessage: "오늘도 1세트 가즈아 💪",
+    statusMessage: "내가 좋아하는 카페는 우리집 ☕",
     seedData: {
       level: 7,
       // 5개 — 운동·홈오피스 컨셉 + 장착 중인 badge_19 포함
       acquiredBadgeIds: ["badge_06", "badge_08", "badge_14", "badge_15", "badge_19"],
-      // 8개 — 장착 중 "#홈트_동기부여" 포함
+      // 9개 — 장착 중 "#카페_지도" 포함
       acquiredTitles: [
+        "#카페_지도",
         "#홈트_동기부여",
         "#슬기로운_혼삶",
         "#공구의_주인",
@@ -123,8 +139,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "주 3회 같이 운동 인증할 분 찾아요!",
           distance: "0m",
           duration: "60분",
-          likes: 5,
-          comments: 2,
+          likes: 2,
+          comments: 0,
           timeAgo: "3시간 전",
           authorLevel: 7,
           meetupType: "장기성 모임",
@@ -139,8 +155,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "탄천에서 저녁 8시 출발!",
           distance: "300m",
           duration: "60분",
-          likes: 8,
-          comments: 3,
+          likes: 9,
+          comments: 0,
           timeAgo: "1일 전",
           authorLevel: 7,
           meetupType: "단기성 모임",
@@ -155,8 +171,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "입에 잘 맞는 단백질 셰이크 공유해요",
           distance: "0m",
           duration: "0분",
-          likes: 12,
-          comments: 4,
+          likes: 0,
+          comments: 0,
           timeAgo: "2일 전",
           authorLevel: 7,
         },
@@ -169,8 +185,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     name: "김서연",
     gender: "F",
     id: "test1234",
-    joinedAt: "2024.03.15",
-    nickname: "사랑스러운 벚꽃",
+    joinedAt: "2026.05.08",
+    nickname: "무지는 단무지",
     title: "#맛집_네비게이터",
     equippedBadgeId: "badge_21", // 동네 미식가
     // 라일락·핑크 톤 — 책상 + 의자만. 좌표는 floorTopY 기준으로 산정.
@@ -268,8 +284,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "주말 브런치 같이 가실 분~",
           distance: "200m",
           duration: "90분",
-          likes: 14,
-          comments: 5,
+          likes: 16,
+          comments: 18,
           timeAgo: "2시간 전",
           authorLevel: 12,
           meetupType: "단기성 모임",
@@ -284,8 +300,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "분당에서 진짜 맛있는 디저트집 공유해요",
           distance: "0m",
           duration: "0분",
-          likes: 22,
-          comments: 6,
+          likes: 18,
+          comments: 0,
           timeAgo: "4시간 전",
           authorLevel: 12,
         },
@@ -297,8 +313,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "정자동 신상 카페 같이 가실 분",
           distance: "350m",
           duration: "120분",
-          likes: 11,
-          comments: 4,
+          likes: 2,
+          comments: 0,
           timeAgo: "6시간 전",
           authorLevel: 12,
           meetupType: "단기성 모임",
@@ -313,8 +329,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "에스프레소 머신 공구하실 분",
           distance: "400m",
           duration: "30분",
-          likes: 9,
-          comments: 3,
+          likes: 19,
+          comments: 0,
           timeAgo: "1일 전",
           authorLevel: 12,
           meetupType: "단기성 모임",
@@ -328,8 +344,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "분당 베이커리 3곳 투어 같이 해요",
           distance: "600m",
           duration: "180분",
-          likes: 16,
-          comments: 5,
+          likes: 0,
+          comments: 0,
           timeAgo: "2일 전",
           authorLevel: 12,
           meetupType: "단기성 모임",
@@ -343,8 +359,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "정자동 라떼 맛집 공유해요",
           distance: "0m",
           duration: "0분",
-          likes: 18,
-          comments: 4,
+          likes: 3,
+          comments: 1,
           timeAgo: "3일 전",
           authorLevel: 12,
         },
@@ -356,8 +372,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
           description: "케이크 클래스 같이 들으실 분",
           distance: "500m",
           duration: "150분",
-          likes: 13,
-          comments: 6,
+          likes: 5,
+          comments: 2,
           timeAgo: "5일 전",
           authorLevel: 12,
           meetupType: "단기성 모임",

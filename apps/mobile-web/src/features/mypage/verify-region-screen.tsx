@@ -1,38 +1,74 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ME } from "@/shared/mock/data";
-import { setRegionVerified } from "@/shared/stores/verification-store";
+import {
+  setRegionVerified,
+  setVerifiedRegion,
+} from "@/shared/stores/verification-store";
+import { findNearestDongs, type KoreanDong } from "@/shared/data/korean-dongs";
+import { addPoints } from "@/features/myroom/myroom-store";
 
-type Phase = "permission" | "detecting" | "confirm" | "success";
+type Phase = "permission" | "detecting" | "confirm" | "success" | "error";
 
-const NEARBY_AREAS = [
-  { id: "bundang-jeongja", label: "성남시 분당구 정자동", primary: true },
-  { id: "bundang-sunae", label: "성남시 분당구 수내동" },
-  { id: "bundang-seohyeon", label: "성남시 분당구 서현동" },
-];
+type DetectedDong = KoreanDong & { distanceM: number };
 
 export function VerifyRegionScreen() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("permission");
-  const [picked, setPicked] = useState<string>("bundang-jeongja");
+  const [picked, setPicked] = useState<string>("");
+  const [nearest, setNearest] = useState<DetectedDong[]>([]);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
-  // detecting → confirm 자동 전환
-  useEffect(() => {
-    if (phase === "detecting") {
-      const t = setTimeout(() => setPhase("confirm"), 1600);
-      return () => clearTimeout(t);
+  // 실제 GPS 좌표 요청 → 가장 가까운 동 3곳 계산
+  function detectLocation() {
+    setPhase("detecting");
+    setErrorMessage("");
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setErrorMessage("이 기기에서는 위치 서비스를 사용할 수 없어요.");
+      setPhase("error");
+      return;
     }
-  }, [phase]);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const dongs = findNearestDongs(
+          { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          3,
+        );
+        setNearest(dongs);
+        setPicked(dongs[0]?.label ?? "");
+        setAccuracy(pos.coords.accuracy);
+        setPhase("confirm");
+      },
+      (err) => {
+        // 권한 거부 / 위치 정보 사용 불가 / 타임아웃 등
+        const messages: Record<number, string> = {
+          1: "위치 권한이 거부됐어요. 브라우저 설정에서 위치 권한을 허용해 주세요.",
+          2: "위치를 확인할 수 없어요. GPS 신호를 받을 수 있는 곳에서 다시 시도해 주세요.",
+          3: "위치 확인이 시간을 초과했어요. 잠시 후 다시 시도해 주세요.",
+        };
+        setErrorMessage(messages[err.code] ?? "위치 정보를 가져오지 못했어요.");
+        setPhase("error");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+    );
+  }
 
-  const grant = () => setPhase("detecting");
+  const grant = () => detectLocation();
   const confirm = () => {
+    if (!picked) return;
     setRegionVerified(true);
+    setVerifiedRegion(picked);
+    addPoints(10, { title: "동네 인증" });
     setPhase("success");
   };
   const finish = () => navigate(-1);
 
-  const pickedLabel =
-    NEARBY_AREAS.find((a) => a.id === picked)?.label ?? NEARBY_AREAS[0].label;
+  const pickedLabel = picked || nearest[0]?.label || "위치 미확인";
+  const accuracyLabel =
+    accuracy !== null && Number.isFinite(accuracy)
+      ? `GPS · 오차범위 약 ${Math.round(accuracy)}m`
+      : "GPS · 오차범위 측정 중";
 
   return (
     <main className="flex flex-1 flex-col">
@@ -104,6 +140,36 @@ export function VerifyRegionScreen() {
         </section>
       )}
 
+      {phase === "error" && (
+        <section className="flex flex-1 flex-col items-center px-6 pt-10 text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-holo-line-3 text-[40px]">
+            ⚠️
+          </div>
+          <h1 className="mt-6 text-[18px] font-bold text-holo-ink">
+            위치를 확인하지 못했어요
+          </h1>
+          <p className="mt-2 px-2 text-[13px] leading-6 text-holo-ink-3">
+            {errorMessage}
+          </p>
+          <div className="mt-auto w-full pb-4 pt-6">
+            <button
+              type="button"
+              onClick={detectLocation}
+              className="h-[60px] w-full rounded-holo-pill bg-holo-ink text-[16px] font-semibold text-white active:scale-[0.99]"
+            >
+              다시 시도
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="mt-2 h-10 w-full text-[13px] text-holo-ink-3"
+            >
+              나중에 할게요
+            </button>
+          </div>
+        </section>
+      )}
+
       {phase === "confirm" && (
         <section className="flex flex-1 flex-col px-4 pt-2">
           <div className="mt-2 rounded-holo-card bg-holo-hero p-6 text-center">
@@ -111,9 +177,7 @@ export function VerifyRegionScreen() {
             <p className="mt-1 flex items-center justify-center gap-1 text-[20px] font-bold text-holo-ink">
               <PinIcon size={20} /> {pickedLabel}
             </p>
-            <p className="mt-1 text-[12px] text-holo-ink-3">
-              GPS · 오차범위 약 30m
-            </p>
+            <p className="mt-1 text-[12px] text-holo-ink-3">{accuracyLabel}</p>
           </div>
 
           <p className="mt-5 text-[13px] font-semibold text-holo-ink">
@@ -124,22 +188,29 @@ export function VerifyRegionScreen() {
           </p>
 
           <ul className="mt-3 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-            {NEARBY_AREAS.map((a) => {
-              const active = picked === a.id;
+            {nearest.map((a, i) => {
+              const active = picked === a.label;
               return (
-                <li key={a.id}>
+                <li key={a.label}>
                   <button
                     type="button"
-                    onClick={() => setPicked(a.id)}
+                    onClick={() => setPicked(a.label)}
                     className="flex w-full items-center justify-between px-4 py-3 text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[14px] text-holo-ink">{a.label}</span>
-                      {a.primary && (
+                      <span className="text-[14px] text-holo-ink">
+                        {a.label}
+                      </span>
+                      {i === 0 && (
                         <span className="rounded-full bg-holo-lilac-card px-2 py-0.5 text-[11px] font-semibold text-holo-purple-mid">
                           가장 가까움
                         </span>
                       )}
+                      <span className="text-[11px] text-holo-ink-3">
+                        {a.distanceM < 1000
+                          ? `${Math.round(a.distanceM)}m`
+                          : `${(a.distanceM / 1000).toFixed(1)}km`}
+                      </span>
                     </div>
                     <Radio selected={active} />
                   </button>
@@ -150,7 +221,7 @@ export function VerifyRegionScreen() {
 
           <button
             type="button"
-            onClick={() => setPhase("detecting")}
+            onClick={detectLocation}
             className="mt-3 self-end text-[12px] text-holo-purple-mid underline"
           >
             다시 감지하기
@@ -165,7 +236,8 @@ export function VerifyRegionScreen() {
             <button
               type="button"
               onClick={confirm}
-              className="h-[60px] w-full rounded-holo-pill bg-holo-ink text-[16px] font-semibold text-white active:scale-[0.99]"
+              disabled={!picked}
+              className="h-[60px] w-full rounded-holo-pill bg-holo-ink text-[16px] font-semibold text-white active:scale-[0.99] disabled:opacity-50"
             >
               이 동네로 인증하기
             </button>
@@ -269,3 +341,4 @@ function BackIcon() {
     </svg>
   );
 }
+

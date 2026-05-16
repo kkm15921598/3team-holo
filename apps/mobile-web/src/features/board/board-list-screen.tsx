@@ -3,40 +3,50 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BOARD_CATEGORIES,
   CATEGORY_SHORT,
-  COMMENTS,
-  ME,
-  POST_COMMENTS,
   type Post,
 } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
+import { useProfile } from "@/shared/hooks/use-profile";
 import { getAuthorGender } from "@/shared/lib/author-gender";
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
+import {
+  getTotalViews,
+  useViewCounts,
+} from "@/shared/stores/view-count-store";
+import { useGeolocation, distanceMeters } from "@/shared/hooks/use-geolocation";
 import { calcJoined } from "./meetup-utils";
 
-// 내 게시글이면 profile-store 의 얼굴, 아니면 닉네임 해시 face
+/**
+ * 게시판에 노출되는 글의 거리 필터 반경 (위치가 있는 글에만 적용).
+ * 위치가 없는 글(자유/추천 등)은 무관하게 항상 노출.
+ */
+const BOARD_NEARBY_RADIUS_M = 10000;
+
+// 내 게시글이면 profile-store 의 얼굴, 아니면 닉네임 해시 face.
+// "내 게시글" 여부는 현재 로그인한 계정의 닉네임(profile-store)과 비교한다 —
+// ME.nickname 은 데모용 고정값이라 테스트 계정으로 로그인하면 어긋난다.
 function avatarFor(nickname: string): string {
-  if (nickname === ME.nickname) {
-    return getProfile().profileFace ?? ME_PERSONA.face;
+  const profile = getProfile();
+  if (nickname === profile.nickname) {
+    return profile.profileFace ?? ME_PERSONA.face;
   }
   return getAvatarUrl(nickname);
 }
 
 /**
- * 게시글 상세에서 실제 렌더링되는 댓글 수 — board-detail 의 totalComments 와 일치시킨다.
- * mock(POST_COMMENTS / COMMENTS) + 사용자가 작성한 댓글/대댓글 합산.
+ * 게시글 카드에 표시되는 댓글 수.
+ * post.comments(롱테일 분포 mock 값) + 사용자가 작성한 댓글 합산.
+ * COMMENTS 폴백(모든 글에 더미 댓글 1개 깔던 옛 로직)은 제거 — 진짜 0 댓글 글도 0 으로 표시.
  */
 function buildCommentCounter(
   userCounts: Map<string, number>,
-): (postId: string) => number {
-  return (postId) => {
-    const mockCount = (POST_COMMENTS[postId] ?? COMMENTS).length;
-    return mockCount + (userCounts.get(postId) ?? 0);
-  };
+): (post: Post) => number {
+  return (post) => (post.comments ?? 0) + (userCounts.get(post.id) ?? 0);
 }
 
 const DRAG_THRESHOLD = 4;
@@ -65,7 +75,7 @@ function parseTimeAgoMinutes(timeAgo: string): number {
   }
 }
 
-const TOP_LIMIT = 10;
+const TOP_LIMIT = 30;
 const WEEK_MINUTES = 60 * 24 * 7;
 
 export function BoardListScreen() {
@@ -85,6 +95,12 @@ export function BoardListScreen() {
   const likedSet = useLikedSet();
   const joinedSet = useJoinedSet();
   const userComments = useUserComments();
+  // 프로필(닉네임/얼굴) 변경 시 리스트의 내 글 아바타가 즉시 갱신되도록 구독
+  useProfile();
+  // 조회수 증분이 바뀌면 리스트도 갱신되도록 구독
+  useViewCounts();
+  // 거리 필터용 사용자 GPS — fix 가 없으면 거리 필터를 건너뛰고 전체 노출
+  const userPos = useGeolocation();
   const getCommentCount = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of userComments) {
@@ -157,15 +173,22 @@ export function BoardListScreen() {
 
   const visible = useMemo(() => {
     // ── 실시간 TOP / 주간 TOP 모드 ─────────────────────────────
-    // 카테고리 탭/검색 키워드는 무시하고 전체 글에서 정렬·상위 N개만 노출
+    // 카테고리 탭/검색 키워드는 무시하고 전체 글에서 정렬·상위 N개만 노출.
+    // 두 모드가 시각적으로 확실히 다른 리스트가 되도록 강조 신호를 분리:
+    //  - 실시간: "방금 핫한 글" → 좋아요(즉각 반응) 가중치 ↑ + 강한 시간 감쇠
+    //  - 주간:   "이 주의 베스트" → 댓글(토론 깊이) 가중치 ↑ + 시간 감쇠 없음
     if (topMode === "live") {
-      // 최근성 가중치 + 좋아요/댓글 합산으로 "지금 뜨거운" 글 산정
+      // 실시간 TOP — HN 의 1.8 보다 더 가파른 ^2 감쇠.
+      //   score = engagement / (hours + 1)^2
+      //   engagement = 좋아요×4 + 댓글×3 + 조회수×0.1
+      // - "방금~1시간 전" 글이 압도적으로 유리. 24h 지난 글은 사실상 노출 안 됨.
+      // - 좋아요 가중치 ↑ : 즉각 반응 강조 (vs 주간은 댓글 강조)
       return [...posts]
         .map((p) => {
-          const minutes = parseTimeAgoMinutes(p.timeAgo);
-          // 최근일수록 큰 가중치 (24시간 이상은 1)
-          const recency = minutes <= 60 * 24 ? 60 * 24 - minutes : 1;
-          const score = p.likes * 4 + p.comments * 3 + recency * 0.05;
+          const hours = parseTimeAgoMinutes(p.timeAgo) / 60;
+          const views = getTotalViews(p);
+          const engagement = p.likes * 4 + p.comments * 3 + views * 0.1;
+          const score = engagement / Math.pow(hours + 1, 2);
           return { p, score };
         })
         .sort((a, b) => b.score - a.score)
@@ -173,10 +196,19 @@ export function BoardListScreen() {
         .map((x) => x.p);
     }
     if (topMode === "weekly") {
-      // 최근 7일 이내 글 중 좋아요+댓글이 많은 순서
+      // 주간 TOP — 7일 누적 + 댓글 가중치 강조 + 감쇠 없음.
+      //   score = 좋아요×2 + 댓글×8 + 조회수×0.15
+      // - 댓글이 압도적으로 무거움 → 토론·댓글 활발한 글 위주.
+      // - 7일 안에서 신규/오래된 차이 없이 누적값만 비교.
+      // - 동점 시 댓글 많은 글 우선 (주간은 토론 깊이가 본질).
       return [...posts]
         .filter((p) => parseTimeAgoMinutes(p.timeAgo) <= WEEK_MINUTES)
-        .sort((a, b) => b.likes + b.comments - (a.likes + a.comments))
+        .sort((a, b) => {
+          const scoreA = a.likes * 2 + a.comments * 8 + getTotalViews(a) * 0.15;
+          const scoreB = b.likes * 2 + b.comments * 8 + getTotalViews(b) * 0.15;
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return b.comments - a.comments;
+        })
         .slice(0, TOP_LIMIT);
     }
 
@@ -195,8 +227,18 @@ export function BoardListScreen() {
     if (genderParam === "M" || genderParam === "F") {
       list = list.filter((p) => getAuthorGender(p.authorNickname) === genderParam);
     }
+    // 거리 필터 — 위치 있는 글은 10km 이내만, 위치 없는 글(자유/추천)은 전부 노출.
+    // GPS fix 가 아직 없으면 (userPos === null) 필터 건너뛰고 전체 노출.
+    if (userPos) {
+      list = list.filter((p) => {
+        if (!p.location) return true; // 자유/추천 등 위치 없는 글은 항상 통과
+        return (
+          distanceMeters(userPos, p.location) <= BOARD_NEARBY_RADIUS_M
+        );
+      });
+    }
     return list;
-  }, [posts, activeCat, keyword, topMode, genderParam]);
+  }, [posts, activeCat, keyword, topMode, genderParam, userPos]);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -228,7 +270,7 @@ export function BoardListScreen() {
             >
               {topMode === "live"
                 ? "지금 이 순간 가장 뜨거운 글"
-                : "이번 주 가장 많이 본 글"}
+                : "이번 주 가장 인기있던 글"}
             </span>
           </div>
           <button
@@ -305,7 +347,7 @@ export function BoardListScreen() {
               post={p}
               rank={isTopView ? i + 1 : undefined}
               liked={likedSet.has(p.id)}
-              commentCount={getCommentCount(p.id)}
+              commentCount={getCommentCount(p)}
               joined={joinedSet.has(p.id)}
             />
           ))}
@@ -392,6 +434,9 @@ function PostCard({
             </span>
             <span className="flex items-center gap-1">
               <CommentIcon /> {commentCount}
+            </span>
+            <span aria-label={`조회 ${getTotalViews(post)}`}>
+              조회 {getTotalViews(post).toLocaleString()}
             </span>
             <ChevronRight />
           </div>

@@ -94,7 +94,8 @@ export function LoginScreen() {
       const saved = getChoices(account.phone);
       // 테스트 계정이므로 로그인할 때마다 프로필/마이룸을 계정 mock 값으로 초기화한다.
       // 단, 사용자가 직접 바꾼 장착 뱃지/칭호는 saved 에 들어 있으면 그쪽을 우선 복원.
-      setProfileFace(defaultFaceForGender(account.gender));
+      // 계정에 profileFace 가 지정돼 있으면 그것을 사용, 없으면 성별 기본 얼굴
+      setProfileFace(account.profileFace ?? defaultFaceForGender(account.gender));
       setNickname(account.nickname);
       setTitle(saved.title ?? account.title);
       setEquippedBadgeId(saved.equippedBadgeId ?? account.equippedBadgeId);
@@ -112,12 +113,15 @@ export function LoginScreen() {
   return (
     <main className="flex flex-1 flex-col px-4 pb-8 pt-20">
       <div className="mb-12 flex flex-col items-center gap-3">
-        <img
-          src="/illustrations/splash-logo.png"
-          alt=""
-          aria-hidden
-          className="h-[90px] w-[105px] animate-holo-pulse object-contain"
-        />
+        {/* 진입 모션은 wrapper에, 지속 float+glow는 img에 — transform 충돌 없이 합쳐짐 */}
+        <div className="animate-holo-logo-in">
+          <img
+            src="/illustrations/splash-logo.png"
+            alt=""
+            aria-hidden
+            className="h-[90px] w-[105px] animate-holo-logo object-contain will-change-transform"
+          />
+        </div>
         <span className="font-fredoka text-[44px] font-semibold leading-none text-holo-purple">
           HOLO
         </span>
