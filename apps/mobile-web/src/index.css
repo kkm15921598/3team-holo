@@ -273,3 +273,26 @@ body {
   color: #7448dd;
 }
 
+/* 강조 핀(드롭 핀) — leaflet div 아이콘 컨테이너의 기본 배경/보더 제거 */
+.holo-focus-pin {
+  background: transparent;
+  border: 0;
+}
+/* 강조 핀 위에 떠 있는 영구 말풍선 — 보라 그라데이션 + 작은 꼬리 */
+.leaflet-tooltip.holo-focus-tooltip {
+  background: linear-gradient(135deg, #7448dd, #542bb4);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 4px 12px rgba(84, 43, 180, 0.35);
+  white-space: nowrap;
+}
+.leaflet-tooltip.holo-focus-tooltip::before {
+  /* 기본 leaflet 화살표를 보라색으로 교체 — direction: top 기준 (꼬리 아래쪽) */
+  border-top-color: #542bb4;
+}
+

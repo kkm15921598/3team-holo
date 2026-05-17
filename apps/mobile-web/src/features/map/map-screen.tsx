@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { POSTS, type Post } from "@/shared/mock/data";
 import { MapView } from "./post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
@@ -9,6 +9,8 @@ import {
   distanceMeters,
   type GeoPosition,
 } from "@/shared/hooks/use-geolocation";
+import { useReverseGeocodedRegion } from "@/shared/hooks/use-reverse-geocode";
+import { useVerification } from "@/shared/stores/verification-store";
 
 /** 미리보기에서 보이는 최대 반경 — 안내 문구와 일치 */
 const PREVIEW_RADIUS_M = 1000;
@@ -96,10 +98,51 @@ function filterPosts(
 
 export function MapScreen() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // 채팅방 "장소" 핀 클릭으로 진입한 경우: ?focusPostId=<id>
+  // URL 파라미터는 mount 직후 정리해버리지만, 그 id 는 별도 state 로 붙들어둬서
+  //  - 강조 핀/말풍선이 계속 표시되도록
+  //  - 모달 닫기 버튼이 원래 채팅방으로 돌아가도록 (히스토리 복귀)
+  // 처리한다.
+  const [chatReturnPostId, setChatReturnPostId] = useState<string | null>(
+    () => {
+      if (typeof window === "undefined") return null;
+      return new URLSearchParams(window.location.search).get("focusPostId");
+    },
+  );
+  const focusPost = useMemo<Post | null>(() => {
+    if (!chatReturnPostId) return null;
+    return POSTS.find((p) => p.id === chatReturnPostId && !!p.location) ?? null;
+  }, [chatReturnPostId]);
+  // 강조 핀 + 말풍선 (post.place 우선, 없으면 location.placeName, 둘 다 없으면 "모임 장소")
+  const focusMarker = useMemo(() => {
+    if (!focusPost?.location) return null;
+    return {
+      location: { lat: focusPost.location.lat, lng: focusPost.location.lng },
+      label:
+        focusPost.place ?? focusPost.location.placeName ?? "모임 장소",
+    };
+  }, [focusPost]);
   const [filter, setFilter] = useState<Filter>("전체");
   // 모달 상태는 sessionStorage 에서 한 번 로드. 같은 mount 동안에는
   // 이 초기값을 기준으로 view 가 변해도 MapView 가 리마운트되지 않게 한다.
-  const initialModalState = useMemo(loadModalState, []);
+  // focusPostId 가 있으면 그쪽이 우선 — 무조건 모달을 열고 그 위치로 센터링.
+  const initialModalState = useMemo(() => {
+    const saved = loadModalState();
+    if (focusPost?.location) {
+      return {
+        expanded: true,
+        radius: saved.radius,
+        view: {
+          lat: focusPost.location.lat,
+          lng: focusPost.location.lng,
+          // 기존 줌 유지하되 없으면 좀 더 가까이 (16 — 동/거리 단위)
+          zoom: saved.view?.zoom ?? 16,
+        },
+      } as ModalMapState;
+    }
+    return saved;
+  }, [focusPost]);
   const [expanded, setExpanded] = useState(initialModalState.expanded);
   const [modalRadius, setModalRadius] = useState<ModalRadius>(
     initialModalState.radius,
@@ -132,21 +175,56 @@ export function MapScreen() {
     () => filterPosts(filter, userPos, PREVIEW_RADIUS_M),
     [filter, userPos],
   );
-  const modalPosts = useMemo(
-    () => filterPosts(filter, userPos, modalRadius),
-    [filter, userPos, modalRadius],
-  );
+  const modalPosts = useMemo(() => {
+    const base = filterPosts(filter, userPos, modalRadius);
+    // focusPost 가 반경/필터 밖이라도 항상 표시 — 채팅방에서 핀 클릭으로 들어왔을 때
+    // 그 모임 마커가 보이지 않으면 동선이 끊긴다.
+    if (focusPost && !base.some((p) => p.id === focusPost.id)) {
+      return [...base, focusPost];
+    }
+    return base;
+  }, [filter, userPos, modalRadius, focusPost]);
+
+  // URL 파라미터(focusPostId)는 mount 직후 한 번만 제거 — 뒤로가기/재진입 시
+  // 또 강제로 재오픈되지 않도록. chatReturnPostId state 는 그대로 유지되어
+  // 강조 핀 / 닫기-복귀 동작이 계속 작동한다.
+  useEffect(() => {
+    if (!searchParams.get("focusPostId")) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("focusPostId");
+    setSearchParams(next, { replace: true });
+    // mount 직후 1회만 — searchParams 객체 자체 변경에 반응하지 않게 deps 비움
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * 확장 모달 닫기.
+   * 채팅방에서 진입한 경우(chatReturnPostId) → 그 채팅방으로 복귀.
+   * 그 외에는 모달만 닫는다 (지도 미리보기 화면으로 돌아옴).
+   */
+  const handleModalClose = () => {
+    if (chatReturnPostId) {
+      // 강조 상태도 정리해서 다음에 모달을 직접 열 때 흔적이 남지 않게 한다.
+      setChatReturnPostId(null);
+      navigate(`/chat/meetup-${chatReturnPostId}`);
+      return;
+    }
+    setExpanded(false);
+  };
   // 이후 코드에서 visiblePosts 라는 이름은 카드/필터 안내 등에서 그대로 사용됨.
   const visiblePosts = previewPosts;
 
-  // ESC로 모달 닫기
+  // ESC로 모달 닫기 — 닫기 버튼과 동일하게 chat 복귀까지 처리
   useEffect(() => {
     if (!expanded) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setExpanded(false);
+      if (e.key === "Escape") handleModalClose();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
+    // handleModalClose 는 매 렌더마다 새 함수지만 닫는 순간만 호출되므로
+    // 이전 클로저로 동작해도 chatReturnPostId 의 정확성에는 영향 없음.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded]);
 
   // 카드 가로 드래그 스크롤
@@ -215,8 +293,11 @@ export function MapScreen() {
 
   return (
     <main className="relative flex flex-1 flex-col overflow-x-clip">
+      {/* 현재 위치 라벨 — 인증된 동네 우선, 미인증 시 geolocation 기반 역지오코딩 */}
+      <LocationLabel userPos={userPos} />
+
       {/* 지도 미리보기 — 드래그/줌 가능. 확장은 우상단 아이콘 버튼으로만. */}
-      <div className="relative mx-4 mt-3 h-[290px] overflow-hidden rounded-holo-tile shadow-[0_4px_20px_rgba(84,43,180,0.10)]">
+      <div className="relative mx-4 mt-2 h-[290px] overflow-hidden rounded-holo-tile shadow-[0_4px_20px_rgba(84,43,180,0.10)]">
         <MapView
           preview
           visiblePosts={visiblePosts}
@@ -373,7 +454,7 @@ export function MapScreen() {
           <header className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line-3 px-4">
             <button
               type="button"
-              onClick={() => setExpanded(false)}
+              onClick={handleModalClose}
               aria-label="닫기"
               className="flex h-8 w-8 items-center justify-center"
             >
@@ -432,6 +513,8 @@ export function MapScreen() {
                 onViewChange={handleModalViewChange}
                 // 저장된 view 가 있을 땐 GPS fix 자동 센터링 차단.
                 centerOnFix={!viewRef.current}
+                // 채팅방에서 진입했으면 모임 장소를 핀+말풍선으로 강조 표시
+                focusMarker={focusMarker}
               />
             </div>
           </div>
@@ -454,5 +537,37 @@ function ArrowOutIcon({ stroke }: { stroke: string }) {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
       <path d="M3 11L11 3M11 3H5M11 3V9" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+/**
+ * 지도 위 현재 위치 라벨.
+ * 1) 인증된 동네(verifiedRegion) 가 있으면 그걸 그대로 사용
+ * 2) 없으면 geolocation 좌표를 Nominatim 으로 역지오코딩 (시·구·동)
+ * 3) 둘 다 없으면 안내문 노출
+ */
+function LocationLabel({ userPos }: { userPos: GeoPosition | null }) {
+  const verification = useVerification();
+  const geoLabel = useReverseGeocodedRegion(userPos);
+  const label = verification.verifiedRegion ?? geoLabel;
+
+  return (
+    <div className="mx-4 mt-3 flex items-center gap-1.5 px-1 text-[13px] text-holo-ink-2">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="#7448DD"
+        stroke="#7448DD"
+        strokeWidth="1"
+        aria-hidden
+      >
+        <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z" />
+        <circle cx="12" cy="9" r="2.5" fill="white" />
+      </svg>
+      <span className="font-medium">
+        {label || (userPos ? "위치 확인 중…" : "위치 정보를 받을 수 없어요")}
+      </span>
+    </div>
   );
 }

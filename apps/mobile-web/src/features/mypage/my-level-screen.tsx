@@ -9,13 +9,15 @@ import {
 } from "@/shared/stores/xp-store";
 
 const LEVEL_MAX = 30;
+// 레벨업 혜택 — 실제 앱 경제(포인트 / 가구 / 뱃지)에서 즉시 지급 가능한 항목만 사용.
+// "프로필 테두리 해금" 같은 미구현 기능 대신 포인트·가구·뱃지로 구성.
 const LEVEL_BENEFITS = [
-  { level: 5,  label: "프로필 테두리 해금" },
-  { level: 10, label: "특별 이모티콘 해금" },
-  { level: 15, label: "칭호 슬롯 +1" },
-  { level: 20, label: "뱃지 프레임 해금" },
-  { level: 25, label: "HOLO 레전드 칭호" },
-  { level: 30, label: "명예의 전당 등록" },
+  { level: 5,  label: "보너스 포인트 +100P" },
+  { level: 10, label: "보너스 포인트 +300P" },
+  { level: 15, label: "보너스 포인트 +500P" },
+  { level: 20, label: "보너스 포인트 +1,000P" },
+  { level: 25, label: "보너스 포인트 +2,000P" },
+  { level: 30, label: "보너스 포인트 +5,000P" },
 ];
 
 // 화면에 보여줄 액션 순서 — XP_CONFIG 와 1:1 매핑

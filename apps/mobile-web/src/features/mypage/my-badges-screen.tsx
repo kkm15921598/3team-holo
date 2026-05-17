@@ -24,6 +24,31 @@ export function MyBadgesScreen() {
     [stats.acquiredBadgeIds],
   );
 
+  /**
+   * 뱃지 렌더 순서:
+   *  1) 획득한 뱃지를 먼저 표시 — 최근 획득일 내림차순(YYYY.MM.DD 문자열 비교).
+   *  2) 미획득 뱃지는 그 뒤에 mock 선언 순서대로.
+   * 사용자의 최신 성취가 그리드 상단에 보이도록 정렬한다.
+   * 획득일은 acquiredBadgeDates(실 store) → BADGES.date(시드) 순으로 폴백.
+   */
+  const sortedBadges = useMemo(() => {
+    const acquired = BADGES.filter((b) => unlockedSet.has(b.id));
+    const locked = BADGES.filter((b) => !unlockedSet.has(b.id));
+    acquired.sort((a, b) => {
+      const aDate =
+        stats.acquiredBadgeDates[a.id] ?? a.date ?? "";
+      const bDate =
+        stats.acquiredBadgeDates[b.id] ?? b.date ?? "";
+      // 날짜 없는 항목은 항상 아래로
+      if (!aDate && !bDate) return 0;
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+      // "2026.05.17" 같은 zero-padded 문자열은 localeCompare 로도 정확히 비교됨
+      return bDate.localeCompare(aDate);
+    });
+    return [...acquired, ...locked];
+  }, [unlockedSet, stats.acquiredBadgeDates]);
+
   const equipped = BADGES.find((b) => b.id === equippedId)!;
   const equippedImg = getBadgeById(equippedId);
   const modalBadge = modal ? BADGES.find((b) => b.id === modal.id)! : null;
@@ -52,10 +77,10 @@ export function MyBadgesScreen() {
         </div>
       </section>
 
-      {/* 뱃지 그리드 */}
+      {/* 뱃지 그리드 — 획득 뱃지(최근순) 먼저, 미획득은 뒤에. */}
       <section className="mt-4 px-4">
         <div className="grid grid-cols-3 gap-3">
-          {BADGES.map((b) => {
+          {sortedBadges.map((b) => {
             const acquired = unlockedSet.has(b.id);
             const isEquipped = b.id === equippedId;
             const img = getBadgeById(b.id);

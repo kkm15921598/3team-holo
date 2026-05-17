@@ -36,6 +36,41 @@ const DEFAULT_STATS: AccountStats = {
   acquiredBadgeDates: {},
 };
 
+/**
+ * 가입 시 자동 발급되는 스타터 항목 — 뱃지 / 칭호 모두 "홀로 입주자".
+ * loadInitial() 에서 기존 사용자 상태에 누락돼 있으면 자동 추가(backfill)한다.
+ * 옛 빌드에서 발급 로직이 빠져 있던 시기에 가입한 계정도 새 빌드에 들어왔을 때
+ * 별도 액션 없이 자동으로 보유 처리되도록 보장하는 안전장치.
+ */
+const STARTER_BADGE_ID = "badge_24";
+const STARTER_TITLE_NAME = "#홀로_입주자";
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function backfillStarterItems(stats: AccountStats): AccountStats {
+  const hasStarterBadge = stats.acquiredBadgeIds.includes(STARTER_BADGE_ID);
+  const hasStarterTitle = stats.acquiredTitles.includes(STARTER_TITLE_NAME);
+  const hasStarterBadgeDate = !!stats.acquiredBadgeDates[STARTER_BADGE_ID];
+  if (hasStarterBadge && hasStarterTitle && hasStarterBadgeDate) return stats;
+  return {
+    ...stats,
+    acquiredBadgeIds: hasStarterBadge
+      ? stats.acquiredBadgeIds
+      : [STARTER_BADGE_ID, ...stats.acquiredBadgeIds],
+    acquiredTitles: hasStarterTitle
+      ? stats.acquiredTitles
+      : [STARTER_TITLE_NAME, ...stats.acquiredTitles],
+    // 백필로 뱃지를 추가한 경우엔 "오늘" 기준으로 획득일도 기록 — 뱃지 목록에서
+    // 최근 획득순으로 정렬할 때 새 뱃지가 상단에 표시되도록 한다.
+    acquiredBadgeDates: hasStarterBadgeDate
+      ? stats.acquiredBadgeDates
+      : { ...stats.acquiredBadgeDates, [STARTER_BADGE_ID]: todayKey() },
+  };
+}
+
 function loadInitial(): AccountStats {
   if (typeof window === "undefined") return DEFAULT_STATS;
   try {
@@ -43,7 +78,7 @@ function loadInitial(): AccountStats {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.level === "number") {
-        return {
+        const base: AccountStats = {
           level: parsed.level,
           acquiredBadgeIds: Array.isArray(parsed.acquiredBadgeIds)
             ? parsed.acquiredBadgeIds
@@ -56,6 +91,7 @@ function loadInitial(): AccountStats {
               ? parsed.acquiredBadgeDates
               : {},
         };
+        return backfillStarterItems(base);
       }
     }
   } catch {

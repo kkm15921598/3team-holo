@@ -7,7 +7,7 @@ import { LocationMap } from "@/features/map/post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
-import { calcJoined, ensureMeetupRoom } from "./meetup-utils";
+import { calcJoined, ensureMeetupRoom, isMeetupPost } from "./meetup-utils";
 import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, useJoinedSet } from "@/shared/stores/joined-store";
 import { addComment, useUserComments } from "@/shared/stores/comments-store";
@@ -39,20 +39,8 @@ type CommentThread = {
   replies: CommentReply[];
 };
 
-// Categories that use the simplified detail layout (no map / 함께하기 / etc.) by default.
-// 단, 게시글에 모임 메타데이터(meetupType / location / place / eventDate / peopleCount) 가
-// 하나라도 있으면 simple 로 취급하지 않고 모임 레이아웃을 보여준다.
-const SIMPLE_CATEGORIES = new Set(["free", "recommend"]);
-
-function hasMeetingMetadata(post: Post): boolean {
-  return !!(
-    post.meetupType ||
-    post.location ||
-    post.place ||
-    post.eventDate ||
-    (post.peopleCount !== undefined && post.peopleCount !== null)
-  );
-}
+// 자유 / 추천 게시판이라도 모임 메타데이터가 붙어 있으면 모임 레이아웃을 사용한다.
+// 판정 규칙은 meetup-utils 의 isMeetupPost 와 동일 — 채팅방 생성 정책과 일치시킨다.
 
 /**
  * "방금 전" / "10분 전" / "3시간 전" / "2일 전" / "1주 전" 같은 timeAgo 를
@@ -198,8 +186,8 @@ export function BoardDetailScreen() {
   }, [menuOpen]);
 
   // free / recommend 인데도 모임 정보가 붙어있으면 모임 게시글로 본다.
-  const isSimple =
-    SIMPLE_CATEGORIES.has(post.category) && !hasMeetingMetadata(post);
+  // 자유 / 추천이면서 모임 메타데이터도 없는 글만 단순 레이아웃.
+  const isSimple = !isMeetupPost(post);
   const likes = liked ? post.likes + 1 : post.likes;
   const joined = Math.min(capacity, baseJoined + (joining ? 1 : 0));
   const displayStatus: "모집중" | "모집완료" =
@@ -329,6 +317,8 @@ export function BoardDetailScreen() {
                 return;
               }
               const roomId = ensureMeetupRoom(post);
+              // 자유/추천 단순 게시글은 모임 채팅방을 만들지 않는다 — null 이면 진입 차단.
+              if (!roomId) return;
               navigate(`/chat/${roomId}`);
             }}
             className="shrink-0 rounded-full border border-holo-purple-mid px-3 py-1 text-[11px] font-medium text-holo-purple-mid"

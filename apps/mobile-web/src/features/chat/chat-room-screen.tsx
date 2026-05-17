@@ -1083,6 +1083,12 @@ export function ChatRoomScreen() {
             setShowMeeting(false);
             navigate(`/profile/${encodeURIComponent(nickname)}`);
           }}
+          onShowOnMap={(postId) => {
+            // 모임 정보 모달 닫고 지도로 이동 — focusPostId 쿼리로
+            // map-screen 이 해당 게시글 위치에 마커/센터링 처리.
+            setShowMeeting(false);
+            navigate(`/map?focusPostId=${encodeURIComponent(postId)}`);
+          }}
         />
       )}
 
@@ -2409,6 +2415,7 @@ function MeetingInfoModal({
   onGoToPost,
   onVoteKick,
   onProfileClick,
+  onShowOnMap,
 }: {
   roomName: string;
   meeting: MeetingInfo;
@@ -2418,6 +2425,8 @@ function MeetingInfoModal({
   onGoToPost?: (postId: string) => void;
   onVoteKick?: () => void;
   onProfileClick?: (nickname: string) => void;
+  /** 장소 옆 핀 아이콘 클릭 시 호출 — 지도 화면에서 모임 위치를 표시. */
+  onShowOnMap?: (postId: string) => void;
 }) {
   return (
     <div
@@ -2447,7 +2456,23 @@ function MeetingInfoModal({
           </div>
           <div className="flex items-start gap-2">
             <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">장소</span>
-            <span className="text-[13px] font-semibold text-holo-ink">{meeting.place}</span>
+            <span className="flex flex-1 items-center gap-1.5 text-[13px] font-semibold text-holo-ink">
+              {meeting.place}
+              {/* 장소가 "온라인" 인 모임은 지도에 띄울 실제 위치가 없으므로 핀 아이콘 숨김.
+                  "온라인 / 분당 정자동" 처럼 오프라인 보조 장소가 함께 적힌 경우엔 노출. */}
+              {postId &&
+                onShowOnMap &&
+                meeting.place.trim() !== "온라인" && (
+                  <button
+                    type="button"
+                    aria-label="지도에서 보기"
+                    onClick={() => onShowOnMap(postId)}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-holo-purple-mid transition active:scale-95 hover:bg-holo-lilac-card"
+                  >
+                    <MapPinIcon />
+                  </button>
+                )}
+            </span>
           </div>
         </div>
 
@@ -2829,6 +2854,25 @@ function CloseIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
       <path d="m6 6 12 12M6 18 18 6" />
+    </svg>
+  );
+}
+/** 모임 정보 모달의 "장소" 옆에 표시되는 핀 아이콘. 클릭 시 지도에 위치 표시. */
+function MapPinIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   );
 }

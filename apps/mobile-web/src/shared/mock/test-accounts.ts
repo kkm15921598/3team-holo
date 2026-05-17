@@ -99,8 +99,8 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     statusMessage: "내가 좋아하는 카페는 우리집 ☕",
     seedData: {
       level: 7,
-      // 5개 — 운동·홈오피스 컨셉 + 장착 중인 badge_19 포함
-      acquiredBadgeIds: ["badge_06", "badge_08", "badge_14", "badge_15", "badge_19"],
+      // 6개 — 가입 시 자동 발급되는 badge_24(홀로 입주자) + 운동·홈오피스 컨셉 + 장착 중인 badge_19
+      acquiredBadgeIds: ["badge_24", "badge_06", "badge_08", "badge_14", "badge_15", "badge_19"],
       // 10개 — 가입 시 자동 발급되는 #홀로_입주자 + 홈트·홈오피스 컨셉 일반 칭호 9개
       acquiredTitles: [
         "#홀로_입주자",
@@ -202,8 +202,9 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
     statusMessage: "디저트 메이트 환영해요 🍰",
     seedData: {
       level: 12,
-      // 18개 — badge_01 ~ badge_17 + 장착 중인 badge_21
+      // 19개 — 가입 시 자동 발급되는 badge_24(홀로 입주자) + badge_01 ~ badge_17 + 장착 중인 badge_21
       acquiredBadgeIds: [
+        "badge_24",
         "badge_01", "badge_02", "badge_03", "badge_04", "badge_05",
         "badge_06", "badge_07", "badge_08", "badge_09", "badge_10",
         "badge_11", "badge_12", "badge_13", "badge_14", "badge_15",
@@ -229,9 +230,10 @@ export const TEST_ACCOUNTS: Record<string, TestAccount> = {
         "#홈트_동기부여",
       ],
       points: 1000,
-      // 참여한 모임 10 — 진행중 5개 + 종료된 모임 5개 (end-fd1, end-fd2, end-sh1, end-md1, end-fd3)
+      // 참여한 모임 9 — 진행중 4개(맛집·먹거리/공구/미디어) + 종료된 모임 5개.
+      // f1(자유게시판 — 모임 메타 없음)은 모임 채팅 대상이 아니므로 제외.
       joinedPostIds: [
-        "hm3", "fd11", "sh11", "md11", "f1",
+        "hm3", "fd11", "sh11", "md11",
         "end-fd1", "end-fd2", "end-sh1", "end-md1", "end-fd3",
       ],
       // 좋아요 10

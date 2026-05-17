@@ -16,17 +16,6 @@ import {
   subscribeVerification,
 } from "@/shared/stores/verification-store";
 
-const BG_COLORS = [
-  "#DDC0FF",
-  "#FCEBB5",
-  "#FFCFCF",
-  "#CAE4B9",
-  "#C7BDFF",
-  "#A3D5FF",
-  "#FFE2B7",
-  "#E5E5E5",
-];
-
 export function ProfileEditScreen() {
   const navigate = useNavigate();
   const profile = useProfile();
@@ -49,7 +38,6 @@ export function ProfileEditScreen() {
     characterOptions.findIndex((f) => f === initialFace),
   );
   const [character, setCharacter] = useState(currentFaceIndex);
-  const [bg, setBg] = useState(1);
   const handleCheck = () => {
     setCheck(nickname === "감자는 감자" ? "fail" : "ok");
   };
@@ -111,39 +99,37 @@ export function ProfileEditScreen() {
       <section className="px-4">
         <p className="text-[14px] font-semibold text-holo-ink">프로필 이미지</p>
 
-        {/* 미리보기 — 선택한 캐릭터를 선택한 배경색 위에 둥근 원으로 표시 */}
+        {/* 미리보기 — 선택한 캐릭터를 둥근 원으로 표시 (배경 없이 프로필 사진만) */}
         <div className="mt-4 flex justify-center">
-          <div
-            className="flex h-[160px] w-[160px] items-center justify-center rounded-full"
-            style={{ background: BG_COLORS[bg] }}
-          >
-            <img
-              src={selectedFace}
-              alt="선택된 캐릭터 미리보기"
-              className="h-[150px] w-[150px] rounded-full object-cover"
-              draggable={false}
-            />
-          </div>
+          <img
+            src={selectedFace}
+            alt="선택된 캐릭터 미리보기"
+            className="h-[160px] w-[160px] rounded-full object-cover"
+            draggable={false}
+          />
         </div>
 
-        {/* 캐릭터 — 가로 스크롤(드래그) 가능 */}
+        {/* 캐릭터 — 가로 스크롤(드래그) 가능. 선택 시 보라 ring 이 잘리지 않도록
+            컨테이너에 세로 padding 을 줘 ring 공간을 확보한다. */}
         <div className="mt-6">
           <p className="text-[13px] font-semibold text-holo-ink">캐릭터</p>
-          <div className="-mx-4 mt-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="-mx-4 mt-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-[10px]">
               {characterOptions.map((face, i) => (
                 <button
                   key={face}
                   type="button"
                   onClick={() => setCharacter(i)}
-                  className={`relative h-11 w-11 shrink-0 overflow-hidden rounded-full transition ${
-                    character === i ? "ring-[2px] ring-holo-purple-mid" : "opacity-80"
+                  className={`relative h-11 w-11 shrink-0 rounded-full transition ${
+                    character === i
+                      ? "ring-2 ring-holo-purple-mid ring-offset-1"
+                      : "opacity-80"
                   }`}
                 >
                   <img
                     src={face}
                     alt=""
-                    className="h-full w-full object-cover"
+                    className="h-full w-full rounded-full object-cover"
                     draggable={false}
                   />
                 </button>
@@ -152,26 +138,6 @@ export function ProfileEditScreen() {
           </div>
         </div>
 
-        {/* 배경색 */}
-        <div className="mt-5">
-          <p className="text-[13px] font-semibold text-holo-ink">배경색</p>
-          <div className="mt-3 flex gap-[10px]">
-            {BG_COLORS.slice(0, 6).map((c, i) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setBg(i)}
-                className={`h-7 w-7 rounded-full transition ${
-                  bg === i
-                    ? "ring-[2px] ring-holo-purple-mid ring-offset-1"
-                    : ""
-                }`}
-                style={{ background: c }}
-                aria-label={`배경 ${i}`}
-              />
-            ))}
-          </div>
-        </div>
       </section>
 
     </main>

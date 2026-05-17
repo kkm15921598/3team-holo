@@ -3,13 +3,39 @@
 
 import { POST_COMMENTS, type ChatRoom, type Post } from "@/shared/mock/data";
 import { MEETUP_POOL } from "@/features/home/home-meetups-data";
-import { addRoom, getRoom } from "@/features/chat/rooms-store";
+import { addRoom, getRoom, getRooms, setRooms } from "@/features/chat/rooms-store";
+import { clearMessagesForRoom } from "@/features/chat/messages-store";
+import { postsStore } from "./posts-store";
 import { getProfile } from "@/shared/stores/profile-store";
 import { getKickedCount } from "@/features/chat/kicked-members-store";
 
 /** 모임 게시글에 대응되는 채팅방 id (게시글당 단일 채팅방). */
 export function meetupRoomId(postId: string): string {
   return `meetup-${postId}`;
+}
+
+/** "모임 채팅방" 을 만들 수 없는 단순 게시글 카테고리 (자유 / 추천). */
+const SIMPLE_CATEGORIES = new Set(["free", "recommend"]);
+
+/**
+ * 게시글이 모임 채팅방을 가질 수 있는지 판정.
+ *  - 자유 / 추천 카테고리는 기본적으로 모임 채팅 대상이 아님.
+ *  - 단, 그 카테고리라도 모임 메타데이터(meetupType / location / place /
+ *    eventDate / peopleCount) 가 하나라도 있으면 모임 게시글로 본다.
+ *  - 그 외 카테고리(맛집 / 공구 / 운동 / 게임 / 미디어 / 도움)는 항상 모임.
+ * 이 판정은 게시글 상세 레이아웃 판정과 동일한 규칙 (board-detail-screen) 이며,
+ * 채팅방 생성 / pruning 의 단일 출처로 쓰인다.
+ */
+export function isMeetupPost(post: Post): boolean {
+  const hasMeta = !!(
+    post.meetupType ||
+    post.location ||
+    post.place ||
+    post.eventDate ||
+    (post.peopleCount !== undefined && post.peopleCount !== null)
+  );
+  if (SIMPLE_CATEGORIES.has(post.category)) return hasMeta;
+  return true;
 }
 
 /**
@@ -80,8 +106,13 @@ export function deriveMeetupMembers(post: Post, targetCount: number): string[] {
   return names.slice(0, Math.max(0, targetCount));
 }
 
-/** 게시글에 매핑되는 채팅방을 보장(없으면 생성)하고 id 를 반환. */
-export function ensureMeetupRoom(post: Post): string {
+/**
+ * 게시글에 매핑되는 채팅방을 보장(없으면 생성)하고 id 를 반환.
+ * 자유 / 추천 등 모임 메타데이터가 없는 게시글은 모임 채팅방 자체가 성립하지 않으므로
+ * `null` 을 반환하고 방을 만들지 않는다.
+ */
+export function ensureMeetupRoom(post: Post): string | null {
+  if (!isMeetupPost(post)) return null;
   const id = meetupRoomId(post.id);
   if (getRoom(id)) return id;
 
@@ -124,4 +155,44 @@ export function ensureMeetupRoom(post: Post): string {
   };
   addRoom(room);
   return id;
+}
+
+/**
+ * 채팅방 목록에서 게시글로 역추적되지 않는 "가짜 모임 채팅방" 을 모두 제거.
+ *
+ * 모임 채팅방의 정상 규약: id 가 `meetup-<postId>` 이며, postId 에 해당하는
+ * 게시글이 존재하고 그 게시글이 모임 메타데이터를 갖고 있어야 한다.
+ *
+ * 다음 두 종류를 제거한다:
+ *  (A) id 가 `meetup-*` 인데 — 게시글이 사라졌거나 / 자유·추천 단순 게시글로 바뀐 경우.
+ *  (B) id 가 `meetup-*` 가 아닌데도 `meeting` 정보가 박혀있는 옛 mock 방
+ *      (예: 옛 "다같이 러닝해요/주말 등산 크루/공구러 모임 🛒/동네 떡볶이 모임" 등).
+ *      게시판과 연결되지 않는 모임 채팅방은 시스템 상 존재할 수 없으므로 청소.
+ * 1:1 / 일반 그룹 방(meeting 없는)은 모두 보존된다.
+ *
+ * 시드 / localStorage 잔존 데이터 정리를 위해 앱 시작 시 한 번 호출.
+ */
+export function pruneNonMeetupRooms(): void {
+  const posts = postsStore.getPosts();
+  const byId = new Map(posts.map((p) => [p.id, p] as const));
+  const toRemove: string[] = [];
+  for (const r of getRooms()) {
+    if (r.id.startsWith("meetup-")) {
+      // (A) meetup-* 인데 게시글이 없거나 자유/추천 단순 글이면 제거
+      const postId = r.id.slice("meetup-".length);
+      const post = byId.get(postId);
+      if (!post || !isMeetupPost(post)) {
+        toRemove.push(r.id);
+      }
+      continue;
+    }
+    // (B) meetup-* 가 아닌데 meeting 만 박혀 있는 옛 방 — 게시글 역추적 불가능
+    if (r.meeting) {
+      toRemove.push(r.id);
+    }
+  }
+  if (toRemove.length === 0) return;
+  const removeSet = new Set(toRemove);
+  setRooms((prev) => prev.filter((r) => !removeSet.has(r.id)));
+  for (const id of toRemove) clearMessagesForRoom(id);
 }

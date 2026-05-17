@@ -22,6 +22,26 @@ const postIcon = L.divIcon({
 });
 
 /**
+ * 채팅방 → 지도 진입 시 강조 표시할 "모임 장소" 핀.
+ * 일반 게시글 마커(원형 글로우)와 시각적으로 확실히 구분되도록 드롭 핀 모양으로 렌더.
+ * iconAnchor 를 핀 끝(아래쪽)에 맞춰 좌표 정확도 유지.
+ */
+const focusPinIcon = L.divIcon({
+  className: "holo-focus-pin",
+  iconSize: [36, 44],
+  iconAnchor: [18, 42],
+  html:
+    '<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs><filter id="holo-focus-shadow" x="-50%" y="-30%" width="200%" height="180%">' +
+    '<feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#542BB4" flood-opacity="0.35"/>' +
+    "</filter></defs>" +
+    '<path d="M18 2C9.7 2 3 8.7 3 17c0 11 15 25 15 25s15-14 15-25C33 8.7 26.3 2 18 2z" ' +
+    'fill="#7448DD" stroke="#FFFFFF" stroke-width="2" filter="url(#holo-focus-shadow)"/>' +
+    '<circle cx="18" cy="17" r="6" fill="#FFFFFF"/>' +
+    "</svg>",
+});
+
+/**
  * 여러 게시글 마커가 한 곳에 겹칠 때 보여줄 클러스터 아이콘.
  * 기존 단일 마커(.holo-post-marker) 와 동일한 라일락 글로우 + 보라 점 디자인,
  * 안쪽 점에 숫자를 표기한다. 개수에 따라 살짝 커진다.
@@ -207,6 +227,15 @@ type MapViewProps = {
    * 직전 view 를 복원해야 하는 경우(모달 재진입) 에는 false 로 전달해 자동 센터링 차단.
    */
   centerOnFix?: boolean;
+  /**
+   * 강조할 단일 위치(드롭 핀 + 영구 말풍선 라벨).
+   * 채팅방 "장소" 핀 클릭으로 지도에 들어왔을 때 모임 장소를 명시적으로 표시할 용도.
+   * 일반 게시글 마커 위에 겹쳐 그려지므로 zIndexOffset 으로 항상 최상단에 노출된다.
+   */
+  focusMarker?: {
+    location: { lat: number; lng: number };
+    label: string;
+  } | null;
 };
 
 export function MapView({
@@ -217,6 +246,7 @@ export function MapView({
   initialZoom,
   onViewChange,
   centerOnFix = true,
+  focusMarker = null,
 }: MapViewProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -324,6 +354,14 @@ export function MapView({
     const markers: L.Marker[] = [];
     visiblePosts.forEach((p) => {
       if (!p.location) return;
+      // 강조 핀과 좌표가 동일한 게시글은 일반 마커를 그리지 않음 — 중복 표시 회피.
+      if (
+        focusMarker &&
+        Math.abs(p.location.lat - focusMarker.location.lat) < 1e-6 &&
+        Math.abs(p.location.lng - focusMarker.location.lng) < 1e-6
+      ) {
+        return;
+      }
       const marker = L.marker([p.location.lat, p.location.lng], {
         icon: postIcon,
         interactive: true,
@@ -337,7 +375,29 @@ export function MapView({
     if (markers.length > 0) {
       clusterGroup.addLayers(markers);
     }
-  }, [visiblePosts, preview, onMarkerClick]);
+  }, [visiblePosts, preview, onMarkerClick, focusMarker]);
+
+  // 강조 핀(드롭 핀 + 영구 말풍선) — 클러스터링 대상 아님. 항상 최상단.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!focusMarker) return;
+    const m = L.marker([focusMarker.location.lat, focusMarker.location.lng], {
+      icon: focusPinIcon,
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 2000,
+    }).addTo(map);
+    m.bindTooltip(focusMarker.label, {
+      permanent: true,
+      direction: "top",
+      offset: [0, -38],
+      className: "holo-focus-tooltip",
+    });
+    return () => {
+      m.remove();
+    };
+  }, [focusMarker?.location.lat, focusMarker?.location.lng, focusMarker?.label]);
 
   return (
     <div className="relative h-full w-full overflow-hidden">

@@ -19,12 +19,15 @@ export function ManagedList({
   onToggleManage,
   items,
   onDelete,
+  readOnly = false,
 }: {
   title: string;
   manage: boolean;
   onToggleManage: () => void;
   items: Post[];
   onDelete: (ids: string[]) => void;
+  /** 읽기 전용 — 다른 사용자의 글/댓글을 볼 때처럼 "관리하기" 버튼을 숨김 */
+  readOnly?: boolean;
 }) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -51,7 +54,7 @@ export function ManagedList({
         <span className="text-[14px] font-semibold text-holo-ink">
           {manage ? "삭제할 게시글을 선택해 주세요" : title}
         </span>
-        {manage ? (
+        {readOnly ? null : manage ? (
           <button
             type="button"
             onClick={handleDelete}

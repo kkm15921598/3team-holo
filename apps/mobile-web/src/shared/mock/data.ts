@@ -272,7 +272,7 @@ export const POSTS: Post[] = [
   { id: "end-sp2", category: "sport", meetupType: "단기성 모임", status: "모집완료", title: "주말 풋살", description: "토요일 오후 풋살 한 판!", distance: "800m", duration: "90분", likes: 8, comments: 5, timeAgo: "3일 전", authorNickname: "정겨운 김밥", authorLevel: 13, eventDate: "2026-05-13", peopleCount: 10, place: "분당 풋살장" },
   { id: "end-fd1", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "봄 브런치 모임", description: "정자동 브런치 카페 모임", distance: "300m", duration: "120분", likes: 7, comments: 6, timeAgo: "1주 전", authorNickname: "춤추는 토끼", authorLevel: 14, eventDate: "2026-05-09", peopleCount: 4, place: "정자동 브런치 카페" },
   { id: "end-fd2", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "빵집 투어", description: "분당 베이커리 3곳 순회", distance: "600m", duration: "150분", likes: 4, comments: 2, timeAgo: "4일 전", authorNickname: "노래하는 햇살", authorLevel: 13, eventDate: "2026-05-12", peopleCount: 5, place: "분당 베이커리 3곳" },
-  { id: "end-sh1", category: "share", meetupType: "단기성 모임", status: "모집완료", title: "운동복 공구 마감", description: "공구 마감했어요. 픽업만 남았어요!", distance: "0m", duration: "30분", likes: 3, comments: 1, timeAgo: "6일 전", authorNickname: "정겨운 김밥", authorLevel: 13, eventDate: "2026-05-10", peopleCount: 6 },
+  { id: "end-sh1", category: "share", meetupType: "단기성 모임", status: "모집완료", title: "운동복 공구 마감", description: "공구 마감했어요. 픽업만 남았어요!", distance: "0m", duration: "30분", likes: 3, comments: 1, timeAgo: "6일 전", authorNickname: "정겨운 김밥", authorLevel: 13, eventDate: "2026-05-10", peopleCount: 6, place: "정자동 픽업 약속 장소" },
   { id: "end-md1", category: "media", meetupType: "단기성 모임", status: "모집완료", title: "주말 영화 모임", description: "주말 신작 같이 보고 후기 나눠요", distance: "400m", duration: "150분", likes: 6, comments: 4, timeAgo: "2일 전", authorNickname: "새콤한 망고", authorLevel: 18, eventDate: "2026-05-14", peopleCount: 5, place: "정자동 CGV" },
   { id: "end-fd3", category: "food", meetupType: "단기성 모임", status: "모집완료", title: "디저트 클래스", description: "마카롱 만들기 원데이 클래스", distance: "500m", duration: "120분", likes: 12, comments: 8, timeAgo: "3일 전", authorNickname: "노래하는 햇살", authorLevel: 13, eventDate: "2026-05-13", peopleCount: 4, place: "정자동 베이킹 스튜디오" },
 ];
@@ -646,14 +646,15 @@ export type ChatRoom = {
   hostNickname?: string;
 };
 
+// 데모/시드용 정적 채팅방.
+// 모임 채팅방은 반드시 게시글에서 파생되어야 하므로(meetup-<postId> 규약) 여기에는
+// 1:1 방만 둔다. 모임 채팅방은 ensureMeetupRoom(post) 으로만 만들어진다.
+// — 옛 mock 의 "다같이 러닝해요/동네 떡볶이 모임/주말 등산 크루/공구러 모임 🛒" 처럼
+//   id 가 "1","3","5","7" 이면서 meeting 정보만 박혀있는 가짜 모임 방은 제거.
 export const CHATROOMS: ChatRoom[] = [
-  { id: "1", name: "다같이 러닝해요", subtitle: "달콤한 무지", isGroup: true, memberCount: 6, lastMessage: "내일 7시 한강에서 만나요!", lastTime: "오후 3:15", unread: 3, pinned: true, online: true, meeting: { date: "5/18 (월)", time: "오후 7:00", place: "반포 한강공원 8번 출구" } },
   { id: "2", name: "보송보송한 햄찌", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "사진 보내드렸어요 📸", lastTime: "오후 2:48", unread: 1, online: true },
-  { id: "3", name: "동네 떡볶이 모임", subtitle: "달콤한 무지, 외 4명", isGroup: true, memberCount: 5, lastMessage: "맛있겠다 ㅋㅋㅋ", lastTime: "오후 1:30", unread: 0, pinned: true, meeting: { date: "5/19 (화)", time: "오후 6:30", place: "정자동 떡볶이천국" } },
   { id: "4", name: "매콤한 떡볶이", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "넵 알겠습니다~", lastTime: "오전 11:20", unread: 0, muted: true },
-  { id: "5", name: "주말 등산 크루", subtitle: "달콤한 무지, 외 7명", isGroup: true, memberCount: 8, lastMessage: "이번주는 패스할게요!", lastTime: "어제", unread: 12, meeting: { date: "5/23 (토)", time: "오전 6:00", place: "관악산 사당역 입구" } },
   { id: "6", name: "새콤한 망고", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "감사합니다 :)", lastTime: "어제", unread: 0 },
-  { id: "7", name: "공구러 모임 🛒", subtitle: "달콤한 무지, 외 12명", isGroup: true, memberCount: 13, lastMessage: "수박 소분 마감입니다", lastTime: "5/14", unread: 0, muted: true, meeting: { date: "5/17 (일)", time: "오후 8:00", place: "분당 정자동 마트 앞" } },
   { id: "8", name: "새콤한 토마토", subtitle: "1:1", isGroup: false, memberCount: 2, lastMessage: "다음에 또 봐요!", lastTime: "5/5", unread: 0 },
 ];
 

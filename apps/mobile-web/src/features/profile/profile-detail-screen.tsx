@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { type ChatRoom, TITLES_META } from "@/shared/mock/data";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { type ChatRoom, TITLES_META, POST_COMMENTS } from "@/shared/mock/data";
 import { BADGES as BADGE_LIB } from "@/badge";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
@@ -39,8 +39,15 @@ function hashString(s: string): number {
  * 다른 사용자 프로필 — 닉네임 해시로 결정론적으로 빌드.
  * 칭호는 실제 TITLES_META 풀(가입 칭호 제외, 41 중 일반·희귀·전설)에서 선택,
  * 뱃지는 BADGE_LIB(26종 전체) 에서 선택하여 마이페이지의 뱃지·칭호 시스템과 일관성 확보.
+ *
+ * 게시글/댓글 카운트는 실제 데이터(postsCount, commentsCount)를 인자로 받아
+ * Stat 클릭 시 보이는 리스트 길이와 정확히 일치하도록 한다.
  */
-function buildOtherUser(nickname: string) {
+function buildOtherUser(
+  nickname: string,
+  postsCount: number,
+  commentsCount: number,
+) {
   const h = hashString(nickname);
   // starter(가입 칭호)는 모두가 가진 거라 다른 사용자 프로필에 노출하긴 어색 → 제외
   const TITLE_POOL = TITLES_META.filter((t) => t.tier !== "starter");
@@ -53,8 +60,8 @@ function buildOtherUser(nickname: string) {
     badgeId: badge?.id ?? "badge_24",
     badgeSrc: badge?.src,
     badgeName: badge?.name ?? "",
-    postsCount: 1 + (h % 80),
-    commentsCount: 5 + ((h >>> 2) % 150),
+    postsCount,
+    commentsCount,
     daysActive: 1 + ((h >>> 5) % 60),
   };
 }
@@ -113,7 +120,32 @@ export function ProfileDetailScreen() {
     myActivity.activeDates.length,
   ]);
 
-  const otherUser = useMemo(() => buildOtherUser(nickname), [nickname]);
+  // 친구(다른 사용자) 게시글·댓글 카운트 — Stat 클릭 시 리스트와 동일한 집계 로직.
+  // postsStore 변경(새 글 등록 등) 시에도 갱신되도록 구독.
+  const [postsTick, setPostsTick] = useState(0);
+  useEffect(() => {
+    return postsStore.subscribe(() => setPostsTick((t) => t + 1));
+  }, []);
+  const otherPostsCount = useMemo(() => {
+    void postsTick;
+    return postsStore.getPosts().filter((p) => p.authorNickname === nickname)
+      .length;
+  }, [nickname, postsTick]);
+  const otherCommentsCount = useMemo(() => {
+    // friend-comments-screen 과 동일한 집계: POST_COMMENTS 에서 그 닉네임이 댓글을 단 unique 게시글 수
+    const postIds = new Set<string>();
+    for (const [postId, comments] of Object.entries(POST_COMMENTS)) {
+      if (comments.some((c) => c.nickname === nickname)) {
+        postIds.add(postId);
+      }
+    }
+    return postIds.size;
+  }, [nickname]);
+
+  const otherUser = useMemo(
+    () => buildOtherUser(nickname, otherPostsCount, otherCommentsCount),
+    [nickname, otherPostsCount, otherCommentsCount],
+  );
   const user = isMe ? meUser : otherUser;
 
   const friends = useFriends();
@@ -366,9 +398,25 @@ export function ProfileDetailScreen() {
         </p>
 
         <div className="mt-6 flex w-full items-center">
-          <Stat label="게시글" value={user.postsCount} />
+          <Stat
+            label="게시글"
+            value={user.postsCount}
+            to={
+              isMe
+                ? "/mypage/posts"
+                : `/profile/${encodeURIComponent(nickname)}/posts`
+            }
+          />
           <span className="h-8 w-px bg-holo-line" />
-          <Stat label="댓글" value={user.commentsCount} />
+          <Stat
+            label="댓글"
+            value={user.commentsCount}
+            to={
+              isMe
+                ? "/mypage/comments"
+                : `/profile/${encodeURIComponent(nickname)}/comments`
+            }
+          />
           <span className="h-8 w-px bg-holo-line" />
           <Stat label="접속일수" value={user.daysActive} />
         </div>
@@ -473,14 +521,35 @@ export function ProfileDetailScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-1 flex-col items-center">
+function Stat({
+  label,
+  value,
+  to,
+}: {
+  label: string;
+  value: number;
+  to?: string;
+}) {
+  const inner = (
+    <>
       <span className="text-[12px] text-holo-ink-2">{label}</span>
       <span className="mt-1 text-[20px] font-black text-holo-purple-mid">
         {value}
       </span>
-    </div>
+    </>
+  );
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="flex flex-1 flex-col items-center active:opacity-70"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="flex flex-1 flex-col items-center">{inner}</div>
   );
 }
 

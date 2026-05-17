@@ -37,6 +37,8 @@ import { AttendanceScreen } from "@/features/event/attendance-screen";
 import { ChatListScreen } from "@/features/chat/chat-list-screen";
 import { ChatRoomScreen } from "@/features/chat/chat-room-screen";
 import { ProfileDetailScreen } from "@/features/profile/profile-detail-screen";
+import { FriendPostsScreen } from "@/features/profile/friend-posts-screen";
+import { FriendCommentsScreen } from "@/features/profile/friend-comments-screen";
 
 // Mypage & Settings
 import { MypageScreen } from "@/features/mypage/mypage-screen";
@@ -73,11 +75,16 @@ import { MyMeetingsScreen } from "@/features/mypage/my-meetings-screen";
 import { MyroomScreen } from "@/features/myroom/myroom-screen";
 
 import { markActiveToday } from "@/shared/stores/activity-store";
+import { pruneNonMeetupRooms } from "@/features/board/meetup-utils";
 
 import "./index.css";
 
 // 앱 진입 시 오늘 날짜를 접속일 set 에 기록 — 가입일 이후 실제 사용한 고유 일 수 카운트용
 markActiveToday();
+
+// 자유 / 추천 단순 게시글에 잘못 연결된 모임 채팅방(localStorage 잔존)을 정리.
+// 시드 데이터 변경 / 옛 빌드의 잔재로 남은 "meetup-<자유글>" 방을 한 번에 제거한다.
+pruneNonMeetupRooms();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -122,6 +129,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/chat" element={<TabLayout><ChatListScreen /></TabLayout>} />
           <Route path="/chat/:id" element={<TabLayout showHeader={false}><ChatRoomScreen /></TabLayout>} />
           <Route path="/profile/:id" element={<ProfileDetailScreen />} />
+          <Route path="/profile/:id/posts" element={<TabLayout showHeader={false}><FriendPostsScreen /></TabLayout>} />
+          <Route path="/profile/:id/comments" element={<TabLayout showHeader={false}><FriendCommentsScreen /></TabLayout>} />
 
           {/* Mypage */}
           <Route path="/mypage" element={<TabLayout><MypageScreen /></TabLayout>} />
