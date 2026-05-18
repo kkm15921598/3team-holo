@@ -121,7 +121,9 @@ export function setGender(g: Gender) {
 
 export function subscribeVerification(fn: () => void) {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 /** 휴대폰 + 지역 둘 다 인증되어야 true */
@@ -161,7 +163,9 @@ export function useVerification() {
   return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
-      return () => listeners.delete(cb);
+      return () => {
+        listeners.delete(cb);
+      };
     },
     () => _state,
     () => _state,

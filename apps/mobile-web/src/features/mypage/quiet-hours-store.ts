@@ -53,7 +53,9 @@ export function setQuietHours(next: QuietHours) {
 
 export function subscribeQuietHours(fn: () => void) {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 /**

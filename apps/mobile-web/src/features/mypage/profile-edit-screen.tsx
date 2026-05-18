@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
 import { useProfile } from "@/shared/hooks/use-profile";
 import {
   setNickname as storeSetNickname,

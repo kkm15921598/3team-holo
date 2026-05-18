@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { useSignup, genderFromIdNum } from "@/shared/contexts/signup-context";
@@ -326,7 +326,7 @@ export function VerificationScreen() {
       {showSheet && (
         <CarrierSheet
           selected={carrier}
-          onSelect={(v) => {
+          onSelect={(v: string) => {
             update("carrier", v);
             setShowSheet(false);
           }}
@@ -411,7 +411,7 @@ function CarrierSheet({ selected, onSelect, onClose }: any) {
         <div className="mx-auto mb-4 h-[6px] w-[70px] rounded-full bg-holo-line" />
         <p className="mb-4 text-center text-[16px] font-semibold text-holo-ink">통신사를 선택해 주세요.</p>
         <div className="flex flex-col gap-5">
-          {CARRIER_GROUPS.map((group, i) => (
+          {CARRIER_GROUPS.map((group) => (
             <section key={group.label} className="flex flex-col gap-2">
               <header className="flex items-center gap-3 px-1">
                 <span className="text-[12px] font-semibold tracking-wide text-holo-ink-3">{group.label}</span>

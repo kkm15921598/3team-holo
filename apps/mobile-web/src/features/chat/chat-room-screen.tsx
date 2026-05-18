@@ -1719,11 +1719,14 @@ function MessageItem({
       return (
         <a
           href="#"
-          onClick={(e) => e.preventDefault()}
           className={`${maxW} flex items-center gap-2 rounded-2xl px-3 py-2 shadow-sm ${
             mine ? "bg-holo-lilac-deep" : "bg-white"
           }`}
           {...pressProps}
+          onClick={(e) => {
+            e.preventDefault();
+            pressProps.onClick(e);
+          }}
         >
           <FileIcon />
           <div className="flex flex-col overflow-hidden">

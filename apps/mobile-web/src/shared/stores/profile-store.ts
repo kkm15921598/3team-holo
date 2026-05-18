@@ -124,7 +124,9 @@ export function setFriendCode(code: string) {
 
 export function subscribeProfile(fn: () => void) {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 /** 현재 장착 뱃지 이미지 src */

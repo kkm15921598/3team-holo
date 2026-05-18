@@ -97,7 +97,9 @@ export function setNotificationSettings(next: Partial<NotificationSettings>) {
 
 export function subscribeNotificationSettings(fn: () => void) {
   listeners.add(fn);
-  return () => listeners.delete(fn);
+  return () => {
+    listeners.delete(fn);
+  };
 }
 
 // 읽음 상태 관련
