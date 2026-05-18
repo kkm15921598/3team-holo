@@ -325,22 +325,25 @@ function NewChatSheet({
       >
         <div className="mx-auto mt-2 mb-2 h-1 w-10 rounded bg-holo-line-3" />
 
-        {/* 헤더 */}
-        <div className="flex items-center justify-between border-b border-holo-line px-4 py-2">
+        {/* 헤더 — 가운데 "새 채팅" 을 absolute 로 진짜 중앙 고정. 좌/우 버튼의 너비가
+            다르더라도 (특히 그룹 모드의 "시작 (N)" 카운트가 늘면) 제목이 흔들리지 않게. */}
+        <div className="relative flex items-center justify-between border-b border-holo-line px-4 py-2">
           <button
             type="button"
             onClick={() => close()}
-            className="text-[13px] text-holo-ink-3"
+            className="relative z-10 text-[13px] text-holo-ink-3"
           >
             취소
           </button>
-          <span className="text-[15px] font-semibold text-holo-ink">새 채팅</span>
+          <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold text-holo-ink">
+            새 채팅
+          </span>
           {mode === "group" ? (
             <button
               type="button"
               disabled={selected.size === 0}
               onClick={() => close(startGroup)}
-              className={`text-[13px] font-semibold ${
+              className={`relative z-10 text-[13px] font-semibold ${
                 selected.size === 0 ? "text-holo-ink-3" : "text-holo-purple-mid"
               }`}
             >
@@ -489,14 +492,17 @@ function FilterChip({
   onClick: () => void;
   children: React.ReactNode;
 }) {
+  // 활성/비활성 둘 다 동일하게 1px 보더를 가지도록 통일.
+  // 활성 시엔 보더 색을 배경(검정) 과 같게 해서 시각적으로 안 보이게.
+  // → 칩의 외곽 크기가 두 상태에서 100% 같아져 텍스트 위치 흔들림 없음.
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`h-7 rounded-full px-3 text-[12px] font-medium ${
+      className={`h-7 rounded-full border px-3 text-[12px] font-medium ${
         active
-          ? "bg-holo-ink text-white"
-          : "border border-holo-line-3 bg-white text-holo-ink-2"
+          ? "border-holo-ink bg-holo-ink text-white"
+          : "border-holo-line-3 bg-white text-holo-ink-2"
       }`}
     >
       {children}
