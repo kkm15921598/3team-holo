@@ -8,6 +8,7 @@ import { tryDailyEarn } from "@/features/myroom/myroom-store";
 import { pushPostCreated } from "@/shared/stores/notifications-store";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 const CATEGORIES = [
   "자유게시판",
@@ -39,7 +40,23 @@ const CATEGORY_ID_TO_NAME: Record<string, Category> = Object.fromEntries(
 const MEETUP_TYPES = ["단기성 모임", "장기성 모임"] as const;
 type MeetupType = (typeof MEETUP_TYPES)[number];
 
-type OpenSection = "category" | "type" | "date" | "people" | null;
+type OpenSection = "category" | "type" | "date" | "time" | "people" | null;
+
+/**
+ * 단기성 모임용 시작 시각 옵션 — 30분 단위, 00:00 ~ 23:30 (총 48개).
+ * 시간만 빠르게 고를 수 있게 셀렉트 형태로 노출한다.
+ */
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      out.push(
+        `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
+      );
+    }
+  }
+  return out;
+})();
 
 type WriteLocationState = {
   // Draft flow
@@ -52,9 +69,15 @@ type WriteLocationState = {
   content?: string;
   meetupType?: MeetupType | null;
   eventDate?: string;
+  /** 단기성 모임 시작 시각 (HH:MM). */
+  eventTime?: string;
+  /** 장기성 모임 종료일 — 단기성에선 undefined. */
+  endDate?: string;
   peopleCount?: number | null;
   place?: string;
   postLocation?: PostLocation | null;
+  /** 게시글 첨부 사진 — 수정 진입 시 기존 사진 복원용. */
+  photoUrls?: string[];
 } | null;
 
 export function BoardWriteScreen() {
@@ -85,8 +108,13 @@ export function BoardWriteScreen() {
   const [date, setDate] = useState<string>(
     incomingState?.eventDate ?? "2026-05-18",
   );
+  // 종료일 — 수정 진입 시 기존 endDate 가 있으면 그걸 살리고, 없으면 시작일로 초기화 (단기성으로 진입한 흐름).
   const [endDate, setEndDate] = useState<string>(
-    incomingState?.eventDate ?? "2026-05-18",
+    incomingState?.endDate ?? incomingState?.eventDate ?? "2026-05-18",
+  );
+  // 단기성 모임 시작 시각 — 기본 19:00. 수정 진입 시 기존 값 복원.
+  const [eventTime, setEventTime] = useState<string>(
+    incomingState?.eventTime ?? "19:00",
   );
   const [rangeMode, setRangeMode] = useState<"start" | "end">("start");
   const [calMonth, setCalMonth] = useState<Date>(
@@ -95,6 +123,44 @@ export function BoardWriteScreen() {
   const [peopleCount, setPeopleCount] = useState<number | null>(
     incomingState?.peopleCount ?? null,
   );
+
+  // 게시글 첨부 사진 — 갤러리에서 여러 장 선택 가능. data URL 배열로 보관해 mock 환경에서 그대로 영속화.
+  const [photoUrls, setPhotoUrls] = useState<string[]>(
+    incomingState?.photoUrls ?? [],
+  );
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  /** 첨부 사진은 최대 5장까지 — 5MB 초과 / 비-이미지는 컷. */
+  const MAX_PHOTOS = 5;
+  const handlePostPhotoFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remaining = MAX_PHOTOS - photoUrls.length;
+    if (remaining <= 0) return;
+    const accepted: File[] = [];
+    for (let i = 0; i < files.length && accepted.length < remaining; i++) {
+      const f = files[i];
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 5 * 1024 * 1024) continue;
+      accepted.push(f);
+    }
+    if (accepted.length === 0) return;
+    // 순서를 보존하기 위해 Promise.all 로 읽고, 다 읽은 뒤 한 번에 setPhotoUrls.
+    Promise.all(
+      accepted.map(
+        (f) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (typeof reader.result === "string") resolve(reader.result);
+              else reject(new Error("not a string"));
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(f);
+          }),
+      ),
+    ).then((urls) => {
+      setPhotoUrls((prev) => [...prev, ...urls].slice(0, MAX_PHOTOS));
+    });
+  };
 
   // 위치(지도) 선택 상태
   const [postLocation, setPostLocation] = useState<PostLocation | null>(
@@ -206,12 +272,18 @@ export function BoardWriteScreen() {
           description: content.trim() || "",
           meetupType: meetupType ?? undefined,
           eventDate: date,
+          // 장기성 모임만 종료일을 함께 저장. 단기성으로 바뀐 경우엔 명시적으로 undefined 로 지워준다.
+          endDate: isLongTerm ? endDate : undefined,
+          // 단기성 모임만 시작 시각을 함께 저장. 장기성은 시간 개념이 없으니 undefined 로 지움.
+          eventTime: !isLongTerm ? eventTime : undefined,
           peopleCount,
           place:
             postLocation?.placeName ??
             incomingState.place ??
             existing.place,
           location: postLocation ?? existing.location,
+          // 첨부 사진 — 빈 배열이면 명시적으로 undefined 로 저장해 잔존 데이터 정리.
+          photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
         });
       }
     } else {
@@ -233,9 +305,17 @@ export function BoardWriteScreen() {
         authorLevel: 24,
         meetupType: isSimpleCategory ? undefined : (meetupType ?? undefined),
         eventDate: isSimpleCategory ? undefined : date,
+        // 종료일은 모임 + 장기성 두 조건 다 만족할 때만 저장.
+        endDate:
+          !isSimpleCategory && isLongTerm ? endDate : undefined,
+        // 시간은 모임 + 단기성 두 조건 다 만족할 때만 저장.
+        eventTime:
+          !isSimpleCategory && !isLongTerm ? eventTime : undefined,
         peopleCount: isSimpleCategory ? null : peopleCount,
         place: postLocation?.placeName ?? incomingState?.place,
         location: postLocation ?? undefined,
+        // 첨부 사진이 있으면 함께 저장 — 게시글 상세에서 본문 위/아래에 노출.
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       });
       // 새 게시글 등록 알림 — 알림 패널에서 바로 그 글로 이동할 수 있도록 한 줄 발행.
       pushPostCreated(newPostTitle, newPostId);
@@ -266,6 +346,15 @@ export function BoardWriteScreen() {
       icon={<CalIcon />}
       active={openSection === "date"}
       onClick={() => toggle("date")}
+    />
+  );
+  // 시간 pill — 단기성 모임에서만 노출. 30분 단위 시각을 셀렉트 형태로 선택.
+  const timePill = (
+    <PillButton
+      label={eventTime}
+      icon={<ClockIcon />}
+      active={openSection === "time"}
+      onClick={() => toggle("time")}
     />
   );
   const peoplePill = (
@@ -360,7 +449,11 @@ export function BoardWriteScreen() {
                   {typePill}
                   {peoplePill}
                 </div>
-                <div className="flex flex-wrap gap-2">{datePill}</div>
+                <div className="flex flex-wrap gap-2">
+                  {datePill}
+                  {/* 단기성 모임에선 날짜 옆에 시작 시각 셀렉트박스도 같이 노출 */}
+                  {!isLongTerm && timePill}
+                </div>
               </div>
             )}
 
@@ -533,6 +626,35 @@ export function BoardWriteScreen() {
               </div>
             )}
 
+            {/* 시간 선택 셀렉트 — 단기성 모임에서만 노출. 30분 단위 시각 리스트를 스크롤 가능한 패널로. */}
+            {!isSimpleCategory && !isLongTerm && openSection === "time" && (
+              <div className="absolute inset-x-5 top-full z-30 mt-2 max-h-[280px] overflow-y-auto rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
+                {TIME_OPTIONS.map((t, i) => {
+                  const selected = t === eventTime;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        setEventTime(t);
+                        setOpenSection(null);
+                      }}
+                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-[14px] ${
+                        i > 0 ? "border-t border-holo-line" : ""
+                      } ${
+                        selected
+                          ? "font-bold text-holo-purple-mid"
+                          : "text-holo-ink"
+                      }`}
+                    >
+                      {t}
+                      {selected && <CheckIcon />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {!isSimpleCategory && openSection === "people" && (
               <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 <div className="flex items-center justify-between px-4 py-3">
@@ -612,9 +734,65 @@ export function BoardWriteScreen() {
           </div>
         )}
 
+        {/* 첨부 사진 가로 스크롤 미리보기 — 0장이면 숨겨지고, 1장 이상이면 thumb + X 버튼 노출 */}
+        {photoUrls.length > 0 && (
+          <div className="no-scrollbar -mx-5 mt-2 flex shrink-0 gap-2 overflow-x-auto px-5">
+            {photoUrls.map((url, i) => (
+              <div
+                key={`${i}-${url.slice(-12)}`}
+                className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-[10px] border border-holo-line-2"
+              >
+                <img
+                  src={url}
+                  alt={`첨부 사진 ${i + 1}`}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label="사진 제거"
+                  onClick={() =>
+                    setPhotoUrls((prev) => prev.filter((_, idx) => idx !== i))
+                  }
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-[11px] text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* hidden 파일 input — 갤러리에서 여러 장 선택. mock 이라 base64 그대로 보관. */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            handlePostPhotoFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
         <div className="mt-auto flex items-center gap-4 border-t border-holo-line-3 px-5 py-3 text-[14px] text-holo-ink">
-          <button type="button" className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoUrls.length >= MAX_PHOTOS}
+            className={`flex items-center gap-1 ${
+              photoUrls.length > 0
+                ? "text-holo-purple-mid"
+                : photoUrls.length >= MAX_PHOTOS
+                  ? "text-holo-ink-4"
+                  : ""
+            }`}
+          >
             <PhotoIcon /> 사진
+            {photoUrls.length > 0 && (
+              <span className="text-[12px]">
+                {photoUrls.length}/{MAX_PHOTOS}
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -629,39 +807,15 @@ export function BoardWriteScreen() {
       </section>
 
       {/* Exit confirmation modal */}
-      {showExitModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
-          onClick={() => setShowExitModal(false)}
-        >
-          <div
-            className="w-full max-w-[300px] rounded-2xl bg-white p-5 text-center shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-[14px] leading-relaxed text-holo-ink">
-              아직 작성 중인 게시글이 있습니다.
-              <br />
-              이대로 나갈까요?
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                className="flex-1 rounded-full border border-holo-lilac-soft px-3 py-2 text-[13px] font-medium text-holo-purple-mid"
-              >
-                임시보관함에 넣기
-              </button>
-              <button
-                type="button"
-                onClick={handleExitWithoutSaving}
-                className="flex-1 rounded-full bg-holo-purple-mid px-3 py-2 text-[13px] font-medium text-white"
-              >
-                나가기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={showExitModal}
+        message="아직 작성 중인 게시글이 있습니다."
+        description="이대로 나갈까요?"
+        cancelLabel="임시보관함에 넣기"
+        confirmLabel="나가기"
+        onCancel={handleSaveDraft}
+        onConfirm={handleExitWithoutSaving}
+      />
 
       {/* Location picker modal */}
       {showLocationPicker && (
@@ -727,28 +881,12 @@ export function BoardWriteScreen() {
       )}
 
       {/* Empty content alert */}
-      {showEmptyAlert && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
-          onClick={() => setShowEmptyAlert(false)}
-        >
-          <div
-            className="w-full max-w-[300px] rounded-2xl bg-white p-5 text-center shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-[14px] leading-relaxed text-holo-ink">
-              내용이 입력되지 않았습니다.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowEmptyAlert(false)}
-              className="mt-4 w-full rounded-full bg-holo-purple-mid px-3 py-2 text-[13px] font-medium text-white"
-            >
-              확인
-            </button>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={showEmptyAlert}
+        message="내용이 입력되지 않았습니다."
+        singleAction
+        onConfirm={() => setShowEmptyAlert(false)}
+      />
     </main>
   );
 }
@@ -845,6 +983,14 @@ function CalIcon() {
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+function ClockIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </svg>
   );
 }

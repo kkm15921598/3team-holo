@@ -6,11 +6,9 @@ import {
   setNickname as storeSetNickname,
   setProfileFace as storeSetProfileFace,
 } from "@/shared/stores/profile-store";
-import {
-  FEMALE_FACES,
-  MALE_FACES,
-  ME_PERSONA,
-} from "@/features/home/home-faces";
+import { ME_PERSONA } from "@/features/home/home-faces";
+// 가입 흐름과 동일한 풀(성인+소년/소녀+노인 전부 포함) 을 사용 — 가입 때와 옵션 수가 동일해야 사용자가 같은 선택지를 본다.
+import { MAN_FACES, WOMAN_FACES } from "@/features/chat/avatars";
 import {
   getVerification,
   subscribeVerification,
@@ -22,17 +20,28 @@ export function ProfileEditScreen() {
   const [nickname, setNickname] = useState(profile.nickname);
   const [check, setCheck] = useState<"ok" | "fail" | null>(null);
 
-  // 본인인증 시 판별된 성별에 따라 캐릭터 후보를 필터링한다.
+  // 본인인증 시 판별된 성별 — 신규 가입자에겐 verification.gender 가 진실이다.
   const [verification, setVerification] = useState(getVerification);
   useEffect(() => {
     const unsub = subscribeVerification(() => setVerification(getVerification()));
     return unsub;
   }, []);
-  const characterOptions =
-    verification.gender === "M" ? MALE_FACES : FEMALE_FACES;
 
-  // 현재 저장된 프로필 얼굴 → 없으면 ME_PERSONA 기본값을 인덱스로 사용
+  // 캐릭터 옵션 결정 로직:
+  //  1) 현재 저장된 profileFace 의 경로(/man/ vs /woman/) 가 있으면 그쪽을 기준으로 — 마이페이지에
+  //     남자 얼굴이 떠 있는데 편집창에선 여자만 보이는 desync 를 막는다.
+  //  2) profileFace 가 없으면 verification.gender 로 폴백 ("F" 또는 null 일 땐 FEMALE).
+  //  3) 둘 다 모르면 FEMALE 기본.
   const initialFace = profile.profileFace ?? ME_PERSONA.face;
+  const inferredGender: "M" | "F" = initialFace.includes("/man/")
+    ? "M"
+    : initialFace.includes("/woman/")
+      ? "F"
+      : verification.gender === "M"
+        ? "M"
+        : "F";
+  const characterOptions = inferredGender === "M" ? MAN_FACES : WOMAN_FACES;
+
   const currentFaceIndex = Math.max(
     0,
     characterOptions.findIndex((f) => f === initialFace),
@@ -147,6 +156,7 @@ export function ProfileEditScreen() {
 function Divider() {
   return <div className="my-4 h-[6px] w-full bg-holo-surface-2" />;
 }
+
 function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/shared/contexts/signup-context";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 type SignupLayoutProps = {
   // 단계를 7단계까지 확장하여 정의
@@ -59,58 +60,22 @@ export function SignupLayout({ step, children }: SignupLayoutProps) {
       </div>
 
       {/* 가입 중단 확인 모달 */}
-      {showExit && (
-        <ExitConfirmModal
-          onCancel={() => setShowExit(false)}
-          onConfirm={handleConfirmExit}
-        />
-      )}
+      <ConfirmModal
+        open={showExit}
+        message="가입을 그만두시겠어요?"
+        description={
+          <>
+            지금까지 입력하신 정보는 저장되지 않아요.
+            <br />
+            그래도 나가시겠어요?
+          </>
+        }
+        cancelLabel="계속 가입"
+        confirmLabel="나가기"
+        onCancel={() => setShowExit(false)}
+        onConfirm={handleConfirmExit}
+      />
     </main>
-  );
-}
-
-function ExitConfirmModal({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-6"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-[320px] rounded-[18px] bg-white p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p className="text-center text-[16px] font-semibold text-holo-ink">
-          가입을 그만두시겠어요?
-        </p>
-        <p className="mt-2 text-center text-[13px] leading-relaxed text-holo-ink-3">
-          지금까지 입력하신 정보는 저장되지 않아요.
-          <br />
-          그래도 나가시겠어요?
-        </p>
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="h-[48px] flex-1 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink"
-          >
-            계속 가입하기
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="h-[48px] flex-1 rounded-holo-pill bg-holo-error text-[14px] font-semibold text-white"
-          >
-            나가기
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 

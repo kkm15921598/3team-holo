@@ -9,6 +9,7 @@ import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
 import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function HomeScreen() {
   const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
@@ -220,33 +221,25 @@ function WelcomeBonusModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/40 px-6">
-      <div className="w-full max-w-[320px] rounded-[20px] bg-white p-6 text-center shadow-xl">
-        <div className="mx-auto flex h-[80px] w-[80px] items-center justify-center rounded-full bg-holo-lilac-card-2 text-[36px]">
-          🎉
-        </div>
-        <h2 className="mt-5 text-[20px] font-bold text-holo-ink">
-          환영합니다!
-        </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-holo-ink-3">
+    <ConfirmModal
+      open
+      message="환영합니다! 🎉"
+      description={
+        <>
           HOLO 가입을 축하드려요.
           <br />
           가입 보너스로 포인트를 드릴게요.
-        </p>
-        <div className="mt-5 flex items-center justify-center gap-2 rounded-[16px] border border-holo-lilac-deep bg-holo-lilac-card px-4 py-3">
-          <span className="text-[18px]">💜</span>
-          <span className="text-[22px] font-bold text-holo-purple-mid">
-            +{bonus}P
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-5 h-[52px] w-full rounded-holo-pill bg-holo-gradient text-[15px] font-semibold text-white shadow-md transition active:scale-[0.99]"
-        >
-          확인
-        </button>
+        </>
+      }
+      singleAction
+      onConfirm={onClose}
+    >
+      <div className="flex items-center justify-center gap-2 rounded-[12px] border border-holo-lilac-deep bg-holo-lilac-card px-4 py-2">
+        <span className="text-[16px]">💜</span>
+        <span className="text-[18px] font-bold text-holo-purple-mid">
+          +{bonus}P
+        </span>
       </div>
-    </div>
+    </ConfirmModal>
   );
 }

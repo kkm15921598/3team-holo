@@ -13,6 +13,9 @@ import {
   useSentRequests,
   type Friend,
 } from "./friends-store";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { markReported } from "@/shared/stores/reported-users-store";
+import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
 
 type Mode = "view" | "block" | "report" | "delete";
 
@@ -40,6 +43,8 @@ export function FriendsScreen() {
   const handleBlock = () => {
     if (!confirmBlock) return;
     blockFriendById(confirmBlock.id);
+    // 닉네임 단위 차단 set 에도 함께 push — 이웃 추천 등 노출 후보 필터에서 단일 출처로 쓰기 위함.
+    markBlocked(confirmBlock.nickname);
     setConfirmBlock(null);
     showToast("차단되었습니다.");
   };
@@ -63,6 +68,8 @@ export function FriendsScreen() {
   const handleSubmitReport = () => {
     if (!reportTarget || !reportReason.trim()) return;
     removeFriendById(reportTarget.id);
+    // 신고된 닉네임은 영속 set 에도 남겨, 이웃 추천 등 노출 후보에서 자동으로 빠진다.
+    markReported(reportTarget.nickname);
     setReportTarget(null);
     setReportReason("");
     showToast("신고가 접수되었습니다.");
@@ -266,109 +273,57 @@ export function FriendsScreen() {
       )}
 
       {/* Confirm delete */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] text-holo-ink">
-              <span className="font-semibold">{confirmDelete.nickname}</span> 님을
-              <br />
-              친구 목록에서 삭제할까요?
-            </p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              삭제하면 친구 목록에서 사라집니다.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(null)}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
-              >
-                삭제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={confirmDelete !== null}
+        message={
+          <>
+            <span className="font-semibold">{confirmDelete?.nickname}</span> 님을
+            <br />
+            친구 목록에서 삭제할까요?
+          </>
+        }
+        description="삭제하면 친구 목록에서 사라집니다."
+        confirmLabel="삭제"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+      />
 
       {/* Confirm block */}
-      {confirmBlock && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] text-holo-ink">
-              <span className="font-semibold">{confirmBlock.nickname}</span> 님을
-              <br />
-              차단하시겠습니까?
-            </p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              차단된 친구는 친구 목록에서 사라집니다.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmBlock(null)}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleBlock}
-                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
-              >
-                차단
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={confirmBlock !== null}
+        message={
+          <>
+            <span className="font-semibold">{confirmBlock?.nickname}</span> 님을
+            <br />
+            차단하시겠습니까?
+          </>
+        }
+        description="차단된 친구는 친구 목록에서 사라집니다."
+        confirmLabel="차단"
+        onCancel={() => setConfirmBlock(null)}
+        onConfirm={handleBlock}
+      />
 
-      {/* Report modal */}
-      {reportTarget && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[320px] rounded-[14px] bg-white p-5">
-            <p className="text-[14px] font-semibold text-holo-ink">
-              {reportTarget.nickname} 님 신고
-            </p>
-            <p className="mt-1 text-[12px] text-holo-ink-3">신고 사유를 입력해 주세요.</p>
-            <textarea
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              placeholder="예: 욕설, 스팸, 부적절한 내용..."
-              rows={4}
-              className="mt-3 w-full resize-none rounded-[10px] border border-holo-line p-3 text-[13px] outline-none placeholder:text-holo-ink-3 focus:border-holo-purple-mid"
-            />
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setReportTarget(null);
-                  setReportReason("");
-                }}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmitReport}
-                disabled={!reportReason.trim()}
-                className={`h-10 flex-1 rounded-full text-[13px] font-semibold text-white ${
-                  reportReason.trim() ? "bg-holo-purple-mid" : "bg-holo-ink-4"
-                }`}
-              >
-                신고
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Report modal — textarea 가 필요해 ConfirmModal 의 children 슬롯을 활용 */}
+      <ConfirmModal
+        open={reportTarget !== null}
+        message={`${reportTarget?.nickname ?? ""} 님 신고`}
+        description="신고 사유를 입력해 주세요."
+        confirmLabel="신고"
+        onCancel={() => {
+          setReportTarget(null);
+          setReportReason("");
+        }}
+        onConfirm={handleSubmitReport}
+      >
+        <textarea
+          value={reportReason}
+          onChange={(e) => setReportReason(e.target.value)}
+          placeholder="예: 욕설, 스팸, 부적절한 내용..."
+          rows={4}
+          className="w-full resize-none rounded-[10px] border border-holo-line p-3 text-[13px] outline-none placeholder:text-holo-ink-3 focus:border-holo-purple-mid"
+        />
+      </ConfirmModal>
 
       {/* Blocked friends view */}
       {showBlockedView && (
@@ -487,13 +442,15 @@ function FlagIcon() {
     </svg>
   );
 }
+
 function ChevronRightIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }
+
 function TrashIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

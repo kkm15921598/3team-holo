@@ -61,12 +61,29 @@ export const DEVICE_W = 360;
 /** 4-버튼 컨트롤이 가구 바깥으로 12px 씩 튀어나오므로, 안전 여백은 14 정도 */
 export const SAFE_MARGIN = 14;
 
-/** 가구가 화면 안쪽에 들어오도록 좌표 보정 */
-export function clampPlacement(x: number, y: number, width: number): { x: number; y: number } {
+/**
+ * 가구가 화면 안쪽에 들어오도록 좌표 보정.
+ *
+ * height 가 주어지면 그 값을 기준으로 maxY 를 정해 가구의 하단이 룸 바닥선을 절대 넘어가지 않게 한다.
+ * 종전에는 height 인자가 없어 "대략 40px" 로 추정했는데, 침대처럼 키가 큰 가구는 그 추정값을
+ * 훨씬 초과해 룸 영역 아래로 빠지는 문제가 있었다. height 를 명시 전달하면 그 가구의 실제 폭/높이로
+ * 정확히 클램프된다.
+ *
+ * height 를 모르는 호출(이전 경로 호환) 은 보수적인 기본 80 을 사용해 큰 가구가 빠지는 것은 막고,
+ * 짧은 가구에서 약간 위쪽으로 클램프되는 정도만 손해본다.
+ */
+export function clampPlacement(
+  x: number,
+  y: number,
+  width: number,
+  height?: number,
+): { x: number; y: number } {
   const minX = (ROOM_W - DEVICE_W) / 2 + SAFE_MARGIN;            // 34
   const maxX = (ROOM_W + DEVICE_W) / 2 - SAFE_MARGIN - width;    // 366 - width
   const minY = SAFE_MARGIN;                                       // 14
-  const maxY = ROOM_H - SAFE_MARGIN - 40;                         // 286 (대략적인 가구 높이 여유)
+  // height 가 있으면 정확한 룸 바닥 기준 클램프. 없으면 보수적인 80 으로 폴백.
+  const safeHeight = height ?? 80;
+  const maxY = ROOM_H - SAFE_MARGIN - safeHeight;
   return {
     x: Math.max(minX, Math.min(maxX, x)),
     y: Math.max(minY, Math.min(maxY, y)),
@@ -113,6 +130,7 @@ export const DEFAULT_PLACEMENT: Record<
  * 가구는 책상 + 의자 2개만 — 좌표는 home-illustrations.tsx 의 floorTopY 기준으로
  * 마름모 바닥 안에 안착하도록 산정되어 있다.
  */
+
 export const DEFAULT_ROOM: PlacedFurniture[] = [
   { id: "desk-1", kind: "desk", variant: "01", flipped: false, x: 117, y: 135, width: 107 },
   { id: "chair-1", kind: "chair", variant: "01", flipped: true, x: 248, y: 188, width: 55 },

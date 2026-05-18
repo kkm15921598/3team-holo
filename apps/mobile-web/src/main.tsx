@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { DeviceFrame } from "@/shared/components/device-frame";
+import { LevelUpCelebration } from "@/shared/components/level-up-celebration";
 import { TabLayout } from "@/shared/components/tab-layout";
 import { SignupProvider } from "@/shared/contexts/signup-context";
 
@@ -52,6 +53,7 @@ import { RecentPostsScreen } from "@/features/mypage/recent-posts-screen";
 import { FriendsScreen } from "@/features/mypage/friends-screen";
 import { FriendsAddScreen } from "@/features/mypage/friends-add-screen";
 import { FriendRequestsScreen } from "@/features/mypage/friend-requests-screen";
+import { NeighborhoodFindScreen } from "@/features/mypage/neighborhood-find-screen";
 import { NotificationsListScreen } from "@/features/notifications/notifications-list-screen";
 import { AccountScreen as MypageAccountScreen } from "@/features/mypage/account-screen";
 import { AccountLinkScreen } from "@/features/mypage/account-link-screen";
@@ -146,6 +148,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/friends" element={<TabLayout showHeader={false}><FriendsScreen /></TabLayout>} />
           <Route path="/mypage/friends/add" element={<TabLayout showHeader={false}><FriendsAddScreen /></TabLayout>} />
           <Route path="/mypage/friends/requests" element={<TabLayout showHeader={false}><FriendRequestsScreen /></TabLayout>} />
+          <Route path="/mypage/neighborhood" element={<TabLayout showHeader={false}><NeighborhoodFindScreen /></TabLayout>} />
           <Route path="/notifications" element={<TabLayout showHeader={false}><NotificationsListScreen /></TabLayout>} />
 
           {/* Mypage Settings */}
@@ -169,6 +172,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
           <Route path="*" element={<Navigate to="/splash" replace />} />
         </Routes>
+        {/* 레벨업 축하 모달 — 어디서 XP 가 적립되어 레벨이 오르든 최상단에서 한 번 노출. */}
+        <LevelUpCelebration />
       </DeviceFrame>
     </BrowserRouter>
   </React.StrictMode>,

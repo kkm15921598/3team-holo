@@ -7,6 +7,7 @@ import {
   subscribeVerification,
 } from "@/shared/stores/verification-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function AccountScreen() {
   const navigate = useNavigate();
@@ -78,40 +79,26 @@ export function AccountScreen() {
         </ul>
       </section>
 
-      {showWithdraw && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] font-semibold text-holo-ink">정말 탈퇴하시겠습니까?</p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              계정의 모든 데이터(글, 댓글, 친구 목록 등)가
-              <br />
-              영구적으로 삭제됩니다.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowWithdraw(false)}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // 모든 사용자 store 초기화 — 글/댓글/좋아요/참여/친구/마이룸/포인트/인증/접속이력 등.
-                  // 로그인 화면으로 보낼 때 잔여 데이터가 다음 가입자에게 누설되지 않게 한다.
-                  resetAllStoresForFreshSignup();
-                  setShowWithdraw(false);
-                  navigate("/login", { replace: true });
-                }}
-                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
-              >
-                탈퇴
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={showWithdraw}
+        message="정말 탈퇴하시겠습니까?"
+        description={
+          <>
+            계정의 모든 데이터(글, 댓글, 친구 목록 등)가
+            <br />
+            영구적으로 삭제됩니다.
+          </>
+        }
+        confirmLabel="탈퇴"
+        onCancel={() => setShowWithdraw(false)}
+        onConfirm={() => {
+          // 모든 사용자 store 초기화 — 글/댓글/좋아요/참여/친구/마이룸/포인트/인증/접속이력 등.
+          // 로그인 화면으로 보낼 때 잔여 데이터가 다음 가입자에게 누설되지 않게 한다.
+          resetAllStoresForFreshSignup();
+          setShowWithdraw(false);
+          navigate("/login", { replace: true });
+        }}
+      />
     </main>
   );
 }

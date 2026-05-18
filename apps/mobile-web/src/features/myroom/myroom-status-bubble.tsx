@@ -22,6 +22,12 @@ export function StatusBubble() {
   const [mode, setMode] = useState<Mode>("idle");
   const [draft, setDraft] = useState(status);
 
+  /**
+   * 말풍선 컨테이너 ref — 드래그 클램프 시 실제 폭/높이를 측정해 영역 밖으로 새지 않게 한다.
+   * 종전엔 x: [10, 360] 고정 클램프라 말풍선 너비를 고려하지 않아 우측이 잘리는 문제가 있었다.
+   */
+  const bubbleRef = useRef<HTMLDivElement>(null);
+
   const dragStart = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
 
   const handleDragStart = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -33,9 +39,20 @@ export function StatusBubble() {
     if (!dragStart.current) return;
     const dx = e.clientX - dragStart.current.px;
     const dy = e.clientY - dragStart.current.py;
+    // 부모(룸 컨테이너) 의 실제 크기를 기준으로 좌상단 (x, y) 클램프.
+    // 폭/높이가 없으면 안전 기본값(360/300) 으로 폴백.
+    const el = bubbleRef.current;
+    const parent = el?.parentElement;
+    const PADDING = 4; // 가장자리에서 떼어둘 최소 여유
+    const bw = el?.offsetWidth ?? 0;
+    const bh = el?.offsetHeight ?? 0;
+    const pw = parent?.clientWidth ?? 360;
+    const ph = parent?.clientHeight ?? 300;
+    const maxX = Math.max(PADDING, pw - bw - PADDING);
+    const maxY = Math.max(PADDING, ph - bh - PADDING);
     setStatusPosition({
-      x: Math.max(10, Math.min(360, dragStart.current.ox + dx)),
-      y: Math.max(10, Math.min(290, dragStart.current.oy + dy)),
+      x: Math.max(PADDING, Math.min(maxX, dragStart.current.ox + dx)),
+      y: Math.max(PADDING, Math.min(maxY, dragStart.current.oy + dy)),
     });
   };
   const handleDragEnd = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -75,6 +92,7 @@ export function StatusBubble() {
 
   return (
     <div
+      ref={bubbleRef}
       className="absolute z-[60] transition-[left] duration-150"
       style={{ left: containerLeft, top: pos.y }}
     >

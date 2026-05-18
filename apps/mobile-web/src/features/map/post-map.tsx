@@ -480,7 +480,11 @@ export function LocationMap({
   return (
     <div
       className={
-        "relative w-full overflow-hidden " + (className ?? "h-[160px]")
+        // isolate — Leaflet 내부 pane 들이 z-index 200~700 을 쓰는데, 격리(isolation:isolate)를
+        // 걸어주지 않으면 부모 stacking context 로 새어 나와 알림창(z-[1200])·드롭다운·
+        // 시트 같은 상위 UI 의 z-index 와 경쟁한다. 그래서 지도 위로 모달이 안 보이는
+        // 현상이 발생. isolate 로 stacking 을 가두면 외부에서는 항상 지도 컨테이너의 z-index 만 보인다.
+        "relative isolate w-full overflow-hidden " + (className ?? "h-[160px]")
       }
     >
       <div
@@ -591,7 +595,8 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
   return (
     <div
       className={
-        "relative w-full overflow-hidden " + (className ?? "h-full")
+        // isolate — LocationMap 과 동일한 이유. Leaflet pane 의 z-index 가 상위로 새어 나가지 못하게 stacking 격리.
+        "relative isolate w-full overflow-hidden " + (className ?? "h-full")
       }
     >
       <div ref={elRef} className="absolute inset-0" />

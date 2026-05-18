@@ -12,6 +12,7 @@ import {
   type KoreanDong,
 } from "@/shared/data/korean-dongs";
 import { addPoints } from "@/features/myroom/myroom-store";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 type Phase = "permission" | "detecting" | "confirm" | "success" | "error";
 
@@ -324,41 +325,29 @@ export function VerifyRegionScreen() {
         </section>
       )}
 
-      {phase === "success" && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-6 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-holo-lilac-card-2 text-[28px]">
-              ✅
-            </div>
-            <p className="mt-3 text-[16px] font-bold text-holo-ink">
-              동네 인증 완료!
-            </p>
-            <p className="mt-1 text-[14px] text-holo-purple-mid">
-              {pickedLabel}
-            </p>
-            {/* 갱신 주기(90일) 이내 재인증이면 적립 안내 대신 "이미 적립됨" 노출 */}
+      <ConfirmModal
+        open={phase === "success"}
+        message="동네 인증 완료!"
+        description={
+          <>
+            <span className="text-holo-purple-mid">{pickedLabel}</span>
+            <br />
             {pointsGranted ? (
-              <p className="mt-3 text-[20px] font-bold text-holo-purple-mid">
+              <span className="mt-1 inline-block text-[16px] font-bold text-holo-purple-mid">
                 +10P
-              </p>
+              </span>
             ) : (
-              <p className="mt-3 text-[13px] font-medium text-holo-ink-3">
-                이미 적립된 동네 인증입니다
-              </p>
+              <span>이미 적립된 동네 인증입니다.</span>
             )}
-            <p className="mt-1 text-[12px] text-holo-ink-3">
+            <br />
+            <span className="text-[11px]">
               인증은 {nextRenewDate()} 에 다시 해주세요.
-            </p>
-            <button
-              type="button"
-              onClick={finish}
-              className="mt-4 h-10 w-full rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
-            >
-              확인
-            </button>
-          </div>
-        </div>
-      )}
+            </span>
+          </>
+        }
+        singleAction
+        onConfirm={finish}
+      />
 
       {/* 미사용 변수 워닝 방지 */}
       <span className="hidden">{ME.region}</span>

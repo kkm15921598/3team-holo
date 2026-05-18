@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 type Provider = {
   id: "kakao" | "naver" | "google" | "apple";
@@ -109,36 +110,20 @@ export function AccountLinkScreen() {
         </p>
       </section>
 
-      {confirmUnlink && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] font-semibold text-holo-ink">
-              {confirmUnlink.label} 연결을 해제할까요?
-            </p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              해제 후에는 {confirmUnlink.label} 계정으로
-              <br />
-              더 이상 로그인할 수 없어요.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmUnlink(null)}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={doUnlink}
-                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
-              >
-                해제
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={confirmUnlink !== null}
+        message={`${confirmUnlink?.label ?? ""} 연결을 해제할까요?`}
+        description={
+          <>
+            해제 후에는 {confirmUnlink?.label} 계정으로
+            <br />
+            더 이상 로그인할 수 없어요.
+          </>
+        }
+        confirmLabel="해제"
+        onCancel={() => setConfirmUnlink(null)}
+        onConfirm={doUnlink}
+      />
     </main>
   );
 }

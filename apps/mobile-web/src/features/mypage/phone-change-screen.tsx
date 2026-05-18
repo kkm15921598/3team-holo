@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setPhoneVerified } from "@/shared/stores/verification-store";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 const CARRIERS = ["SKT", "KT", "LG U+", "SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"];
 const CURRENT_PHONE = "010-****-1234";
@@ -208,28 +209,16 @@ export function PhoneChangeScreen() {
         </div>
       )}
 
-      {done && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] font-semibold text-holo-ink">
-              번호가 변경되었어요!
-            </p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              {formatPhone(phone)} 로 등록되었습니다.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setDone(false);
-                navigate(-1);
-              }}
-              className="mt-4 h-10 w-full rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
-            >
-              확인
-            </button>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={done}
+        message="번호가 변경되었어요!"
+        description={`${formatPhone(phone)} 로 등록되었습니다.`}
+        singleAction
+        onConfirm={() => {
+          setDone(false);
+          navigate(-1);
+        }}
+      />
     </main>
   );
 }

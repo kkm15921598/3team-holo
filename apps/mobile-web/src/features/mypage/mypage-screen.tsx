@@ -7,6 +7,7 @@ import { usePoints } from "@/features/myroom/myroom-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useVerification } from "@/shared/stores/verification-store";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -126,35 +127,17 @@ export function MypageScreen() {
         </ul>
       </section>
 
-      {showLogout && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] font-semibold text-holo-ink">로그아웃 하시겠어요?</p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              다시 로그인해야 서비스를 이용할 수 있어요.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowLogout(false)}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowLogout(false);
-                  navigate("/login");
-                }}
-                className="h-10 flex-1 rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
-              >
-                로그아웃
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={showLogout}
+        message="로그아웃 하시겠어요?"
+        description="다시 로그인해야 서비스를 이용할 수 있어요."
+        confirmLabel="로그아웃"
+        onCancel={() => setShowLogout(false)}
+        onConfirm={() => {
+          setShowLogout(false);
+          navigate("/login");
+        }}
+      />
     </main>
   );
 }

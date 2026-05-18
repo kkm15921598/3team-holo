@@ -37,6 +37,7 @@ import { GroupAvatar } from "./group-avatar";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
+import { ConfirmModal as SharedConfirmModal } from "@/shared/components/confirm-modal";
 
 type ReplyTarget = { nickname: string; content: string } | null;
 
@@ -409,7 +410,8 @@ export function ChatRoomScreen() {
         mine: true,
         replyTo: reply ?? undefined,
         read: false,
-        readBy: 1,
+        // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
+        readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
       },
     ]);
     setText("");
@@ -590,7 +592,7 @@ export function ChatRoomScreen() {
             type: "image",
             imageUrl: reader.result as string,
             read: false,
-            readBy: 1,
+            readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
           },
         ]);
       };
@@ -615,7 +617,7 @@ export function ChatRoomScreen() {
           fileSize: file.size,
           fileMime: file.type,
           read: false,
-          readBy: 1,
+          readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
         },
       ]);
     });
@@ -662,7 +664,8 @@ export function ChatRoomScreen() {
           address: locDraftAddress.trim() || undefined,
         },
         read: false,
-        readBy: 1,
+        // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
+        readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
       },
     ]);
     setShowLocationPicker(false);
@@ -871,6 +874,7 @@ export function ChatRoomScreen() {
               <MessageItem
                 key={m.id}
                 message={m}
+                memberCount={room?.memberCount ?? 2}
                 onLongPress={(target) => setActionTarget(target)}
                 onReact={() => setReactionTarget(m.id)}
                 showReactionPicker={reactionTarget === m.id}
@@ -1239,64 +1243,68 @@ export function ChatRoomScreen() {
         </div>
       )}
 
-      {alert && (
-        <AlertModal
-          title={alert.title}
-          description={alert.description}
-          danger={alert.danger}
-          onConfirm={alert.onConfirm}
-          onClose={() => setAlert(null)}
-        />
-      )}
+      <SharedConfirmModal
+        open={alert !== null}
+        message={alert?.title ?? ""}
+        description={alert?.description}
+        // onConfirm 이 있으면 확인/취소 2버튼 다이얼로그, 없으면 단일 확인 안내.
+        singleAction={!alert?.onConfirm}
+        onCancel={() => setAlert(null)}
+        onConfirm={() => {
+          alert?.onConfirm?.();
+          setAlert(null);
+        }}
+      />
 
-      {showAddFriend && (
-        <ConfirmModal
-          message={
-            <>
-              <strong>{showAddFriend}</strong>님을 친구로 추가하시겠습니까?
-            </>
-          }
-          onYes={() => {
-            const friendName = showAddFriend;
+      <SharedConfirmModal
+        open={showAddFriend !== null}
+        message={
+          <>
+            <strong>{showAddFriend}</strong>님을 친구로 추가하시겠습니까?
+          </>
+        }
+        confirmLabel="추가"
+        onCancel={() => setShowAddFriend(null)}
+        onConfirm={() => {
+          const friendName = showAddFriend;
+          if (!friendName) return;
 
-            // 전역 친구 store 에 요청을 보낸다 — 실제 친구로는 상대 수락 후에 등록된다.
-            const result = sendFriendRequest(friendName);
+          // 전역 친구 store 에 요청을 보낸다 — 실제 친구로는 상대 수락 후에 등록된다.
+          const result = sendFriendRequest(friendName);
 
-            setNewlyAddedFriends((prev) => {
-              if (prev.has(friendName)) return prev;
-              const next = new Set(prev);
-              next.add(friendName);
-              return next;
-            });
+          setNewlyAddedFriends((prev) => {
+            if (prev.has(friendName)) return prev;
+            const next = new Set(prev);
+            next.add(friendName);
+            return next;
+          });
 
-            const systemMessage =
-              result === "already-friend"
-                ? `${friendName}님은 이미 친구예요`
-                : result === "already-sent"
-                  ? `${friendName}님에게는 이미 친구 요청을 보냈어요`
-                  : result === "incoming-exists"
-                    ? `${friendName}님이 먼저 친구 요청을 보냈어요. 친구 화면에서 수락해 보세요`
-                    : result === "max-reached"
-                      ? `친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요`
-                      : `${friendName}님에게 친구 요청을 보냈어요`;
+          const systemMessage =
+            result === "already-friend"
+              ? `${friendName}님은 이미 친구예요`
+              : result === "already-sent"
+                ? `${friendName}님에게는 이미 친구 요청을 보냈어요`
+                : result === "incoming-exists"
+                  ? `${friendName}님이 먼저 친구 요청을 보냈어요. 친구 화면에서 수락해 보세요`
+                  : result === "max-reached"
+                    ? `친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요`
+                    : `${friendName}님에게 친구 요청을 보냈어요`;
 
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `friend-added-${Date.now()}`,
-                nickname: "",
-                content: systemMessage,
-                time: "",
-                mine: false,
-                type: "system",
-              },
-            ]);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `friend-added-${Date.now()}`,
+              nickname: "",
+              content: systemMessage,
+              time: "",
+              mine: false,
+              type: "system",
+            },
+          ]);
 
-            setShowAddFriend(null);
-          }}
-          onNo={() => setShowAddFriend(null)}
-        />
-      )}
+          setShowAddFriend(null);
+        }}
+      />
 
       {actionTarget && (
         <MessageActionSheet
@@ -1626,6 +1634,7 @@ function PhotoViewer({
 
 function MessageItem({
   message,
+  memberCount,
   onLongPress,
   onReact,
   showReactionPicker,
@@ -1634,6 +1643,8 @@ function MessageItem({
   onImageTap,
 }: {
   message: ChatMessage;
+  /** 방의 총 인원수 — 안 읽음 카운트 계산용. 1:1 방은 2, 단톡은 그 이상. */
+  memberCount: number;
   onLongPress: (m: ChatMessage) => void;
   onReact: () => void;
   showReactionPicker: boolean;
@@ -1765,13 +1776,24 @@ function MessageItem({
     );
   };
 
+  // 내가 보낸 메시지의 "안 읽음 N" — 카운트는 방 인원에서 나(보낸이) 를 뺀 값이 상한.
+  //   상한 = max(0, memberCount - 1)
+  //   실제 표시값 = message.readBy 가 있으면 그 값을 상한으로 클램프, 없으면 상한 그대로.
+  //   1:1 방(memberCount=2) 에서는 상한이 1.
+  const mineOthers = Math.max(0, memberCount - 1);
+  const mineUnread =
+    typeof message.readBy === "number"
+      ? Math.min(message.readBy, mineOthers)
+      : mineOthers;
+
   if (message.mine) {
     return (
       <li className="flex flex-col items-end">
         <div className="flex items-end gap-2">
           <div className="flex flex-col items-end gap-0.5">
+            {/* 읽지 않은 사람 수 — "안 읽음" / "읽음" 라벨 없이 숫자만 노출. 0이거나 read=true 면 비움. */}
             <span className="text-[10px] text-holo-ink-3">
-              {message.read ? "읽음" : message.readBy ? `안 읽음 ${message.readBy}` : ""}
+              {!message.read && mineUnread > 0 ? mineUnread : ""}
             </span>
             <span className="text-[10px] text-holo-ink-3">{message.time}</span>
           </div>
@@ -1821,7 +1843,24 @@ function MessageItem({
               {renderBody(false)}
               {showReactionPicker && <ReactionPicker onPick={onPickEmoji} />}
             </div>
-            <span className="text-[10px] text-holo-ink-3">{message.time}</span>
+            {/* 친구 말풍선 — 읽지 않은 사람 수만 숫자로. 보낸이·나 제외한 상한(max(0, memberCount-2)).
+                0 이면 라벨 자체를 숨겨 시간만 보인다. */}
+            <div className="flex flex-col items-start gap-0.5">
+              {(() => {
+                const friendOthers = Math.max(0, memberCount - 2);
+                const friendUnread =
+                  typeof message.readBy === "number"
+                    ? Math.min(message.readBy, friendOthers)
+                    : friendOthers;
+                if (friendUnread === 0) return null;
+                return (
+                  <span className="text-[10px] text-holo-ink-3">
+                    {friendUnread}
+                  </span>
+                );
+              })()}
+              <span className="text-[10px] text-holo-ink-3">{message.time}</span>
+            </div>
           </div>
           {reactions.length > 0 && (
             <div className="relative z-20 mt-0 ml-2">
@@ -2659,40 +2698,6 @@ function ChatInfoModal({
   );
 }
 
-function ConfirmModal({
-  message,
-  onYes,
-  onNo,
-}: {
-  message: React.ReactNode;
-  onYes: () => void;
-  onNo: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-4">
-      <div className="w-full max-w-[300px] overflow-hidden rounded-[12px] bg-white">
-        <p className="px-4 py-5 text-center text-[14px] text-holo-ink">{message}</p>
-        <div className="flex border-t border-holo-line">
-          <button
-            type="button"
-            onClick={onYes}
-            className="flex-1 bg-holo-ink py-3 text-[14px] font-semibold text-white"
-          >
-            네
-          </button>
-          <button
-            type="button"
-            onClick={onNo}
-            className="flex-1 bg-holo-ink py-3 text-[14px] font-semibold text-white"
-          >
-            아니오
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function InviteFriendsModal({
   roomName,
   existingNicknames,
@@ -2905,6 +2910,7 @@ function ChevronRightSmallIcon() {
     </svg>
   );
 }
+
 function PlusIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -2949,68 +2955,4 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
-function formatPhone(v: string): string {
-  const digits = v.replace(/\D/g, "").slice(0, 11);
-  if (digits.length < 4) return digits;
-  if (digits.length < 8) return `${digits.slice(0,3)}-${digits.slice(3)}`;
-  return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
-}
 
-function AlertModal({
-  title,
-  description,
-  danger,
-  onConfirm,
-  onClose,
-}: {
-  title: string;
-  description?: string;
-  danger?: boolean;
-  onConfirm?: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-6"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[300px] overflow-hidden rounded-[14px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
-      >
-        <div className="px-5 pt-6 pb-2 text-center text-[15px] font-semibold leading-snug text-holo-ink">
-          {title}
-        </div>
-        {description && (
-          <div className="px-5 pb-5 text-center text-[13px] leading-snug text-holo-ink-2">
-            {description}
-          </div>
-        )}
-        <div className="flex bg-[#1A1A1A] text-white">
-          {onConfirm && (
-            <>
-              <button
-                type="button"
-                onClick={() => { onConfirm(); onClose(); }}
-                className={`flex-1 py-3 text-center text-[15px] font-medium ${danger ? "text-[#FF6B6B]" : ""}`}
-              >
-                네
-              </button>
-              <span className="w-px self-stretch bg-white/30" aria-hidden />
-            </>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 text-center text-[15px] font-medium"
-          >
-            {onConfirm ? "아니요" : "확인"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

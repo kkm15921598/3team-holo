@@ -41,7 +41,15 @@ export function PointsScreen() {
           )}
           {history.map((h) => (
             <li key={h.id} className="flex items-start gap-3 border-b border-holo-line-3 py-3">
-              <span className="text-[13px] text-holo-ink-2">{h.date}</span>
+              {/* 날짜는 위 줄, 그 아래에 작은 시간 라벨 — 시각이 없는 옛 항목은 날짜만 노출. */}
+              <div className="flex shrink-0 flex-col">
+                <span className="text-[13px] text-holo-ink-2">{h.date}</span>
+                {h.time && (
+                  <span className="mt-0.5 text-[11px] text-holo-ink-3">
+                    {h.time}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-1 flex-col">
                 <span className="text-[14px] text-holo-ink">{h.title}</span>
                 {h.note && <span className="text-[12px] text-holo-ink-3">{h.note}</span>}
@@ -99,6 +107,7 @@ function CalIcon() {
     </svg>
   );
 }
+
 function PCircleIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

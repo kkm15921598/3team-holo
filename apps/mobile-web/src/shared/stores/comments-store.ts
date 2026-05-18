@@ -19,6 +19,10 @@ export type StoredComment = {
   isAuthor?: boolean;
   hasMap?: boolean;
   hasPhoto?: boolean;
+  /** 사진 첨부 시 data URL — 카메라/갤러리에서 선택한 실제 이미지. mock 환경이라 base64 로 직접 보관. */
+  photoUrl?: string;
+  /** 지도 첨부 시 실제 좌표/장소명 — 글쓰기와 동일한 위치 선택 모달에서 가져온다. */
+  location?: { lat: number; lng: number; placeName?: string };
 };
 
 const STORAGE_KEY = "holo:comments:v1";
@@ -96,6 +100,7 @@ const subscribe = (cb: () => void) => {
   };
 };
 const snapshot = () => state;
+
 
 /** 전체 사용자 댓글 배열 (드물게 필요) */
 export function useUserComments(): StoredComment[] {

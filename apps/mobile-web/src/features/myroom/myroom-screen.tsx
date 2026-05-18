@@ -7,7 +7,7 @@ import { ME_PERSONA } from "../home/home-faces";
 import { CATEGORIES, clampPlacement, DEFAULT_PLACEMENT, furnitureSrc, type CategoryKey, type PlacedFurniture } from "./myroom-data";
 import type { CatalogItem } from "./myroom-data";
 import { CATALOG } from "./myroom-catalog";
-import { getPlacementWidth } from "./myroom-dimensions";
+import { getPlacementWidth, getPlacementHeight } from "./myroom-dimensions";
 import { RoomEditorView } from "./myroom-room-view";
 import { StatusBubble } from "./myroom-status-bubble";
 import {
@@ -114,9 +114,12 @@ export function MyroomScreen() {
   };
   const handleMove = (id: string, x: number, y: number) => {
     setMyroomItems(
-      items.map((i) =>
-        i.id === id ? { ...i, ...clampPlacement(x, y, i.width) } : i,
-      ),
+      items.map((i) => {
+        if (i.id !== id) return i;
+        // height 를 함께 넘겨야 가구 바닥이 룸 영역을 넘어가지 않도록 정확히 클램프된다.
+        const h = getPlacementHeight(i.kind, i.variant);
+        return { ...i, ...clampPlacement(x, y, i.width, h) };
+      }),
     );
   };
 
@@ -150,7 +153,8 @@ export function MyroomScreen() {
     } else {
       const d = DEFAULT_PLACEMENT[item.kind];
       const width = getPlacementWidth(item.kind, item.variant);
-      const safe = clampPlacement(d.x, d.y, width);
+      const height = getPlacementHeight(item.kind, item.variant);
+      const safe = clampPlacement(d.x, d.y, width, height);
       const placed: PlacedFurniture = {
         id: `${item.kind}-${item.variant}-${Date.now()}`,
         kind: item.kind,

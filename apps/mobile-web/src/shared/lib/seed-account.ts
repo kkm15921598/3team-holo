@@ -23,8 +23,10 @@ import { postsStore } from "@/features/board/posts-store";
 import { ensureMeetupRoom } from "@/features/board/meetup-utils";
 import { clearMeetupRooms } from "@/features/chat/rooms-store";
 import {
+  cumulativeXpForLevel,
   resetXp,
   setTotalXp,
+  xpRequiredForLevel,
   seedAttendanceDates,
 } from "@/shared/stores/xp-store";
 import { resetVerification } from "@/shared/stores/verification-store";
@@ -136,8 +138,15 @@ export function seedAccount(account: TestAccount): void {
     acquiredBadgeDates,
   });
   setPoints(seed.points);
-  // 레벨에 맞춰 XP 시드 — (level-1) * 500 + 340 로 "다음 레벨까지 160 XP" 상태 재현
-  setTotalXp(Math.max(0, (seed.level - 1) * 500 + 340));
+  // 레벨에 맞춰 XP 시드 — 새 LEVEL_XP_REQUIRED 테이블 기준으로:
+  //   "그 레벨에 막 들어선 직후 + 다음 레벨 요구치의 절반" 위치로 둔다.
+  //   예) seed.level=1 → 0 + 15 = 15 XP (Lv 1 의 절반)
+  //       seed.level=5 → 30+40+50+60 + 40 = 220 XP (Lv 5 의 절반)
+  // 종전엔 옛 500/레벨 공식(setTotalXp((level-1)*500+340)) 을 그대로 써서 새 테이블과 어긋났다 —
+  // 결과적으로 stats.level 이 1인데 totalXp 가 6레벨치라 화면 표시가 mod 30 으로 튀는 버그가 있었다.
+  const base = cumulativeXpForLevel(seed.level);
+  const halfNext = Math.floor(xpRequiredForLevel(seed.level) / 2);
+  setTotalXp(Math.max(0, base + halfNext));
 
   // 접속일수 시드 — 가입일 ~ 오늘 사이 모든 날짜를 활동 일자로 기록.
   // joinedAt 이 오래된 계정(예: 5/8 가입 → 오늘이 5/16 이면 9일)일수록 큰 숫자가 나옴.

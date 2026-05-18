@@ -1,5 +1,12 @@
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type UIEventHandler,
+} from "react";
 import {
   BOARD_CATEGORIES,
   CATEGORY_SHORT,
@@ -25,6 +32,7 @@ import {
 } from "@/shared/stores/view-count-store";
 import { useGeolocation, distanceMeters } from "@/shared/hooks/use-geolocation";
 import { calcJoined } from "./meetup-utils";
+import { rankLive, rankWeekly } from "./top-ranking";
 
 /**
  * 게시판에 노출되는 글의 거리 필터 반경 (위치가 있는 글에만 적용).
@@ -60,32 +68,8 @@ function buildCommentCounter(
 
 const DRAG_THRESHOLD = 4;
 
-/**
- * "방금 전 / N분 전 / N시간 전 / N일 전" 등을 분 단위 수치로 환산.
- * 실시간 TOP 정렬에서 "최신"을 가중치로 쓰기 위함.
- */
-function parseTimeAgoMinutes(timeAgo: string): number {
-  if (!timeAgo) return Number.POSITIVE_INFINITY;
-  if (/방금/.test(timeAgo)) return 0;
-  const m = timeAgo.match(/(\d+)\s*(분|시간|일|주)/);
-  if (!m) return Number.POSITIVE_INFINITY;
-  const n = Number(m[1]);
-  switch (m[2]) {
-    case "분":
-      return n;
-    case "시간":
-      return n * 60;
-    case "일":
-      return n * 60 * 24;
-    case "주":
-      return n * 60 * 24 * 7;
-    default:
-      return Number.POSITIVE_INFINITY;
-  }
-}
-
-const TOP_LIMIT = 30;
-const WEEK_MINUTES = 60 * 24 * 7;
+// 점수 계산식 / 가중치 / 시간 환산은 top-ranking.ts 단일 출처로 옮겼다.
+// 이 파일은 그 결과를 받아 정렬·필터링·렌더링만 책임진다.
 
 export function BoardListScreen() {
   const navigate = useNavigate();
@@ -250,44 +234,17 @@ export function BoardListScreen() {
 
   const visible = useMemo(() => {
     // ── 실시간 TOP / 주간 TOP 모드 ─────────────────────────────
-    // 카테고리 탭/검색 키워드는 무시하고 전체 글에서 정렬·상위 N개만 노출.
-    // 두 모드가 시각적으로 확실히 다른 리스트가 되도록 강조 신호를 분리:
-    //  - 실시간: "방금 핫한 글" → 좋아요(즉각 반응) 가중치 ↑ + 강한 시간 감쇠
-    //  - 주간:   "이 주의 베스트" → 댓글(토론 깊이) 가중치 ↑ + 시간 감쇠 없음
-    if (topMode === "live") {
-      // 실시간 TOP — HN 의 1.8 보다 더 가파른 ^2 감쇠.
-      //   score = engagement / (hours + 1)^2
-      //   engagement = 좋아요×4 + 댓글×3 + 조회수×0.1
-      // - "방금~1시간 전" 글이 압도적으로 유리. 24h 지난 글은 사실상 노출 안 됨.
-      // - 좋아요 가중치 ↑ : 즉각 반응 강조 (vs 주간은 댓글 강조)
-      return [...posts]
-        .map((p) => {
-          const hours = parseTimeAgoMinutes(p.timeAgo) / 60;
-          const views = getTotalViews(p);
-          const engagement = p.likes * 4 + p.comments * 3 + views * 0.1;
-          const score = engagement / Math.pow(hours + 1, 2);
-          return { p, score };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, TOP_LIMIT)
-        .map((x) => x.p);
-    }
-    if (topMode === "weekly") {
-      // 주간 TOP — 7일 누적 + 댓글 가중치 강조 + 감쇠 없음.
-      //   score = 좋아요×2 + 댓글×8 + 조회수×0.15
-      // - 댓글이 압도적으로 무거움 → 토론·댓글 활발한 글 위주.
-      // - 7일 안에서 신규/오래된 차이 없이 누적값만 비교.
-      // - 동점 시 댓글 많은 글 우선 (주간은 토론 깊이가 본질).
-      return [...posts]
-        .filter((p) => parseTimeAgoMinutes(p.timeAgo) <= WEEK_MINUTES)
-        .sort((a, b) => {
-          const scoreA = a.likes * 2 + a.comments * 8 + getTotalViews(a) * 0.15;
-          const scoreB = b.likes * 2 + b.comments * 8 + getTotalViews(b) * 0.15;
-          if (scoreB !== scoreA) return scoreB - scoreA;
-          return b.comments - a.comments;
-        })
-        .slice(0, TOP_LIMIT);
-    }
+    // 카테고리 탭 / 검색 키워드는 무시하고 전체 글에서 점수 기준 상위 N개만 노출.
+    // 점수 계산식 자체는 top-ranking.ts 의 rankLive / rankWeekly 가 단일 출처.
+    // 사용자가 누른 좋아요·작성한 댓글·증가한 조회수까지 반영되도록 ctx 를 넘긴다 —
+    // 카드의 표시값과 랭킹이 일치한다.
+    const rankCtx = {
+      likedSet,
+      getCommentCount,
+      getViews: getTotalViews,
+    };
+    if (topMode === "live") return rankLive(posts, rankCtx);
+    if (topMode === "weekly") return rankWeekly(posts, rankCtx);
 
     // ── 기본 모드 (카테고리 / 검색) ─────────────────────────
     let list = activeCat === "all" ? posts : posts.filter((p) => p.category === activeCat);
@@ -350,7 +307,47 @@ export function BoardListScreen() {
     boardFilterIds,
     typeFilters,
     ageFilters,
+    // 랭킹이 사용자의 실시간 좋아요·댓글에 즉각 반응하도록 deps 에 추가.
+    // 조회수는 useViewCounts() 가 위쪽에서 호출돼 컴포넌트 자체가 매번 리렌더되므로 따로 deps 에 둘 필요 없음.
+    likedSet,
+    getCommentCount,
   ]);
+
+  // ── 스크롤 위치 복원 ─────────────────────────────────────────
+  // 게시글 상세로 진입했다가 뒤로 돌아왔을 때, 사용자가 보고 있던 위치 그대로
+  // 게시판 리스트가 보이도록 sessionStorage 에 스크롤 오프셋을 영속화한다.
+  // 키는 pathname + search 전체 — 탭/검색/필터별로 분리되어 다른 컨텍스트의
+  // 스크롤이 새 컨텍스트에 새어 들어가지 않는다.
+  const location = useLocation();
+  const scrollKey = `holo:board-list-scroll:${location.pathname}${location.search}`;
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // 마운트 / URL 키 변경 시 저장된 스크롤 위치를 복원 (없으면 0 으로 리셋).
+  // useLayoutEffect — 페인트 전에 위치를 맞춰서 깜빡임 없이 복원된다.
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    let saved = 0;
+    try {
+      const raw = window.sessionStorage.getItem(scrollKey);
+      if (raw != null) {
+        const n = Number(raw);
+        if (Number.isFinite(n)) saved = n;
+      }
+    } catch {
+      // ignore
+    }
+    el.scrollTop = saved;
+  }, [scrollKey, visible.length]);
+
+  const handleListScroll: UIEventHandler<HTMLUListElement> = (e) => {
+    const top = e.currentTarget.scrollTop;
+    try {
+      window.sessionStorage.setItem(scrollKey, String(top));
+    } catch {
+      // ignore (quota / private mode)
+    }
+  };
 
   return (
     <main className="flex flex-1 flex-col">
@@ -488,7 +485,11 @@ export function BoardListScreen() {
           )}
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto">
+        <ul
+          ref={listRef}
+          onScroll={handleListScroll}
+          className="flex-1 overflow-y-auto"
+        >
           {visible.map((p, i) => (
             <PostCard
               key={p.id}

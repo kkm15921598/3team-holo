@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 type LoginRecord = {
   id: string;
@@ -128,39 +129,23 @@ export function LoginHistoryScreen() {
         </p>
       </section>
 
-      {reportId && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] font-semibold text-holo-ink">
-              이 접속을 신고할까요?
-            </p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              모든 다른 기기에서 자동 로그아웃되고
-              <br />
-              비밀번호를 변경하시는 것을 권장해요.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setReportId(null)}
-                className="h-10 flex-1 rounded-full border border-holo-line text-[13px] text-holo-ink"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setReportId(null);
-                  alert("신고가 접수되었어요. 다른 기기에서 로그아웃되었습니다.");
-                }}
-                className="h-10 flex-1 rounded-full bg-holo-error text-[13px] font-semibold text-white"
-              >
-                신고
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={reportId !== null}
+        message="이 접속을 신고할까요?"
+        description={
+          <>
+            모든 다른 기기에서 자동 로그아웃되고
+            <br />
+            비밀번호를 변경하시는 것을 권장해요.
+          </>
+        }
+        confirmLabel="신고"
+        onCancel={() => setReportId(null)}
+        onConfirm={() => {
+          setReportId(null);
+          alert("신고가 접수되었어요. 다른 기기에서 로그아웃되었습니다.");
+        }}
+      />
     </main>
   );
 }

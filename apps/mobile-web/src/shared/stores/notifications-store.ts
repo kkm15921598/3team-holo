@@ -318,6 +318,29 @@ export function pushFriendRequestAccepted(nickname: string): DynNotification {
   return item;
 }
 
+/**
+ * 내가 받은 요청을 직접 수락했을 때 알림 발행 — pushFriendRequestAccepted 와 동일한 kind 를
+ * 쓰지만, "내가 수락했다" 는 관점으로 본문이 다르다. 수락 직후 알림 패널에 한 줄이 남아서
+ * 사용자가 "이게 친구가 된 거구나" 라고 명확히 인지하게 한다.
+ */
+export function pushBecameFriendByMe(nickname: string): DynNotification {
+  if (!isAllowed("friend")) return SUPPRESSED;
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,
+    kind: "friend-accepted",
+    title: "친구가 됐어요",
+    body: `${nickname}님의 친구 요청을 수락했어요. 이제 친구예요!`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: "/mypage/friends",
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
 /** 특정 닉네임에 대한 받은-친구요청 알림 제거 (수락/거절 시 정리) */
 export function removeReceivedNotificationByNickname(nickname: string): void {
   const before = _list.length;

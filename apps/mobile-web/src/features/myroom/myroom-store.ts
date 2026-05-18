@@ -386,6 +386,8 @@ export type PointEvent = {
   id: string;
   /** "YY.MM.DD" 형식 — 화면 표시용 */
   date: string;
+  /** "HH:MM" (24h) — 획득/사용 시각. 옛 항목엔 없을 수 있어 옵셔널. */
+  time?: string;
   /** 메인 라벨 (예: "출석체크", "아이템 구매") */
   title: string;
   /** 부가 설명 (예: 가구 이름) */
@@ -442,11 +444,21 @@ function todayDateLabel(): string {
   return `${y}.${m}.${day}`;
 }
 
+/** 현재 시각을 "HH:MM" (24h) 으로 — 포인트 내역에 자동 부여. */
+function nowTimeLabel(): string {
+  const d = new Date();
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
 /** 내역 항목 추가 — 최신이 맨 위. addPoints/spendPoints 내부에서 자동 호출됨 */
 function appendPointEvent(entry: Omit<PointEvent, "id" | "date"> & { date?: string }): void {
   const next: PointEvent = {
     id: `pe-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     date: entry.date ?? todayDateLabel(),
+    // 시각은 자동 부여 — 호출 측에서 별도로 넘기지 않아도 적립 순간을 기록.
+    time: entry.time ?? nowTimeLabel(),
     title: entry.title,
     note: entry.note,
     amount: entry.amount,
@@ -534,6 +546,7 @@ function persistDailyCaps() {
  * 일일 cap 안에서 적립 시도. 성공 시 true 반환, cap 초과 시 false.
  * key 예: "post" (글쓰기 일 6회), "ad" (광고 일 5회)
  */
+
 export function tryDailyEarn(key: string, max: number, amount: number, reason: PointReason): boolean {
   // 날짜가 바뀌었으면 reset
   if (dailyCaps.date !== todayKey()) {

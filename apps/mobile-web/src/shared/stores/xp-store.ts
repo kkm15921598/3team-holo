@@ -1,4 +1,5 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { getStats, setStats } from "@/shared/stores/account-stats-store";
 
 /**
  * 경험치(XP) store.
@@ -10,7 +11,73 @@ import { useSyncExternalStore } from "react";
  */
 
 const STORAGE_KEY = "holo:xp:v1";
-export const XP_PER_LEVEL = 500;
+
+/**
+ * 레벨업에 필요한 경험치 — 레벨 N 에서 N+1 으로 올라가는 데 필요한 XP.
+ *
+ * 사용자가 직접 지정한 곡선. 초반은 두 레벨씩 동일한 값으로 묶여 빠르게 오르고,
+ * 중반부터 10 XP 씩 증가, 21레벨 이후엔 20 XP 씩 증가, 마지막은 50 XP 점프.
+ *
+ *   누적: 2 = 30, 3 = 60, 4 = 100, 5 = 140, 6 = 190, 7 = 240, 8 = 300, 9 = 360,
+ *         10 = 430, ... (만렙 30 까지 cumulativeXpForLevel(N) 으로 계산 가능)
+ */
+export const LEVEL_XP_REQUIRED: Record<number, number> = {
+  1: 30,   // → Lv 2
+  2: 30,   // → Lv 3
+  3: 40,   // → Lv 4
+  4: 40,   // → Lv 5
+  5: 50,   // → Lv 6
+  6: 50,   // → Lv 7
+  7: 60,   // → Lv 8
+  8: 60,   // → Lv 9
+  9: 70,   // → Lv 10
+  10: 80,  // → Lv 11
+  11: 90,  // → Lv 12
+  12: 100, // → Lv 13
+  13: 110, // → Lv 14
+  14: 120, // → Lv 15
+  15: 130, // → Lv 16
+  16: 140, // → Lv 17
+  17: 150, // → Lv 18
+  18: 160, // → Lv 19
+  19: 170, // → Lv 20
+  20: 180, // → Lv 21
+  21: 200, // → Lv 22
+  22: 220, // → Lv 23
+  23: 240, // → Lv 24
+  24: 260, // → Lv 25
+  25: 280, // → Lv 26
+  26: 300, // → Lv 27
+  27: 350, // → Lv 28
+  28: 400, // → Lv 29
+  29: 500, // → Lv 30 (만렙)
+  30: 500, // 만렙. 표시상만 사용.
+};
+
+/** 호환용 기본값 — 레벨이 명시되지 않은 호출에서 폴백으로 사용. 1레벨 요구치. */
+export const XP_PER_LEVEL = LEVEL_XP_REQUIRED[1];
+
+/** 특정 레벨에서 다음 레벨로 올라가는 데 필요한 XP. 테이블에 없으면 최댓값으로 폴백. */
+export function xpRequiredForLevel(level: number): number {
+  return LEVEL_XP_REQUIRED[level] ?? LEVEL_XP_REQUIRED[30];
+}
+
+/**
+ * 1레벨에서 시작해 특정 레벨에 막 도달하는 데 필요한 누적 XP.
+ *
+ * 예) cumulativeXpForLevel(1) === 0 (이미 1레벨)
+ *     cumulativeXpForLevel(2) === LEVEL_XP_REQUIRED[1] === 30
+ *     cumulativeXpForLevel(3) === 30 + 40 === 70
+ *
+ * 테스트 계정 시드처럼 "Lv N 의 시작점에 위치시키고 싶다" 면 이 값을 setTotalXp 에 그대로 넣으면 됨.
+ */
+export function cumulativeXpForLevel(level: number): number {
+  let sum = 0;
+  for (let i = 1; i < level; i++) {
+    sum += LEVEL_XP_REQUIRED[i] ?? 0;
+  }
+  return sum;
+}
 
 export type XpAction =
   | "post"
@@ -28,9 +95,20 @@ export const XP_CONFIG: Record<
   comment:      { xp: 5,  dailyLimit: 10, label: "댓글 작성" },
   join:         { xp: 20, dailyLimit: 3,  label: "모임 참여" },
   attendance:   { xp: 3,  dailyLimit: 1,  label: "출석 체크" },
+  // friend 항목은 화면 노출에서 제외 — 사용자 요청. awardXp("friend") 가 코드 곳곳에 남아있어
+  // 타입/스토어 구조 호환을 위해 키는 유지하되, UI 출력 시 화면 단에서 필터링한다.
   friend:       { xp: 15, dailyLimit: 5,  label: "이웃 친구 추가" },
   likeReceived: { xp: 2,  dailyLimit: 20, label: "게시글 좋아요 받기" },
 };
+
+/** my-level-screen 에서 "경험치 획득 방법" 목록으로 노출할 액션 — friend 제외. */
+export const VISIBLE_XP_ACTIONS: XpAction[] = [
+  "post",
+  "comment",
+  "join",
+  "attendance",
+  "likeReceived",
+];
 
 type XpState = {
   totalXp: number;
@@ -71,6 +149,57 @@ function loadInitial(): XpState {
 let state: XpState = loadInitial();
 const listeners = new Set<() => void>();
 
+/**
+ * 누적 XP 로부터 현재 도달 레벨을 계산.
+ *
+ * LEVEL_XP_REQUIRED[N] 은 "N → N+1 로 가는 데 필요한 XP".
+ * 그래서 1레벨에서 시작해 remaining 이 그 값보다 크면 다음 레벨로 진행하고 차감.
+ * 만렙(30) 에 도달하면 멈춤.
+ */
+export function levelFromTotalXp(totalXp: number): number {
+  let remaining = Math.max(0, totalXp);
+  let level = 1;
+  while (level < 30 && remaining >= LEVEL_XP_REQUIRED[level]) {
+    remaining -= LEVEL_XP_REQUIRED[level];
+    level += 1;
+  }
+  return level;
+}
+
+/** 레벨업 직후 축하 모달을 띄우기 위한 pending 상태. 한 액션이 한 단계 이상 점프하면 toLevel 이 가장 높은 도달 레벨. */
+type PendingLevelUp = { fromLevel: number; toLevel: number };
+let pendingLevelUp: PendingLevelUp | null = null;
+const levelUpListeners = new Set<() => void>();
+
+function emitLevelUp() {
+  levelUpListeners.forEach((l) => l());
+}
+
+export function getPendingLevelUp(): PendingLevelUp | null {
+  return pendingLevelUp;
+}
+
+/** 축하 모달이 닫힐 때 호출 — pending 비움. */
+export function clearPendingLevelUp(): void {
+  if (pendingLevelUp === null) return;
+  pendingLevelUp = null;
+  emitLevelUp();
+}
+
+/** 컴포넌트에서 pending 을 구독해서 모달을 띄울 때 사용. */
+export function usePendingLevelUp(): PendingLevelUp | null {
+  const [value, setValue] = useState<PendingLevelUp | null>(pendingLevelUp);
+  useEffect(() => {
+    const listener = () => setValue(pendingLevelUp);
+    levelUpListeners.add(listener);
+    listener();
+    return () => {
+      levelUpListeners.delete(listener);
+    };
+  }, []);
+  return value;
+}
+
 function persist() {
   if (typeof window === "undefined") return;
   try {
@@ -97,6 +226,18 @@ export function awardXp(action: XpAction): { gained: number; capped: boolean } {
   if (count >= cfg.dailyLimit) {
     return { gained: 0, capped: true };
   }
+  // 시작 전 한 번 점검 — 옛 시드 데이터(500/레벨 공식) 로 stats.level 이 totalXp 와 어긋났을 가능성을
+  // 여기서 한 번에 보정한다. levelFromTotalXp 가 진실. 모자라면 stats.level 을 올려준다.
+  // (예: 시드로 totalXp=340 이 들어왔는데 stats.level=1 인 경우, 새 테이블 기준으론 이미 Lv6 임)
+  const currentLevelByXp = levelFromTotalXp(state.totalXp);
+  const statsNow = getStats();
+  if (currentLevelByXp > statsNow.level) {
+    setStats({ ...statsNow, level: currentLevelByXp });
+  }
+
+  // XP 적립 전/후 레벨을 비교해 레벨업이 발생했는지 감지한다.
+  // stats.level 은 별도 store 라 동기적으로 setStats 로 끌어올리고, 축하 모달용 pending 상태를 세팅한다.
+  const oldLevel = levelFromTotalXp(state.totalXp);
   state = {
     totalXp: state.totalXp + cfg.xp,
     daily: {
@@ -106,6 +247,16 @@ export function awardXp(action: XpAction): { gained: number; capped: boolean } {
   };
   persist();
   emit();
+  const newLevel = levelFromTotalXp(state.totalXp);
+  if (newLevel > oldLevel) {
+    // 한 액션으로 두 레벨 이상 점프하는 경우가 거의 없지만, 정확히 최종 도달 레벨을 기록.
+    const currentStats = getStats();
+    if (newLevel > currentStats.level) {
+      setStats({ ...currentStats, level: newLevel });
+    }
+    pendingLevelUp = { fromLevel: oldLevel, toLevel: newLevel };
+    emitLevelUp();
+  }
   return { gained: cfg.xp, capped: false };
 }
 
@@ -190,7 +341,6 @@ export function getAttendanceCycleStatus(): {
   const days = Array.from({ length: 7 }, (_, i) => {
     const pos = i + 1;
     const isToday = pos === todayPosition;
-    // 과거 일차 = 이미 완료 / 오늘 = 출석했으면 완료 / 미래 = 미완료
     const checked =
       pos < todayPosition || (pos === todayPosition && attendedToday);
     return { day: pos, checked, isToday };
@@ -203,6 +353,8 @@ export function getAttendanceCycleStatus(): {
  * 오늘을 기준으로 한 연속 출석일 수.
  * 오늘 출석을 안 했으면 어제부터 거꾸로 카운트.
  */
+
+
 export function getCurrentStreak(): number {
   const todayStr = ymd(new Date());
   const cursor = new Date();
@@ -210,7 +362,6 @@ export function getCurrentStreak(): number {
     cursor.setDate(cursor.getDate() - 1);
   }
   let count = 0;
-  // 가입한 지 얼마 안 된 사용자의 무한 루프 방지용 상한 (10000일)
   for (let i = 0; i < 10000; i++) {
     const iso = ymd(cursor);
     if ((state.daily[iso]?.attendance ?? 0) > 0) {
@@ -223,7 +374,6 @@ export function getCurrentStreak(): number {
   return count;
 }
 
-/** 오늘 해당 액션의 남은 cap 횟수 */
 export function getDailyRemaining(action: XpAction): number {
   const cfg = XP_CONFIG[action];
   const today = todayISO();
@@ -231,19 +381,20 @@ export function getDailyRemaining(action: XpAction): number {
   return Math.max(0, cfg.dailyLimit - count);
 }
 
-/** 현재 레벨 안에서의 XP 진행도 */
-export function getLevelProgress(): {
+
+export function getLevelProgress(currentLevel = 1): {
   current: number;
   required: number;
   remaining: number;
   percent: number;
 } {
-  const current = state.totalXp % XP_PER_LEVEL;
+  const required = xpRequiredForLevel(currentLevel);
+  const current = state.totalXp % required;
   return {
     current,
-    required: XP_PER_LEVEL,
-    remaining: XP_PER_LEVEL - current,
-    percent: Math.round((current / XP_PER_LEVEL) * 100),
+    required,
+    remaining: required - current,
+    percent: Math.round((current / required) * 100),
   };
 }
 

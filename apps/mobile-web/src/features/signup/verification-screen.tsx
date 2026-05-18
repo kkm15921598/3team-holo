@@ -436,15 +436,49 @@ function CarrierSheet({ selected, onSelect, onClose }: any) {
 }
 
 function AlreadyJoinedModal({ onLogin, onFindPassword, onClose }: any) {
+  // 액션이 3개라 표준 ConfirmModal (2버튼) 로는 못 담아 — 시각 envelope (rounded-[14px], max-w-[300px], 14px 본문, 12px 설명) 은 동일하게 맞춘 채 버튼만 세로 스택으로 둠.
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-6" onClick={onClose}>
-      <div className="w-full max-w-[320px] rounded-[18px] bg-white p-6" onClick={(e) => e.stopPropagation()}>
-        <p className="text-center text-[16px] font-semibold text-holo-ink">이미 가입된 번호예요</p>
-        <p className="mt-2 text-center text-[13px] leading-relaxed text-holo-ink-3">휴대폰 번호 1개당 아이디 1개만 만들 수 있어요.<br />기존 계정으로 로그인하거나 비밀번호를 찾아보세요.</p>
-        <div className="mt-5 flex flex-col gap-2">
-          <button type="button" onClick={onLogin} className="h-[48px] w-full rounded-holo-pill bg-holo-gradient text-[14px] font-semibold text-white">로그인하기</button>
-          <button type="button" onClick={onFindPassword} className="h-[48px] w-full rounded-holo-pill border border-holo-purple-mid text-[14px] font-semibold text-holo-purple-mid">비밀번호 찾기</button>
-          <button type="button" onClick={onClose} className="h-[40px] w-full text-[13px] text-holo-ink-3">다른 번호로 다시 인증</button>
+    <div
+      className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40 px-6"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+      >
+        <p className="text-[14px] font-semibold leading-snug text-holo-ink">
+          이미 가입된 번호예요
+        </p>
+        <p className="mt-2 text-[12px] leading-relaxed text-holo-ink-3">
+          휴대폰 번호 1개당 아이디 1개만 만들 수 있어요.
+          <br />
+          기존 계정으로 로그인하거나 비밀번호를 찾아보세요.
+        </p>
+        <div className="mt-4 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onLogin}
+            className="h-10 w-full rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
+          >
+            로그인하기
+          </button>
+          <button
+            type="button"
+            onClick={onFindPassword}
+            className="h-10 w-full rounded-full border border-holo-line text-[13px] text-holo-ink"
+          >
+            비밀번호 찾기
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] text-holo-ink-3 underline"
+          >
+            다른 번호로 다시 인증
+          </button>
         </div>
       </div>
     </div>

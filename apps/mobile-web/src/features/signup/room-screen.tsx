@@ -13,7 +13,7 @@ import {
 } from "../myroom/myroom-data";
 import type { CatalogItem } from "../myroom/myroom-data";
 import { CATALOG } from "../myroom/myroom-catalog";
-import { getPlacementWidth } from "../myroom/myroom-dimensions";
+import { getPlacementWidth, getPlacementHeight } from "../myroom/myroom-dimensions";
 import { RoomEditorView } from "../myroom/myroom-room-view";
 import { setMyroomItems, purchaseItem, addPoints } from "../myroom/myroom-store";
 import {
@@ -96,9 +96,12 @@ export function RoomScreen() {
 
   const handleMove = (id: string, x: number, y: number) => {
     setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, ...clampPlacement(x, y, i.width) } : i
-      )
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        // 가구 바닥이 룸 영역 아래로 빠지지 않도록 실제 높이로 클램프.
+        const h = getPlacementHeight(i.kind, i.variant);
+        return { ...i, ...clampPlacement(x, y, i.width, h) };
+      })
     );
   };
 
@@ -170,7 +173,8 @@ export function RoomScreen() {
 
     const d = DEFAULT_PLACEMENT[item.kind];
     const width = getPlacementWidth(item.kind, item.variant);
-    const safe = clampPlacement(d.x, d.y, width);
+    const height = getPlacementHeight(item.kind, item.variant);
+    const safe = clampPlacement(d.x, d.y, width, height);
 
     const placed: PlacedFurniture = {
       id: `${item.kind}-${item.variant}-${Date.now()}`,
@@ -391,41 +395,12 @@ export function RoomScreen() {
         onCancel={() => setPendingPurchase(null)}
       />
 
-      <TutorialAlertModal
+      <ConfirmModal
         open={limitAlertOpen}
         message="이미 2개를 구매하셨습니다."
-        onClose={() => setLimitAlertOpen(false)}
+        singleAction
+        onConfirm={() => setLimitAlertOpen(false)}
       />
     </SignupLayout>
-  );
-}
-
-function TutorialAlertModal({
-  open,
-  message,
-  onClose,
-}: {
-  open: boolean;
-  message: string;
-  onClose: () => void;
-}) {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
-      <div className="w-full max-w-[320px] rounded-[24px] bg-white px-5 py-6 shadow-lg">
-        <p className="text-center text-[15px] font-medium leading-relaxed text-holo-ink">
-          {message}
-        </p>
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-6 h-[44px] w-full rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white"
-        >
-          확인
-        </button>
-      </div>
-    </div>
   );
 }

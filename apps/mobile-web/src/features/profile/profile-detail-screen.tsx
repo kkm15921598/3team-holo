@@ -17,6 +17,8 @@ import {
 import { awardXp } from "@/shared/stores/xp-store";
 import { RoomSceneView, randomRoomFurniture } from "@/features/home/home-illustrations";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { markReported } from "@/shared/stores/reported-users-store";
+import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
@@ -184,7 +186,10 @@ export function ProfileDetailScreen() {
 
   const [confirm, setConfirm] = useState<{
     message: ReactNode;
+    description?: ReactNode;
     confirmLabel?: string;
+    /** true 면 단일 "확인" 버튼만 노출 (안내 다이얼로그) */
+    singleAction?: boolean;
     onConfirm: () => void;
   } | null>(null);
 
@@ -225,16 +230,10 @@ export function ProfileDetailScreen() {
       awardXp("friend");
     } else if (result.reason === "max-reached") {
       setConfirm({
-        message: (
-          <>
-            친구 정원이 가득 찼어요.
-            <br />
-            <span className="text-[13px] font-normal text-holo-ink-2">
-              (최대 30명까지 추가할 수 있어요)
-            </span>
-          </>
-        ),
+        message: "친구 정원이 가득 찼어요.",
+        description: "최대 30명까지 추가할 수 있어요.",
         confirmLabel: "확인",
+        singleAction: true,
         onConfirm: () => setConfirm(null),
       });
     }
@@ -291,15 +290,14 @@ export function ProfileDetailScreen() {
       message: (
         <>
           <strong>{nickname}</strong>님을 차단하시겠습니까?
-          <br />
-          <span className="text-[13px] font-normal text-holo-ink-2">
-            차단하면 더 이상 게시글·메시지를 받을 수 없어요.
-          </span>
         </>
       ),
+      description: "차단하면 더 이상 게시글·메시지를 받을 수 없어요.",
+      confirmLabel: "차단",
       onConfirm: () => {
         setConfirm(null);
-        // TODO: 실제 차단 처리 — 모의 데이터에서는 별도 동작 없음
+        // 차단된 닉네임은 영속 set 에 남겨, 이웃 추천 등 노출 후보에서 제외되도록 한다.
+        markBlocked(nickname);
         navigate(-1);
       },
     });
@@ -309,15 +307,14 @@ export function ProfileDetailScreen() {
       message: (
         <>
           <strong>{nickname}</strong>님을 신고하시겠습니까?
-          <br />
-          <span className="text-[13px] font-normal text-holo-ink-2">
-            운영팀에서 검토 후 조치해드려요.
-          </span>
         </>
       ),
+      description: "운영팀에서 검토 후 조치해드려요.",
+      confirmLabel: "신고",
       onConfirm: () => {
         setConfirm(null);
-        // TODO: 실제 신고 처리
+        // 신고된 닉네임은 영속 set 에 남겨, 이웃 추천 등 노출 후보에서 제외되도록 한다.
+        markReported(nickname);
         navigate(-1);
       },
     });
@@ -513,7 +510,9 @@ export function ProfileDetailScreen() {
       <ConfirmModal
         open={confirm !== null}
         message={confirm?.message ?? null}
+        description={confirm?.description}
         confirmLabel={confirm?.confirmLabel}
+        singleAction={confirm?.singleAction}
         onConfirm={() => confirm?.onConfirm()}
         onCancel={() => setConfirm(null)}
       />
@@ -664,7 +663,6 @@ function BlockIcon() {
     </svg>
   );
 }
-
 function FlagIcon() {
   return (
     <svg

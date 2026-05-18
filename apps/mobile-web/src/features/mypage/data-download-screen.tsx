@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 type DataCategory = {
   id: string;
@@ -107,30 +108,22 @@ export function DataDownloadScreen() {
         </button>
       </div>
 
-      {submitted && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-6">
-          <div className="w-full max-w-[300px] rounded-[14px] bg-white p-5 text-center">
-            <p className="text-[14px] font-semibold text-holo-ink">
-              요청이 접수되었어요!
-            </p>
-            <p className="mt-2 text-[12px] text-holo-ink-3">
-              준비가 끝나면 등록 이메일로
-              <br />
-              다운로드 링크를 보내드릴게요.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitted(false);
-                navigate(-1);
-              }}
-              className="mt-4 h-10 w-full rounded-full bg-holo-purple-mid text-[13px] font-semibold text-white"
-            >
-              확인
-            </button>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={submitted}
+        message="요청이 접수되었어요!"
+        description={
+          <>
+            준비가 끝나면 등록 이메일로
+            <br />
+            다운로드 링크를 보내드릴게요.
+          </>
+        }
+        singleAction
+        onConfirm={() => {
+          setSubmitted(false);
+          navigate(-1);
+        }}
+      />
     </main>
   );
 }

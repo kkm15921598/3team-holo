@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { FRIENDS } from "@/shared/mock/data";
 import {
   getDynNotifications,
+  pushBecameFriendByMe,
   pushFriendRequestAccepted,
   pushFriendRequestReceived,
   removeReceivedNotificationByNickname,
@@ -233,7 +234,7 @@ export type AcceptRequestResult =
   | { ok: true; friend: Friend }
   | { ok: false; reason: "not-found" | "max-reached" };
 
-/** 받은 요청 수락 → 친구로 추가 + 요청 제거 + 관련 알림 정리 */
+/** 받은 요청 수락 → 친구로 추가 + 요청 제거 + 관련 알림 정리 + 수락 완료 알림 발행 */
 export function acceptFriendRequest(requestId: string): AcceptRequestResult {
   const req = _requests.find((r) => r.id === requestId);
   if (!req || req.direction !== "received") return { ok: false, reason: "not-found" };
@@ -242,7 +243,11 @@ export function acceptFriendRequest(requestId: string): AcceptRequestResult {
   if (!friend) return { ok: false, reason: "max-reached" };
   _requests = _requests.filter((r) => r.id !== requestId);
   notify();
+  // 기존 "친구 요청을 보냈어요" 알림은 정리 — 이제 그 카드는 의미가 없음.
   removeReceivedNotificationByNickname(req.nickname);
+  // 수락 직후 알림 패널에 "친구가 됐어요" 한 줄을 남겨, 종소리 배지만 들어오고 내역이 비는
+  // 현상을 막는다 (이전엔 push 가 없어 패널이 비어 있었다).
+  pushBecameFriendByMe(req.nickname);
   return { ok: true, friend };
 }
 

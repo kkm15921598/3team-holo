@@ -20,13 +20,13 @@ const LEVEL_BENEFITS = [
   { level: 30, label: "보너스 포인트 +5,000P" },
 ];
 
-// 화면에 보여줄 액션 순서 — XP_CONFIG 와 1:1 매핑
+// 화면에 보여줄 액션 순서 — xp-store 의 VISIBLE_XP_ACTIONS 와 동일.
+// "이웃 친구 추가(friend)" 는 노출에서 제외 (사용자 요청).
 const ACTIVITY_ORDER: XpAction[] = [
   "post",
   "comment",
   "join",
   "attendance",
-  "friend",
   "likeReceived",
 ];
 
@@ -35,8 +35,10 @@ export function MyLevelScreen() {
   const stats = useAccountStats();
   // XP 변경을 구독해 진행도 / 잔여 횟수가 실시간 반영되게 한다.
   useXpState();
+  // 현재 레벨(stats.level) 을 넘겨, 그 레벨에 맞는 요구치(LEVEL_XP_REQUIRED) 로 진행도를 계산.
+  // 종전엔 모든 레벨 공통 500 XP 였는데 초반 진입 장벽이 높다는 피드백으로 레벨별 테이블로 교체됨.
   const { current: currentXp, required: nextLevelXp, percent: progress } =
-    getLevelProgress();
+    getLevelProgress(stats.level);
 
   return (
     <main className="flex flex-1 flex-col overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -112,20 +114,25 @@ export function MyLevelScreen() {
             const cfg = XP_CONFIG[action];
             const remaining = getDailyRemaining(action);
             const done = remaining === 0;
+            // 회당 XP / 일 한도 / 총 가능 XP 를 명시적으로 안내해, "하루 N회 작성 시 X XP 까지 가능" 임이 분명히 보이게 한다.
+            const dailyMax = cfg.xp * cfg.dailyLimit;
             return (
               <div
                 key={action}
                 className="flex items-center justify-between px-4 py-3"
               >
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-col">
                   <span className="text-[14px] text-holo-ink">{cfg.label}</span>
+                  <span className="mt-0.5 text-[11px] text-holo-ink-3">
+                    1회 +{cfg.xp} XP · 하루 최대 {cfg.dailyLimit}회 (총 {dailyMax} XP)
+                  </span>
                   <span className="mt-0.5 text-[11px] text-holo-ink-3">
                     오늘 남은 횟수 {remaining}/{cfg.dailyLimit}
                     {done && " · 일일 한도 도달"}
                   </span>
                 </div>
                 <span
-                  className={`text-[13px] font-semibold ${
+                  className={`shrink-0 text-[13px] font-semibold ${
                     done ? "text-holo-ink-3" : "text-holo-purple-mid"
                   }`}
                 >

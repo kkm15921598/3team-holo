@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
+import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 /**
  * 가입 직전 요약 화면.
@@ -109,49 +110,26 @@ function WelcomeModal({
   onStart: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-6">
-      <div className="w-full max-w-[320px] rounded-[20px] bg-white p-6 text-center">
-        <div className="mx-auto flex h-[88px] w-[88px] items-center justify-center rounded-full bg-holo-purple/10">
-          <SparkleIcon />
-        </div>
-        <h2 className="mt-5 text-[18px] font-bold text-holo-ink">
+    <ConfirmModal
+      open
+      message={
+        <>
           <span className="text-holo-purple-mid">{nickname}</span>님,
           <br />
           가입을 환영해요!
-        </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-holo-ink-3">
+        </>
+      }
+      description={
+        <>
           이제 마지막으로 마이룸을 꾸며볼게요.
           <br />
           취향에 맞는 가구를 골라보세요.
-        </p>
-        <button
-          type="button"
-          onClick={onStart}
-          className="mt-6 h-[52px] w-full rounded-holo-pill bg-holo-gradient text-[15px] font-semibold text-white shadow-md transition active:scale-[0.99]"
-        >
-          시작하기
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SparkleIcon() {
-  return (
-    <svg
-      width="44"
-      height="44"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#7448DD"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
-      <circle cx="12" cy="12" r="3.5" />
-    </svg>
+        </>
+      }
+      singleAction
+      confirmLabel="시작하기"
+      onConfirm={onStart}
+    />
   );
 }
 

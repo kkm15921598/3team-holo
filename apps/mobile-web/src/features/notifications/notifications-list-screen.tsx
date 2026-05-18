@@ -53,8 +53,11 @@ function buildStaticNotifications(
   const list: Notification[] = [];
 
   if (myPost) {
+    // ID 는 app-header / notification-panel 의 STATIC_NOTIFICATION_META 와 동일한 "n1" / "n2" 사용.
+    // 이전엔 `n1-${postId}` 처럼 post 별로 달라서 list 에서 markRead 를 호출해도 헤더 배지가
+    // "n1" 기준으로만 검사해 unread 가 줄지 않는 동기화 버그가 있었다.
     list.push({
-      id: `n1-${myPost.id}`,
+      id: "n1",
       type: "comment",
       title: "댓글 알림",
       body: `보송보송한 햄찌님이 내 글 "${myPost.title}"에 댓글을 달았어요. "저요! 저요!"`,
@@ -64,7 +67,7 @@ function buildStaticNotifications(
       link: `/board/${myPost.id}`,
     });
     list.push({
-      id: `n2-${myPost.id}`,
+      id: "n2",
       type: "like",
       title: "좋아요 알림",
       body: `단무지팬님이 내 글 "${myPost.title}"에 좋아요를 눌렀어요.`,
