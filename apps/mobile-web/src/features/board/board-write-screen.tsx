@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { PostLocation } from "@/shared/mock/data";
+import type { Post, PostLocation } from "@/shared/mock/data";
 import { LocationPicker } from "@/features/map/post-map";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { awardXp } from "@/shared/stores/xp-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
-import { pushPostCreated } from "@/shared/stores/notifications-store";
+import { pushPostCreated, pushMeetingFull } from "@/shared/stores/notifications-store";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { ensureMeetupRoom, isMeetupPost, meetupRoomId } from "./meetup-utils";
+import { joinPost } from "@/shared/stores/joined-store";
 
 const CATEGORIES = [
   "자유게시판",
@@ -95,6 +97,8 @@ export function BoardWriteScreen() {
 
   const [showExitModal, setShowExitModal] = useState(false);
   const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+  /** 모임 글 등록 직후, 채팅방 개설 안내 + 채팅방으로 이동 여부 묻는 모달. */
+  const [chatRoomCreatedFor, setChatRoomCreatedFor] = useState<Post | null>(null);
 
   const [openSection, setOpenSection] = useState<OpenSection>(null);
   const initialCategory: Category =
@@ -290,7 +294,7 @@ export function BoardWriteScreen() {
       // New post flow — prepend.
       const newPostId = `post-${Date.now()}`;
       const newPostTitle = title.trim() || "(제목 없음)";
-      postsStore.prepend({
+      const newPost: Post = {
         id: newPostId,
         category: CATEGORY_NAME_TO_ID[category],
         status: "모집중",
@@ -316,7 +320,8 @@ export function BoardWriteScreen() {
         location: postLocation ?? undefined,
         // 첨부 사진이 있으면 함께 저장 — 게시글 상세에서 본문 위/아래에 노출.
         photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
-      });
+      };
+      postsStore.prepend(newPost);
       // 새 게시글 등록 알림 — 알림 패널에서 바로 그 글로 이동할 수 있도록 한 줄 발행.
       pushPostCreated(newPostTitle, newPostId);
       // 새 게시글 작성 → XP 부여 (일일 cap 적용)
@@ -328,6 +333,21 @@ export function BoardWriteScreen() {
       });
       if (incomingState?.draftId) {
         draftsStore.remove([incomingState.draftId]);
+      }
+      // 모임 글이면 채팅방을 자동 개설 + 작성자를 호스트로 참여 처리.
+      // 그 후 모달로 채팅방 이동 여부를 묻는다. (네 → 채팅방, 아니오 → 게시판)
+      if (isMeetupPost(newPost)) {
+        ensureMeetupRoom(newPost);
+        joinPost(newPostId);
+        // mock 환경에서 다른 사용자의 참여를 시뮬레이션 — 30~90초 후에 정원이
+        // 채워졌다는 알림을 호스트(현재 사용자) 에게 발행.
+        // 실제 서비스에선 서버가 정원 도달을 감지해서 푸시한다.
+        const fillDelay = 30000 + Math.random() * 60000;
+        window.setTimeout(() => {
+          pushMeetingFull(newPost.title, newPost.id);
+        }, fillDelay);
+        setChatRoomCreatedFor(newPost);
+        return; // 모달에서 분기 처리하므로 navigate 호출은 잠시 보류.
       }
     }
     navigate("/board/list");
@@ -367,7 +387,7 @@ export function BoardWriteScreen() {
   );
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col pb-6">
       <header className="flex h-12 shrink-0 items-center justify-between px-4">
         <button type="button" aria-label="뒤로" onClick={handleBackClick}>
           <BackIcon />
@@ -715,9 +735,9 @@ export function BoardWriteScreen() {
           </div>
         )}
 
-        {/* 선택된 위치 칩 — 지도 미리보기를 함께 노출 */}
+        {/* 선택된 위치 칩 — 지도 미리보기를 함께 노출. 칩 아래에 여백 추가해 "사진/장소" 행과 분리. */}
         {postLocation && (
-          <div className="mx-5 mt-2 flex items-center gap-2 rounded-full border border-holo-lilac-soft bg-holo-lilac-soft/40 px-3 py-1.5 text-[12px] text-holo-purple-mid">
+          <div className="mx-5 mt-2 mb-4 flex items-center gap-2 rounded-full border border-holo-lilac-soft bg-holo-lilac-soft/40 px-3 py-1.5 text-[12px] text-holo-purple-mid">
             <PinIcon />
             <span className="truncate">
               {postLocation.placeName ??
@@ -851,8 +871,16 @@ export function BoardWriteScreen() {
 
             {/* 지도 영역 */}
             <div className="relative flex-1">
-              <LocationPicker value={draftPick} onChange={setDraftPick} />
-              <p className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
+              <LocationPicker
+                value={draftPick}
+                onChange={setDraftPick}
+                onPlaceName={(name) => {
+                  // 사용자가 직접 장소명을 비웠거나 새 좌표를 찍은 경우에만 자동 채움.
+                  // 기존에 입력한 이름이 있으면 덮어쓰지 않는다.
+                  setDraftPlaceName((prev) => (prev.trim() ? prev : name));
+                }}
+              />
+              <p className="pointer-events-none absolute left-1/2 top-14 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
                 지도를 탭해 위치를 선택하세요
               </p>
             </div>
@@ -886,6 +914,28 @@ export function BoardWriteScreen() {
         message="내용이 입력되지 않았습니다."
         singleAction
         onConfirm={() => setShowEmptyAlert(false)}
+      />
+
+      {/* 모임 글 등록 직후 — 채팅방 자동 개설 안내 + 이동 여부 확인 */}
+      <ConfirmModal
+        open={chatRoomCreatedFor !== null}
+        message="채팅창이 개설되었습니다."
+        description="채팅방으로 이동하시겠습니까?"
+        confirmLabel="네"
+        cancelLabel="아니오"
+        onConfirm={() => {
+          const post = chatRoomCreatedFor;
+          setChatRoomCreatedFor(null);
+          if (post) {
+            navigate(`/chat/${meetupRoomId(post.id)}`, { replace: true });
+          } else {
+            navigate("/board/list");
+          }
+        }}
+        onCancel={() => {
+          setChatRoomCreatedFor(null);
+          navigate("/board/list");
+        }}
       />
     </main>
   );

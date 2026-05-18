@@ -239,11 +239,13 @@ export function NicknameScreen() {
   const [suggestions, setSuggestions] = useState<string[]>(() => generateSuggestions());
   const [showFacePicker, setShowFacePicker] = useState(false);
 
-  // 주민번호로 인식된 성별에 따라 노출 가능한 프로필 이미지 풀
+  // 주민번호로 인식된 성별에 따라 노출 가능한 프로필 이미지 풀.
+  // 성별을 못 잡은 케이스(모바일에서 주민번호 흐름이 어긋난 경우 등)에서도
+  // 사용자가 캐릭터를 고를 수 있도록, gender 가 null 이면 남녀 전체를 보여준다.
   const facePool = useMemo(() => {
     if (data.gender === "M") return MAN_FACES;
     if (data.gender === "F") return WOMAN_FACES;
-    return [];
+    return [...MAN_FACES, ...WOMAN_FACES];
   }, [data.gender]);
 
   // 성별과 다른 이미지가 이미 들어있으면 초기화 (예: 가입 중에 주민번호를 수정한 경우)
@@ -316,12 +318,12 @@ export function NicknameScreen() {
               <span className="flex h-full w-full items-center justify-center text-[32px] text-holo-ink-4">?</span>
             )}
           </div>
-          {/* 설정 아이콘 — 프로필 원 우하단에 겹침 */}
+          {/* 설정 아이콘 — 프로필 원 우하단에 겹침. 성별 미인식 케이스에서도
+              사용자가 캐릭터를 고를 수 있도록 항상 활성화. */}
           <button
             type="button"
             onClick={() => setShowFacePicker(true)}
-            disabled={!data.gender}
-            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-holo-purple-mid text-white shadow transition hover:bg-holo-purple active:scale-95 disabled:opacity-40"
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-holo-purple-mid text-white shadow transition hover:bg-holo-purple active:scale-95"
             aria-label="프로필 이미지 선택"
           >
             <SettingsIcon />
@@ -414,7 +416,7 @@ export function NicknameScreen() {
         </button>
       </div>
 
-      {showFacePicker && data.gender && (
+      {showFacePicker && (
         <FacePickerSheet
           faces={facePool}
           selected={data.profileFace}

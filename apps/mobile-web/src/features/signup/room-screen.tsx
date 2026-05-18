@@ -50,9 +50,7 @@ export function RoomScreen() {
   const [pendingPurchase, setPendingPurchase] = useState<CatalogItem | null>(null);
   const [limitAlertOpen, setLimitAlertOpen] = useState(false);
   const [showError, setShowError] = useState(false);
-  /** 카탈로그 드로어 펼침 상태 — 가구 클릭/스크롤 시 룸 영역이 100px 줄어 카탈로그가 위로 올라옴 */
-  const [catalogExpanded, setCatalogExpanded] = useState(false);
-  const expandCatalog = () => setCatalogExpanded(true);
+  // 스와이프/드로어 동작은 제거 — 화면 전체가 자연스럽게 스크롤되는 긴 페이지로 동작.
 
   const filtered = useMemo(() => {
     const levelOneItems = CATALOG.filter(
@@ -71,20 +69,10 @@ export function RoomScreen() {
   };
 
   const handleRemove = (id: string) => {
-    const removed = items.find((i) => i.id === id);
-
+    // 방에서만 빼고 ownedKeys 는 유지한다 — 한 번 구매한 가구는 카탈로그에서
+    // 다시 클릭만 해도 즉시 재배치되도록.
     setItems((prev) => prev.filter((i) => i.id !== id));
     setSelectedId(null);
-
-    if (removed) {
-      const ownedKey = `${removed.kind}:${removed.variant}`;
-      setOwnedKeys((prev) => {
-        const next = new Set(prev);
-        next.delete(ownedKey);
-        return next;
-      });
-    }
-
     setShowError(false);
   };
 
@@ -123,14 +111,54 @@ export function RoomScreen() {
     setItems(next);
   };
 
+  /** 이미 보유한 가구를 모달 없이 즉시 방에 재배치. */
+  const placeOwnedItem = (item: CatalogItem) => {
+    const d = DEFAULT_PLACEMENT[item.kind];
+    const width = getPlacementWidth(item.kind, item.variant);
+    const height = getPlacementHeight(item.kind, item.variant);
+    const safe = clampPlacement(d.x, d.y, width, height);
+    const placed: PlacedFurniture = {
+      id: `${item.kind}-${item.variant}-${Date.now()}`,
+      kind: item.kind,
+      variant: item.variant,
+      flipped: d.flipped ?? false,
+      x: safe.x,
+      y: safe.y,
+      width,
+    };
+    setItems((prev) => [...prev, placed]);
+    setSelectedId(placed.id);
+    setShowError(false);
+    requestAnimationFrame(() => {
+      const scrollArea = document.getElementById("signup-scroll-area");
+      scrollArea?.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  };
+
   const handleRequestPurchase = (item: CatalogItem) => {
     const isLocked = item.lockedAt !== undefined && item.lockedAt > TUTORIAL_LEVEL;
     if (isLocked) return;
 
     const ownedKey = `${item.kind}:${item.variant}`;
     const alreadyOwned = ownedKeys.has(ownedKey);
+    const alreadyPlaced = items.some(
+      (i) => i.kind === item.kind && i.variant === item.variant,
+    );
 
-    if (alreadyOwned) return;
+    // 이미 방에 배치되어 있으면 그 가구를 선택만 해준다 (이동/회전/삭제 컨트롤 노출).
+    if (alreadyPlaced) {
+      const existing = items.find(
+        (i) => i.kind === item.kind && i.variant === item.variant,
+      );
+      if (existing) setSelectedId(existing.id);
+      return;
+    }
+
+    // 보유 중인데 방에서 X 로 지운 상태 → 모달 없이 바로 재배치.
+    if (alreadyOwned) {
+      placeOwnedItem(item);
+      return;
+    }
 
     if (ownedKeys.size >= MAX_BUY_COUNT) {
       setLimitAlertOpen(true);
@@ -190,6 +218,12 @@ export function RoomScreen() {
     setSelectedId(placed.id);
     setShowError(false);
     setPendingPurchase(null);
+
+    // 구매 후 자동으로 마이룸 미리보기까지 스크롤 — 방금 배치한 가구가 보이도록.
+    requestAnimationFrame(() => {
+      const scrollArea = document.getElementById("signup-scroll-area");
+      scrollArea?.scrollTo({ top: 0, behavior: "smooth" });
+    });
   };
 
   const handleNext = () => {
@@ -241,6 +275,8 @@ export function RoomScreen() {
       phone: data.phone,
       interests: data.interests,
       customInterest: data.customInterest,
+      // 가입 시점 기록 — 계정관리 화면의 "가입년도" 노출에 사용.
+      signupAt: Date.now(),
     })
   );
 
@@ -255,33 +291,44 @@ export function RoomScreen() {
 };
 
   return (
-    <SignupLayout step={7}>
-      <h1 className="text-[20px] font-bold leading-snug text-holo-ink">
+    <SignupLayout
+      step={7}
+      keepFooterVisible={canNext}
+      footer={
+        <div className="flex flex-col items-center gap-2">
+          {showError && (
+            <p className="text-[13px] text-holo-error">
+              가구 2개를 구매하고 배치해주세요!
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={handleNext}
+            className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
+              canNext ? "bg-holo-ink" : "bg-holo-ink-4"
+            }`}
+          >
+            다음
+          </button>
+        </div>
+      }
+    >
+      <h1 className="shrink-0 text-[20px] font-bold leading-snug text-holo-ink">
         거의 다 왔습니다!
         <br />
         <span className="text-holo-purple-mid">{displayName}</span> 님의 방을 꾸며보세요!
       </h1>
 
-      <p className="mt-2 text-[14px] text-holo-ink-3">
+      <p className="mt-2 shrink-0 text-[14px] text-holo-ink-3">
         마음에 드는 가구 2개를 구매하고 방에 배치해보세요.
       </p>
 
-      <div
-        onClick={() => {
-          if (catalogExpanded) setCatalogExpanded(false);
-        }}
-        className={`relative -mx-4 mt-4 flex shrink-0 justify-center overflow-hidden transition-[height] duration-300 ${
-          catalogExpanded ? "h-[240px]" : "h-[340px]"
-        }`}
-      >
+      {/* 룸 미리보기 — 고정 높이. 페이지 자체는 SignupLayout 이 overflow-y-auto 라 자연 스크롤. */}
+      <div className="relative -mx-4 mt-4 flex h-[340px] shrink-0 justify-center overflow-hidden">
         <RoomEditorView
           items={items}
           selectedId={selectedId}
-          onSelect={(id) => {
-            handleSelectInRoom(id);
-            // 방 안의 가구를 선택하면 드로어를 다시 내려 가구가 가려지지 않게 함
-            if (id !== null) setCatalogExpanded(false);
-          }}
+          onSelect={handleSelectInRoom}
           onRemove={handleRemove}
           onFlip={handleFlip}
           onMove={handleMove}
@@ -290,10 +337,7 @@ export function RoomScreen() {
         />
       </div>
 
-      <div
-        onClick={expandCatalog}
-        className="no-scrollbar -mx-4 mt-2 shrink-0 overflow-x-auto px-4 py-2"
-      >
+      <div className="no-scrollbar -mx-4 mt-2 shrink-0 overflow-x-auto px-4 py-2">
         <div className="flex w-max gap-2">
           {CATEGORIES.map((c) => {
             const on = activeCat === c.key;
@@ -316,19 +360,28 @@ export function RoomScreen() {
         </div>
       </div>
 
-      <div
-        onClick={expandCatalog}
-        onScroll={expandCatalog}
-        className="no-scrollbar -mx-4 flex flex-1 min-h-0 flex-col overflow-y-auto px-4 pb-2"
-      >
+      {/* 카탈로그 — 자연 높이로 늘어남. 페이지 전체가 SignupLayout 의 overflow-y-auto 로 스크롤된다. */}
+      <div className="-mx-4 shrink-0 px-4 pb-2">
         <div className="grid grid-cols-2 gap-x-3 gap-y-4">
           {filtered.map((it) => {
             const ownedKey = `${it.kind}:${it.variant}`;
             const alreadyOwned = ownedKeys.has(ownedKey);
 
+            const alreadyPlaced = items.some(
+              (i) => i.kind === it.kind && i.variant === it.variant,
+            );
             return (
               <div key={it.id} className="flex flex-col">
-                <article className="relative flex aspect-square flex-col overflow-hidden rounded-holo-input bg-holo-surface-2 p-3">
+                <article
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleRequestPurchase(it)}
+                  className={`relative flex aspect-square flex-col overflow-hidden rounded-holo-input bg-holo-surface-2 p-3 transition active:scale-[0.98] ${
+                    alreadyOwned && !alreadyPlaced
+                      ? "ring-2 ring-holo-purple-mid/40"
+                      : ""
+                  }`}
+                >
                   <div className="flex flex-1 items-center justify-center overflow-hidden">
                     <img
                       src={furnitureSrc({
@@ -341,14 +394,12 @@ export function RoomScreen() {
                     />
                   </div>
 
+                  {/* 첫 구매 전에만 핑크 "구매하기" 버튼 노출. 한 번 구매하면 X 로 빼더라도
+                      이 버튼은 다시 안 뜨고, 카탈로그 카드를 직접 클릭해 재배치한다. */}
                   {!alreadyOwned && (
-                    <button
-                      type="button"
-                      onClick={() => handleRequestPurchase(it)}
-                      className="absolute bottom-3 left-3 right-3 z-10 rounded-full bg-[#FF6CB8] py-[6px] text-center text-[13px] tracking-tight text-white shadow-[0_3px_8px_rgba(255,108,184,0.35)]"
-                    >
+                    <span className="pointer-events-none absolute bottom-3 left-3 right-3 z-10 rounded-full bg-[#FF6CB8] py-[6px] text-center text-[13px] tracking-tight text-white shadow-[0_3px_8px_rgba(255,108,184,0.35)]">
                       구매하기
-                    </button>
+                    </span>
                   )}
                 </article>
 
@@ -359,24 +410,6 @@ export function RoomScreen() {
             );
           })}
         </div>
-      </div>
-
-      <div className="mt-auto flex flex-col items-center gap-2 pt-4">
-        {showError && (
-          <p className="text-[13px] text-holo-error">
-            가구 2개를 구매하고 배치해주세요!
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={handleNext}
-          className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
-            canNext ? "bg-holo-ink" : "bg-holo-ink-4"
-          }`}
-        >
-          다음
-        </button>
       </div>
 
       <ConfirmModal

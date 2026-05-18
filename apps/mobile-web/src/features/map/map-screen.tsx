@@ -13,7 +13,7 @@ import { useReverseGeocodedRegion } from "@/shared/hooks/use-reverse-geocode";
 import { useVerification } from "@/shared/stores/verification-store";
 
 /** 미리보기에서 보이는 최대 반경 — 안내 문구와 일치 */
-const PREVIEW_RADIUS_M = 1000;
+const PREVIEW_RADIUS_M = 5000;
 /** 확장 모달(모임 지도)에서 토글 가능한 반경 옵션. 기본값은 5km. */
 const MODAL_RADIUS_OPTIONS = [5000, 10000] as const;
 type ModalRadius = (typeof MODAL_RADIUS_OPTIONS)[number];
@@ -296,13 +296,15 @@ export function MapScreen() {
       {/* 현재 위치 라벨 — 인증된 동네 우선, 미인증 시 geolocation 기반 역지오코딩 */}
       <LocationLabel userPos={userPos} />
 
-      {/* 지도 미리보기 — 드래그/줌 가능. 확장은 우상단 아이콘 버튼으로만. */}
+      {/* 지도 미리보기 — 드래그/줌 가능. 확장은 우상단 아이콘 버튼으로만.
+          반경 5km 범위가 한눈에 들어오도록 zoom=13 기본값. */}
       <div className="relative mx-4 mt-2 h-[290px] overflow-hidden rounded-holo-tile shadow-[0_4px_20px_rgba(84,43,180,0.10)]">
         <MapView
           preview
           visiblePosts={visiblePosts}
           onMarkerClick={goToPost}
           initialCenter={userPos ?? undefined}
+          initialZoom={13}
         />
         <button
           type="button"
@@ -315,7 +317,7 @@ export function MapScreen() {
       </div>
 
       <p className="mt-2 px-4 text-center text-[12px] font-medium text-holo-ink-4">
-        ※ 내 주변 1km 안의 모임만 보여드려요
+        ※ 내 주변 5km 안의 모임만 보여드려요
       </p>
 
       {/* 필터 */}
@@ -542,14 +544,16 @@ function ArrowOutIcon({ stroke }: { stroke: string }) {
 
 /**
  * 지도 위 현재 위치 라벨.
- * 1) 인증된 동네(verifiedRegion) 가 있으면 그걸 그대로 사용
- * 2) 없으면 geolocation 좌표를 Nominatim 으로 역지오코딩 (시·구·동)
- * 3) 둘 다 없으면 안내문 노출
+ * 1) 사용자가 직접 인증한 동네(verifiedRegion) 가 있으면 그걸 우선 — 마이페이지·계정관리
+ *    화면과 일관된 라벨이 노출되도록.
+ * 2) 인증된 동네가 없으면 GPS 좌표 reverse geocoding 결과로 폴백.
+ * 3) 둘 다 없으면 안내문 노출.
  */
 function LocationLabel({ userPos }: { userPos: GeoPosition | null }) {
   const verification = useVerification();
   const geoLabel = useReverseGeocodedRegion(userPos);
-  const label = verification.verifiedRegion ?? geoLabel;
+  // 핸드폰에서도 라벨이 한 줄에 잘리지 않게 truncate + min-w-0 처리.
+  const label = verification.verifiedRegion || geoLabel;
 
   return (
     <div className="mx-4 mt-3 flex items-center gap-1.5 px-1 text-[13px] text-holo-ink-2">
@@ -561,11 +565,12 @@ function LocationLabel({ userPos }: { userPos: GeoPosition | null }) {
         stroke="#7448DD"
         strokeWidth="1"
         aria-hidden
+        className="shrink-0"
       >
         <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z" />
         <circle cx="12" cy="9" r="2.5" fill="white" />
       </svg>
-      <span className="font-medium">
+      <span className="min-w-0 flex-1 truncate font-medium">
         {label || (userPos ? "위치 확인 중…" : "위치 정보를 받을 수 없어요")}
       </span>
     </div>

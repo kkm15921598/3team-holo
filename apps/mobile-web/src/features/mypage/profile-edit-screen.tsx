@@ -72,26 +72,29 @@ export function ProfileEditScreen() {
         </button>
       </header>
 
-      {/* Nickname */}
+      {/* Nickname — 안드로이드에서 input 의 기본 min-width 가 커서 버튼이 화면 밖으로
+          밀려나는 문제가 있어, 컨테이너는 overflow-hidden, input 은 min-w-0,
+          버튼은 shrink-0 로 항상 컨테이너 안에 보이도록 강제한다. */}
       <section className="px-4">
         <p className="text-[14px] font-semibold text-holo-ink">닉네임</p>
-        <div className="mt-2 flex items-center gap-2 rounded-holo-pill border border-holo-line bg-white pl-4 pr-1">
+        <div className="mt-2 flex w-full items-center gap-2 overflow-hidden rounded-holo-pill border border-holo-line bg-white pl-4 pr-1">
           <input
             value={nickname}
             maxLength={10}
             onChange={(e) => {
+              // 한글 스크립트 전체 + 공백 + 천지인 "·" 허용 (천지인 키보드 조합 호환).
               const filtered = e.target.value
-                .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣ ]/g, "")
+                .replace(/[^\p{Script=Hangul}· ]/gu, "")
                 .slice(0, 10);
               setNickname(filtered);
               setCheck(null);
             }}
-            className="h-[44px] flex-1 text-[14px] text-holo-ink outline-none"
+            className="h-[44px] min-w-0 flex-1 bg-transparent text-[14px] text-holo-ink outline-none"
           />
           <button
             type="button"
             onClick={handleCheck}
-            className="rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white"
+            className="shrink-0 rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white"
           >
             중복확인
           </button>

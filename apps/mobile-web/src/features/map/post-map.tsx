@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
-import { type Post, type PostLocation } from "@/shared/mock/data";
+import { MY_LOCATION, type Post, type PostLocation } from "@/shared/mock/data";
 
 /**
  * GPS fix 가 아직 안 잡혔거나 좌표가 지정되지 않은 경우의 지도 기본 중심.
@@ -137,6 +137,11 @@ function attachLiveUserLocation(
      * 사용자 위치가 보이게 한다. fix 가 들어오면 그 위치로 자연스럽게 이동.
      */
     initialPosition?: { lat: number; lng: number };
+    /**
+     * 첫 GPS fix 콜백 — 호출자가 직접 지도 중심 이동 여부를 결정하고 싶을 때 사용.
+     * centerOnFix 와는 독립적으로 동작. (centerOnFix:false 일 때도 호출됨)
+     */
+    onFirstFix?: (latlng: { lat: number; lng: number }) => void;
   },
 ): () => void {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -175,8 +180,11 @@ function attachLiveUserLocation(
     } else {
       userMarker.setLatLng(e.latlng);
     }
-    if (firstFix && options.centerOnFix !== false) {
-      map.setView(e.latlng, map.getZoom());
+    if (firstFix) {
+      if (options.centerOnFix !== false) {
+        map.setView(e.latlng, map.getZoom());
+      }
+      options.onFirstFix?.({ lat: e.latlng.lat, lng: e.latlng.lng });
       firstFix = false;
     }
   };
@@ -505,19 +513,202 @@ type LocationPickerProps = {
   value: { lat: number; lng: number } | null;
   onChange: (next: { lat: number; lng: number }) => void;
   className?: string;
+  /**
+   * 좌표 클릭 후 reverse geocoding 으로 얻은 장소명(상호 / 시설 / 도로명)을 받아간다.
+   * 호출자가 "장소 이름" 입력란을 자동으로 채우는 데 사용.
+   */
+  onPlaceName?: (name: string) => void;
 };
 
-export function LocationPicker({ value, onChange, className }: LocationPickerProps) {
+/**
+ * 좌표 → 사람이 읽을 수 있는 장소명 (상호 / 시설 / 도로명).
+ * OpenStreetMap Nominatim 공개 API 사용 — 무료, 키 불필요.
+ * 사용 정책: 초당 1회 이하 / 캐싱 / User-Agent 명시 권장.
+ *  - 브라우저는 User-Agent 를 override 할 수 없으므로 자동으로 브라우저 UA 사용.
+ *  - 같은 좌표는 가까운 값으로 정규화해 캐시.
+ */
+/**
+ * 주소/장소명 → 좌표 (forward geocoding) — Nominatim search API.
+ * 한국 내 결과로 제한 (countrycodes=kr) 해서 의도치 않은 해외 매치를 막는다.
+ * near 가 주어지면 그 주변을 우선 검색하도록 viewbox 로 바이어스 + 더 많은 결과를 받아
+ * 클라이언트에서 거리순으로 다시 정렬한다 (사용자에게 가까운 매장이 위에 노출되게).
+ */
+type GeocodeResult = {
+  lat: number;
+  lng: number;
+  displayName: string;
+  /** near 가 주어졌을 때 채워지는 사용자 위치 ↔ 결과 거리(m). 정렬·표시에 사용. */
+  distanceM?: number;
+};
+
+/** Haversine — 두 위경도 사이 직선 거리(m). */
+function distanceMeters(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+async function searchAddress(
+  query: string,
+  near?: { lat: number; lng: number },
+): Promise<GeocodeResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  try {
+    // near 있으면 ~25km 반경을 viewbox 로 지정 → Nominatim 이 그 영역의 결과를 우선.
+    // bounded=0 으로 두면 영역 밖 결과도 받지만 우선순위가 낮아진다.
+    let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(trimmed)}&format=json&limit=10&accept-language=ko&countrycodes=kr&addressdetails=1`;
+    if (near) {
+      const dLat = 0.22; // 위도 1도 ≈ 111km, 0.22 ≈ 24km
+      const dLng = 0.27; // 한국 위도 37° 부근에서 경도 1도 ≈ 89km, 0.27 ≈ 24km
+      const viewbox = `${near.lng - dLng},${near.lat + dLat},${near.lng + dLng},${near.lat - dLat}`;
+      url += `&viewbox=${viewbox}&bounded=0`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = (await res.json()) as Array<{
+      lat: string;
+      lon: string;
+      display_name: string;
+    }>;
+    const results: GeocodeResult[] = data.map((d) => ({
+      lat: Number(d.lat),
+      lng: Number(d.lon),
+      displayName: d.display_name,
+    }));
+    if (near) {
+      for (const r of results) {
+        r.distanceM = distanceMeters(near, { lat: r.lat, lng: r.lng });
+      }
+      // 가까운 순으로 정렬 — 사용자 위치 기준 가장 가까운 매장이 맨 위.
+      results.sort((a, b) => (a.distanceM ?? 0) - (b.distanceM ?? 0));
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+const reverseGeocodeCache = new Map<string, string>();
+async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  if (reverseGeocodeCache.has(key)) return reverseGeocodeCache.get(key) ?? null;
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18&accept-language=ko`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json() as {
+      name?: string;
+      display_name?: string;
+      address?: {
+        amenity?: string;
+        shop?: string;
+        building?: string;
+        office?: string;
+        leisure?: string;
+        tourism?: string;
+        road?: string;
+        neighbourhood?: string;
+        suburb?: string;
+      };
+    };
+    // 우선순위: 구체적인 상호 / 시설 → 건물 / 사무실 → 도로명 → 동네명
+    const addr = data.address ?? {};
+    const name =
+      data.name ||
+      addr.amenity ||
+      addr.shop ||
+      addr.tourism ||
+      addr.leisure ||
+      addr.building ||
+      addr.office ||
+      addr.road ||
+      addr.neighbourhood ||
+      addr.suburb ||
+      null;
+    if (name) reverseGeocodeCache.set(key, name);
+    return name;
+  } catch {
+    return null;
+  }
+}
+
+export function LocationPicker({ value, onChange, className, onPlaceName }: LocationPickerProps) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onPlaceNameRef = useRef(onPlaceName);
+  onPlaceNameRef.current = onPlaceName;
+  // 주소 검색 상태 — 검색어 / 검색 결과 / 로딩 상태
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // 거리 정렬 기준점 — 실제 GPS fix 가 들어오면 그 좌표로 갱신.
+  // 그 전엔 mock 의 MY_LOCATION (미금역) 을 사용해 분당 지역 결과가 위로 오게 함.
+  const userPosRef = useRef<{ lat: number; lng: number }>({
+    lat: MY_LOCATION.lat,
+    lng: MY_LOCATION.lng,
+  });
+
+  const runSearch = async (q: string) => {
+    if (q.trim().length < 2) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      return;
+    }
+    setSearching(true);
+    setSearchOpen(true);
+    const results = await searchAddress(q, userPosRef.current);
+    setSearchResults(results);
+    setSearching(false);
+  };
+
+  /** 검색 결과 선택 — 지도 중심을 결과 위치로 이동 + 마커 + 장소명 자동 채움. */
+  const handlePickResult = (result: GeocodeResult) => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setView([result.lat, result.lng], 17, { animate: true });
+    if (markerRef.current) {
+      markerRef.current.setLatLng([result.lat, result.lng]);
+    } else {
+      markerRef.current = L.marker([result.lat, result.lng], {
+        icon: postIcon,
+        interactive: false,
+      }).addTo(map);
+    }
+    onChangeRef.current({ lat: result.lat, lng: result.lng });
+    // 검색 결과에서 첫 단어(가장 구체적인 명칭)를 장소명으로 채움.
+    const firstSegment = result.displayName.split(",")[0]?.trim();
+    if (firstSegment) onPlaceNameRef.current?.(firstSegment);
+    setSearchOpen(false);
+    setSearchQuery(firstSegment ?? result.displayName);
+  };
+  /** GPS fix 가 한 번이라도 들어왔으면 중심 자동 이동을 멈춤 (첫 fix 만 따라간다). */
+  const centeredOnFixRef = useRef(false);
 
   useLayoutEffect(() => {
     if (!elRef.current || mapRef.current) return;
 
-    const center = value ?? SEOUL_FALLBACK_CENTER;
+    // 초기 중심 우선순위:
+    //  1) 사용자가 이미 선택한 좌표 (value)
+    //  2) mock 환경의 내 위치 (MY_LOCATION — 미금역 인근)
+    //  3) 서울 시청 폴백 (네트워크 이슈 / mock 데이터 미설정 시)
+    // 이전엔 value 가 없을 때 무조건 서울 시청으로 떨어졌어서, 분당 사용자가
+    // 위치 선택 모달을 열면 서울 도심이 떴다.
+    const center = value ?? MY_LOCATION ?? SEOUL_FALLBACK_CENTER;
 
     const map = L.map(elRef.current, {
       center: [center.lat, center.lng],
@@ -535,9 +726,20 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
     });
     tiles.addTo(map);
 
-    // 글쓰기 화면 — 사용자 위치는 실제 GPS fix 가 들어오면 helper 가 마커를 만든다.
-    // 지도 중심은 사용자가 선택한 좌표를 유지하므로 centerOnFix:false.
-    const cleanupLocate = attachLiveUserLocation(map, { preview: true, centerOnFix: false });
+    // 사용자 위치 마커 + 실 GPS fix 가 들어오면 첫 fix 시점에만 지도 중심도 거기로 이동.
+    // 이후 패닝은 사용자에게 맡긴다 (계속 따라가면 위치 선택이 불편).
+    const cleanupLocate = attachLiveUserLocation(map, {
+      preview: true,
+      centerOnFix: false,
+      onFirstFix: (latlng) => {
+        // 검색 거리 정렬 기준점도 실제 위치로 갱신
+        userPosRef.current = { lat: latlng.lat, lng: latlng.lng };
+        if (centeredOnFixRef.current) return;
+        if (markerRef.current) return; // 사용자가 이미 위치를 찍었으면 그대로 둔다
+        centeredOnFixRef.current = true;
+        map.setView([latlng.lat, latlng.lng], map.getZoom(), { animate: true });
+      },
+    });
 
     if (value) {
       markerRef.current = L.marker([value.lat, value.lng], {
@@ -557,6 +759,11 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
         }).addTo(map);
       }
       onChangeRef.current({ lat, lng });
+      // 비동기 reverse geocode — 응답이 도착하면 호출자에게 장소명을 전달.
+      // 네트워크/CORS 실패 시 null 이라 별도 노출 없이 조용히 무시.
+      void reverseGeocode(lat, lng).then((name) => {
+        if (name) onPlaceNameRef.current?.(name);
+      });
     });
 
     mapRef.current = map;
@@ -600,6 +807,130 @@ export function LocationPicker({ value, onChange, className }: LocationPickerPro
       }
     >
       <div ref={elRef} className="absolute inset-0" />
+
+      {/* 주소/상호 검색창 — 지도 상단 가운데 떠 있음. 입력 후 엔터 또는 결과 클릭 시 해당 위치로 이동. */}
+      <div className="pointer-events-none absolute left-2 right-2 top-2 z-[500]">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runSearch(searchQuery);
+          }}
+          className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.12)]"
+        >
+          <SearchIcon />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => {
+              if (searchResults.length > 0) setSearchOpen(true);
+            }}
+            placeholder="주소 · 장소명으로 검색"
+            className="h-7 min-w-0 flex-1 bg-transparent text-[13px] text-holo-ink outline-none placeholder:text-holo-ink-4"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              aria-label="검색어 지우기"
+              onClick={() => {
+                setSearchQuery("");
+                setSearchResults([]);
+                setSearchOpen(false);
+              }}
+              className="shrink-0 text-holo-ink-3"
+            >
+              <ClearIcon />
+            </button>
+          )}
+        </form>
+
+        {/* 검색 결과 드롭다운 */}
+        {searchOpen && (
+          <div className="pointer-events-auto mt-2 max-h-[40vh] overflow-y-auto rounded-[12px] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
+            {searching && (
+              <p className="px-4 py-3 text-[13px] text-holo-ink-3">검색 중…</p>
+            )}
+            {!searching && searchResults.length === 0 && (
+              <p className="px-4 py-3 text-[13px] text-holo-ink-3">
+                일치하는 결과가 없어요.
+              </p>
+            )}
+            {!searching &&
+              searchResults.map((r, i) => {
+                const first = r.displayName.split(",")[0]?.trim() ?? r.displayName;
+                const rest = r.displayName.split(",").slice(1).join(",").trim();
+                const distLabel = r.distanceM != null
+                  ? r.distanceM < 1000
+                    ? `${Math.round(r.distanceM)}m`
+                    : `${(r.distanceM / 1000).toFixed(1)}km`
+                  : null;
+                return (
+                  <button
+                    key={`${r.lat},${r.lng}-${i}`}
+                    type="button"
+                    onClick={() => handlePickResult(r)}
+                    className="flex w-full flex-col items-start gap-0.5 border-b border-holo-line-3 px-4 py-3 text-left last:border-b-0 active:bg-holo-surface-2"
+                  >
+                    <div className="flex w-full items-center gap-2">
+                      <span className="text-[13px] font-semibold text-holo-ink">
+                        {first}
+                      </span>
+                      {distLabel && (
+                        <span className="ml-auto shrink-0 text-[11px] font-medium text-holo-purple-mid">
+                          {distLabel}
+                        </span>
+                      )}
+                    </div>
+                    {rest && (
+                      <span className="text-[11px] leading-tight text-holo-ink-3">
+                        {rest}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="shrink-0 text-holo-ink-3"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
+function ClearIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="10" fill="currentColor" stroke="none" opacity="0.15" />
+      <path d="M9 9l6 6M9 15l6-6" />
+    </svg>
   );
 }

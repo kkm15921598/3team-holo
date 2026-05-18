@@ -145,8 +145,8 @@ export function VerificationScreen() {
         ※ 휴대폰 번호 1개당 하나의 계정만 만들 수 있어요.
       </p>
 
-      {/* 국적 토글 — 내국인 / 외국인 */}
-      <div className="mt-6 flex h-[44px] rounded-holo-pill border border-holo-line p-[3px]">
+      {/* 국적 토글 — 내국인 / 외국인. shrink-0 으로 좁은 뷰포트에서도 세로 크기 유지. */}
+      <div className="mt-6 flex h-[44px] shrink-0 rounded-holo-pill border border-holo-line p-[3px]">
         {(
           [
             { id: "kor", label: "내국인" },
@@ -171,15 +171,21 @@ export function VerificationScreen() {
         })}
       </div>
 
-      <div className="mt-4 flex flex-col gap-3">
+      <div className="mt-4 flex shrink-0 flex-col gap-3">
         {nationality === "kor" ? (
           <Input
             placeholder="이름 입력 (한글 2~10자)"
             value={name}
             onChange={(v) => {
-              // 한글 완성형 + 자모(IME 조합 중 임시로 노출되는 ㄱㄴㄷ/ㅏㅑㅓ) 허용.
-              // 자모만으로는 isNameValid가 통과되지 않으므로 다음 버튼은 비활성 상태 유지.
-              const filtered = v.replace(/[^가-힣ㄱ-ㅎㅏ-ㅣ]/g, "").slice(0, 10);
+              // 한글 완성형(가-힣) + 자모(IME 조합 중 임시로 노출되는 ㄱㄴㄷ/ㅏㅑㅓ) +
+              // 천지인 키보드의 "·"(U+00B7), "ㆍ"(U+318D 아래아) 같은 조합 부호 허용.
+              // 이걸 막으면 천지인 사용자는 모음을 만들 수 없어 글자 자체가 입력되지 않는다.
+              // \p{Script=Hangul} 로 한글 스크립트 전체(자모/완성형/확장)를 허용하고,
+              // 추가로 천지인 전용 "·" 를 명시. 자모/부호 단독으로는 isNameValid 가 통과
+              // 하지 않으므로 다음 버튼은 비활성 유지.
+              const filtered = v
+                .replace(/[^\p{Script=Hangul}·]/gu, "")
+                .slice(0, 10);
               update("name", filtered);
             }}
             valid={isNameValid}
@@ -247,7 +253,7 @@ export function VerificationScreen() {
         <button
           type="button"
           onClick={() => setShowSheet(true)}
-          className={`flex h-[62px] items-center justify-between rounded-holo-input border px-5 text-left text-[15px] ${
+          className={`flex h-[62px] shrink-0 items-center justify-between rounded-holo-input border px-5 text-left text-[15px] ${
             carrier ? "border-2 border-holo-purple-mid text-holo-purple-mid" : "border-holo-ink-4 text-holo-ink-4"
           }`}
         >
@@ -310,7 +316,7 @@ export function VerificationScreen() {
         )}
       </div>
 
-      <div className="mt-auto pt-6">
+      <div className="mt-auto shrink-0 pt-6">
         <button
           type="button"
           onClick={handleMain}
@@ -393,7 +399,7 @@ function Input({
         if (v !== value) onChange(v);
       }}
       onBlur={onBlur}
-      className={`h-[62px] w-full rounded-holo-input ${paddingRight ? "pr-12 pl-5" : "px-5"} text-[15px] outline-none ${
+      className={`h-[62px] w-full shrink-0 rounded-holo-input ${paddingRight ? "pr-12 pl-5" : "px-5"} text-[15px] outline-none ${
         error
           ? "border-2 border-holo-error"
           : valid

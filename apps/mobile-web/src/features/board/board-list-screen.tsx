@@ -391,16 +391,26 @@ export function BoardListScreen() {
           </button>
         </div>
       ) : (
-        <div
-          ref={tabsRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          className="overflow-x-auto px-4 py-2 [&::-webkit-scrollbar]:hidden"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none", cursor: "grab" }}
-        >
-          <div className="flex w-max gap-2">
+        // 뒤로가기 + 카테고리 탭. 좌측에 뒤로 버튼을 고정하고 그 오른쪽은 가로 스크롤되는 탭.
+        <div className="flex items-center border-b border-holo-line-2">
+          <button
+            type="button"
+            aria-label="뒤로"
+            onClick={() => navigate(-1)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center"
+          >
+            <BackIcon />
+          </button>
+          <div
+            ref={tabsRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            className="flex-1 overflow-x-auto px-2 py-2 [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none", cursor: "grab" }}
+          >
+            <div className="flex w-max gap-2">
             {BOARD_CATEGORIES.map((c) => {
               const on = activeCat === c.id;
               return (
@@ -417,6 +427,7 @@ export function BoardListScreen() {
                 </button>
               );
             })}
+            </div>
           </div>
         </div>
       )}

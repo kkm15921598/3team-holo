@@ -203,28 +203,31 @@ export function ActivityScreen() {
         />
       </ul>
 
-      {/* CTA — 라일락 카드 + 작은 일러스트 + pill 버튼 */}
+      {/* CTA — 좌측: 텍스트 (수직 중앙) / 우측: 일러스트 + 버튼 (수직 중앙).
+          양쪽 컬럼을 items-center 로 정렬해 카드 안 여백이 균등해 보이도록 함. */}
       <Link
         to="/mypage/neighborhood"
-        className="mt-auto flex items-center gap-3 overflow-hidden rounded-[18px] bg-gradient-to-br from-holo-lilac-card-2 to-[#F1E6FF] p-5 shadow-[0_4px_16px_rgba(116,72,221,0.10)] transition active:scale-[0.99]"
+        className="mt-3 flex items-center gap-3 overflow-hidden rounded-[18px] bg-gradient-to-br from-holo-lilac-card-2 to-[#F1E6FF] p-5 shadow-[0_4px_16px_rgba(116,72,221,0.10)] transition active:scale-[0.99]"
       >
         <div className="flex min-w-0 flex-1 flex-col">
-          <p className="text-[15px] font-bold leading-snug text-holo-ink">
-            나와 닮은 이웃의
+          <p className="text-[17px] font-bold leading-snug text-holo-ink">
+            나와 닮은 이웃을
             <br />
-            방으로 놀러가볼까요?
+            만나볼까요?
           </p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-holo-ink-3">
-            게시판에서 다양한 사람들의
+          <p className="mt-2 text-[13px] leading-relaxed text-holo-ink-3">
+            AI 추천을 통해
             <br />
-            이야기를 만나보세요!
+            새로운 이웃을 만나보세요!
           </p>
-          <span className="mt-4 inline-flex w-fit items-center gap-1 rounded-full bg-holo-gradient px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.35)]">
+        </div>
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          <NeighborhoodIllustration />
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-holo-gradient px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-[0_2px_6.9px_rgba(84,43,180,0.35)]">
             이웃찾기
             <ArrowRightSmall />
           </span>
         </div>
-        <NeighborhoodIllustration />
       </Link>
     </main>
   );
@@ -360,9 +363,9 @@ function ArrowRightSmall() {
 function NeighborhoodIllustration() {
   return (
     <svg
-      width="68"
-      height="68"
-      viewBox="0 0 68 68"
+      width="80"
+      height="70"
+      viewBox="0 10 68 60"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden

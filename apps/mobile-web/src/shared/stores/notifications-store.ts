@@ -32,6 +32,7 @@ export type DynNotifKind =
   | "reward"
   | "post-created"
   | "meeting-joined"
+  | "meeting-full"
   | "comment"
   | "like";
 
@@ -243,6 +244,37 @@ export function pushMeetingJoined(
     kind: "meeting-joined",
     title: "모임 참여 완료",
     body: `"${title}" 모임에 참여했어요. 모임 일정을 잊지 마세요!`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/board/${postId}`,
+  };
+  _list = [item, ..._list];
+  notify();
+  return item;
+}
+
+/**
+ * 내가 주최한 모임의 인원이 정원에 도달했을 때 발행.
+ *  - postId 와 함께 멱등성 보장 ("이미 발행됨" 체크) — 같은 모임에 두 번 알림 가지 않게.
+ *  - "meeting" 카테고리에 매핑되어 사용자 설정에서 모임 알림을 끄면 노출되지 않는다.
+ */
+export function pushMeetingFull(
+  title: string,
+  postId: string,
+): DynNotification {
+  if (!isAllowed("meeting")) return SUPPRESSED;
+  // 이미 같은 postId 로 "meeting-full" 알림이 있으면 중복 발행하지 않음.
+  const already = _list.some(
+    (n) => n.kind === "meeting-full" && n.link === `/board/${postId}`,
+  );
+  if (already) return SUPPRESSED;
+  const createdAt = Date.now();
+  const item: DynNotification = {
+    id: `dn-meeting-full-${createdAt}-${Math.random().toString(36).slice(2, 6)}`,
+    kind: "meeting-full",
+    title: "모임 모집 완료",
+    body: `"${title}" 모임 인원이 모두 채워졌어요!`,
     time: timeAgo(createdAt),
     createdAt,
     read: false,

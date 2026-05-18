@@ -269,10 +269,10 @@ export function FindPasswordScreen() {
             placeholder="이름 입력 (한글/영문, 2~20자)"
             value={name}
             onChange={(v) => {
-              // 한글 완성형 + 자모(IME 조합 중) + 영문 + 공백 허용.
+              // 한글 스크립트 전체(천지인 "·" 포함) + 영문 + 공백 허용.
               // 연속 공백 압축 + 20자 제한.
               const filtered = v
-                .replace(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\s]/g, "")
+                .replace(/[^\p{Script=Hangul}·a-zA-Z\s]/gu, "")
                 .replace(/\s{2,}/g, " ")
                 .slice(0, 20);
               setName(filtered);

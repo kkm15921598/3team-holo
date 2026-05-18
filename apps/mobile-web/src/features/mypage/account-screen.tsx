@@ -20,8 +20,26 @@ export function AccountScreen() {
     return unsub;
   }, []);
 
-  const verified = verification.phoneVerified && verification.regionVerified;
+  // 위치(동네) 인증 여부만으로 뱃지 토글 — 휴대폰 인증은 가입 시 끝나니 별도 안내 없이 통합.
+  // 실제 위치 인증을 거치면 '인증완료' 로 자동 전환된다.
+  const regionVerified = verification.regionVerified;
   const faceSrc = profile.profileFace ?? ME_PERSONA.face;
+
+  // 가입년도 — localStorage 의 holoUser.signupAt 에서 추출. 없으면 현재 년도 폴백.
+  const signupYear = (() => {
+    try {
+      const raw = window.localStorage.getItem("holoUser");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { signupAt?: number };
+        if (parsed?.signupAt) {
+          return new Date(parsed.signupAt).getFullYear();
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return new Date().getFullYear();
+  })();
 
   return (
     <main className="flex flex-1 flex-col">
@@ -35,28 +53,45 @@ export function AccountScreen() {
       <section className="px-4 pt-2">
         <p className="text-[12px] text-holo-ink-3">로그인 계정</p>
         <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-holo-card">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <img
               src={faceSrc}
               alt={profile.nickname}
-              className="h-9 w-9 rounded-full object-cover"
+              className="h-9 w-9 shrink-0 rounded-full object-cover"
               draggable={false}
             />
-            <div className="flex flex-col">
-              <span className="text-[14px] font-semibold text-holo-ink">{profile.nickname}</span>
-              <span className="text-[12px] text-holo-ink-3">ID : {profile.friendCode}</span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-[14px] font-semibold text-holo-ink">
+                {profile.nickname}
+              </span>
+              <span className="text-[12px] text-holo-ink-3">
+                ID : {profile.friendCode}
+              </span>
             </div>
           </div>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-              verified
+          {/* 위치 인증 뱃지 — 클릭하면 동네 인증 화면으로 이동. */}
+          <button
+            type="button"
+            onClick={() => navigate("/mypage/verify-region")}
+            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+              regionVerified
                 ? "bg-holo-lilac-card text-holo-purple-mid"
-                : "bg-holo-line-2/50 text-holo-ink-3"
+                : "bg-holo-line-2/50 text-holo-ink-3 hover:bg-holo-line-2"
             }`}
+            aria-label={
+              regionVerified
+                ? "동네 인증 완료 — 재인증하려면 클릭"
+                : "동네 인증하기"
+            }
           >
-            {verified ? "인증완료" : "미인증"}
-          </span>
+            {regionVerified ? "인증완료" : "미인증"}
+          </button>
         </div>
+        {/* 가입년도 — 프로필 카드 바로 아래 작은 캡션. 카드 안에 넣으면 답답해 보여서
+            카드 외곽에 라벨 형식으로 분리. */}
+        <p className="mt-2 flex items-center gap-1.5 px-1 text-[12px] text-holo-ink-3">
+          <CalendarIcon /> {signupYear}년부터 HOLO와 함께하고 있어요
+        </p>
       </section>
 
       <section className="mt-4 px-4">
@@ -142,6 +177,14 @@ function ChevronRightIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+function CalendarIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );
 }

@@ -66,6 +66,7 @@ import { PrivacyPolicyScreen } from "@/features/mypage/privacy-policy-screen";
 import { TermsOfServiceScreen } from "@/features/mypage/terms-of-service-screen";
 import { DataDownloadScreen } from "@/features/mypage/data-download-screen";
 import { NotificationsScreen } from "@/features/mypage/notifications-screen";
+import { HelpScreen } from "@/features/mypage/help-screen";
 import { QuietHoursScreen } from "@/features/mypage/quiet-hours-screen";
 import { ModeScreen } from "@/features/mypage/mode-screen";
 import { FreePointsScreen } from "@/features/mypage/free-points-screen";
@@ -123,7 +124,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/board" element={<TabLayout><BoardMainScreen /></TabLayout>} />
           <Route path="/board/list" element={<TabLayout><BoardListScreen /></TabLayout>} />
           <Route path="/board/search" element={<TabLayout><BoardSearchScreen /></TabLayout>} />
-          <Route path="/board/write" element={<BoardWriteScreen />} />
+          <Route path="/board/write" element={<TabLayout showHeader={false}><BoardWriteScreen /></TabLayout>} />
           <Route path="/board/drafts" element={<BoardDraftsScreen />} />
           <Route path="/board/:id" element={<TabLayout><BoardDetailScreen /></TabLayout>} />
 
@@ -164,6 +165,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/privacy/data" element={<TabLayout showHeader={false}><DataDownloadScreen /></TabLayout>} />
           <Route path="/mypage/notifications" element={<TabLayout showHeader={false}><NotificationsScreen /></TabLayout>} />
           <Route path="/mypage/notifications/quiet" element={<TabLayout showHeader={false}><QuietHoursScreen /></TabLayout>} />
+          <Route path="/mypage/help" element={<TabLayout showHeader={false}><HelpScreen /></TabLayout>} />
           <Route path="/mypage/mode" element={<TabLayout showHeader={false}><ModeScreen /></TabLayout>} />
           <Route path="/mypage/level" element={<TabLayout showHeader={false}><MyLevelScreen /></TabLayout>} />
           <Route path="/mypage/badges" element={<TabLayout showHeader={false}><MyBadgesScreen /></TabLayout>} />

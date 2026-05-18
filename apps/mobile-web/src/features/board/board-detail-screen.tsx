@@ -24,7 +24,7 @@ import {
   useViewCounts,
 } from "@/shared/stores/view-count-store";
 import { awardXp } from "@/shared/stores/xp-store";
-import { pushMeetingJoined } from "@/shared/stores/notifications-store";
+import { pushMeetingJoined, pushMeetingFull } from "@/shared/stores/notifications-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
@@ -490,6 +490,12 @@ export function BoardDetailScreen() {
     // 모임 참여 알림 — 알림 패널에서 그 모임으로 바로 이동할 수 있도록 한 줄 발행.
     pushMeetingJoined(post.title, post.id);
     setShowJoinBanner(true);
+    // 이번 참여로 정원이 채워지고 + 이 모임을 내가 주최한 경우 → 호스트(=현재 사용자)에게 모집 완료 알림.
+    // baseJoined + 1(이번 참여) >= capacity 이면 정원 채움.
+    const willBeFull = Math.min(capacity, baseJoined + 1) >= capacity;
+    if (willBeFull && post.authorNickname === profile.nickname) {
+      pushMeetingFull(post.title, post.id);
+    }
   };
 
   /** 취소 확인 다이얼로그에서 "취소" 를 눌렀을 때 실제로 모임에서 빠지고 채팅방도 퇴장. */
@@ -732,7 +738,8 @@ export function BoardDetailScreen() {
               </div>
             </div>
 
-            <p className="mt-[15px] text-[13px] text-holo-ink-2">
+            {/* 게시글 본문 — 화면에서 가장 강조되어야 하는 텍스트. 댓글보다 크고 진하게. */}
+            <p className="mt-[15px] text-[15px] leading-relaxed text-holo-ink">
               {post.description}
             </p>
 
@@ -818,7 +825,8 @@ export function BoardDetailScreen() {
         {/* Simple-only: description + heart/comment stats row */}
         {isSimple && (
           <>
-            <p className="mt-2 text-[13px] text-holo-ink-2">{post.description}</p>
+            {/* 게시글 본문 — 댓글보다 크고 진하게, 최우선 가독성. */}
+            <p className="mt-2 text-[15px] leading-relaxed text-holo-ink">{post.description}</p>
             {/* 자유/추천 카테고리에도 동일하게 사진 노출 */}
             {post.photoUrls && post.photoUrls.length > 0 && (
               <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
@@ -899,7 +907,9 @@ export function BoardDetailScreen() {
                         {c.timeAgo}
                       </span>
                     </div>
-                    <p className="mt-1 text-[13px] text-holo-ink-2">
+                    {/* 댓글 본문 — 게시글 본문(15px)보다 한 단계 작게(13px) 유지해
+                        본문 > 댓글 위계가 시각적으로 드러나도록 함. */}
+                    <p className="mt-1.5 text-[13px] leading-relaxed text-holo-ink">
                       {c.content}
                     </p>
                     {/* 부모 댓글 사진 첨부 미리보기 — photoUrl 이 있으면 실제 이미지, 없으면 회색 박스 폴백. */}
@@ -957,7 +967,8 @@ export function BoardDetailScreen() {
                               {r.timeAgo}
                             </span>
                           </div>
-                          <p className="mt-1 text-[13px] text-holo-ink-2">
+                          {/* 대댓글 본문 — 댓글과 동일한 13px 로 위계 일관성 유지. */}
+                          <p className="mt-1.5 text-[13px] leading-relaxed text-holo-ink">
                             {r.content}
                           </p>
                           {(r.hasPhoto || r.hasMap) && (
@@ -1361,8 +1372,11 @@ export function BoardDetailScreen() {
               <LocationPicker
                 value={commentDraftPick}
                 onChange={setCommentDraftPick}
+                onPlaceName={(name) => {
+                  setCommentDraftPlaceName((prev) => (prev.trim() ? prev : name));
+                }}
               />
-              <p className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
+              <p className="pointer-events-none absolute left-1/2 top-14 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
                 지도를 탭해 위치를 선택하세요
               </p>
             </div>
@@ -1420,8 +1434,11 @@ export function BoardDetailScreen() {
               <LocationPicker
                 value={replyDraftPick}
                 onChange={setReplyDraftPick}
+                onPlaceName={(name) => {
+                  setReplyDraftPlaceName((prev) => (prev.trim() ? prev : name));
+                }}
               />
-              <p className="pointer-events-none absolute left-1/2 top-3 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
+              <p className="pointer-events-none absolute left-1/2 top-14 z-[400] -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] text-holo-ink-2 shadow">
                 지도를 탭해 위치를 선택하세요
               </p>
             </div>

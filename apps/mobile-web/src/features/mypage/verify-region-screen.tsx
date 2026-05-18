@@ -23,7 +23,9 @@ export function VerifyRegionScreen() {
   const [phase, setPhase] = useState<Phase>("permission");
   const [picked, setPicked] = useState<string>("");
   const [nearest, setNearest] = useState<DetectedDong[]>([]);
-  const [accuracy, setAccuracy] = useState<number | null>(null);
+  // 이전엔 GPS accuracy(오차범위)를 노출했지만 브라우저 환경에 따라 50km 같은
+  // 비현실적인 값이 나와 의미가 없어 제거. 대신 동네 인증의 가치를 안내하는
+  // 문구를 보여준다.
   const [errorMessage, setErrorMessage] = useState<string>("");
   // 이번 confirm() 호출에서 +10P 적립이 실제로 발생했는지 — 성공 모달 표시 분기에 사용.
   // 갱신 주기(90일) 이내 재인증이면 false 가 되어 "+10P" 대신 "이미 적립됨" 안내를 보여준다.
@@ -50,7 +52,6 @@ export function VerifyRegionScreen() {
         );
         setNearest(dongs);
         setPicked(dongs[0]?.label ?? "");
-        setAccuracy(pos.coords.accuracy);
         setPhase("confirm");
       },
       (err) => {
@@ -84,10 +85,6 @@ export function VerifyRegionScreen() {
   const finish = () => navigate(-1);
 
   const pickedLabel = picked || nearest[0]?.label || "위치 미확인";
-  const accuracyLabel =
-    accuracy !== null && Number.isFinite(accuracy)
-      ? `GPS · 오차범위 약 ${Math.round(accuracy)}m`
-      : "GPS · 오차범위 측정 중";
 
   return (
     <main className="flex flex-1 flex-col">
@@ -196,7 +193,9 @@ export function VerifyRegionScreen() {
             <p className="mt-1 flex items-center justify-center gap-1 text-[20px] font-bold text-holo-ink">
               <PinIcon size={20} /> {pickedLabel}
             </p>
-            <p className="mt-1 text-[12px] text-holo-ink-3">{accuracyLabel}</p>
+            <p className="mt-1 whitespace-nowrap text-[12px] text-holo-ink-3">
+              현재 머무는 동네 이웃을 만나보세요
+            </p>
           </div>
 
           <p className="mt-5 text-[13px] font-semibold text-holo-ink">
