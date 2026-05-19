@@ -223,7 +223,7 @@ function WelcomeBonusModal({
   return (
     <ConfirmModal
       open
-      message="환영합니다! 🎉"
+      message={<span className="text-[18px] leading-snug">환영합니다! 🎉</span>}
       description={
         <>
           HOLO 가입을 축하드려요.

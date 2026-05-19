@@ -1,57 +1,47 @@
-import { Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 
-// 주제별로 그룹화 — 모든 칩을 하나의 6열 그리드에 넣고 라벨은 full-width 분리자로 렌더링.
-// 짧은 칩(short): col-span-2 → 한 행에 3개
-// 긴 칩(half): col-span-3 → 한 행에 2개 (모임 형태처럼 텍스트가 긴 경우)
-// 6열 그리드로 두 폭을 한 그리드 안에서 일관되게 정렬한다.
-type TagItem = { tag: string; span?: "short" | "half" };
+// 게시판 카테고리(BOARD_CATEGORIES) 와 동일한 8개 그룹으로 정리.
+// "전체"는 카테고리가 아니라 모음이므로 제외.
+type TagItem = { tag: string };
 type TagGroup = { label: string; items: TagItem[] };
 const TAG_GROUPS: TagGroup[] = [
   {
-    label: "공유·도움",
-    items: ["공동구매", "소분", "나눔", "도움", "분실물", "무료나눔", "정보공유"].map(
+    label: "자유게시판",
+    items: ["소통", "일상", "반려동물", "자취", "여행", "사진", "패션", "뷰티", "인테리어"].map(
       (t) => ({ tag: t }),
     ),
   },
   {
-    label: "맛·먹거리",
+    label: "공동구매 / 소분하기",
+    items: ["공동구매", "소분", "나눔", "무료나눔"].map((t) => ({ tag: t })),
+  },
+  {
+    label: "추천해요",
+    items: ["정보공유", "재테크", "꿀팁", "독서", "강의"].map((t) => ({ tag: t })),
+  },
+  {
+    label: "게임파티",
+    items: ["게임", "OTT", "보드게임"].map((t) => ({ tag: t })),
+  },
+  {
+    label: "같이 운동해요",
+    items: ["운동", "산책", "등산", "캠핑", "러닝", "자전거"].map((t) => ({ tag: t })),
+  },
+  {
+    label: "드라마 · 영화",
+    items: ["영화", "드라마", "음악", "웹툰", "책", "공연", "전시"].map((t) => ({ tag: t })),
+  },
+  {
+    label: "맛집 & 먹거리",
     items: ["맛집", "먹거리", "카페", "디저트", "술집", "배달", "홈쿠킹"].map(
       (t) => ({ tag: t }),
     ),
   },
   {
-    label: "활동·취미",
-    items: ["운동", "산책", "여행", "사진", "등산", "캠핑", "러닝", "자전거"].map(
-      (t) => ({ tag: t }),
-    ),
-  },
-  {
-    label: "문화·콘텐츠",
-    items: ["게임", "OTT", "영화", "드라마", "음악", "웹툰", "책", "공연", "전시"].map(
-      (t) => ({ tag: t }),
-    ),
-  },
-  {
-    label: "학습",
-    items: ["공부", "스터디", "어학", "자격증", "독서", "강의"].map((t) => ({ tag: t })),
-  },
-  {
-    label: "라이프스타일",
-    items: ["반려동물", "자취", "소통", "인테리어", "패션", "뷰티", "재테크"].map(
-      (t) => ({ tag: t }),
-    ),
-  },
-  {
-    label: "모임 형태",
-    items: [
-      { tag: "단기성 소모임", span: "half" },
-      { tag: "장기성 소모임", span: "half" },
-      { tag: "온라인 모임", span: "half" },
-      { tag: "오프라인 모임", span: "half" },
-    ],
+    label: "도와주세요!",
+    items: ["도움", "분실물"].map((t) => ({ tag: t })),
   },
 ];
 
@@ -155,43 +145,45 @@ export function InterestScreen() {
       </div>
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {/* 칩은 글자 길이에 맞춰 콘텐츠 기반 폭으로 렌더링되고, flex-wrap 으로 자연스럽게 줄바꿈된다.
-            카테고리 라벨은 별도 줄 분리자 역할. */}
-        <div className="flex flex-col gap-3">
+        {/* 각 카테고리 = (라벨 + 칩들) 한 묶음. 묶음 사이는 넓게(gap-5), 라벨↔칩 간은 좁게(gap-1.5)
+            두어 시각적으로 한 덩어리로 보이도록 한다. */}
+        <div className="flex flex-col gap-5">
           {TAG_GROUPS.map((group) => (
-            <Fragment key={group.label}>
-              <span className="px-2 pb-1 pt-2 text-[11px] font-medium text-holo-ink-4">
+            <div key={group.label} className="flex flex-col gap-1.5">
+              <span className="px-2 text-[11px] font-medium text-holo-ink-4">
                 {group.label}
               </span>
               <div className="flex flex-wrap gap-2">
                 {group.items.map(renderChip)}
               </div>
-            </Fragment>
+            </div>
           ))}
 
-          <span className="px-2 pb-1 pt-2 text-[11px] font-medium text-holo-ink-4">
-            기타
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {custom.length > 0 ? (
-              <input
-                autoFocus
-                value={custom}
-                onChange={(e) => update("customInterest", e.target.value.slice(0, 20))}
-                placeholder="직접 입력하세요"
-                maxLength={20}
-                className="rounded-[20px] border border-holo-purple-mid bg-white px-3.5 py-1.5 text-[14px] text-holo-purple-mid outline-none placeholder:text-holo-ink-4"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => update("customInterest", " ")}
-                className={`${CHIP_BASE} border-holo-line text-holo-ink`}
-              >
-                <span className="text-holo-ink-4">+</span>
-                직접 입력
-              </button>
-            )}
+          <div className="flex flex-col gap-1.5">
+            <span className="px-2 text-[11px] font-medium text-holo-ink-4">
+              기타
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {custom.length > 0 ? (
+                <input
+                  autoFocus
+                  value={custom}
+                  onChange={(e) => update("customInterest", e.target.value.slice(0, 20))}
+                  placeholder="직접 입력하세요"
+                  maxLength={20}
+                  className="rounded-[20px] border border-holo-purple-mid bg-white px-3.5 py-1.5 text-[14px] text-holo-purple-mid outline-none placeholder:text-holo-ink-4"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => update("customInterest", " ")}
+                  className={`${CHIP_BASE} border-holo-line text-holo-ink`}
+                >
+                  <span className="text-holo-ink-4">+</span>
+                  직접 입력
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

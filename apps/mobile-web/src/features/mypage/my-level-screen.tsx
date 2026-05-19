@@ -70,36 +70,51 @@ export function MyLevelScreen() {
         </div>
       </section>
 
-      {/* 레벨업 혜택 */}
+      {/* 레벨업 혜택 — 3열 그리드 (2행 × 3칸) 컴팩트 형태.
+          각 카드는 레벨 뱃지 + 보상(+100P 등) + 획득 시 우측 상단 체크 표시만 노출. */}
       <section className="mt-5 px-4">
-        <p className="text-[14px] font-semibold text-holo-ink">레벨업 혜택</p>
-        <div className="mt-3 flex flex-col gap-2">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[14px] font-semibold text-holo-ink">레벨업 혜택</p>
+          <p className="text-[11px] text-holo-ink-3">레벨 달성 시 보너스 포인트 지급</p>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {LEVEL_BENEFITS.map((b) => {
             const unlocked = stats.level >= b.level;
+            // "보너스 포인트 +100P" → "+100P" 만 추출해 간결하게 표시.
+            const amount = b.label.replace(/^보너스 포인트\s*/, "");
             return (
               <div
                 key={b.level}
-                className={`flex items-center gap-3 rounded-[12px] border px-4 py-3 ${
+                className={`relative flex flex-col items-center justify-center gap-1.5 rounded-[12px] border px-2 py-3 text-center ${
                   unlocked
                     ? "border-holo-purple-mid bg-holo-purple-mid/5"
                     : "border-holo-line bg-white"
                 }`}
               >
+                {unlocked && (
+                  <span
+                    className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-holo-purple-mid text-[8px] text-white"
+                    aria-label="획득 완료"
+                  >
+                    ✓
+                  </span>
+                )}
                 <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold ${
-                    unlocked ? "bg-holo-purple-mid text-white" : "bg-holo-surface-2 text-holo-ink-3"
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-bold ${
+                    unlocked
+                      ? "bg-holo-purple-mid text-white"
+                      : "bg-holo-surface-2 text-holo-ink-3"
                   }`}
                 >
                   {b.level}
                 </span>
                 <span
-                  className={`text-[14px] ${unlocked ? "font-semibold text-holo-ink" : "text-holo-ink-3"}`}
+                  className={`text-[12px] font-semibold ${
+                    unlocked ? "text-holo-purple-mid" : "text-holo-ink-3"
+                  }`}
                 >
-                  {b.label}
+                  {amount}
                 </span>
-                {unlocked && (
-                  <span className="ml-auto text-[12px] font-semibold text-holo-purple-mid">획득 완료</span>
-                )}
               </div>
             );
           })}

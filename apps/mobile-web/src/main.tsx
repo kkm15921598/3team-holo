@@ -113,7 +113,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           </Route>
 
           {/* Event */}
-          <Route path="/event/attendance" element={<AttendanceScreen />} />
+          <Route
+            path="/event/attendance"
+            element={
+              <TabLayout showHeader={false}>
+                <AttendanceScreen />
+              </TabLayout>
+            }
+          />
 
           {/* Main Tabs */}
           <Route path="/home" element={<TabLayout><HomeScreen /></TabLayout>} />

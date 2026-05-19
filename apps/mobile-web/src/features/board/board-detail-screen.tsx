@@ -27,6 +27,11 @@ import { awardXp } from "@/shared/stores/xp-store";
 import { pushMeetingJoined, pushMeetingFull } from "@/shared/stores/notifications-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import {
+  BUMP_MAX_COUNT,
+  bumpStore,
+  formatBumpRemaining,
+} from "@/shared/stores/bump-store";
 
 type CommentReply = {
   id: string;
@@ -90,22 +95,22 @@ function parseTimeAgoToDate(timeAgo: string): Date {
 
 /**
  * "YYYY-MM-DD" 형식의 event/end date 를 게시글 상세에서 쓰는 짧은 표기로 변환.
- *   "2026-05-18" → "26.5.18"
+ *   "2026-05-18" → "26.05.18" (zero-padded yy.mm.dd, 앱 전반 통일)
  * 잘못된 형식이면 입력을 그대로 돌려준다 (mock 폴백 케이스 보호).
  */
 function formatYmdShort(ymd: string): string {
   const m = ymd.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (!m) return ymd;
   const yy = m[1].slice(2);
-  const mm = String(Number(m[2]));
-  const dd = String(Number(m[3]));
+  const mm = String(Number(m[2])).padStart(2, "0");
+  const dd = String(Number(m[3])).padStart(2, "0");
   return `${yy}.${mm}.${dd}`;
 }
 
-/** YYYY.MM.DD 형식 (게시글 작성일 노출용) */
+/** yy.mm.dd 형식 (게시글 작성일 노출용) — 앱 전반 통일된 날짜 포맷. */
 function formatPostDate(timeAgo: string): string {
   const d = parseTimeAgoToDate(timeAgo);
-  const y = d.getFullYear();
+  const y = String(d.getFullYear()).slice(-2);
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}.${m}.${day}`;
@@ -129,7 +134,7 @@ export function BoardDetailScreen() {
   //  - 단기성: 단일 날짜 + 시작 시각 (HH:MM)
   //  - eventDate 가 없는 옛 mock 글은 종전 데모 문구로 폴백.
   const timeText = useMemo(() => {
-    if (!post.eventDate) return "26.4.2  19:00";
+    if (!post.eventDate) return "26.04.02  19:00";
     const start = formatYmdShort(post.eventDate);
     const isLongTerm = post.meetupType === "장기성 모임";
     if (isLongTerm && post.endDate && post.endDate !== post.eventDate) {
@@ -536,6 +541,33 @@ export function BoardDetailScreen() {
   };
 
   /**
+   * 끌어올리기 — 본인 글을 게시판 최상단으로 이동.
+   *  - 쿨다운 중이면 토스트로 남은 시간 안내
+   *  - 가능하면 글의 timeAgo 를 "방금 전" 으로 갱신 → postsStore.update 가 시간순 재정렬
+   *  - 성공 시 게시판 리스트로 이동해 결과(최상단 노출) 를 즉시 확인 가능
+   */
+  const handleBump = () => {
+    if (!post) return;
+    // 한도 도달 — 더 이상 끌어올릴 수 없음을 명확히 안내.
+    if (bumpStore.isMaxedOut(post.id)) {
+      showToast(`끌어올리기는 글당 최대 ${BUMP_MAX_COUNT}회까지 가능해요`);
+      return;
+    }
+    // 쿨다운 중 — 남은 시간 안내.
+    if (!bumpStore.canBump(post.id)) {
+      const remaining = bumpStore.getRemainingMs(post.id);
+      showToast(`${formatBumpRemaining(remaining)} 후에 끌어올릴 수 있어요`);
+      return;
+    }
+    bumpStore.bump(post.id);
+    // update() 는 stable sort 때문에 동률 글들 사이에서 위치가 안 바뀐다.
+    // bumpToTop() 은 명시적으로 글을 배열에서 제거 후 최상단에 prepend 한다.
+    postsStore.bumpToTop(post);
+    // 게시판 리스트로 이동 — 사용자가 끌어올림이 반영된 최상단 글을 바로 확인할 수 있도록
+    navigate("/board/list");
+  };
+
+  /**
    * 새로고침 — 게시글 store 상태를 최신으로 다시 가져오고, 진입 시 한 번만 카운트하던
    * 조회수 가드(viewedOnceRef) 를 비워 이번 새로고침에서도 조회수 +1 이 한 번 더 반영되도록 한다.
    * 사용자에겐 짧은 토스트로 동작 완료를 알린다.
@@ -582,8 +614,14 @@ export function BoardDetailScreen() {
     }
   };
 
+  // 끌어올리기는 "모집" 성격의 게시판에서만 노출. 자유게시판/추천해요는 모집 글이 아니라
+  // 시간 순 정보 공유 성격이라 끌어올리기를 숨긴다.
+  const bumpAllowed = post.category !== "free" && post.category !== "recommend";
   const menuItems = isMine
     ? [
+        ...(bumpAllowed
+          ? [{ key: "bump", label: "끌어올리기", Icon: BumpIcon, onClick: handleBump }]
+          : []),
         { key: "edit", label: "수정하기", Icon: EditIcon, onClick: handleEdit },
         { key: "delete", label: "삭제하기", Icon: TrashIcon, onClick: handleDelete },
       ]
@@ -595,7 +633,7 @@ export function BoardDetailScreen() {
       ];
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col pb-6">
       {showJoinBanner && (
         <div className="mx-4 mt-2 flex items-center gap-2 rounded-[14px] bg-white px-3 py-2 shadow-holo-card">
           <span className="text-[20px]" aria-hidden>🎉</span>
@@ -1598,6 +1636,15 @@ function EditIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function BumpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
     </svg>
   );
 }

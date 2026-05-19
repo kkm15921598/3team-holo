@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { privacyStore, usePrivacy } from "@/shared/stores/privacy-store";
 
 export function PrivacyScreen() {
   const navigate = useNavigate();
-  const [shareLocation, setShareLocation] = useState(true);
-  const [allowFriendRequest, setAllowFriendRequest] = useState(true);
-  const [marketing, setMarketing] = useState(false);
+  // privacyStore 를 구독해 다른 화면(친구 요청·지도·광고)과 동일한 단일 출처에서 값을 읽고 쓴다.
+  const { shareLocation, allowFriendRequest, marketing } = usePrivacy();
 
   return (
     <main className="flex flex-1 flex-col">
@@ -23,12 +22,12 @@ export function PrivacyScreen() {
             label="위치 정보 공유"
             hint="동네 인증·지도에서 활용돼요"
             value={shareLocation}
-            onChange={setShareLocation}
+            onChange={(v) => privacyStore.set("shareLocation", v)}
           />
           <ToggleRow
             label="친구 요청 허용"
             value={allowFriendRequest}
-            onChange={setAllowFriendRequest}
+            onChange={(v) => privacyStore.set("allowFriendRequest", v)}
           />
         </ul>
       </section>
@@ -40,7 +39,7 @@ export function PrivacyScreen() {
             label="맞춤 광고 수신"
             hint="관심사 기반의 추천을 받아요"
             value={marketing}
-            onChange={setMarketing}
+            onChange={(v) => privacyStore.set("marketing", v)}
           />
         </ul>
       </section>

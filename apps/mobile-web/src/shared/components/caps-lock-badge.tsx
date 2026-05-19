@@ -8,14 +8,11 @@
  * 캡스락이 켜졌다 꺼질 때 아래 요소들(로그인 버튼 등)이 흔들리지 않습니다.
  */
 export function CapsLockBadge({ visible }: { visible: boolean }) {
+  if (!visible) return null;
   return (
-    <div className="h-[22px]">
-      {visible && (
-        <div className="flex w-fit items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[12px] font-medium text-amber-700">
-          <CapsIcon />
-          Caps Lock이 켜져 있어요
-        </div>
-      )}
+    <div className="flex w-fit items-center gap-1 pl-2 text-[12px] font-medium text-holo-purple-mid">
+      <CapsIcon />
+      Caps Lock이 켜져 있어요
     </div>
   );
 }

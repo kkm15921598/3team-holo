@@ -213,7 +213,7 @@ export function MyroomScreen() {
           if (catalogExpanded) setCatalogExpanded(false);
         }}
         className={`relative -mx-4 flex shrink-0 justify-center transition-[height] duration-300 ${
-          catalogExpanded ? "h-[260px] overflow-hidden" : "h-[360px] overflow-visible"
+          catalogExpanded ? "h-[160px] overflow-hidden" : "h-[360px] overflow-visible"
         }`}
       >
         <RoomEditorView

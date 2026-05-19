@@ -11,6 +11,7 @@ import { postsStore } from "./posts-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { ensureMeetupRoom, isMeetupPost, meetupRoomId } from "./meetup-utils";
 import { joinPost } from "@/shared/stores/joined-store";
+import { containsProfanity } from "@/shared/utils/profanity";
 
 const CATEGORIES = [
   "자유게시판",
@@ -96,7 +97,11 @@ export function BoardWriteScreen() {
   const [content, setContent] = useState<string>(initialContent);
 
   const [showExitModal, setShowExitModal] = useState(false);
-  const [showEmptyAlert, setShowEmptyAlert] = useState(false);
+  /**
+   * 입력 누락 안내 모달 — 비어 있으면 null, 채워져 있으면 안내 메시지.
+   * 메시지를 상태에 직접 담아 어떤 필드가 빠졌는지에 따라 동적으로 노출한다.
+   */
+  const [emptyAlert, setEmptyAlert] = useState<string | null>(null);
   /** 모임 글 등록 직후, 채팅방 개설 안내 + 채팅방으로 이동 여부 묻는 모달. */
   const [chatRoomCreatedFor, setChatRoomCreatedFor] = useState<Post | null>(null);
 
@@ -200,15 +205,18 @@ export function BoardWriteScreen() {
     setPostLocation(null);
   };
 
+  // 카테고리 드롭다운(상단) 과 칩 드롭다운(하단) 이 별도 DOM 트리에 있어
+  // 클릭이 두 영역 모두의 바깥일 때만 드롭다운을 닫는다.
   const controlsRef = useRef<HTMLDivElement>(null);
+  const pillsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!openSection) return;
     const handler = (e: MouseEvent) => {
-      if (
-        controlsRef.current &&
-        !controlsRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as Node;
+      const insideControls = controlsRef.current?.contains(target);
+      const insidePills = pillsRef.current?.contains(target);
+      if (!insideControls && !insidePills) {
         setOpenSection(null);
       }
     };
@@ -259,8 +267,30 @@ export function BoardWriteScreen() {
 
   // Publish: build/update a Post, then navigate to Board2.
   const handlePublish = () => {
+    // 제목·내용 둘 다 비어 있으면 한 번에 안내, 한 쪽만 비어 있으면 빠진 항목을 콕 짚어 안내.
     if (!title.trim() && !content.trim()) {
-      setShowEmptyAlert(true);
+      setEmptyAlert("제목과 내용을 모두 입력해 주세요.");
+      return;
+    }
+    if (!title.trim()) {
+      setEmptyAlert("제목을 입력해 주세요.");
+      return;
+    }
+    if (!content.trim()) {
+      setEmptyAlert("내용을 입력해 주세요.");
+      return;
+    }
+    // 욕설/비속어 검사 — 어느 한 곳이라도 걸리면 어디서 걸렸는지 명시해 차단.
+    const badTitle = containsProfanity(title);
+    const badContent = containsProfanity(content);
+    if (badTitle || badContent) {
+      const where =
+        badTitle && badContent
+          ? "제목과 내용"
+          : badTitle
+            ? "제목"
+            : "내용";
+      setEmptyAlert(`${where}에 사용할 수 없는 단어가 포함돼 있어요.`);
       return;
     }
     if (cameFromEdit && incomingState?.postId) {
@@ -356,7 +386,9 @@ export function BoardWriteScreen() {
   const typePill = (
     <PillButton
       label={meetupType ?? "모임유형"}
+      icon={<MeetupTypeIcon />}
       active={openSection === "type"}
+      selected={meetupType !== null}
       onClick={() => toggle("type")}
     />
   );
@@ -382,6 +414,7 @@ export function BoardWriteScreen() {
       label={peopleLabel}
       icon={<PersonIcon />}
       active={openSection === "people"}
+      selected={peopleCount !== null}
       onClick={() => toggle("people")}
     />
   );
@@ -411,7 +444,7 @@ export function BoardWriteScreen() {
         </div>
       </header>
 
-      <section className="relative mx-4 flex flex-1 flex-col rounded-holo-card bg-white shadow-holo-card">
+      <section className="relative mx-4 flex flex-1 flex-col overflow-hidden rounded-holo-card bg-white shadow-holo-card">
         <div ref={controlsRef}>
           <button
             type="button"
@@ -462,23 +495,139 @@ export function BoardWriteScreen() {
             </ul>
           )}
 
-          <div className={`relative z-20 ${isSimpleCategory ? "" : "pt-3"}`}>
-            {!isSimpleCategory && (
-              <div className="flex flex-col gap-2 px-5">
-                <div className="flex flex-wrap gap-2">
-                  {typePill}
-                  {peoplePill}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {datePill}
-                  {/* 단기성 모임에선 날짜 옆에 시작 시각 셀렉트박스도 같이 노출 */}
-                  {!isLongTerm && timePill}
-                </div>
-              </div>
-            )}
+        </div>
 
-            {!isSimpleCategory && openSection === "type" && (
-              <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="제목을 입력해주세요."
+          className="mx-5 mt-3 border-b border-holo-line py-2 text-[16px] outline-none placeholder:text-holo-ink-3"
+        />
+
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="작성하고 싶으신 내용을 입력해주세요"
+          className="mx-5 mt-3 min-h-[180px] flex-1 resize-none text-[14px] outline-none placeholder:text-holo-ink-3"
+        />
+
+        {!content && (
+          <div className="mx-5 mb-5 mt-2 text-[11px] leading-relaxed text-holo-ink-3">
+            ※ 커뮤니티 이용규칙을 꼭 지켜주세요. ※
+            <br />
+            정치·사회 갈등 조장, 광고·홍보, 불법·유해 콘텐츠, 욕설·혐오 표현, 타인 비방·사생활 침해, 공포·낚시성 게시물은 제한될 수 있습니다.
+            <br />
+            모두가 편하게 소통할 수 있도록 서로 존중하는 글을 작성해주세요
+          </div>
+        )}
+
+        {/* 선택된 위치 칩 — 지도 미리보기를 함께 노출. 칩 아래에 여백 추가해 "사진/장소" 행과 분리. */}
+        {postLocation && (
+          <div className="mx-5 mt-2 mb-4 flex items-center gap-2 rounded-full border border-holo-lilac-soft bg-holo-lilac-soft/40 px-3 py-1.5 text-[12px] text-holo-purple-mid">
+            <PinIcon />
+            <span className="truncate">
+              {postLocation.placeName ??
+                `${postLocation.lat.toFixed(4)}, ${postLocation.lng.toFixed(4)}`}
+            </span>
+            <button
+              type="button"
+              aria-label="위치 제거"
+              onClick={clearLocation}
+              className="ml-auto text-holo-ink-3"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* 첨부 사진 가로 스크롤 미리보기 — 0장이면 숨겨지고, 1장 이상이면 thumb + X 버튼 노출 */}
+        {photoUrls.length > 0 && (
+          <div className="no-scrollbar -mx-5 mt-2 flex shrink-0 gap-2 overflow-x-auto px-5">
+            {photoUrls.map((url, i) => (
+              <div
+                key={`${i}-${url.slice(-12)}`}
+                className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-[10px] border border-holo-line-2"
+              >
+                <img
+                  src={url}
+                  alt={`첨부 사진 ${i + 1}`}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label="사진 제거"
+                  onClick={() =>
+                    setPhotoUrls((prev) => prev.filter((_, idx) => idx !== i))
+                  }
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-[11px] text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* hidden 파일 input — 갤러리에서 여러 장 선택. mock 이라 base64 그대로 보관. */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            handlePostPhotoFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
+        {/* 첨부 미니 아이콘 — 본문 영역 우측 하단. 사진·장소를 가볍게 호출.
+            위쪽 회색 보더로 본문 영역과 시각적 분리. 배경은 흰색 유지. */}
+        <div className="mt-1 flex items-center justify-end gap-1 border-t border-holo-line-3 bg-white px-3 py-1.5">
+          <ComposerIconButton
+            icon={<PhotoIcon />}
+            ariaLabel="사진 첨부"
+            count={photoUrls.length > 0 ? photoUrls.length : undefined}
+            active={photoUrls.length > 0}
+            disabled={photoUrls.length >= MAX_PHOTOS}
+            onClick={() => photoInputRef.current?.click()}
+          />
+          <ComposerIconButton
+            icon={<PinIcon />}
+            ariaLabel="장소 첨부"
+            active={!!postLocation}
+            onClick={openLocationPicker}
+          />
+        </div>
+
+        {/* 모임 정보 — 본문 작성 후 마지막에 채우는 메타데이터 영역.
+            라일락 톤 컨테이너로 묶어서 본문과 시각적으로 구분.
+            드롭다운 패널은 위쪽으로 열려서 화면 밖으로 튀어나가지 않게 함. */}
+        {!isSimpleCategory && (
+          <div
+            ref={pillsRef}
+            className="relative z-20 border-t border-holo-line-3 bg-holo-lilac-card/40 px-5 pb-3 pt-3"
+          >
+            <div className="mb-2 flex items-center gap-1.5">
+              <span className="text-holo-purple-mid">
+                <MeetupSectionIcon />
+              </span>
+              <span className="text-[12px] font-semibold text-holo-purple-mid">
+                모임 정보
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {typePill}
+              {peoplePill}
+              {/* 장기성 모임은 시간 입력이 없으므로 날짜 칩이 한 줄을 가득 채우도록 col-span-2. */}
+              <div className={isLongTerm ? "col-span-2 flex" : "flex"}>
+                {datePill}
+              </div>
+              {/* 단기성 모임에서만 시간 셀렉트 노출. 장기성이면 시간 칩 자체를 렌더링하지 않음. */}
+              {!isLongTerm && timePill}
+            </div>
+
+            {openSection === "type" && (
+              <div className="absolute inset-x-5 bottom-full z-30 mb-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 {MEETUP_TYPES.map((t, i) => {
                   const selected = t === meetupType;
                   return (
@@ -509,8 +658,8 @@ export function BoardWriteScreen() {
               </div>
             )}
 
-            {!isSimpleCategory && openSection === "date" && (
-              <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
+            {openSection === "date" && (
+              <div className="absolute inset-x-5 bottom-full z-30 mb-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 {isLongTerm && (
                   <div className="flex border-b border-holo-line text-[12px]">
                     <button
@@ -647,8 +796,8 @@ export function BoardWriteScreen() {
             )}
 
             {/* 시간 선택 셀렉트 — 단기성 모임에서만 노출. 30분 단위 시각 리스트를 스크롤 가능한 패널로. */}
-            {!isSimpleCategory && !isLongTerm && openSection === "time" && (
-              <div className="absolute inset-x-5 top-full z-30 mt-2 max-h-[280px] overflow-y-auto rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
+            {!isLongTerm && openSection === "time" && (
+              <div className="absolute inset-x-5 bottom-full z-30 mb-2 max-h-[280px] overflow-y-auto rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 {TIME_OPTIONS.map((t, i) => {
                   const selected = t === eventTime;
                   return (
@@ -675,8 +824,8 @@ export function BoardWriteScreen() {
               </div>
             )}
 
-            {!isSimpleCategory && openSection === "people" && (
-              <div className="absolute inset-x-5 top-full z-30 mt-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
+            {openSection === "people" && (
+              <div className="absolute inset-x-5 bottom-full z-30 mb-2 overflow-hidden rounded-holo-tile border border-holo-lilac-soft bg-white shadow-holo-card">
                 <div className="flex items-center justify-between px-4 py-3">
                   <span className="text-[14px] text-holo-ink">인원 수</span>
                   <div className="flex items-center gap-3">
@@ -707,123 +856,8 @@ export function BoardWriteScreen() {
               </div>
             )}
           </div>
-        </div>
-
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="제목을 입력해주세요."
-          className={`mx-5 border-b border-holo-line py-2 text-[16px] outline-none placeholder:text-holo-ink-3 ${
-            isSimpleCategory ? "mt-3" : "mt-4"
-          }`}
-        />
-
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="작성하고 싶으신 내용을 입력해주세요"
-          className="mx-5 mt-3 min-h-[180px] flex-1 resize-none text-[14px] outline-none placeholder:text-holo-ink-3"
-        />
-
-        {!content && (
-          <div className="mx-5 mb-5 mt-2 text-[11px] leading-relaxed text-holo-ink-3">
-            ※ 커뮤니티 이용규칙을 꼭 지켜주세요. ※
-            <br />
-            정치·사회 갈등 조장, 광고·홍보, 불법·유해 콘텐츠, 욕설·혐오 표현, 타인 비방·사생활 침해, 공포·낚시성 게시물은 제한될 수 있습니다.
-            <br />
-            모두가 편하게 소통할 수 있도록 서로 존중하는 글을 작성해주세요
-          </div>
         )}
 
-        {/* 선택된 위치 칩 — 지도 미리보기를 함께 노출. 칩 아래에 여백 추가해 "사진/장소" 행과 분리. */}
-        {postLocation && (
-          <div className="mx-5 mt-2 mb-4 flex items-center gap-2 rounded-full border border-holo-lilac-soft bg-holo-lilac-soft/40 px-3 py-1.5 text-[12px] text-holo-purple-mid">
-            <PinIcon />
-            <span className="truncate">
-              {postLocation.placeName ??
-                `${postLocation.lat.toFixed(4)}, ${postLocation.lng.toFixed(4)}`}
-            </span>
-            <button
-              type="button"
-              aria-label="위치 제거"
-              onClick={clearLocation}
-              className="ml-auto text-holo-ink-3"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* 첨부 사진 가로 스크롤 미리보기 — 0장이면 숨겨지고, 1장 이상이면 thumb + X 버튼 노출 */}
-        {photoUrls.length > 0 && (
-          <div className="no-scrollbar -mx-5 mt-2 flex shrink-0 gap-2 overflow-x-auto px-5">
-            {photoUrls.map((url, i) => (
-              <div
-                key={`${i}-${url.slice(-12)}`}
-                className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-[10px] border border-holo-line-2"
-              >
-                <img
-                  src={url}
-                  alt={`첨부 사진 ${i + 1}`}
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  type="button"
-                  aria-label="사진 제거"
-                  onClick={() =>
-                    setPhotoUrls((prev) => prev.filter((_, idx) => idx !== i))
-                  }
-                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-[11px] text-white"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {/* hidden 파일 input — 갤러리에서 여러 장 선택. mock 이라 base64 그대로 보관. */}
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            handlePostPhotoFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-
-        <div className="mt-auto flex items-center gap-4 border-t border-holo-line-3 px-5 py-3 text-[14px] text-holo-ink">
-          <button
-            type="button"
-            onClick={() => photoInputRef.current?.click()}
-            disabled={photoUrls.length >= MAX_PHOTOS}
-            className={`flex items-center gap-1 ${
-              photoUrls.length > 0
-                ? "text-holo-purple-mid"
-                : photoUrls.length >= MAX_PHOTOS
-                  ? "text-holo-ink-4"
-                  : ""
-            }`}
-          >
-            <PhotoIcon /> 사진
-            {photoUrls.length > 0 && (
-              <span className="text-[12px]">
-                {photoUrls.length}/{MAX_PHOTOS}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={openLocationPicker}
-            className={`flex items-center gap-1 ${
-              postLocation ? "text-holo-purple-mid" : ""
-            }`}
-          >
-            <PinIcon /> 장소
-          </button>
-        </div>
       </section>
 
       {/* Exit confirmation modal */}
@@ -908,12 +942,17 @@ export function BoardWriteScreen() {
         </div>
       )}
 
-      {/* Empty content alert */}
+      {/* 입력 검증 알림 — 빈 칸 / 비속어 두 케이스 모두 emptyAlert 메시지로 노출. */}
       <ConfirmModal
-        open={showEmptyAlert}
-        message="내용이 입력되지 않았습니다."
+        open={emptyAlert !== null}
+        message={emptyAlert ?? ""}
+        description={
+          emptyAlert?.includes("사용할 수 없는 단어")
+            ? "다른 표현으로 수정한 뒤 다시 등록해 주세요."
+            : "작성을 완료하면 등록할 수 있어요."
+        }
         singleAction
-        onConfirm={() => setShowEmptyAlert(false)}
+        onConfirm={() => setEmptyAlert(null)}
       />
 
       {/* 모임 글 등록 직후 — 채팅방 자동 개설 안내 + 이동 여부 확인 */}
@@ -941,15 +980,25 @@ export function BoardWriteScreen() {
   );
 }
 
+/**
+ * 모임 정보 설정용 셀렉트 버튼.
+ * 셀렉트 형태로 명확히 인지되도록 모서리 둥근 박스 + 좌측 아이콘 + 우측 chevron.
+ *  - active: 드롭다운이 열려있는 상태 (보라 보더 + 보라 chevron 회전)
+ *  - selected: 값이 채워진 상태 (검정 글자, 진한 보라 chevron)
+ *  - placeholder: 값이 아직 비어있는 상태 (회색 글자)
+ */
 function PillButton({
   label,
   icon,
   active,
+  selected = true,
   onClick,
 }: {
   label: string;
   icon?: React.ReactNode;
   active?: boolean;
+  /** 값이 선택된 상태인지 (true=선택됨, false=placeholder 톤). */
+  selected?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -957,15 +1006,121 @@ function PillButton({
       type="button"
       onClick={onClick}
       aria-expanded={active}
-      className="flex items-center gap-1 rounded-full border border-holo-lilac-soft px-3 py-1 text-[12px] text-holo-ink"
+      className={`flex h-[40px] flex-1 items-center justify-between gap-1.5 rounded-[12px] border bg-white px-3 text-[13px] transition ${
+        active
+          ? "border-holo-purple-mid text-holo-purple-mid"
+          : selected
+            ? "border-holo-line-2 text-holo-ink"
+            : "border-holo-line-2 text-holo-ink-3"
+      }`}
     >
-      {icon}
-      {label}
+      <span className="flex min-w-0 items-center gap-1.5 truncate">
+        <span
+          className={
+            active
+              ? "text-holo-purple-mid"
+              : selected
+                ? "text-holo-purple-mid"
+                : "text-holo-ink-4"
+          }
+        >
+          {icon}
+        </span>
+        <span className="truncate">{label}</span>
+      </span>
       <ChevronDownIcon
-        color="#A8A8A8"
-        className={`transition-transform ${active ? "rotate-180" : ""}`}
+        color={active ? "#7448DD" : "#A8A8A8"}
+        className={`shrink-0 transition-transform ${active ? "rotate-180" : ""}`}
       />
     </button>
+  );
+}
+
+/**
+ * 본문 우측 하단 컴포저 미니 아이콘 버튼 (Discord/Slack 스타일).
+ *  - 라일락 호버 톤 + 작은 사이즈 (h-9 w-9 정도) 로 본문에 부담을 주지 않음.
+ *  - count 가 있으면 우측 상단에 작은 보라 뱃지로 첨부 수를 노출.
+ *  - 활성(첨부됨) / 평소 / 비활성 3단 상태.
+ */
+function ComposerIconButton({
+  icon,
+  ariaLabel,
+  count,
+  active = false,
+  disabled = false,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  ariaLabel: string;
+  count?: number;
+  active?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative flex h-9 w-9 items-center justify-center rounded-full transition active:scale-[0.94] ${
+        disabled
+          ? "text-holo-ink-4"
+          : active
+            ? "bg-holo-lilac-card text-holo-purple-mid"
+            : "text-holo-ink-3 hover:bg-holo-surface-2"
+      }`}
+    >
+      {icon}
+      {count !== undefined && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-holo-purple-mid px-1 text-[9px] font-bold leading-none text-white">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** 모임 정보 섹션 헤더 옆 아이콘 — 작은 사람 + 작은 별 (모임 / 이벤트 느낌). */
+function MeetupSectionIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 11h-6" />
+      <path d="M19 8v6" />
+    </svg>
+  );
+}
+
+/** 모임 유형 셀렉트 좌측 아이콘 — 작은 캘린더·사람 묶음 느낌. */
+function MeetupTypeIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="9" cy="9" r="3.5" />
+      <circle cx="17" cy="10" r="2.5" />
+      <path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6M14 14c2.5 0 7 1.5 7 5" />
+    </svg>
   );
 }
 

@@ -148,7 +148,8 @@ export function ensureMeetupRoom(post: Post): string | null {
     unread: 0,
     online: true,
     meeting: {
-      date: "26.4.2",
+      // 앱 전체에서 yy.mm.dd 표기로 통일.
+      date: "26.04.02",
       time: "19:00",
       place: post.place ?? post.location?.placeName ?? "",
     },

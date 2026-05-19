@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { POSTS } from "@/shared/mock/data";
+import { POSTS, type Post } from "@/shared/mock/data";
 import { ManagedList } from "./managed-list";
 import {
   removeCommentsByPostIds,
@@ -16,7 +16,6 @@ export function MyCommentsScreen() {
   const items = useMemo(() => {
     const seen = new Set<string>();
     const ids: string[] = [];
-    // 최신 작성 댓글이 위로 오도록 역순으로 훑는다
     for (let i = userComments.length - 1; i >= 0; i--) {
       const id = userComments[i].postId;
       if (!seen.has(id)) {
@@ -29,7 +28,20 @@ export function MyCommentsScreen() {
       .filter((p): p is (typeof POSTS)[number] => !!p);
   }, [userComments]);
 
-  // "관리하기" → "삭제" 시 해당 post 에 단 사용자 댓글 모두 제거
+  // 각 게시글에서 사용자가 가장 최근에 단 댓글의 timeAgo — 메타 행 시간 라벨.
+  // 사용자 댓글 배열의 끝쪽이 최신이므로 뒤에서부터 처음 매칭되는 항목을 사용.
+  const latestCommentTimeById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (let i = userComments.length - 1; i >= 0; i--) {
+      const c = userComments[i];
+      if (!m.has(c.postId)) m.set(c.postId, c.timeAgo);
+    }
+    return m;
+  }, [userComments]);
+
+  const getTimeLabel = (p: Post): string | undefined =>
+    latestCommentTimeById.get(p.id);
+
   const handleDelete = (ids: string[]) => {
     removeCommentsByPostIds(ids);
   };
@@ -48,6 +60,7 @@ export function MyCommentsScreen() {
         onToggleManage={() => setManage((v) => !v)}
         items={items}
         onDelete={handleDelete}
+        getTimeLabel={getTimeLabel}
       />
     </main>
   );

@@ -154,6 +154,24 @@ export const postsStore = {
       notify();
     }
   },
+  /**
+   * 끌어올리기 — 글을 현재 위치에서 제거하고 최상단으로 이동.
+   *
+   * 단순히 timeAgo 를 "방금 전" 으로 바꿔 update() 하면 다른 "방금 전" 글들과
+   * 동률이 되어 stable sort 가 원래 순서를 유지하므로 시각적으로 위로 안 올라간다.
+   * 이 메서드는 명시적으로 배열에서 제거 → 최상단 prepend 후 재정렬해서 확실히
+   * 최상단으로 보낸다(동률 안에서도 첫 번째 위치 확보).
+   */
+  bumpToTop(post: Post): void {
+    const idx = _posts.findIndex((p) => p.id === post.id);
+    if (idx < 0) return;
+    const next = [..._posts];
+    next.splice(idx, 1);
+    next.unshift({ ...post, timeAgo: "방금 전" });
+    _posts = sortByRecency(next);
+    persist();
+    notify();
+  },
   remove(ids: string[]): void {
     const set = new Set(ids);
     _posts = _posts.filter((p) => !set.has(p.id));

@@ -1,11 +1,29 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { POSTS } from "@/shared/mock/data";
+import { POSTS, type Post } from "@/shared/mock/data";
 import { ManagedList } from "./managed-list";
 import {
   removeViewedPosts,
   useViewedEntries,
 } from "@/shared/stores/viewed-posts-store";
+
+/** unix ms 타임스탬프 → "방금 전 / X분 전 / X시간 전 / X일 전" 같은 상대 시간. */
+function timeAgoFromMs(ms: number, now = Date.now()): string {
+  const diff = Math.max(0, now - ms);
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "방금 전";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour}시간 전`;
+  const day = Math.floor(hour / 24);
+  if (day < 7) return `${day}일 전`;
+  const week = Math.floor(day / 7);
+  if (week < 5) return `${week}주 전`;
+  const month = Math.floor(day / 30);
+  if (month < 12) return `${month}개월 전`;
+  return `${Math.floor(day / 365)}년 전`;
+}
 
 export function RecentPostsScreen() {
   const navigate = useNavigate();
@@ -13,7 +31,6 @@ export function RecentPostsScreen() {
   const viewedEntries = useViewedEntries();
 
   // store 의 viewed 엔트리(최근순)에 해당하는 게시글만 노출.
-  // 가입 직후엔 비어 있고, 게시글을 누를 때마다 한 줄씩 쌓이며 가장 최근에 본 글이 맨 위로 온다.
   const items = useMemo(
     () =>
       viewedEntries
@@ -21,6 +38,18 @@ export function RecentPostsScreen() {
         .filter((p): p is (typeof POSTS)[number] => !!p),
     [viewedEntries],
   );
+
+  // 게시글 id → 본 시점 timestamp 매핑 — 메타 행의 시간 라벨 계산에 사용.
+  const viewedAtById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of viewedEntries) m.set(e.id, e.viewedAt);
+    return m;
+  }, [viewedEntries]);
+
+  const getTimeLabel = (p: Post): string | undefined => {
+    const at = viewedAtById.get(p.id);
+    return at != null ? timeAgoFromMs(at) : undefined;
+  };
 
   const handleDelete = (ids: string[]) => {
     removeViewedPosts(ids);
@@ -40,6 +69,7 @@ export function RecentPostsScreen() {
         onToggleManage={() => setManage((v) => !v)}
         items={items}
         onDelete={handleDelete}
+        getTimeLabel={getTimeLabel}
       />
     </main>
   );

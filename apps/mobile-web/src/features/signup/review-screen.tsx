@@ -113,11 +113,11 @@ function WelcomeModal({
     <ConfirmModal
       open
       message={
-        <>
+        <span className="text-[18px] leading-snug">
           <span className="text-holo-purple-mid">{nickname}</span>님,
           <br />
           가입을 환영해요!
-        </>
+        </span>
       }
       description={
         <>

@@ -103,6 +103,12 @@ export function ActivityScreen() {
   );
   const commentsCount = userComments.length;
   const activeDays = activity.activeDates.length;
+  // 최근 본 글 카운트 — 게시판에서 이미 삭제된 글은 viewed 에 남아있어도
+  // recent-posts-screen 에서 노출되지 않으니, 현재 살아있는 글만 카운트.
+  const recentViewedCount = useMemo(() => {
+    const aliveIds = new Set(allPosts.map((p) => p.id));
+    return viewed.filter((v) => aliveIds.has(v.id)).length;
+  }, [viewed, allPosts]);
 
   // 최근 본 글의 카테고리 분포 / 댓글을 단 글의 카테고리 분포 — 활동 요약 카피의 입력.
   const summary = useMemo(() => {
@@ -200,6 +206,7 @@ export function ActivityScreen() {
           iconBg="bg-[#FFF0DA]"
           iconColor="text-[#C97A1F]"
           label="최근 본 글"
+          count={recentViewedCount}
         />
       </ul>
 

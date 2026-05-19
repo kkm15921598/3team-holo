@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
+import { calcJoined } from "@/features/board/meetup-utils";
 
 /**
  * 모임이 이미 끝났는지 판정.
@@ -89,17 +90,24 @@ export function MyMeetingsScreen() {
                       {post.description}
                     </span>
                   </div>
-                  {post.peopleCount != null && (
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        ended
-                          ? "bg-holo-line-3 text-holo-ink-3"
-                          : "bg-holo-purple-mid/10 text-holo-purple-mid"
-                      }`}
-                    >
-                      {post.peopleCount}명
-                    </span>
-                  )}
+                  {/* 모임 참여 글이므로 항상 인원수 표시.
+                      "현재 참여 / 최대 정원" (예: 5/6) 으로 노출하고,
+                      현재 참여 = baseJoined + 본인(joined=true) — 다만 capacity 초과 방지를 위해 Math.min 적용. */}
+                  {(() => {
+                    const { capacity, baseJoined } = calcJoined(post);
+                    const joinedCount = Math.min(capacity, baseJoined + 1);
+                    return (
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
+                          ended
+                            ? "bg-holo-line-3 text-holo-ink-3"
+                            : "bg-holo-purple-mid/10 text-holo-purple-mid"
+                        }`}
+                      >
+                        {joinedCount}/{capacity}명
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {(post.eventDate || post.place) && (

@@ -78,7 +78,7 @@ export function NotificationsScreen() {
           <ToggleRow label="이벤트 알림" hint="출석체크·포인트 이벤트 안내" value={event} onChange={set("event")} />
           <ToggleRow
             label="마케팅 알림"
-            hint="혜택·프로모션 소식 (선택)"
+            hint="관심사 기반 추천 소식"
             value={marketing}
             onChange={set("marketing")}
           />

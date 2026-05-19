@@ -455,7 +455,7 @@ function FacePickerSheet({
         <p className="mb-3 text-center text-[15px] font-semibold text-holo-ink">
           프로필 이미지 선택
         </p>
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="no-scrollbar max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
           <div className="grid grid-cols-4 gap-3">
             {faces.map((src) => {
               const on = selected === src;

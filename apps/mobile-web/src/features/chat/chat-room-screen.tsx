@@ -32,6 +32,8 @@ import {
   useKickedMap,
 } from "./kicked-members-store";
 import { postsStore } from "@/features/board/posts-store";
+import { calcJoined } from "@/features/board/meetup-utils";
+import { formatYyMmDd } from "@/shared/utils/format-date";
 import { getAvatarUrl } from "./avatars";
 import { GroupAvatar } from "./group-avatar";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
@@ -828,7 +830,7 @@ export function ChatRoomScreen() {
             className="flex w-full shrink-0 items-center gap-2 overflow-hidden border-b border-holo-line bg-holo-lilac-card/30 px-4 py-2 transition-colors hover:bg-holo-lilac-card/50"
           >
             <span className="shrink-0 text-[12px] font-semibold text-holo-purple-mid">
-              {room.meeting.date} · {room.meeting.time}
+              {formatYyMmDd(room.meeting.date)} · {room.meeting.time}
             </span>
             <span className="text-holo-ink-4">·</span>
             <span className="flex flex-1 items-center gap-1 truncate text-left text-[12px] text-holo-ink-2">
@@ -1011,6 +1013,16 @@ export function ChatRoomScreen() {
         <ChatInfoModal
           roomName={displayRoomName}
           members={members}
+          // 모임 채팅방이면 게시글의 정원을 calcJoined 로 계산해서 전달.
+          // calcJoined 는 peopleCount 가 비어 있어도 5 로 폴백해서, 다른 화면(홈/맵/게시글)
+          // 과 동일한 정원이 채팅방에서도 그대로 보이도록 단일 출처를 유지한다.
+          capacity={(() => {
+            if (!room.id.startsWith("meetup-")) return undefined;
+            const postId = room.id.slice("meetup-".length);
+            const post = postsStore.getPosts().find((p) => p.id === postId);
+            if (!post) return undefined;
+            return calcJoined(post).capacity;
+          })()}
           onClose={() => setShowInfo(false)}
           onAddFriend={(nickname) => setShowAddFriend(nickname)}
           onInvite={() => {
@@ -1151,6 +1163,15 @@ export function ChatRoomScreen() {
         <InviteFriendsModal
           roomName={displayRoomName}
           existingNicknames={members.map((m) => m.nickname)}
+          // 모임 채팅방이면 남은 자리(=정원-현재인원) 만큼만 초대 가능.
+          // 일반 방은 undefined → 무제한 선택.
+          maxInvite={(() => {
+            if (!room.id.startsWith("meetup-")) return undefined;
+            const postId = room.id.slice("meetup-".length);
+            const post = postsStore.getPosts().find((p) => p.id === postId);
+            if (!post) return undefined;
+            return Math.max(0, calcJoined(post).capacity - members.length);
+          })()}
           onClose={() => setShowInvite(false)}
           onInvite={(nicks) => {
             setShowInvite(false);
@@ -1260,7 +1281,7 @@ export function ChatRoomScreen() {
         open={showAddFriend !== null}
         message={
           <>
-            <strong>{showAddFriend}</strong>님을 친구로 추가하시겠습니까?
+            <strong>{showAddFriend}</strong>님에게 친구 요청을 하시겠습니까?
           </>
         }
         confirmLabel="추가"
@@ -2490,7 +2511,7 @@ function MeetingInfoModal({
         <div className="mt-4 flex flex-col gap-2 rounded-holo-card bg-holo-lilac-card/40 p-4">
           <div className="flex items-center gap-2">
             <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">날짜</span>
-            <span className="text-[13px] font-semibold text-holo-ink">{meeting.date}</span>
+            <span className="text-[13px] font-semibold text-holo-ink">{formatYyMmDd(meeting.date)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">시간</span>
@@ -2608,6 +2629,7 @@ function MeetingInfoModal({
 function ChatInfoModal({
   roomName,
   members,
+  capacity,
   onClose,
   onAddFriend,
   onInvite,
@@ -2618,6 +2640,8 @@ function ChatInfoModal({
 }: {
   roomName: string;
   members: Member[];
+  /** 모임 정원. 모임 채팅방일 때만 전달되며, 일반 1:1/그룹 채팅은 undefined. */
+  capacity?: number | null;
   onClose: () => void;
   onAddFriend: (nickname: string) => void;
   onInvite: () => void;
@@ -2626,6 +2650,9 @@ function ChatInfoModal({
   onLeave: () => void;
   onProfileClick?: (nickname: string) => void;
 }) {
+  // 정원이 지정된 모임 채팅방인 경우, 현재 인원이 정원에 도달했는지로 초대 버튼 분기.
+  const hasCapacity = typeof capacity === "number" && capacity > 0;
+  const isFull = hasCapacity && members.length >= (capacity as number);
   return (
     <div
       className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
@@ -2644,7 +2671,9 @@ function ChatInfoModal({
 
         <div className="mt-4 flex items-center justify-between">
           <span className="text-[14px] font-semibold text-holo-ink">대화상대</span>
-          <span className="text-[14px] text-holo-ink-2">{members.length}명</span>
+          <span className="text-[14px] text-holo-ink-2">
+            {hasCapacity ? `${members.length}/${capacity}명` : `${members.length}명`}
+          </span>
         </div>
 
         <ul className="mt-3 flex max-h-[220px] flex-col gap-2 overflow-y-auto rounded-holo-card bg-holo-surface-2 p-4">
@@ -2684,9 +2713,12 @@ function ChatInfoModal({
         <button
           type="button"
           onClick={onInvite}
-          className="mt-4 h-[44px] w-full rounded-full bg-holo-gradient text-[14px] font-semibold text-white"
+          disabled={isFull}
+          className={`mt-4 h-[44px] w-full rounded-full text-[14px] font-semibold text-white transition ${
+            isFull ? "bg-holo-ink-4" : "bg-holo-gradient active:opacity-90"
+          }`}
         >
-          초대하기
+          {isFull ? "모임 인원이 꽉 찼어요" : "초대하기"}
         </button>
 
         <div className="mt-3 flex items-center justify-around text-[13px] text-holo-ink">
@@ -2704,17 +2736,27 @@ function ChatInfoModal({
 function InviteFriendsModal({
   roomName,
   existingNicknames,
+  maxInvite,
   onClose,
   onInvite,
 }: {
   roomName: string;
   existingNicknames: string[];
+  /**
+   * 한 번에 초대 가능한 최대 인원. 모임 채팅방의 남은 자리(정원-현재인원).
+   * undefined 면 제한 없음 (일반 그룹/1:1 채팅).
+   * 0 이면 정원 꽉 차서 추가 초대 불가.
+   */
+  maxInvite?: number;
   onClose: () => void;
   onInvite: (nicknames: string[]) => void;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const allFriends = useFriends();
+  // 선택 한도 도달 여부 — 모임 채팅방에서 남은 자리만큼만 선택할 수 있도록 강제.
+  const limitReached =
+    typeof maxInvite === "number" && selected.size >= maxInvite;
 
   // 동일 닉네임 한 번만 + 이미 방에 있는 친구는 disabled
   const friends = useMemo(() => {
@@ -2740,8 +2782,13 @@ function InviteFriendsModal({
   const toggle = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        // 한도 도달 시 추가 선택 차단
+        if (typeof maxInvite === "number" && next.size >= maxInvite) return prev;
+        next.add(id);
+      }
       return next;
     });
   };
@@ -2783,6 +2830,20 @@ function InviteFriendsModal({
           <p className="text-[12px] text-holo-ink-3">
             <span className="font-semibold text-holo-ink">{roomName}</span>에 초대할 친구를 선택해주세요
           </p>
+          {/* 모임 채팅방의 남은 자리 안내 — 한도 도달 시 보라색으로 강조. */}
+          {typeof maxInvite === "number" && (
+            <p
+              className={`mt-1 text-[11px] font-medium ${
+                limitReached ? "text-holo-purple-mid" : "text-holo-ink-3"
+              }`}
+            >
+              {maxInvite === 0
+                ? "모임 정원이 꽉 차 더 이상 초대할 수 없어요"
+                : limitReached
+                  ? `최대 ${maxInvite}명까지 선택했어요`
+                  : `남은 자리 ${maxInvite}명 · 최대 ${maxInvite}명까지 초대할 수 있어요`}
+            </p>
+          )}
           <div className="mt-2 flex items-center gap-2 rounded-full border border-holo-line-3 px-3 py-1.5">
             <SearchSmallIcon />
             <input
@@ -2803,7 +2864,10 @@ function InviteFriendsModal({
           ) : (
             filtered.map((f) => {
               const isSelected = selected.has(f.id);
-              const disabled = f.already;
+              // (1) 이미 채팅방에 있는 친구 = disabled
+              // (2) 정원 한도에 도달했고 현재 미선택 친구 = disabled (선택 차단)
+              const disabled =
+                f.already || (limitReached && !isSelected);
               return (
                 <li
                   key={f.id}

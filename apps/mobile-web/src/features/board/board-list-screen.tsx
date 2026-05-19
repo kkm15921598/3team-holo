@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useNavigationType, useSearchParams } from "react-router-dom";
 import {
   useEffect,
   useLayoutEffect,
@@ -33,6 +33,7 @@ import {
 import { useGeolocation, distanceMeters } from "@/shared/hooks/use-geolocation";
 import { calcJoined } from "./meetup-utils";
 import { rankLive, rankWeekly } from "./top-ranking";
+import { useBumpCount } from "@/shared/stores/bump-store";
 
 /**
  * 게시판에 노출되는 글의 거리 필터 반경 (위치가 있는 글에만 적용).
@@ -314,19 +315,29 @@ export function BoardListScreen() {
   ]);
 
   // ── 스크롤 위치 복원 ─────────────────────────────────────────
-  // 게시글 상세로 진입했다가 뒤로 돌아왔을 때, 사용자가 보고 있던 위치 그대로
+  // 게시글 상세로 진입했다가 뒤로 돌아왔을 때(POP), 사용자가 보고 있던 위치 그대로
   // 게시판 리스트가 보이도록 sessionStorage 에 스크롤 오프셋을 영속화한다.
-  // 키는 pathname + search 전체 — 탭/검색/필터별로 분리되어 다른 컨텍스트의
-  // 스크롤이 새 컨텍스트에 새어 들어가지 않는다.
+  // 단, 하단 탭 클릭(PUSH) 으로 새로 진입한 경우엔 복원하지 않고 상단부터 보여준다.
   const location = useLocation();
+  const navigationType = useNavigationType();
   const scrollKey = `holo:board-list-scroll:${location.pathname}${location.search}`;
   const listRef = useRef<HTMLUListElement>(null);
 
-  // 마운트 / URL 키 변경 시 저장된 스크롤 위치를 복원 (없으면 0 으로 리셋).
-  // useLayoutEffect — 페인트 전에 위치를 맞춰서 깜빡임 없이 복원된다.
+  // 마운트 / URL 키 변경 시 저장된 스크롤 위치를 복원.
+  //
+  // ── 진단 + retry 로직 ───────────────────────────────────────────────
+  // 실제 스크롤이 ul 에서 일어나는지, 부모 요소에서 일어나는지 확인 불확실해서
+  // ul 과 closest scrollable 부모 양쪽 모두에 대해 시도. 콘솔에 디버그 로그도
+  // 남겨 사용자가 DevTools 에서 확인할 수 있게 함.
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
+    // POP 만 (브라우저 뒤로/앞으로) 저장된 위치 복원. 탭 클릭(PUSH/REPLACE) 으로
+    // 들어온 경우엔 무조건 상단부터 보여준다.
+    if (navigationType !== "POP") {
+      el.scrollTop = 0;
+      return;
+    }
     let saved = 0;
     try {
       const raw = window.sessionStorage.getItem(scrollKey);
@@ -337,7 +348,61 @@ export function BoardListScreen() {
     } catch {
       // ignore
     }
-    el.scrollTop = saved;
+    // 실제 스크롤되는 요소 찾기 — ul 자체가 안 스크롤되면 가장 가까운 overflow:auto 부모.
+    const findScrollable = (start: HTMLElement): HTMLElement => {
+      let cur: HTMLElement | null = start;
+      while (cur) {
+        const s = getComputedStyle(cur);
+        if (
+          (s.overflowY === "auto" || s.overflowY === "scroll") &&
+          cur.scrollHeight > cur.clientHeight
+        ) {
+          return cur;
+        }
+        cur = cur.parentElement;
+      }
+      return start;
+    };
+
+    if (saved === 0) {
+      el.scrollTop = 0;
+      return;
+    }
+    const scroller = findScrollable(el);
+    scroller.scrollTop = saved;
+    if (scroller !== el) el.scrollTop = saved;
+
+    let rafId = 0;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 60;
+    let userScrolled = false;
+    const onUserScroll = () => {
+      userScrolled = true;
+    };
+    scroller.addEventListener("wheel", onUserScroll, { passive: true });
+    scroller.addEventListener("touchmove", onUserScroll, { passive: true });
+
+    const tryRestore = () => {
+      if (userScrolled) return;
+      const elNow = listRef.current;
+      if (!elNow || attempts >= MAX_ATTEMPTS) return;
+      attempts++;
+      const s = findScrollable(elNow);
+      const maxScroll = s.scrollHeight - s.clientHeight;
+      if (maxScroll >= saved && s.scrollTop !== saved) {
+        s.scrollTop = saved;
+      }
+      if (s.scrollTop < saved) {
+        rafId = requestAnimationFrame(tryRestore);
+      }
+    };
+    rafId = requestAnimationFrame(tryRestore);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      scroller.removeEventListener("wheel", onUserScroll);
+      scroller.removeEventListener("touchmove", onUserScroll);
+    };
   }, [scrollKey, visible.length]);
 
   const handleListScroll: UIEventHandler<HTMLUListElement> = (e) => {
@@ -349,8 +414,59 @@ export function BoardListScreen() {
     }
   };
 
+  // 부모(TabLayout content div) 가 실제 스크롤하는 케이스 대비 — 마운트 시 ul 의
+  // 가장 가까운 overflow:auto 조상에도 스크롤 리스너를 단다.
+  useEffect(() => {
+    const ul = listRef.current;
+    if (!ul) return;
+    let scroller: HTMLElement | null = ul.parentElement;
+    while (scroller) {
+      const s = getComputedStyle(scroller);
+      if (
+        (s.overflowY === "auto" || s.overflowY === "scroll") &&
+        scroller.scrollHeight > scroller.clientHeight
+      ) {
+        break;
+      }
+      scroller = scroller.parentElement;
+    }
+    if (!scroller || scroller === ul) return;
+    const onScroll = () => {
+      try {
+        window.sessionStorage.setItem(scrollKey, String(scroller!.scrollTop));
+      } catch {
+        // ignore
+      }
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => scroller!.removeEventListener("scroll", onScroll);
+  }, [scrollKey]);
+
+  // 언마운트 직전(예: 글 상세로 이동) 에 마지막 스크롤 위치를 한 번 더 저장.
+  useEffect(() => {
+    return () => {
+      const el = listRef.current;
+      if (!el) return;
+      // ul + 부모 스크롤러 양쪽 모두 확인해 가장 큰 값 저장
+      let maxScrollTop = el.scrollTop;
+      let cur: HTMLElement | null = el.parentElement;
+      while (cur) {
+        const s = getComputedStyle(cur);
+        if (s.overflowY === "auto" || s.overflowY === "scroll") {
+          if (cur.scrollTop > maxScrollTop) maxScrollTop = cur.scrollTop;
+        }
+        cur = cur.parentElement;
+      }
+      try {
+        window.sessionStorage.setItem(scrollKey, String(maxScrollTop));
+      } catch {
+        // ignore
+      }
+    };
+  }, [scrollKey]);
+
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex min-h-0 flex-1 flex-col">
       {isTopView ? (
         // 실시간 TOP / 주간 TOP 전용 헤더 — 카테고리 탭 대신 표시
         <div
@@ -385,7 +501,7 @@ export function BoardListScreen() {
           <button
             type="button"
             onClick={clearTop}
-            className="text-[12px] text-holo-purple-mid underline"
+            className="rounded-full border border-holo-purple-mid bg-white px-3 py-1.5 text-[12px] font-semibold text-holo-purple-mid shadow-sm active:opacity-80"
           >
             전체보기
           </button>
@@ -499,7 +615,7 @@ export function BoardListScreen() {
         <ul
           ref={listRef}
           onScroll={handleListScroll}
-          className="flex-1 overflow-y-auto"
+          className="no-scrollbar flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {visible.map((p, i) => (
             <PostCard
@@ -607,6 +723,7 @@ function PostCard({
             <span aria-label={`조회 ${getTotalViews(post)}`}>
               조회 {getTotalViews(post).toLocaleString()}
             </span>
+            <BumpCountChip postId={post.id} />
             <ChevronRight />
           </div>
         </div>
@@ -650,6 +767,42 @@ function CategoryBadge({ label, variant }: { label: string; variant?: string }) 
     <span className={`shrink-0 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium ${styles}`}>
       {label}
     </span>
+  );
+}
+
+/**
+ * 게시글 카드의 통계 행에 표시되는 끌어올리기 횟수 칩.
+ * 한 번도 끌어올린 적 없으면 렌더링하지 않아 다른 카드와 정렬에 영향이 없다.
+ */
+function BumpCountChip({ postId }: { postId: string }) {
+  const count = useBumpCount(postId);
+  if (count <= 0) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-0.5 text-holo-purple-mid"
+      aria-label={`끌어올리기 ${count}회`}
+    >
+      <BumpArrow /> 끌올 {count}회
+    </span>
+  );
+}
+
+function BumpArrow() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+    </svg>
   );
 }
 

@@ -80,7 +80,7 @@ export function BoardSearchScreen() {
 
   return (
     <main className="relative flex flex-1 flex-col bg-[#EFE6FA]">
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pt-3 pb-28 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 pt-2 pb-24 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {/* 검색어 입력 */}
         <div className="relative">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-holo-ink-3">
@@ -90,7 +90,7 @@ export function BoardSearchScreen() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="검색어를 입력해 주세요."
-            className="h-[50px] w-full rounded-[14px] bg-white pl-11 pr-4 text-[14px] outline-none placeholder:text-holo-ink-3"
+            className="h-[42px] w-full rounded-[14px] bg-white pl-11 pr-4 text-[14px] outline-none placeholder:text-holo-ink-3"
           />
         </div>
 
@@ -146,11 +146,11 @@ export function BoardSearchScreen() {
       </div>
 
       {/* 하단 고정 액션바 */}
-      <div className="absolute inset-x-0 bottom-0 flex shrink-0 gap-2 bg-white px-4 pb-4 pt-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+      <div className="absolute inset-x-0 bottom-0 flex shrink-0 gap-2 bg-white px-4 pb-3 pt-2 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <button
           type="button"
           onClick={handleReset}
-          className="h-[52px] flex-[1] rounded-[14px] border-2 border-holo-purple-mid bg-white text-[15px] font-semibold text-holo-purple-mid active:opacity-80"
+          className="h-[46px] flex-[1] rounded-[14px] border-2 border-holo-purple-mid bg-white text-[15px] font-semibold text-holo-purple-mid active:opacity-80"
         >
           초기화
         </button>
@@ -158,7 +158,7 @@ export function BoardSearchScreen() {
           type="button"
           onClick={handleSearch}
           disabled={!isActive}
-          className={`h-[52px] flex-[2] rounded-[14px] text-[15px] font-semibold text-white transition active:opacity-90 ${
+          className={`h-[46px] flex-[2] rounded-[14px] text-[15px] font-semibold text-white transition active:opacity-90 ${
             isActive ? "bg-holo-purple-mid" : "bg-holo-line-2"
           }`}
         >
@@ -187,11 +187,11 @@ function FilterGroup({
   onSelect: (v: string) => void;
 }) {
   return (
-    <section className="overflow-hidden rounded-[16px] bg-white">
+    <section className="overflow-hidden rounded-[14px] bg-white">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3.5"
+        className="flex w-full items-center justify-between px-4 py-2"
       >
         <span className="flex items-center gap-2">
           <span className="text-holo-purple-mid">{icon}</span>
@@ -200,7 +200,7 @@ function FilterGroup({
         <ChevronIcon open={open} />
       </button>
       {open && (
-        <div className="flex flex-wrap gap-2 px-4 pb-4 pt-1">
+        <div className="flex flex-wrap gap-1.5 px-3 pb-3 pt-0">
           {options.map((o) => {
             const on = selected?.has(o);
             return (
@@ -208,7 +208,7 @@ function FilterGroup({
                 key={o}
                 type="button"
                 onClick={() => onSelect(o)}
-                className={`rounded-full px-4 py-2 text-[13px] transition ${
+                className={`rounded-full px-3 py-1 text-[13px] transition ${
                   on
                     ? "bg-holo-purple-mid font-semibold text-white"
                     : "bg-[#F3EBFF] font-medium text-holo-ink-2 active:bg-[#E8DCFA]"
