@@ -7,6 +7,8 @@
  */
 import { ME } from "@/shared/mock/data";
 import { BADGES as BADGE_LIB } from "@/badge";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 const STORAGE_KEY = "holo:profile:v1";
 
@@ -83,6 +85,21 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
+/** 프로필 데이터를 Supabase users 테이블에 동기화 (best-effort) */
+function syncProfileToSupabase(s: ProfileState) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({
+    nickname: s.nickname,
+    title: s.title,
+    equipped_badge_id: s.equippedBadgeId,
+    profile_face: s.profileFace,
+    friend_code: s.friendCode,
+  }).eq("phone", userPhone).then(({ error }) => {
+    if (error) console.warn("Supabase 프로필 저장 실패:", error.message);
+  });
+}
+
 export function getProfile() {
   return _state;
 }
@@ -91,24 +108,28 @@ export function setNickname(nickname: string) {
   _state = { ..._state, nickname };
   persist();
   notify();
+  syncProfileToSupabase(_state);
 }
 
 export function setTitle(title: string) {
   _state = { ..._state, title };
   persist();
   notify();
+  syncProfileToSupabase(_state);
 }
 
 export function setEquippedBadgeId(id: string) {
   _state = { ..._state, equippedBadgeId: id };
   persist();
   notify();
+  syncProfileToSupabase(_state);
 }
 
 export function setProfileFace(face: string | null) {
   _state = { ..._state, profileFace: face };
   persist();
   notify();
+  syncProfileToSupabase(_state);
 }
 
 /**
@@ -120,6 +141,7 @@ export function setFriendCode(code: string) {
   _state = { ..._state, friendCode: next };
   persist();
   notify();
+  syncProfileToSupabase(_state);
 }
 
 export function subscribeProfile(fn: () => void) {

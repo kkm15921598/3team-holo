@@ -1,4 +1,15 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(s: Set<string>) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ joined_post_ids: [...s] })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 모임참여 저장 실패:", error.message);
+    });
+}
 
 /**
  * 모임 참여 상태 store.
@@ -54,6 +65,7 @@ export function joinPost(id: string): void {
   state = next;
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 /**
@@ -67,6 +79,7 @@ export function leavePost(id: string): void {
   state = next;
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 export function getJoinedIds(): string[] {
@@ -78,6 +91,7 @@ export function setJoinedIds(ids: string[]): void {
   state = new Set(ids);
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 const subscribe = (cb: () => void) => {

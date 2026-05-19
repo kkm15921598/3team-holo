@@ -1,4 +1,18 @@
 // 알림설정 상태를 공유하는 모듈 레벨 store
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncSettingsToSupabase(settings: NotificationSettings, readIds: Set<string>) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({
+    notification_settings: settings,
+    notification_read_ids: [...readIds],
+  }).eq("phone", userPhone).then(({ error }) => {
+    if (error) console.warn("Supabase 알림설정 저장 실패:", error.message);
+  });
+}
+
 // NotificationsScreen ↔ NotificationPanel ↔ AppHeader 모두 사용.
 //
 // 영속화:
@@ -93,6 +107,7 @@ export function setNotificationSettings(next: Partial<NotificationSettings>) {
   _state = { ..._state, ...next };
   persistSettings();
   notify();
+  syncSettingsToSupabase(_state, _readIds);
 }
 
 export function subscribeNotificationSettings(fn: () => void) {
@@ -111,6 +126,7 @@ export function markRead(id: string) {
   _readIds = new Set(_readIds).add(id);
   persistReadIds();
   notify();
+  syncSettingsToSupabase(_state, _readIds);
 }
 
 export function markAllRead(ids: string[]) {
@@ -120,4 +136,5 @@ export function markAllRead(ids: string[]) {
   _readIds = merged;
   persistReadIds();
   notify();
+  syncSettingsToSupabase(_state, _readIds);
 }

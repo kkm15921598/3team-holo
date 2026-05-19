@@ -1,4 +1,15 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(s: Set<string>) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ blocked_nicknames: [...s] })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 차단 저장 실패:", error.message);
+    });
+}
 
 /**
  * 친구가 아닌 사용자(예: 게시글 작성자 / 채팅 상대 등) 를 차단했을 때 닉네임을 영속화하는 store.
@@ -54,6 +65,7 @@ export function markBlocked(nickname: string): void {
   state = next;
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 export function unmarkBlocked(nickname: string): void {
@@ -64,6 +76,7 @@ export function unmarkBlocked(nickname: string): void {
   state = next;
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 export function getBlockedNicknames(): Set<string> {

@@ -1,5 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { getStats, setStats } from "@/shared/stores/account-stats-store";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 경험치(XP) store.
@@ -213,6 +215,18 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+/** 경험치/출석 데이터를 Supabase users 테이블에 동기화 (best-effort) */
+function syncXpToSupabase(s: XpState) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({
+    total_xp: s.totalXp,
+    daily_xp: s.daily,
+  }).eq("phone", userPhone).then(({ error }) => {
+    if (error) console.warn("Supabase XP 저장 실패:", error.message);
+  });
+}
+
 /**
  * 사용자 액션 1회당 XP 부여.
  * - 일일 cap 도달 시 capped=true 와 함께 gained=0 반환 (어뷰징 방지).
@@ -247,6 +261,7 @@ export function awardXp(action: XpAction): { gained: number; capped: boolean } {
   };
   persist();
   emit();
+  syncXpToSupabase(state);
   const newLevel = levelFromTotalXp(state.totalXp);
   if (newLevel > oldLevel) {
     // 한 액션으로 두 레벨 이상 점프하는 경우가 거의 없지만, 정확히 최종 도달 레벨을 기록.
@@ -265,6 +280,7 @@ export function setTotalXp(xp: number): void {
   state = { ...state, totalXp: Math.max(0, Math.floor(xp)) };
   persist();
   emit();
+  syncXpToSupabase(state);
 }
 
 /**
@@ -282,6 +298,7 @@ export function seedAttendanceDates(dates: string[]): void {
   state = { ...state, daily: nextDaily };
   persist();
   emit();
+  syncXpToSupabase(state);
 }
 
 /** 모든 XP 초기화 (신규 가입자 / 다른 계정 로그인 시) */

@@ -1,4 +1,15 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(s: ViewedEntry[]) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ viewed_posts: s })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 본 글 저장 실패:", error.message);
+    });
+}
 
 /**
  * 사용자가 실제로 클릭해서 본 게시글의 id 와 마지막 조회 시각을 영속화한다.
@@ -57,6 +68,7 @@ export function markPostViewed(id: string): void {
   state = next.slice(0, MAX_ENTRIES);
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 /** 마이페이지 관리 삭제 — 지정한 id 들을 viewed 목록에서 제거 */
@@ -65,6 +77,7 @@ export function removeViewedPosts(ids: string[]): void {
   state = state.filter((e) => !set.has(e.id));
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 /** 가장 최근에 본 순서대로 id 배열 반환 */

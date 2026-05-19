@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 마이페이지 상단의 4개 통계 (레벨/뱃지/칭호) 를 영속화.
@@ -116,6 +118,20 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+/** 뱃지/칭호/레벨을 Supabase users 테이블에 동기화 (best-effort) */
+function syncToSupabase(s: AccountStats) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({
+    level: s.level,
+    acquired_badge_ids: s.acquiredBadgeIds,
+    acquired_titles: s.acquiredTitles,
+    acquired_badge_dates: s.acquiredBadgeDates,
+  }).eq("phone", userPhone).then(({ error }) => {
+    if (error) console.warn("Supabase 뱃지/칭호 저장 실패:", error.message);
+  });
+}
+
 export function getStats(): AccountStats {
   return state;
 }
@@ -130,6 +146,7 @@ export function setStats(stats: Partial<AccountStats> & Pick<AccountStats, "leve
   };
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 /**
@@ -150,6 +167,7 @@ export function recordBadgeAcquired(badgeId: string): boolean {
   };
   persist();
   emit();
+  syncToSupabase(state);
   return true;
 }
 
@@ -170,6 +188,7 @@ export function recordTitleAcquired(titleName: string): boolean {
   };
   persist();
   emit();
+  syncToSupabase(state);
   return true;
 }
 

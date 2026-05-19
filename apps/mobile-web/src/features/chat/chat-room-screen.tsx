@@ -8,6 +8,8 @@ import {
   type ChatRoom,
   type MeetingInfo,
 } from "@/shared/mock/data";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   sendFriendRequest,
   getFriends,
@@ -402,11 +404,13 @@ export function ChatRoomScreen() {
       .getMinutes()
       .toString()
       .padStart(2, "0")}`;
+    const msgId = String(Date.now());
+    const myNickname = getProfile().nickname;
     setMessages((prev) => [
       ...prev,
       {
-        id: String(Date.now()),
-        nickname: "",
+        id: msgId,
+        nickname: myNickname,
         content: v,
         time,
         mine: true,
@@ -420,6 +424,21 @@ export function ChatRoomScreen() {
     setReply(null);
     setShowEmoji(false);
     setShowAttach(false);
+
+    // Supabase에 메시지 저장 (best-effort)
+    const userPhone = getCurrentAccount();
+    if (userPhone && id) {
+      supabase.from("messages").insert({
+        message_id: msgId,
+        room_id: id,
+        sender_phone: userPhone,
+        sender_nickname: myNickname,
+        content: v,
+        sent_time: time,
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase 메시지 저장 실패:", error.message);
+      });
+    }
   };
 
   const addReaction = (id: string, emoji: string) => {

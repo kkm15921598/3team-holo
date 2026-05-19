@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { Post } from "@/shared/mock/data";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 게시글 조회수.
@@ -94,6 +96,13 @@ export function incrementViewCount(id: string): void {
   counts = { ...counts, [id]: (counts[id] ?? 0) + 1 };
   persist();
   emit();
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("users").update({ view_counts: counts })
+      .eq("phone", userPhone).then(({ error }) => {
+        if (error) console.warn("Supabase 조회수 저장 실패:", error.message);
+      });
+  }
 }
 
 /** 표시용 총 조회수 = baseline + 사용자 증분 */

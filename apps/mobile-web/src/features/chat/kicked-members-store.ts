@@ -3,6 +3,17 @@
 // - 게시글 인원수에서는 calcJoined 가 이 set 의 크기만큼 baseJoined 를 차감.
 
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(m: KickedMap) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ kicked_members: m })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 강퇴목록 저장 실패:", error.message);
+    });
+}
 
 const STORAGE_KEY = "holo:kickedMembers:v1";
 
@@ -46,6 +57,7 @@ export function addKickedMember(postId: string, nickname: string): boolean {
   state = { ...state, [postId]: [...cur, nickname] };
   persist();
   emit();
+  syncToSupabase(state);
   return true;
 }
 
@@ -64,6 +76,7 @@ export function resetKickedMembers(): void {
   state = {};
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 const subscribe = (cb: () => void) => {

@@ -1,4 +1,15 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(s: Set<string>) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ reported_nicknames: [...s] })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 신고 저장 실패:", error.message);
+    });
+}
 
 /**
  * 사용자가 "신고하기" 로 처리한 닉네임을 영속화하는 store.
@@ -55,6 +66,7 @@ export function markReported(nickname: string): void {
   state = next;
   persist();
   emit();
+  syncToSupabase(state);
 }
 
 /** 신고 기록 전체 — 노출 후보 필터링 등에 사용. */

@@ -3,3 +3,6 @@ dist
 .vite
 *.log
 *.tsbuildinfo
+.env
+.env.local
+.env.*.local

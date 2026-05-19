@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 사용자 활동 store — 가입일과 접속한 날짜들을 영속화한다.
@@ -63,6 +65,18 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+/** 활동 데이터를 Supabase users 테이블에 동기화 (best-effort) */
+function syncActivityToSupabase(s: ActivityState) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({
+    signup_date: s.signupDate,
+    active_dates: s.activeDates,
+  }).eq("phone", userPhone).then(({ error }) => {
+    if (error) console.warn("Supabase 활동 저장 실패:", error.message);
+  });
+}
+
 /** 첫 실행이라면 store 가 이미 오늘로 초기화되어 있으므로 persist 만 보장 */
 export function ensureInitialized(): void {
   // 로드 시 이미 today 가 들어가 있지만, 일부 환경(SSR) 에서 localStorage 가
@@ -80,6 +94,7 @@ export function markActiveToday(): void {
   };
   persist();
   emit();
+  syncActivityToSupabase(state);
 }
 
 export function getActivityState(): ActivityState {
@@ -99,6 +114,7 @@ export function setActivityState(next: ActivityState): void {
   state = { signupDate: next.signupDate, activeDates: unique };
   persist();
   emit();
+  syncActivityToSupabase(state);
 }
 
 /**

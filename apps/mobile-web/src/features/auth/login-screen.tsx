@@ -19,6 +19,7 @@ import {
   getChoices,
   setCurrentAccount,
 } from "@/shared/stores/account-choices-store";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
 const formatPhone = (raw: string) => {
@@ -61,7 +62,7 @@ export function LoginScreen() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!phone) {
@@ -82,6 +83,30 @@ export function LoginScreen() {
       return;
     }
 
+    // 1) Supabase DB에서 실제 가입 계정 확인
+    const { data: dbUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("phone", phone)
+      .eq("password", password)
+      .single();
+
+    if (dbUser) {
+      // Supabase 계정으로 로그인 성공
+      setGender(dbUser.gender ?? "female");
+      setCurrentAccount(dbUser.phone);
+      setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
+      setNickname(dbUser.nickname ?? "");
+      setTitle("");
+      setEquippedBadgeId(null);
+      setFriendCode("");
+      setMyroomItems([]);
+      setStatusMessage("");
+      navigate("/home", { replace: true });
+      return;
+    }
+
+    // 2) 테스트 계정 확인 (기존 mock 로그인)
     const account = TEST_ACCOUNTS[phone];
     if (!account) {
       setPhoneError(true);
@@ -93,9 +118,6 @@ export function LoginScreen() {
       setGender(account.gender);
       setCurrentAccount(account.phone);
       const saved = getChoices(account.phone);
-      // 테스트 계정이므로 로그인할 때마다 프로필/마이룸을 계정 mock 값으로 초기화한다.
-      // 단, 사용자가 직접 바꾼 장착 뱃지/칭호는 saved 에 들어 있으면 그쪽을 우선 복원.
-      // 계정에 profileFace 가 지정돼 있으면 그것을 사용, 없으면 성별 기본 얼굴
       setProfileFace(account.profileFace ?? defaultFaceForGender(account.gender));
       setNickname(account.nickname);
       setTitle(saved.title ?? account.title);
@@ -103,7 +125,6 @@ export function LoginScreen() {
       setFriendCode(account.friendCode);
       setMyroomItems(account.myroomItems);
       setStatusMessage(account.statusMessage);
-      // 데모용 mock 데이터(통계·포인트·게시글·댓글·좋아요·참여·최근본글) 시드
       seedAccount(account);
       navigate("/home", { replace: true });
     } else {

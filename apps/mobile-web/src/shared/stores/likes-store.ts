@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 게시글 좋아요 상태 store.
@@ -46,11 +48,35 @@ export function isPostLiked(id: string): boolean {
 
 export function togglePostLike(id: string): boolean {
   const next = new Set(state);
-  if (next.has(id)) next.delete(id);
+  const wasLiked = next.has(id);
+  if (wasLiked) next.delete(id);
   else next.add(id);
   state = next;
   persist();
   emit();
+
+  // Supabase 저장/삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    if (!wasLiked) {
+      // 좋아요 추가
+      supabase.from("post_likes").insert({
+        post_id: id,
+        user_id: userPhone,
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase 좋아요 저장 실패:", error.message);
+      });
+    } else {
+      // 좋아요 취소
+      supabase.from("post_likes").delete()
+        .eq("post_id", id)
+        .eq("user_id", userPhone)
+        .then(({ error }) => {
+          if (error) console.warn("Supabase 좋아요 삭제 실패:", error.message);
+        });
+    }
+  }
+
   return state.has(id);
 }
 

@@ -1,6 +1,17 @@
 // 방해 금지 모드의 시작·종료 시각을 영속화하는 store.
 // NotificationsScreen ↔ QuietHoursScreen 공유.
 // 토글 자체(ON/OFF)는 notification-settings-store 의 quietEnabled 로 관리.
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(s: QuietHours) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ quiet_hours: s })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 방해금지 시각 저장 실패:", error.message);
+    });
+}
 
 export type QuietHours = {
   startH: number;
@@ -49,6 +60,7 @@ export function setQuietHours(next: QuietHours) {
   _state = next;
   persist();
   notify();
+  syncToSupabase(_state);
 }
 
 export function subscribeQuietHours(fn: () => void) {

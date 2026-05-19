@@ -12,6 +12,7 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { ensureMeetupRoom, isMeetupPost, meetupRoomId } from "./meetup-utils";
 import { joinPost } from "@/shared/stores/joined-store";
 import { containsProfanity } from "@/shared/utils/profanity";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 const CATEGORIES = [
   "자유게시판",
@@ -352,6 +353,25 @@ export function BoardWriteScreen() {
         photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       };
       postsStore.prepend(newPost);
+
+      // Supabase에도 저장 (best-effort — 실패해도 로컬은 이미 저장됨)
+      supabase.from("posts").insert({
+        id: newPostId,
+        title: newPost.title,
+        description: newPost.description,
+        category: newPost.category,
+        author_nickname: newPost.authorNickname,
+        author_level: newPost.authorLevel ?? 1,
+        time_ago: newPost.timeAgo,
+        distance: newPost.distance ?? "0m",
+        duration: newPost.duration ?? "0분",
+        likes: newPost.likes,
+        comments: newPost.comments,
+        status: newPost.status,
+      }).then(({ error }) => {
+        if (error) console.warn("Supabase 게시글 저장 실패:", error.message);
+      });
+
       // 새 게시글 등록 알림 — 알림 패널에서 바로 그 글로 이동할 수 있도록 한 줄 발행.
       pushPostCreated(newPostTitle, newPostId);
       // 새 게시글 작성 → XP 부여 (일일 cap 적용)

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { CHATROOMS, type ChatRoom } from "@/shared/mock/data";
 import { clearMessagesForRoom } from "./messages-store";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
@@ -88,6 +90,20 @@ export function addRoom(room: ChatRoom) {
     updatedAt: room.updatedAt ?? Date.now(),
   };
   setRooms((prev) => [stamped, ...prev]);
+
+  // Supabase 저장 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("chat_rooms").insert({
+      room_id: stamped.id,
+      name: stamped.name,
+      room_name: stamped.name,
+      post_id: stamped.meeting?.postId ?? null,
+      creator_phone: userPhone,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 채팅방 저장 실패:", error.message);
+    });
+  }
 }
 
 /**

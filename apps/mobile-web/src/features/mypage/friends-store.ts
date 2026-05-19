@@ -10,6 +10,8 @@ import {
   pushFriendRequestReceived,
   removeReceivedNotificationByNickname,
 } from "@/shared/stores/notifications-store";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 export type Friend = (typeof FRIENDS)[number];
 
@@ -159,6 +161,19 @@ function addFriendInternal(nickname: string, avatarBg?: string): Friend | null {
   };
   _friends = [..._friends, newFriend];
   _blocked = _blocked.filter((b) => b.nickname !== trimmed);
+
+  // Supabase에 저장 (best-effort) — friend_id는 FK 충돌로 제외
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friends").insert({
+      user_phone: userPhone,
+      friend_nickname: newFriend.nickname,
+      avatar_bg: newFriend.avatarBg,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 친구 저장 실패:", error.message);
+    });
+  }
+
   return newFriend;
 }
 
@@ -206,6 +221,21 @@ export function sendFriendRequest(nickname: string): SendRequestResult {
   };
   _requests = [..._requests, req];
   notify();
+
+  // Supabase에 요청 저장 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friend_requests").insert({
+      user_phone: userPhone,
+      request_id: req.id,
+      nickname: req.nickname,
+      direction: req.direction,
+      avatar_bg: req.avatarBg,
+      time_ago: req.timeAgo,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 친구 요청 저장 실패:", error.message);
+    });
+  }
 
   // 데모용 — 6초 뒤 상대편이 수락한 것처럼 시뮬레이션해서 친구로 이동시키고
   // "X님이 친구 요청을 수락했어요" 알림을 발행한다.
@@ -259,6 +289,17 @@ export function declineFriendRequest(requestId: string): void {
   );
   notify();
   if (req) removeReceivedNotificationByNickname(req.nickname);
+  // Supabase에서도 삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friend_requests")
+      .delete()
+      .eq("user_phone", userPhone)
+      .eq("request_id", requestId)
+      .then(({ error }) => {
+        if (error) console.warn("Supabase 친구 요청 거절 삭제 실패:", error.message);
+      });
+  }
 }
 
 /** 보낸 요청 취소 → 요청 제거 */
@@ -267,6 +308,17 @@ export function cancelFriendRequest(requestId: string): void {
     (r) => !(r.id === requestId && r.direction === "sent"),
   );
   notify();
+  // Supabase에서도 삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friend_requests")
+      .delete()
+      .eq("user_phone", userPhone)
+      .eq("request_id", requestId)
+      .then(({ error }) => {
+        if (error) console.warn("Supabase 친구 요청 취소 삭제 실패:", error.message);
+      });
+  }
 }
 
 /** 닉네임 기준으로 요청 조회 — 프로필 화면에서 버튼 상태 결정용 */
@@ -312,11 +364,34 @@ export function useReceivedRequests(): FriendRequest[] {
 export function removeFriendByNickname(nickname: string) {
   _friends = _friends.filter((f) => f.nickname !== nickname);
   notify();
+  // Supabase에서도 삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friends")
+      .delete()
+      .eq("user_phone", userPhone)
+      .eq("friend_nickname", nickname)
+      .then(({ error }) => {
+        if (error) console.warn("Supabase 친구 삭제 실패:", error.message);
+      });
+  }
 }
 
 export function removeFriendById(id: string) {
+  const target = _friends.find((f) => f.id === id);
   _friends = _friends.filter((f) => f.id !== id);
   notify();
+  // Supabase에서도 삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone && target) {
+    supabase.from("friends")
+      .delete()
+      .eq("user_phone", userPhone)
+      .eq("friend_id", id)
+      .then(({ error }) => {
+        if (error) console.warn("Supabase 친구 삭제 실패:", error.message);
+      });
+  }
 }
 
 export function blockFriendById(id: string) {
@@ -325,6 +400,17 @@ export function blockFriendById(id: string) {
   _friends = _friends.filter((f) => f.id !== id);
   _blocked = [..._blocked, target];
   notify();
+  // Supabase friends에서 삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friends")
+      .delete()
+      .eq("user_phone", userPhone)
+      .eq("friend_id", id)
+      .then(({ error }) => {
+        if (error) console.warn("Supabase 친구 차단 삭제 실패:", error.message);
+      });
+  }
 }
 
 /** 차단 해제 → 친구 목록 복귀. 정원 초과 시 false 반환 (UI 토스트 분기용) */

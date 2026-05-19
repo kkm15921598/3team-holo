@@ -11,6 +11,17 @@
  * 기본값은 모두 true — 가입 직후 사용자가 별도로 비활성화하기 전까지 활성 상태.
  */
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncToSupabase(s: PrivacySettings) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update({ privacy_settings: s })
+    .eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 개인정보설정 저장 실패:", error.message);
+    });
+}
 
 const STORAGE_KEY = "holo:privacy:v1";
 
@@ -87,6 +98,7 @@ export const privacyStore = {
     _state = { ..._state, [key]: value };
     save(_state);
     notify();
+    syncToSupabase(_state);
   },
 };
 

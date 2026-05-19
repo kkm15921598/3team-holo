@@ -9,6 +9,8 @@
  * 저장: localStorage("holo:post-bumps:v1") — { [postId]: timestampMs }
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 // v3 로 키를 바꿔 이전(v1, v2) 의 단순 timestamp 구조를 자동 초기화한다.
 // v3 부터는 글마다 마지막 끌어올린 시각(lastAt) + 누적 횟수(count) 를 함께 저장.
@@ -109,6 +111,13 @@ export const bumpStore = {
     };
     save(_bumps);
     notify();
+    const userPhone = getCurrentAccount();
+    if (userPhone) {
+      supabase.from("users").update({ bump_data: _bumps })
+        .eq("phone", userPhone).then(({ error }) => {
+          if (error) console.warn("Supabase 끌어올리기 저장 실패:", error.message);
+        });
+    }
     return true;
   },
 };

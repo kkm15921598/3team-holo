@@ -5,6 +5,8 @@
 import { useEffect, useState } from "react";
 import { getNotificationSettings } from "@/shared/stores/notification-settings-store";
 import { isInQuietHoursNow } from "@/features/mypage/quiet-hours-store";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 알림 발행 게이트.
@@ -86,6 +88,23 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+/** 알림을 _list에 추가하고 Supabase에도 저장 (best-effort) */
+function _addNotif(item: DynNotification): void {
+  _list = [item, ..._list];
+  notify();
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("notifications").insert({
+      user_id: userPhone,
+      type: item.kind,
+      content: item.body,
+      is_read: item.read,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 알림 저장 실패:", error.message);
+    });
+  }
+}
+
 function timeAgo(ms: number): string {
   const diff = Date.now() - ms;
   if (diff < 60 * 1000) return "방금 전";
@@ -162,8 +181,7 @@ export function pushFriendRequestReceived(
     read: false,
     link: "/mypage/friends/requests",
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -181,8 +199,7 @@ export function pushWelcomeNotification(nickname: string): DynNotification {
     read: false,
     link: "/mypage",
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -204,8 +221,7 @@ export function pushRewardNotification(
     read: false,
     link,
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -227,8 +243,7 @@ export function pushPostCreated(
     read: false,
     link: `/board/${postId}`,
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -249,8 +264,7 @@ export function pushMeetingJoined(
     read: false,
     link: `/board/${postId}`,
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -280,8 +294,7 @@ export function pushMeetingFull(
     read: false,
     link: `/board/${postId}`,
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -303,8 +316,7 @@ export function pushCommentReceived(
     read: false,
     link: `/board/${postId}`,
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -326,8 +338,7 @@ export function pushLikeReceived(
     read: false,
     link: `/board/${postId}`,
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -345,8 +356,7 @@ export function pushFriendRequestAccepted(nickname: string): DynNotification {
     read: false,
     link: "/mypage/friends",
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 
@@ -368,8 +378,7 @@ export function pushBecameFriendByMe(nickname: string): DynNotification {
     read: false,
     link: "/mypage/friends",
   };
-  _list = [item, ..._list];
-  notify();
+  _addNotif(item);
   return item;
 }
 

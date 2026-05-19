@@ -17,6 +17,8 @@
  * 적립되지 않도록 차단한다 (UI 의 "3개월에 한 번 갱신" 정책과 일치).
  */
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 export type Gender = "M" | "F";
 
@@ -82,6 +84,18 @@ function setState(patch: Partial<State>) {
   _state = { ..._state, ...patch };
   persist();
   notify();
+  // Supabase 동기화 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("users").update({
+      phone_verified: _state.phoneVerified,
+      region_verified: _state.regionVerified,
+      verified_region: _state.verifiedRegion,
+      last_region_verified_at: _state.lastRegionVerifiedAt,
+    }).eq("phone", userPhone).then(({ error }) => {
+      if (error) console.warn("Supabase 인증 저장 실패:", error.message);
+    });
+  }
 }
 
 export function getVerification() {

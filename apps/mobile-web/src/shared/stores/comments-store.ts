@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 사용자가 board-detail 에서 작성한 댓글 / 대댓글을 영속화하는 store.
@@ -61,6 +63,18 @@ export function addComment(c: StoredComment): void {
   state = [...state, c];
   persist();
   emit();
+
+  // Supabase 저장 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("comments").insert({
+      post_id: c.postId,
+      user_id: userPhone,
+      content: c.content,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 댓글 저장 실패:", error.message);
+    });
+  }
 }
 
 /** postId 들에 해당하는 사용자 댓글 전부 제거 (마이페이지 관리 화면용) */

@@ -1,6 +1,16 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_ROOM, type PlacedFurniture } from "./myroom-data";
 import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+
+function syncMyroomToSupabase(patch: Record<string, unknown>) {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  supabase.from("users").update(patch).eq("phone", userPhone).then(({ error }) => {
+    if (error) console.warn("Supabase 마이룸 저장 실패:", error.message);
+  });
+}
 
 const STORAGE_KEY = "holo:myroom:v1";
 
@@ -38,6 +48,7 @@ export function setMyroomItems(items: PlacedFurniture[]) {
   state = items;
   persist();
   emit();
+  syncMyroomToSupabase({ placed_furniture: items });
 }
 
 export function getMyroomItems(): PlacedFurniture[] {
@@ -170,6 +181,7 @@ export function purchaseItem(kind: string, variant: string): void {
   ownedState = next;
   persistOwned();
   emitOwned();
+  syncMyroomToSupabase({ owned_furniture: [...next] });
   // 가구 20개 수집 달성 → badge_25 자동 발급 (이미 보유 시 no-op)
   if (next.size >= 20) {
     recordBadgeAcquired("badge_25");
@@ -239,6 +251,7 @@ export function spendPoints(amount: number, reason?: PointReason): boolean {
   pointsState -= amount;
   persistPoints();
   emitPoints();
+  syncMyroomToSupabase({ points: pointsState });
   if (reason) {
     appendPointEvent({ title: reason.title, note: reason.note, amount: -amount });
   }
@@ -251,6 +264,7 @@ export function addPoints(amount: number, reason?: PointReason): void {
   pointsState += amount;
   persistPoints();
   emitPoints();
+  syncMyroomToSupabase({ points: pointsState });
   if (reason) {
     appendPointEvent({ title: reason.title, note: reason.note, amount });
   }
@@ -261,6 +275,7 @@ export function setPoints(amount: number): void {
   pointsState = Math.max(0, Math.floor(amount));
   persistPoints();
   emitPoints();
+  syncMyroomToSupabase({ points: pointsState });
 }
 
 /** 현재 포인트 (구독 안 함) */
@@ -317,6 +332,7 @@ export function setStatusMessage(msg: string): void {
   statusState = msg.trim() || DEFAULT_STATUS;
   persistStatus();
   emitStatus();
+  syncMyroomToSupabase({ status_message: statusState });
 }
 
 const statusSubscribe = (cb: () => void) => {
@@ -466,6 +482,7 @@ function appendPointEvent(entry: Omit<PointEvent, "id" | "date"> & { date?: stri
   historyState = [next, ...historyState];
   persistHistory();
   emitHistory();
+  syncMyroomToSupabase({ point_history: historyState });
 }
 
 /** 외부에서 직접 내역만 남기고 싶을 때 (테스트 시드 등) */
