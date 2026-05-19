@@ -32,7 +32,12 @@ export function ReviewScreen() {
     });
 
     if (error) {
-      alert("회원가입 중 오류가 발생했어요: " + error.message);
+      // PostgreSQL unique 제약조건 위반 (중복 가입 시도)
+      if (error.code === "23505") {
+        alert("이미 가입된 번호예요. 다른 번호로 시도해주세요.");
+      } else {
+        alert("회원가입 중 오류가 발생했어요: " + error.message);
+      }
       return;
     }
 

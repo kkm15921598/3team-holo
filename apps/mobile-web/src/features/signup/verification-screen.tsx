@@ -11,8 +11,14 @@ const CARRIER_GROUPS: { label: string; items: string[] }[] = [
   { label: "알뜰폰", items: ["SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"] },
 ];
 
-const MOCK_VERIFY_CODE = "123456";
 const MOCK_REGISTERED_PHONES = ["01012345678"];
+
+// 데모용: 실제 SMS 발송 없이 가짜 6자리 인증번호를 생성.
+// 실제 SMS API 연동 전까지 사용. 가입 화면에서 발송 시점에 무작위 코드를 만들어
+// 화면 상단의 가짜 알림 토스트로 보여주고, 그 값과 사용자가 입력한 값을 비교한다.
+function generateMockCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export function VerificationScreen() {
   const navigate = useNavigate();
@@ -26,6 +32,10 @@ export function VerificationScreen() {
   const [verifyError, setVerifyError] = useState("");
   const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
   const [showIdNum, setShowIdNum] = useState(false);
+
+  // 데모용 가짜 SMS 인증: 발송 시 무작위 코드 생성 → 토스트로 보여줌
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [showSmsToast, setShowSmsToast] = useState(false);
 
   // 내국인 / 외국인 구분 — 이름 / ID 번호 입력 방식이 달라진다.
   const [nationality, setNationality] = useState<"kor" | "foreign">("kor");
@@ -104,7 +114,13 @@ export function VerificationScreen() {
 
     if (!codeSent) {
       if (!baseFilled) return;
+      // 가짜 SMS 발송: 무작위 6자리 코드 생성 + 토스트 노출
+      const newCode = generateMockCode();
+      setGeneratedCode(newCode);
       setCodeSent(true);
+      setShowSmsToast(true);
+      // 10초 뒤 자동으로 토스트 닫기
+      setTimeout(() => setShowSmsToast(false), 10000);
       return;
     }
 
@@ -113,7 +129,7 @@ export function VerificationScreen() {
       setVerifyError("인증 시간이 만료되었습니다. 재전송해주세요.");
       return;
     }
-    if (code !== MOCK_VERIFY_CODE) {
+    if (code !== generatedCode) {
       setVerifyError("인증번호가 일치하지 않습니다.");
       return;
     }
@@ -128,9 +144,14 @@ export function VerificationScreen() {
   };
 
   const handleResendCode = () => {
+    // 재전송 시에도 새 코드를 생성하여 매번 다른 값이 나오도록 함
+    const newCode = generateMockCode();
+    setGeneratedCode(newCode);
     setCode("");
     setVerifyError("");
     restartTimer();
+    setShowSmsToast(true);
+    setTimeout(() => setShowSmsToast(false), 10000);
   };
 
   return (
@@ -347,7 +368,46 @@ export function VerificationScreen() {
           onClose={() => setShowAlreadyJoined(false)}
         />
       )}
+
+      {showSmsToast && (
+        <SmsToast
+          code={generatedCode}
+          onClose={() => setShowSmsToast(false)}
+        />
+      )}
     </SignupLayout>
+  );
+}
+
+/**
+ * 가짜 SMS 알림 토스트.
+ * 실제 SMS API 연동 전까지 데모용으로 화면 상단에 iOS/Android 알림처럼 노출.
+ * 클릭하면 닫히고, handleMain 쪽에서 10초 뒤 자동 닫힘 처리도 한다.
+ */
+function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
+  return (
+    <div
+      role="alert"
+      onClick={onClose}
+      className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl bg-white/95 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-holo-purple-mid text-[16px] font-bold text-white">
+          H
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[13px] font-semibold text-holo-ink">HOLO</span>
+            <span className="shrink-0 text-[11px] text-holo-ink-3">방금</span>
+          </div>
+          <p className="mt-0.5 text-[13px] leading-snug text-holo-ink">
+            [HOLO] 본인확인 인증번호는{" "}
+            <span className="font-bold text-holo-purple-mid">{code}</span> 입니다.
+            정확히 입력해주세요.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
