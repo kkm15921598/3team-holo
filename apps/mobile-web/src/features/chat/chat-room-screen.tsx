@@ -119,6 +119,16 @@ function buildMembersFor(room: ChatRoom): Member[] {
 }
 
 // 방마다 다른 더미 메시지를 보여주기 위해 id 기반으로 살짝 변형
+// buildMessagesFor 결과 중 "고정 베이스 mock(시스템 + 처음 3개 대화)" 만 남기는 필터.
+// 마지막의 `room.lastMessage` 자동 추가 메시지(상대방 자리로 들어감)는 내가 보낸 메시지와
+// 충돌해 화면에 "상대방이 내 글을 말한 것처럼" 보이게 만들기 때문에 제외한다.
+const BASE_MOCK_ID_SUFFIXES = ["-sys", "-1", "-2", "-3"];
+function baseMockMessages(room: ChatRoom): ChatMessage[] {
+  return buildMessagesFor(room).filter((m) =>
+    BASE_MOCK_ID_SUFFIXES.some((suffix) => m.id.endsWith(suffix)),
+  );
+}
+
 function buildMessagesFor(room: ChatRoom): ChatMessage[] {
   // 더미 메시지를 누가 보낸 것처럼 보일지 결정 — 실제 방 멤버(memberNames) 를 우선 사용.
   // 없으면 fallback 풀. 그래서 헤더 아바타·정보 모달 멤버와 채팅 본문의 닉네임이 어긋나지 않음.
@@ -304,25 +314,105 @@ export function ChatRoomScreen() {
     // 1) 캐시된 메시지가 있으면 그대로 복원 (재진입 시 이전 대화 유지)
     const cached = getMessagesForRoom(id);
     if (cached) return cached;
-    // 2) 처음 진입이면 unread 기준으로 빌드
+    // 2) 처음 진입이면 베이스 mock(필터된)만 깔아두기 — 잘못된 last 메시지로 잔상이 보이지 않게.
+    //    실제 메시지는 곧 이어 useEffect 의 loadFromSupabase 에서 합쳐진다.
     return initialRoomRef.current
-      ? buildMessagesFor(initialRoomRef.current)
+      ? baseMockMessages(initialRoomRef.current)
       : CHAT_MESSAGES;
   });
 
   // 라우트 id가 바뀌면 메시지 갈아끼우고 읽음 처리
   useEffect(() => {
     if (!id) return;
-    const cached = getMessagesForRoom(id);
-    if (cached) {
-      setMessages(cached);
-    } else {
+
+    // 1) preset mock 대화를 먼저 깔고 (demo 흐름 보존)
+    // 2) 그 뒤에 Supabase 에 저장된 실제 메시지를 시간 순으로 붙인다.
+    // baseMockMessages 가 자동 last 메시지를 잘라내므로, 내 메시지가 상대 자리로
+    // 잘못 가는 잔상도 없다.
+    let cancelled = false;
+    const loadFromSupabase = async () => {
       const r = getRoom(id);
-      if (r) setMessages(buildMessagesFor(r));
-    }
+      const mockMessages: ChatMessage[] = r ? baseMockMessages(r) : [];
+
+      const { data: rows, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("room_id", id)
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.warn("Supabase 메시지 조회 실패:", error.message);
+        // 조회 실패 → 캐시 또는 mock 만으로
+        const cached = getMessagesForRoom(id);
+        setMessages(cached ?? mockMessages);
+        return;
+      }
+
+      const userPhone = getCurrentAccount();
+      const remote: ChatMessage[] = (rows ?? []).map((row: any) => ({
+        id: String(row.message_id ?? row.id),
+        nickname: row.sender_nickname ?? "",
+        content: row.content ?? "",
+        time: row.sent_time ?? "",
+        mine: row.sender_phone === userPhone,
+      }));
+
+      // mock + 실제 메시지 합쳐서 표시
+      const combined = [...mockMessages, ...remote];
+      setMessages(combined);
+      persistWithoutUnreadDivider(id, combined);
+    };
+
+    loadFromSupabase();
+
     // 한 프레임 뒤에 unread = 0
     const t = window.setTimeout(() => markRoomRead(id), 0);
-    return () => window.clearTimeout(t);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [id]);
+
+  // ── 실시간 구독 ─────────────────────────────────────────────
+  // 현재 방의 messages 테이블에 새 row 가 INSERT 되면 즉시 화면에 추가.
+  // 내가 직접 보낸 메시지는 send() 에서 이미 setMessages 로 추가되어 있으므로,
+  // 같은 id 가 이미 있으면 무시해서 중복을 막는다.
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`room-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `room_id=eq.${id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          const userPhone = getCurrentAccount();
+          const newMsg: ChatMessage = {
+            id: String(row.message_id ?? row.id),
+            nickname: row.sender_nickname ?? "",
+            content: row.content ?? "",
+            time: row.sent_time ?? "",
+            mine: row.sender_phone === userPhone,
+          };
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   // 마운트 시점의 마지막 메시지 id — 단순 입장만 했을 때는 updatedAt 을 갱신하지 않기 위함.
