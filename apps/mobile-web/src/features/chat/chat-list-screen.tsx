@@ -213,7 +213,7 @@ export function ChatListScreen() {
               lastMessage: "(대화를 시작해보세요)",
               lastTime: "방금",
               unread: 0,
-              online: Math.random() < 0.5,
+              online: false,
             };
             addRoom(newRoom);
             setShowNew(false);

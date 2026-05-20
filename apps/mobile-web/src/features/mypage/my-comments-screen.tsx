@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
@@ -7,16 +7,57 @@ import {
   removeCommentsByPostIds,
   useUserComments,
 } from "@/shared/stores/comments-store";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { useProfile } from "@/shared/hooks/use-profile";
+
+/** ISO 시간 → 상대 시간 표현 */
+function relativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "방금 전";
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  return `${days}일 전`;
+}
 
 export function MyCommentsScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
   const userComments = useUserComments();
+  const myProfile = useProfile();
 
-  // 사용자가 댓글을 단 적이 있는 게시글만 노출 — store 의 댓글 작성 시점 순서 유지
+  // Supabase에서 내가 단 댓글의 post_id, created_at 조회 (다른 기기에서 작성한 것 포함)
+  const [supabaseCommentMeta, setSupabaseCommentMeta] = useState<
+    { postId: string; createdAt: string }[]
+  >([]);
+  useEffect(() => {
+    if (!myProfile.nickname) return;
+    supabase
+      .from("comments")
+      .select("post_id, created_at")
+      .eq("nickname", myProfile.nickname)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setSupabaseCommentMeta(
+            data.map((row: any) => ({
+              postId: String(row.post_id),
+              createdAt: row.created_at ?? "",
+            })),
+          );
+        }
+      });
+  }, [myProfile.nickname]);
+
+  // 사용자가 댓글을 단 적이 있는 게시글만 노출
+  // localStorage(optimistic) + Supabase 합산, 중복 제거
   const items = useMemo(() => {
     const seen = new Set<string>();
     const ids: string[] = [];
+
+    // localStorage (optimistic, 최신순)
     for (let i = userComments.length - 1; i >= 0; i--) {
       const id = userComments[i].postId;
       if (!seen.has(id)) {
@@ -24,21 +65,34 @@ export function MyCommentsScreen() {
         ids.push(id);
       }
     }
+    // Supabase (이미 최신순으로 정렬됨, localStorage에 없는 것만 추가)
+    for (const row of supabaseCommentMeta) {
+      if (!seen.has(row.postId)) {
+        seen.add(row.postId);
+        ids.push(row.postId);
+      }
+    }
+
     return ids
       .map((id) => postsStore.getPosts().find((p) => p.id === id))
       .filter((p): p is Post => !!p);
-  }, [userComments]);
+  }, [userComments, supabaseCommentMeta]);
 
-  // 각 게시글에서 사용자가 가장 최근에 단 댓글의 timeAgo — 메타 행 시간 라벨.
-  // 사용자 댓글 배열의 끝쪽이 최신이므로 뒤에서부터 처음 매칭되는 항목을 사용.
+  // 각 게시글에서 가장 최근 댓글 시간
   const latestCommentTimeById = useMemo(() => {
     const m = new Map<string, string>();
+    // Supabase 먼저 (최신순 정렬된 상태)
+    for (const row of supabaseCommentMeta) {
+      if (!m.has(row.postId) && row.createdAt)
+        m.set(row.postId, relativeTime(row.createdAt));
+    }
+    // localStorage 덮어쓰기 (가장 최신 댓글 기준)
     for (let i = userComments.length - 1; i >= 0; i--) {
       const c = userComments[i];
       if (!m.has(c.postId)) m.set(c.postId, c.timeAgo);
     }
     return m;
-  }, [userComments]);
+  }, [userComments, supabaseCommentMeta]);
 
   const getTimeLabel = (p: Post): string | undefined =>
     latestCommentTimeById.get(p.id);

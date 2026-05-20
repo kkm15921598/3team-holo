@@ -135,8 +135,18 @@ export function ProfileDetailScreen() {
     return postsStore.getPosts().filter((p) => p.authorNickname === nickname)
       .length;
   }, [nickname, postsTick]);
-  // 댓글 카운트: comments-store에서 해당 닉네임의 댓글 수를 실시간으로 집계
-  const otherCommentsCount = 0; // Supabase 기반으로 추후 구현
+  // 댓글 카운트: Supabase comments 테이블에서 해당 닉네임의 댓글 수 조회
+  const [otherCommentsCount, setOtherCommentsCount] = useState(0);
+  useEffect(() => {
+    if (isMe) return;
+    supabase
+      .from("comments")
+      .select("id", { count: "exact", head: true })
+      .eq("nickname", nickname)
+      .then(({ count }) => {
+        if (count != null) setOtherCommentsCount(count);
+      });
+  }, [nickname, isMe]);
 
   // 친구 프로필 레벨 — Supabase에서 실제 값을 조회. 로딩 중엔 해시 기반 임시값 사용.
   const [otherLevel, setOtherLevel] = useState<number | undefined>(undefined);
@@ -676,6 +686,21 @@ function FlagIcon() {
   return (
     <svg
       width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 22V4" />
+      <path d="M4 4h13l-2 4 2 4H4" />
+    </svg>
+  );
+}
+
       height="16"
       viewBox="0 0 24 24"
       fill="none"

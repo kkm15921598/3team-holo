@@ -19,6 +19,7 @@ import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, leavePost, useJoinedSet } from "@/shared/stores/joined-store";
 import { addComment, useUserComments, type StoredComment } from "@/shared/stores/comments-store";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
 import { markPostViewed } from "@/shared/stores/viewed-posts-store";
 import {
   getTotalViews,
@@ -220,32 +221,31 @@ export function BoardDetailScreen() {
             content: row.content ?? "",
             timeAgo: "방금 전",
             parentId: row.parent_id ?? undefined,
+            hasPhoto: row.photo_url ? true : undefined,
+            photoUrl: row.photo_url ?? undefined,
           })));
         }
       });
   }, [post.id]);
-  // 사용자가 작성한 댓글/대댓글은 store 에서 가져와 mock 과 합친다.
+  // 사용자가 작성한 댓글/대댓글은 store 에서 가져온다.
   const userComments = useUserComments();
   const comments = useMemo<CommentThread[]>(() => {
-    const parents: CommentThread[] = initialComments.map((c) => ({
-      id: c.id,
-      nickname: c.nickname,
-      content: c.content,
-      timeAgo: c.timeAgo,
-      replies: [],
-    }));
-    // Supabase 댓글 추가 (localStorage와 중복 제거)
-    const localIds = new Set(userComments.map((c) => c.id));
+    /**
+     * Supabase 댓글을 단일 소스로 사용.
+     * localStorage(userComments)는 전송 직후 Supabase 반영 전 optimistic 용도로만 추가.
+     *
+     * 중복 방지 전략:
+     * - Supabase ID set → localStorage에서 같은 UUID가 있으면 건너뜀
+     * - nickname+content 조합 set → 내가 쓴 댓글이 Supabase에도 있으면 건너뜀
+     *   (localStorage ID는 `c-timestamp`, Supabase ID는 UUID라 ID로는 매칭 불가)
+     */
+    const parentMap = new Map<string, CommentThread>();
+    const parents: CommentThread[] = [];
+
+    // 1) Supabase 부모 댓글 먼저 추가
     for (const c of supabaseComments) {
-      if (!localIds.has(c.id) && !c.parentId) {
-        parents.push({ id: c.id, nickname: c.nickname, content: c.content, timeAgo: c.timeAgo, replies: [] });
-      }
-    }
-    const myForThisPost = userComments.filter((c) => c.postId === post.id);
-    // 사용자가 단 일반 댓글들을 뒤에 붙인다.
-    for (const c of myForThisPost) {
       if (!c.parentId) {
-        parents.push({
+        const thread: CommentThread = {
           id: c.id,
           nickname: c.nickname,
           content: c.content,
@@ -255,29 +255,79 @@ export function BoardDetailScreen() {
           hasMap: c.hasMap,
           location: c.location,
           replies: [],
-        });
+        };
+        parents.push(thread);
+        parentMap.set(c.id, thread);
       }
     }
-    // 대댓글들을 부모 아래로 정렬해서 붙인다.
-    for (const r of myForThisPost) {
-      if (!r.parentId) continue;
-      const parent = parents.find((p) => p.id === r.parentId);
+
+    // 2) Supabase 대댓글을 부모 thread에 연결
+    for (const c of supabaseComments) {
+      if (!c.parentId) continue;
+      const parent = parentMap.get(c.parentId);
       if (!parent) continue;
       parent.replies.push({
-        id: r.id,
-        nickname: r.nickname,
-        content: r.content,
-        timeAgo: r.timeAgo,
-        isAuthor: r.isAuthor,
-        hasMap: r.hasMap,
-        hasPhoto: r.hasPhoto,
-        photoUrl: r.photoUrl,
-        location: r.location,
+        id: c.id,
+        nickname: c.nickname,
+        content: c.content,
+        timeAgo: c.timeAgo,
+        isAuthor: c.isAuthor,
+        hasMap: c.hasMap,
+        hasPhoto: c.hasPhoto,
+        photoUrl: c.photoUrl,
+        location: c.location,
       });
     }
+
+    // 3) localStorage 댓글 중 Supabase에 아직 없는 것만 optimistic으로 추가
+    //    (전송 직후 Supabase 반영 전 짧은 순간)
+    const supabaseIds = new Set(supabaseComments.map((c) => c.id));
+    const supabaseKeys = new Set(
+      supabaseComments.map((c) => `${c.nickname}:${c.content}`)
+    );
+    const myForThisPost = userComments.filter((c) => c.postId === post.id);
+
+    for (const c of myForThisPost) {
+      const key = `${c.nickname}:${c.content}`;
+      if (supabaseIds.has(c.id) || supabaseKeys.has(key)) continue;
+      if (!c.parentId) {
+        const thread: CommentThread = {
+          id: c.id,
+          nickname: c.nickname,
+          content: c.content,
+          timeAgo: c.timeAgo,
+          hasPhoto: c.hasPhoto,
+          photoUrl: c.photoUrl,
+          hasMap: c.hasMap,
+          location: c.location,
+          replies: [],
+        };
+        parents.push(thread);
+        parentMap.set(c.id, thread);
+      }
+    }
+
+    // 4) localStorage 대댓글도 optimistic 처리
+    for (const c of myForThisPost) {
+      if (!c.parentId) continue;
+      const key = `${c.nickname}:${c.content}`;
+      if (supabaseIds.has(c.id) || supabaseKeys.has(key)) continue;
+      const parent = parentMap.get(c.parentId);
+      if (!parent) continue;
+      parent.replies.push({
+        id: c.id,
+        nickname: c.nickname,
+        content: c.content,
+        timeAgo: c.timeAgo,
+        isAuthor: c.isAuthor,
+        hasMap: c.hasMap,
+        hasPhoto: c.hasPhoto,
+        photoUrl: c.photoUrl,
+        location: c.location,
+      });
+    }
+
     return parents;
-    // initialComments 는 mock 상수라 매 렌더마다 새 배열일 수 있어 의존성에 넣지 않는다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userComments, supabaseComments, post.id]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -391,9 +441,14 @@ export function BoardDetailScreen() {
     ? (post.authorPhone ? post.authorPhone === myPhone : post.authorNickname === profile.nickname)
     : post.authorNickname === profile.nickname;
 
-  const handleSendComment = () => {
+  const handleSendComment = async () => {
     // 사진/지도만 첨부하고 텍스트가 없어도 전송 가능 — 답글 입력과 동일한 정책.
     if (!hasCommentText && !commentHasPhoto && !commentLocation) return;
+    // 사진이 base64라면 Storage에 업로드 후 공개 URL 사용 (fallback: base64 그대로)
+    const resolvedPhotoUrl =
+      commentPhotoUrl?.startsWith("data:")
+        ? await uploadPhotoToStorage(commentPhotoUrl, "comments")
+        : commentPhotoUrl ?? undefined;
     addComment({
       id: `c-${Date.now()}`,
       postId: post.id,
@@ -401,8 +456,7 @@ export function BoardDetailScreen() {
       content: commentText.trim(),
       timeAgo: "방금 전",
       hasPhoto: commentHasPhoto || undefined,
-      // 실제 이미지 data URL — mock 환경이라 base64 그대로 localStorage 에 저장된다.
-      photoUrl: commentPhotoUrl ?? undefined,
+      photoUrl: resolvedPhotoUrl,
       hasMap: commentLocation ? true : undefined,
       location: commentLocation ?? undefined,
     });
@@ -423,8 +477,13 @@ export function BoardDetailScreen() {
   /** 답글 입력창의 + 버튼 팝업 (사진/지도) 열림 여부. parentId 단위로는 한 번에 하나만 열리므로 boolean. */
   const [showReplyAttach, setShowReplyAttach] = useState(false);
 
-  const handleSendReply = (parentId: string) => {
+  const handleSendReply = async (parentId: string) => {
     if (!hasReplyText && !replyHasPhoto && !replyHasMap) return;
+    // 사진이 base64라면 Storage에 업로드 후 공개 URL 사용 (fallback: base64 그대로)
+    const resolvedReplyPhotoUrl =
+      replyPhotoUrl?.startsWith("data:")
+        ? await uploadPhotoToStorage(replyPhotoUrl, "comments")
+        : replyPhotoUrl ?? undefined;
     addComment({
       id: `r-${Date.now()}`,
       postId: post.id,
@@ -435,7 +494,7 @@ export function BoardDetailScreen() {
       isAuthor: isMine,
       hasMap: replyHasMap,
       hasPhoto: replyHasPhoto,
-      photoUrl: replyPhotoUrl ?? undefined,
+      photoUrl: resolvedReplyPhotoUrl,
       location: replyLocation ?? undefined,
     });
     awardXp("comment");
@@ -1731,6 +1790,61 @@ function PlusIcon() {
   );
 }
 function CameraIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 7h3l2-3h8l2 3h3v13H3z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+function PhotoIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
+  );
+}
+function PinIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 6l12 12M6 18 18 6" />
+    </svg>
+  );
+}
+function CheckMark({ color = "currentColor" }: { color?: string }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+function SendIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11 21 3l-8 18-2-8z" />
+    </svg>
+  );
+}
+function ReplyArrowIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-1">
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h12a4 4 0 0 1 4 4v7" />
+    </svg>
+  );
+}
+{
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M3 7h3l2-3h8l2 3h3v13H3z" />

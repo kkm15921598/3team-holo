@@ -82,25 +82,8 @@ function buildMembersFor(room: ChatRoom): Member[] {
   if (room.memberNames && room.memberNames.length > 0) {
     nicknames = room.memberNames;
   } else {
-    // 2) 없으면 pool에서 memberCount-1만큼 채움 (mock 기존 방)
-    const pool = [
-      "고소한 감자",
-      "보송보송한 햄찌",
-      "새콤한 망고",
-      "매콤한 떡볶이",
-      "촉촉한 푸딩",
-      "고소한 호빵",
-      "쫄깃한 라면",
-      "매콤한 만두",
-      "달콤한 수박",
-      "새콤한 토마토",
-      "씩씩한 당근",
-    ];
-    const otherCount = Math.max(0, room.memberCount - 1);
+    // 2) memberNames 없음 — 실제 멤버 정보 없으므로 빈 배열 (가짜 닉네임 사용 안 함)
     nicknames = [];
-    for (let i = 0; i < otherCount; i++) {
-      nicknames.push(pool[i % pool.length]);
-    }
   }
 
   const others: Member[] = nicknames.map((nickname, i) => ({
@@ -225,17 +208,25 @@ export function ChatRoomScreen() {
       }
 
       const userPhone = getCurrentAccount();
+      const memberCount = r?.memberCount ?? 2;
       const remote: ChatMessage[] = (rows ?? []).map((row: any) => {
         // created_at → 날짜 구분선용 date 필드 (YYYY-MM-DD)
         const createdAt = row.created_at ? new Date(row.created_at) : new Date();
         const date = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}-${String(createdAt.getDate()).padStart(2, "0")}`;
+        const isMine = row.sender_phone === userPhone;
+        // read_by 배열 기반 실제 미읽음 수 계산 (내 메시지만 표시)
+        const readByArr: string[] = Array.isArray(row.read_by) ? row.read_by : [];
+        const readBy = isMine
+          ? Math.max(0, memberCount - 1 - readByArr.length)
+          : undefined;
         return {
           id: String(row.message_id ?? row.id),
           nickname: row.sender_nickname ?? "",
           content: row.content ?? "",
           time: row.sent_time ?? "",
-          mine: row.sender_phone === userPhone,
+          mine: isMine,
           date,
+          readBy,
         };
       });
 
@@ -261,7 +252,17 @@ export function ChatRoomScreen() {
 
     loadFromSupabase();
 
-    // 한 프레임 뒤에 unread = 0
+    // 채팅방 진입 시: 상대방이 보낸 메시지를 읽음 처리 (Supabase RPC)
+    // + 로컬 unread 배지도 0으로 초기화
+    const userPhone = getCurrentAccount();
+    if (userPhone && id) {
+      supabase.rpc("mark_room_messages_read", {
+        p_room_id: id,
+        p_user_phone: userPhone,
+      }).then(({ error }) => {
+        if (error) console.warn("읽음 처리 실패:", error.message);
+      });
+    }
     const t = window.setTimeout(() => markRoomRead(id), 0);
     return () => {
       cancelled = true;
@@ -270,11 +271,13 @@ export function ChatRoomScreen() {
   }, [id]);
 
   // ── 실시간 구독 ─────────────────────────────────────────────
-  // 현재 방의 messages 테이블에 새 row 가 INSERT 되면 즉시 화면에 추가.
-  // 내가 직접 보낸 메시지는 send() 에서 이미 setMessages 로 추가되어 있으므로,
-  // 같은 id 가 이미 있으면 무시해서 중복을 막는다.
+  // INSERT: 새 메시지 즉시 표시 (중복 방지)
+  // UPDATE: read_by 변경 시 readBy 숫자 실시간 갱신 → "1" 배지 제거
   useEffect(() => {
     if (!id) return;
+
+    const room = getRoom(id);
+    const memberCount = room?.memberCount ?? 2;
 
     const channel = supabase
       .channel(`room-${id}`)
@@ -289,17 +292,43 @@ export function ChatRoomScreen() {
         (payload) => {
           const row = payload.new as any;
           const userPhone = getCurrentAccount();
+          const isMine = row.sender_phone === userPhone;
+          const readByArr: string[] = Array.isArray(row.read_by) ? row.read_by : [];
           const newMsg: ChatMessage = {
             id: String(row.message_id ?? row.id),
             nickname: row.sender_nickname ?? "",
             content: row.content ?? "",
             time: row.sent_time ?? "",
-            mine: row.sender_phone === userPhone,
+            mine: isMine,
+            readBy: isMine ? Math.max(0, memberCount - 1 - readByArr.length) : undefined,
           };
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `room_id=eq.${id}`,
+        },
+        (payload) => {
+          // read_by 배열이 바뀌면 해당 메시지의 readBy 숫자를 재계산
+          const row = payload.new as any;
+          const msgId = String(row.message_id ?? row.id);
+          const readByArr: string[] = Array.isArray(row.read_by) ? row.read_by : [];
+          const newReadBy = Math.max(0, memberCount - 1 - readByArr.length);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msgId && m.mine
+                ? { ...m, readBy: newReadBy }
+                : m,
+            ),
+          );
         },
       )
       .subscribe();
@@ -419,6 +448,7 @@ export function ChatRoomScreen() {
         sender_nickname: myNickname,
         content: v,
         sent_time: time,
+        read_by: [],  // 발송 시 아무도 읽지 않은 상태
       }).then(({ error }) => {
         if (error) console.warn("Supabase 메시지 저장 실패:", error.message);
       });
@@ -1119,9 +1149,9 @@ export function ChatRoomScreen() {
           candidates={members.filter((m) => !m.isMe).map((m) => m.nickname)}
           onSelectTarget={(nickname) => {
             setVoteKick({ target: nickname, phase: "voting" });
-            // 데모 시뮬레이션 — 3초 뒤 70% 확률로 만장일치 통과
+            // 강퇴 투표 — 3초 뒤 통과 처리 (방장 단독 결정)
             window.setTimeout(() => {
-              const passed = Math.random() > 0.3;
+              const passed = true;
               setVoteKick({
                 target: nickname,
                 phase: passed ? "passed" : "rejected",
@@ -3026,3 +3056,38 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
+rentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11 21 3l-8 18-2-8z" />
+    </svg>
+  );
+}
+function CrownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFCB3B" stroke="#FFCB3B" strokeWidth="1" aria-hidden>
+      <path d="m3 18 2-9 5 4 2-7 2 7 5-4 2 9z" />
+    </svg>
+  );
+}
+function UserPlusIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21c0-4 3.6-7 7-7s7 3 7 7" />
+      <path d="M19 8v6M16 11h6" />
+    </svg>
+  );
+}
+function FileIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}

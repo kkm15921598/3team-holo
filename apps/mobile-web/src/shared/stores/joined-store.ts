@@ -142,3 +142,7 @@ if (typeof window !== "undefined") {
     window.setTimeout(() => syncJoinedFromSupabase(), 800);
   });
 }
+> {
+    window.setTimeout(() => syncJoinedFromSupabase(), 800);
+  });
+}

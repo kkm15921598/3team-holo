@@ -278,3 +278,6 @@ if (typeof window !== "undefined") {
     window.setTimeout(() => initChatNotificationListener(), 600);
   });
 }
+meout(() => initChatNotificationListener(), 600);
+  });
+}

@@ -1,152 +1,34 @@
-import { useSyncExternalStore } from "react";
-import type { Post } from "@/shared/mock/data";
-import { supabase } from "@/shared/lib/supabaseClient";
-import { getCurrentAccount } from "@/shared/stores/account-choices-store";
-
 /**
  * 게시글 조회수.
  *
- * 표시값 = baseline(post.likes / comments 기반 결정적 값) + 사용자 누적 증분.
- * - baseline 은 likes·comments·id 만 있으면 항상 같은 값이라 mock 데이터에 직접
- *   views 필드를 박아두지 않아도 자연스러운 초기값을 만들 수 있다.
- * - 사용자가 상세 화면에 진입할 때마다 +1 (incrementViewCount).
- *   여러 번 들락거리면 누적되어 늘어남 → 자기 글 조회수가 올라가는 데모 효과.
+ * Supabase posts.views 컬럼이 실제 조회수의 원천.
+ * - 상세 화면 진입 시 postsStore.patchViews() 를 통해 Supabase RPC 로 원자적 +1.
+ * - 중복 카운트 방지: 같은 세션에서 이미 조회한 post id 는 viewed-posts-store 가 관리.
+ * - getTotalViews: post.views 값을 그대로 반환 (가짜 baseline 없음).
  */
+import { useSyncExternalStore } from "react";
+import type { Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
 
-const STORAGE_KEY = "holo:view-counts:v1";
-
-function loadInitial(): Record<string, number> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        // 숫자 값만 남김
-        const out: Record<string, number> = {};
-        for (const [k, v] of Object.entries(parsed)) {
-          if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
-        }
-        return out;
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return {};
-}
-
-let counts: Record<string, number> = loadInitial();
-const listeners = new Set<() => void>();
-
-function persist() {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(counts));
-  } catch {
-    // ignore (quota / private mode)
-  }
-}
-
-function emit() {
-  listeners.forEach((l) => l());
-}
-
-/** post id 문자열을 안정적 양의 정수 해시로 변환 (FNV-1a 변형) */
-function stableHash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/**
- * 게시글의 기본 조회수 — post id 해시만으로 결정. 같은 post 면 항상 같은 값.
- *
- * 분포 (570개 글 기준 대략):
- *  - 0~50    : ~92% (≈ 525개) — 평범한 글, 0~50 사이에서 골고루
- *  - 51~100  : ~5.5% (≈ 30개) — 조금 관심받은 글
- *  - 101~200 : ~2%  (≈ 11개)  — 인기 글 (몇 개)
- *  - 201~300 : ~0.5% (≈ 3~5개) — 극상위 인기 글 (극소수)
- */
-export function baselineViewsForPost(post: Post): number {
-  const h = stableHash(post.id);
-  const bucket = h % 1000;
-  // 가장 좁은 구간(상위 인기)부터 차례로 판정.
-  if (bucket < 5) {
-    // 201~300 — 극소수
-    return 201 + ((h >>> 3) % 100);
-  }
-  if (bucket < 25) {
-    // 101~200 — 몇 개
-    return 101 + ((h >>> 3) % 100);
-  }
-  if (bucket < 80) {
-    // 51~100 — 약 30개 정도
-    return 51 + ((h >>> 3) % 50);
-  }
-  // 0~50 — 대부분 (균등 분포)
-  return (h >>> 3) % 51;
-}
-
-/** 상세 화면 진입 시 호출 — 사용자 증분 +1 */
-export function incrementViewCount(id: string): void {
-  counts = { ...counts, [id]: (counts[id] ?? 0) + 1 };
-  persist();
-  emit();
-  const userPhone = getCurrentAccount();
-  if (userPhone) {
-    supabase.from("users").update({ view_counts: counts })
-      .eq("phone", userPhone).then(({ error }) => {
-        if (error) console.warn("Supabase 조회수 저장 실패:", error.message);
-      });
-  }
-}
-
-/** 표시용 총 조회수 = baseline + 사용자 증분 */
+/** 표시용 조회수 — Supabase 에서 로드한 실제 값 */
 export function getTotalViews(post: Post): number {
-  return baselineViewsForPost(post) + (counts[post.id] ?? 0);
+  return post.views ?? 0;
 }
 
-const subscribe = (cb: () => void) => {
-  listeners.add(cb);
-  return () => {
-    listeners.delete(cb);
-  };
-};
-const snapshot = () => counts;
+/** 상세 화면 진입 시 호출 — postsStore 를 통해 Supabase RPC +1 */
+export function incrementViewCount(id: string): void {
+  postsStore.patchViews(id);
+}
 
-/** 모든 조회수 증분 맵을 React 컴포넌트에서 구독 */
+/** React 컴포넌트용 — postsStore 구독으로 조회수 변경 시 재렌더 트리거 */
 export function useViewCounts(): Record<string, number> {
-  return useSyncExternalStore(subscribe, snapshot, snapshot);
-}
-
-/**
- * Supabase users.view_counts 에서 조회수 증분 맵 읽어와 병합.
- */
-export async function syncViewCountsFromSupabase(): Promise<void> {
-  const userPhone = getCurrentAccount();
-  if (!userPhone) return;
-  const { data, error } = await supabase
-    .from("users")
-    .select("view_counts")
-    .eq("phone", userPhone)
-    .single();
-  if (error || !data || !data.view_counts) return;
-  const remote = data.view_counts as Record<string, number>;
-  const merged: Record<string, number> = { ...remote };
-  for (const [k, v] of Object.entries(counts)) {
-    merged[k] = Math.max(merged[k] ?? 0, v);
-  }
-  counts = merged;
-  persist();
-  emit();
-}
-
-if (typeof window !== "undefined") {
-  window.addEventListener("load", () => {
-    window.setTimeout(() => syncViewCountsFromSupabase(), 900);
-  });
+  return useSyncExternalStore(
+    (cb) => postsStore.subscribe(cb),
+    () => {
+      const map: Record<string, number> = {};
+      postsStore.getPosts().forEach((p) => { map[p.id] = p.views ?? 0; });
+      return map;
+    },
+    () => ({}),
+  );
 }

@@ -73,6 +73,7 @@ export function addComment(c: StoredComment): void {
       content: c.content,
       nickname: c.nickname,
       parent_id: c.parentId ?? null,
+      photo_url: c.photoUrl ?? null,
     }).then(({ error }) => {
       if (error) console.warn("Supabase 댓글 저장 실패:", error.message);
     });
@@ -121,4 +122,6 @@ const snapshot = () => state;
 /** 전체 사용자 댓글 배열 (드물게 필요) */
 export function useUserComments(): StoredComment[] {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+re(subscribe, snapshot, snapshot);
 }

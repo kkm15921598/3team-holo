@@ -444,3 +444,16 @@ export function pushChatMessage(
   
   return item;
 }
+: roomName,
+    body: `${senderNickname}: ${preview}`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/chat/${roomId}`,
+  };
+  _addNotif(item);
+  
+  return item;
+}
+ item;
+}

@@ -60,27 +60,14 @@ export function calcJoined(post: Post): { capacity: number; baseJoined: number }
   return { capacity, baseJoined: Math.min(capacity, adjusted) };
 }
 
-/** 닉네임 부족 시 사용하는 대체 닉네임 풀. */
-export const MEMBER_FALLBACK_POOL = [
-  "고소한 감자",
-  "보송보송한 햄찌",
-  "새콤한 망고",
-  "매콤한 떡볶이",
-  "포근한 두부",
-  "달콤한 복숭아",
-];
-
 /**
  * 게시글에서 채팅방/카드 멤버 닉네임 N개를 도출.
  * - 1순위: 작성자 (첫 번째 → 방장)
- * - 3순위: 댓글 작성자
- * - 4순위: 일반 닉네임 fallback 풀
- * 정확히 targetCount 개를 반환하며, 부족하면 풀로 채우고 넘치면 잘라낸다.
- * 항상 나(ME) 는 제외한다.
+ * 가짜 닉네임 풀 사용 없이, 실제 참여자 정보만 반환.
+ * targetCount 보다 적을 수 있으며, 항상 나(ME) 는 제외한다.
  */
 export function deriveMeetupMembers(post: Post, targetCount: number): string[] {
   const names: string[] = [];
-  // 현재 로그인 계정 닉네임을 멤버 목록에서 제외 (ME.nickname 은 데모용 고정값).
   const myNickname = getProfile().nickname;
   const add = (n: string | undefined) => {
     if (!n || n === myNickname || names.includes(n)) return;
@@ -89,14 +76,6 @@ export function deriveMeetupMembers(post: Post, targetCount: number): string[] {
 
   // 1) 작성자
   add(post.authorNickname);
-  // 3) 댓글 작성자
-  const comments: { nickname: string }[] = [];
-  for (const c of comments) add(c.nickname);
-  // 4) Fallback 풀로 부족분 채움
-  for (const n of MEMBER_FALLBACK_POOL) {
-    if (names.length >= targetCount) break;
-    add(n);
-  }
 
   return names.slice(0, Math.max(0, targetCount));
 }

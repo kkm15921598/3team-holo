@@ -8,14 +8,6 @@ import { getAvatarUrl } from "./avatars";
 import { getProfile } from "@/shared/stores/profile-store";
 import { ME_PERSONA } from "@/features/home/home-faces";
 
-/** memberNames 가 부족할 때 채워 넣는 fallback 닉네임 풀. */
-const FALLBACK_NICKS = [
-  "고소한 감자",
-  "보송보송한 햄찌",
-  "새콤한 망고",
-  "매콤한 떡볶이",
-];
-
 /** 본인 닉네임이면 프로필 store 의 사진을, 그 외에는 닉네임 시드 아바타를 반환. */
 function avatarSrcFor(nickname: string): string {
   const profile = getProfile();
@@ -26,38 +18,25 @@ function avatarSrcFor(nickname: string): string {
 }
 
 /**
- * 방의 멤버 시드 닉네임을 인원 수만큼 만들어 반환. 항상 본인을 첫 번째로 포함.
- * - memberNames 가 있으면 그것을 우선
- * - 부족하면 fallback 풀로 채움
- * - 그래도 부족하면 방 이름 시드 더미로 채움
- * 결과는 최소 2개, 최대 4개로 슬라이스.
+ * 방의 멤버 시드 닉네임을 반환. 항상 본인을 첫 번째로 포함.
+ * - memberNames 가 있으면 그것을 우선 사용 (실제 멤버만)
+ * 결과는 최대 4개로 슬라이스.
  */
 function buildSeeds(room: ChatRoom): string[] {
   const profile = getProfile();
   const myNickname = profile.nickname;
 
-  const target = Math.max(2, Math.min(4, room.memberCount));
   const seeds: string[] = [myNickname];
 
-  // 1) 방의 실제 멤버 닉네임
+  // 방의 실제 멤버 닉네임만 사용 (가짜 fallback 없음)
   if (room.memberNames) {
     for (const n of room.memberNames) {
-      if (seeds.length >= target) break;
-      if (!seeds.includes(n)) seeds.push(n);
+      if (seeds.length >= 4) break;
+      if (n && !seeds.includes(n)) seeds.push(n);
     }
   }
-  // 2) Fallback 풀
-  for (const n of FALLBACK_NICKS) {
-    if (seeds.length >= target) break;
-    if (!seeds.includes(n)) seeds.push(n);
-  }
-  // 3) 방 이름 시드 더미
-  let filler = 0;
-  while (seeds.length < target) {
-    seeds.push(`${room.name}_g${filler++}`);
-  }
 
-  return seeds.slice(0, target);
+  return seeds;
 }
 
 type Size = "sm" | "md";
@@ -95,6 +74,17 @@ export function GroupAvatar({
   }
 
   const seeds = buildSeeds(room);
+
+  // 1명(자신만) → 단일 원형 아바타
+  if (seeds.length === 1) {
+    return (
+      <img
+        src={avatarSrcFor(seeds[0])}
+        alt=""
+        className={`${SIZE_BOX[size]} shrink-0 rounded-full bg-holo-yellow-room object-cover`}
+      />
+    );
+  }
 
   // 2명 → 좌우 2분할
   if (seeds.length === 2) {

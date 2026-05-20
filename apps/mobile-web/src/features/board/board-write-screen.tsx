@@ -13,6 +13,7 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { ensureMeetupRoom, isMeetupPost, meetupRoomId } from "./meetup-utils";
 import { joinPost } from "@/shared/stores/joined-store";
 import { containsProfanity } from "@/shared/utils/profanity";
+import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
 
 const CATEGORIES = [
   "자유게시판",
@@ -99,6 +100,8 @@ export function BoardWriteScreen() {
   const [content, setContent] = useState<string>(initialContent);
 
   const [showExitModal, setShowExitModal] = useState(false);
+  /** 사진 Storage 업로드 중 — true 이면 등록하기 버튼 비활성 */
+  const [uploading, setUploading] = useState(false);
   /**
    * 입력 누락 안내 모달 — 비어 있으면 null, 채워져 있으면 안내 메시지.
    * 메시지를 상태에 직접 담아 어떤 필드가 빠졌는지에 따라 동적으로 노출한다.
@@ -268,7 +271,7 @@ export function BoardWriteScreen() {
   };
 
   // Publish: build/update a Post, then navigate to Board2.
-  const handlePublish = () => {
+  const handlePublish = async () => {
     // 제목·내용 둘 다 비어 있으면 한 번에 안내, 한 쪽만 비어 있으면 빠진 항목을 콕 짚어 안내.
     if (!title.trim() && !content.trim()) {
       setEmptyAlert("제목과 내용을 모두 입력해 주세요.");
@@ -295,6 +298,24 @@ export function BoardWriteScreen() {
       setEmptyAlert(`${where}에 사용할 수 없는 단어가 포함돼 있어요.`);
       return;
     }
+
+    // 사진 Storage 업로드 — base64 data URL 을 Supabase Storage 공개 URL 로 변환.
+    // 버킷 미존재 / 업로드 오류 시 원본 base64 fallback 사용.
+    const targetPostId = cameFromEdit
+      ? (incomingState?.postId ?? `post-${Date.now()}`)
+      : `post-${Date.now()}`;
+    let resolvedPhotoUrls = photoUrls;
+    if (photoUrls.some((url) => url.startsWith("data:"))) {
+      setUploading(true);
+      try {
+        resolvedPhotoUrls = await Promise.all(
+          photoUrls.map((url) => uploadPhotoToStorage(url, `posts/${targetPostId}`)),
+        );
+      } finally {
+        setUploading(false);
+      }
+    }
+
     if (cameFromEdit && incomingState?.postId) {
       // Edit flow — update existing post in place.
       const existing = postsStore
@@ -319,12 +340,12 @@ export function BoardWriteScreen() {
             existing.place,
           location: postLocation ?? existing.location,
           // 첨부 사진 — 빈 배열이면 명시적으로 undefined 로 저장해 잔존 데이터 정리.
-          photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+          photoUrls: resolvedPhotoUrls.length > 0 ? resolvedPhotoUrls : undefined,
         });
       }
     } else {
       // New post flow — prepend.
-      const newPostId = `post-${Date.now()}`;
+      const newPostId = targetPostId;
       const newPostTitle = title.trim() || "(제목 없음)";
       const newPost: Post = {
         id: newPostId,
@@ -350,8 +371,8 @@ export function BoardWriteScreen() {
         peopleCount: isSimpleCategory ? null : peopleCount,
         place: postLocation?.placeName ?? incomingState?.place,
         location: postLocation ?? undefined,
-        // 첨부 사진이 있으면 함께 저장 — 게시글 상세에서 본문 위/아래에 노출.
-        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+        // 첨부 사진이 있으면 함께 저장 — Storage URL 또는 fallback base64.
+        photoUrls: resolvedPhotoUrls.length > 0 ? resolvedPhotoUrls : undefined,
       };
       postsStore.prepend(newPost);
 
@@ -432,10 +453,11 @@ export function BoardWriteScreen() {
           <span className="h-3 w-px bg-holo-line" />
           <button
             type="button"
-            className="font-semibold text-[#7448DD]"
-            onClick={handlePublish}
+            className={`font-semibold ${uploading ? "text-holo-ink-3" : "text-[#7448DD]"}`}
+            onClick={uploading ? undefined : handlePublish}
+            disabled={uploading}
           >
-            등록하기
+            {uploading ? "업로드 중…" : "등록하기"}
           </button>
         </div>
       </header>
@@ -1199,6 +1221,35 @@ function PersonIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+function PhotoIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
+  );
+}
+function PinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
+  );
+}
+function BackIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+4H8a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
   );

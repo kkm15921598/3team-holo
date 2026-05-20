@@ -49,9 +49,9 @@ export function pickPersonas(seed: number, count: number): Persona[] {
   return result;
 }
 
-/** The current user's persona (for the home profile card) */
+/** 기본 여성 프로필 얼굴 — profileFace 미설정 시 fallback 이미지 */
 export const ME_PERSONA: Persona = {
-  name: "무지는 단무지",
+  name: "",
   face: enc("woman/girl", "ggx8izggx8izggx8_8"),
 };
 
@@ -72,4 +72,6 @@ export const MALE_DEFAULT_FACE: string = MALE_FACES[0];
 
 export function defaultFaceForGender(gender: "M" | "F"): string {
   return gender === "M" ? MALE_DEFAULT_FACE : FEMALE_DEFAULT_FACE;
+}
+CE;
 }

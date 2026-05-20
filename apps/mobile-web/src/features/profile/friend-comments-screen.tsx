@@ -3,10 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "@/features/mypage/managed-list";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 /**
  * 친구가 댓글을 단 게시글 목록.
- * mock POST_COMMENTS 에서 nickname 으로 댓글을 단 글 id 를 모은 뒤,
+ * Supabase comments 테이블에서 nickname 으로 댓글을 단 글 id 를 모은 뒤,
  * postsStore 에서 해당 글을 찾아 카드 형태로 노출.
  */
 export function FriendCommentsScreen() {
@@ -19,16 +20,28 @@ export function FriendCommentsScreen() {
     return postsStore.subscribe(() => setAllPosts(postsStore.getPosts()));
   }, []);
 
+  // Supabase에서 해당 닉네임이 댓글 단 post_id 목록 조회
+  const [commentPostIds, setCommentPostIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!nickname) return;
+    supabase
+      .from("comments")
+      .select("post_id")
+      .eq("nickname", nickname)
+      .then(({ data }) => {
+        if (data) {
+          const ids = [...new Set(data.map((row: any) => String(row.post_id)))];
+          setCommentPostIds(ids);
+        }
+      });
+  }, [nickname]);
+
   const items = useMemo(() => {
-    if (!nickname) return [];
-    // POST_COMMENTS가 제거되어 mock 댓글 기반 조회 불가.
-    // postsStore에서 해당 닉네임이 작성한 게시글만 표시.
-    const postIds = new Set<string>();
-    // postsStore(최신 글 포함) lookup
-    return Array.from(postIds)
+    if (!nickname || commentPostIds.length === 0) return [];
+    return commentPostIds
       .map((pid) => allPosts.find((p) => p.id === pid))
       .filter((p): p is Post => !!p);
-  }, [nickname, allPosts]);
+  }, [nickname, allPosts, commentPostIds]);
 
   return (
     <main className="flex flex-1 flex-col">

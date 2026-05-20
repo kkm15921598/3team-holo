@@ -60,6 +60,7 @@ function rowToPost(row: Record<string, unknown>): Post {
     peopleCount:
       row.people_count != null ? (row.people_count as number) : null,
     place: (row.place as string) ?? undefined,
+    views: (row.views as number) ?? 0,
   };
 }
 
@@ -189,6 +190,7 @@ export const postsStore = {
       end_date: post.endDate ?? null,
       people_count: post.peopleCount ?? null,
       place: post.place ?? null,
+      views: 0,
       bumped_at: new Date().toISOString(),
       is_deleted: false,  // 명시적으로 false 저장 — NULL이면 eq("is_deleted", false) 조회에서 누락됨
     }).then(({ error }) => {
@@ -293,6 +295,38 @@ export const postsStore = {
       .eq("id", postId).then(({ error }) => {
         if (error) console.warn("Supabase 참여자 업데이트 실패:", error.message);
       });
+  },
+  /** 조회수 +1 — 로컬 즉시 반영 + Supabase RPC 호출 */
+  patchViews(postId: string): void {
+    const idx = _posts.findIndex((p) => p.id === postId);
+    if (idx >= 0) {
+      const next = [..._posts];
+      next[idx] = { ...next[idx], views: (next[idx].views ?? 0) + 1 };
+      _posts = next;
+      notify();
+    }
+    supabase.rpc("increment_post_views", { post_id: postId }).then(({ error }) => {
+      if (error) console.warn("Supabase 조회수 업데이트 실패:", error.message);
+    });
+  },
+  /** 신규 가입 시 mock 초기값으로 리셋 */
+  resetToInitial(): void {
+    _posts = [];
+    notify();
+  },
+};
+ */
+  patchViews(postId: string): void {
+    const idx = _posts.findIndex((p) => p.id === postId);
+    if (idx >= 0) {
+      const next = [..._posts];
+      next[idx] = { ...next[idx], views: (next[idx].views ?? 0) + 1 };
+      _posts = next;
+      notify();
+    }
+    supabase.rpc("increment_post_views", { post_id: postId }).then(({ error }) => {
+      if (error) console.warn("Supabase 조회수 업데이트 실패:", error.message);
+    });
   },
   /** 신규 가입 시 mock 초기값으로 리셋 */
   resetToInitial(): void {

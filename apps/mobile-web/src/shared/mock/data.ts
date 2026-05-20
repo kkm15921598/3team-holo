@@ -68,6 +68,8 @@ export type Post = {
   endDate?: string;
   peopleCount?: number | null;
   place?: string;
+  /** 실제 조회수 — Supabase posts.views 컬럼 값. */
+  views?: number;
 };
 
 export type MeetingInfo = {
@@ -248,22 +250,3 @@ export const BADGES: Badge[] = [
   { id: "badge_26", label: "1년째 입주민",   condition: "가입 후 출석일이 1년(365일) 이상이 되면 받아요." },
 ];
 
-export type AttendanceDay = {
-  day: number;       // 1~7
-  points: number;    // 지급 포인트
-  checked: boolean;  // 출석 완료 여부
-  isToday: boolean;  // 오늘 여부
-  label?: string;    // 특별 라벨 (예: "연속보너스", "전체보너스")
-};
-
-export const ATTENDANCE_DAYS: AttendanceDay[] = [
-  { day: 1, points: 5,  checked: true,  isToday: false },
-  { day: 2, points: 5,  checked: false, isToday: true  },
-  { day: 3, points: 15, checked: false, isToday: false, label: "연속보너스" },
-  { day: 4, points: 5,  checked: false, isToday: false },
-  { day: 5, points: 25, checked: false, isToday: false, label: "연속보너스" },
-  { day: 6, points: 5,  checked: false, isToday: false },
-  { day: 7, points: 55, checked: false, isToday: false, label: "스페셜 보너스" },
-];
-
-export const ATTENDANCE_STREAK = 20; // 연속 출석일 수

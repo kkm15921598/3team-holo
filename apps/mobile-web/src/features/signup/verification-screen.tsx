@@ -373,8 +373,8 @@ export function VerificationScreen() {
 }
 
 /**
- * 가짜 SMS 알림 토스트.
- * 실제 SMS API 연동 전까지 데모용으로 화면 상단에 iOS/Android 알림처럼 노출.
+ * 개발 전용 인증번호 안내 배너.
+ * 실제 SMS API 연동 전까지 테스트 목적으로만 표시.
  * 클릭하면 닫히고, handleMain 쪽에서 10초 뒤 자동 닫힘 처리도 한다.
  */
 function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
@@ -382,21 +382,18 @@ function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
     <div
       role="alert"
       onClick={onClose}
-      className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl bg-white/95 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+      className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-holo-purple-mid text-[16px] font-bold text-white">
-          H
-        </div>
+        <span className="text-[20px]">🛠️</span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[13px] font-semibold text-holo-ink">HOLO</span>
-            <span className="shrink-0 text-[11px] text-holo-ink-3">방금</span>
+            <span className="text-[12px] font-bold text-yellow-700">개발 테스트 모드</span>
+            <span className="shrink-0 text-[11px] text-yellow-600">SMS 미연동</span>
           </div>
-          <p className="mt-0.5 text-[13px] leading-snug text-holo-ink">
-            [HOLO] 본인확인 인증번호는{" "}
-            <span className="font-bold text-holo-purple-mid">{code}</span> 입니다.
-            정확히 입력해주세요.
+          <p className="mt-0.5 text-[13px] leading-snug text-yellow-800">
+            테스트 인증번호:{" "}
+            <span className="font-bold text-yellow-900">{code}</span>
           </p>
         </div>
       </div>

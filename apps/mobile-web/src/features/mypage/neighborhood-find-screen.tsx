@@ -16,8 +16,8 @@
  */
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PERSONAS } from "@/features/home/home-faces";
 import { getAvatarUrl } from "@/features/chat/avatars";
+import { postsStore } from "@/features/board/posts-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 import {
   getAuthorAge,
@@ -168,16 +168,23 @@ export function NeighborhoodFindScreen() {
     const friendsAtMount = new Set(getFriends().map((f) => f.nickname));
     const blockedAtMount = getBlockedNicknames();
     const reportedAtMount = getReportedNicknames();
-    return PERSONAS.filter(
-      (p) =>
-        p.name !== profile.nickname &&
-        !friendsAtMount.has(p.name) &&
-        !blockedAtMount.has(p.name) &&
-        !reportedAtMount.has(p.name),
-    )
-      .map<Neighbor>((p) => {
-        const interests = getNeighborInterests(p.name);
-        const age = getAuthorAge(p.name);
+
+    // 실제 게시글 작성자 닉네임 풀 (중복 제거, 본인 제외)
+    const uniqueAuthors = Array.from(
+      new Set(postsStore.getPosts().map((p) => p.authorNickname).filter(Boolean))
+    );
+
+    return uniqueAuthors
+      .filter(
+        (name) =>
+          name !== profile.nickname &&
+          !friendsAtMount.has(name) &&
+          !blockedAtMount.has(name) &&
+          !reportedAtMount.has(name),
+      )
+      .map<Neighbor>((name) => {
+        const interests = getNeighborInterests(name);
+        const age = getAuthorAge(name);
         const { score, sharedInterests } = similarityScore({
           myInterests,
           myAge,
@@ -185,8 +192,8 @@ export function NeighborhoodFindScreen() {
           neighborAge: age,
         });
         return {
-          nickname: p.name,
-          face: p.face,
+          nickname: name,
+          face: getAvatarUrl(name),
           age,
           interests,
           sharedInterests,
