@@ -179,3 +179,49 @@ export function useRooms() {
   }, []);
   return getRooms();
 }
+
+/**
+ * Supabase chat_rooms 에서 현재 계정의 방 목록을 불러와
+ * localStorage 에 없는 방만 보충한다.
+ * 브라우저 캐시 삭제 / 다른 기기 접속 시 채팅방 복원용.
+ */
+export async function syncRoomsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("chat_rooms")
+    .select("*")
+    .eq("creator_phone", userPhone)
+    .order("created_at", { ascending: false });
+
+  if (error || !data || data.length === 0) return;
+
+  const existingIds = new Set(rooms.map((r) => r.id));
+  const toAdd: ChatRoom[] = data
+    .filter((row) => !existingIds.has(row.room_id as string))
+    .map((row) => ({
+      id: row.room_id as string,
+      name: (row.name ?? row.room_name ?? "") as string,
+      subtitle: row.is_group ? "그룹" : "1:1",
+      isGroup: (row.is_group ?? false) as boolean,
+      memberCount: row.is_group ? 3 : 2,
+      lastMessage: "(대화를 시작해보세요)",
+      lastTime: "",
+      unread: 0,
+      updatedAt: new Date(row.created_at as string).getTime(),
+    }));
+
+  if (toAdd.length > 0) {
+    rooms = [...toAdd, ...rooms];
+    emit();
+  }
+}
+
+// 앱 시작 시 로그인 상태면 Supabase 방 목록 보충
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    // account 로드 시간을 위해 짧은 딜레이
+    window.setTimeout(() => syncRoomsFromSupabase(), 500);
+  });
+}
