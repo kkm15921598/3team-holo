@@ -337,8 +337,14 @@ export function ChatRoomScreen() {
       if (error) {
         console.warn("Supabase 메시지 조회 실패:", error.message);
         const cached = getMessagesForRoom(id);
-        const sysMsg = r ? baseMockMessages(r).slice(0, 1) : [];
-        setMessages(cached ?? sysMsg);
+        if (cached) { setMessages(cached); return; }
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const sysMsg: ChatMessage[] = r ? [{
+          id: `${r.id}-sys`, nickname: "", content: `${r.name} 채팅방이 시작됐어요`,
+          time: "", mine: false, date: todayStr, type: "system" as ChatMessage["type"],
+        }] : [];
+        setMessages(sysMsg);
         return;
       }
 
@@ -357,9 +363,21 @@ export function ChatRoomScreen() {
         };
       });
 
-      // 시스템 메시지("채팅방이 시작됐어요")는 항상 첫 줄에 표시
-      // 실제 메시지가 없으면 시스템 메시지만 (대화 시작 전 상태)
-      const sysMsg = r ? baseMockMessages(r).slice(0, 1) : [];
+      // 시스템 메시지("채팅방이 시작됐어요") — 첫 실제 메시지와 같은 날짜,
+      // 메시지 없으면 오늘 날짜 사용 (하드코딩 날짜 제거)
+      const firstDate = remote.length > 0 ? remote[0].date : (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })();
+      const sysMsg: ChatMessage[] = r ? [{
+        id: `${r.id}-sys`,
+        nickname: "",
+        content: `${r.name} 채팅방이 시작됐어요`,
+        time: "",
+        mine: false,
+        date: firstDate,
+        type: "system" as ChatMessage["type"],
+      }] : [];
       const combined = [...sysMsg, ...remote];
       setMessages(combined);
       persistWithoutUnreadDivider(id, combined);
