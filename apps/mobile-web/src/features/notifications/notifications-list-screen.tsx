@@ -3,20 +3,12 @@ import { useNavigate } from "react-router-dom";
 import {
   getNotificationSettings,
   subscribeNotificationSettings,
-  getReadIds,
-  markRead,
-  markAllRead,
 } from "@/shared/stores/notification-settings-store";
 import {
   markAllDynRead,
   markDynRead,
   useDynNotifications,
 } from "@/shared/stores/notifications-store";
-import { useProfile } from "@/shared/hooks/use-profile";
-import { postsStore } from "@/features/board/posts-store";
-import { type Post } from "@/shared/mock/data";
-import { useRooms } from "@/features/chat/rooms-store";
-import { useJoinedSet } from "@/shared/stores/joined-store";
 
 type NotifType = "comment" | "like" | "friend" | "chat" | "meeting" | "event";
 
@@ -27,96 +19,11 @@ type Notification = {
   body: string;
   /** "방금 전" 등 표시용 라벨 */
   time: string;
-  /** 정렬 / 그룹핑용 — 작을수록 최신. ms 단위. 정적 mock 은 createdAt 대신 order(분 단위)로 근사. */
+  /** 정렬 / 그룹핑용 — ms 단위, 작을수록 최신. */
   ageMs: number;
   read: boolean;
   link: string;
-  /** 동적 알림이면 store 읽음 처리 분기에 사용 */
-  dynamic?: boolean;
 };
-
-/**
- * 정적 mock 알림 빌더.
- * 현재 로그인한 사용자 상태(작성 글 / 채팅방 / 참여 모임)에 따라 동적으로 알림을 구성한다:
- * - 댓글/좋아요 알림: 내가 작성한 글이 있을 때만
- * - 채팅 알림: "동네 떡볶이 모임" 채팅방(id "3") 에 참여 중일 때만
- * - 모임 알림: "강아지 산책친구 구해요"(post "3") 에 참여 중일 때만
- * - 이벤트 알림: 항상 표시
- *
- * 신규 가입자처럼 채팅방 / 참여글이 없는 사용자에겐 어색한 거짓 알림이 안 뜨도록 보장.
- */
-function buildStaticNotifications(
-  myPost: Post | null,
-  hasChatRoom3: boolean,
-  hasJoinedPost3: boolean,
-): Notification[] {
-  const list: Notification[] = [];
-
-  if (myPost) {
-    // ID 는 app-header / notification-panel 의 STATIC_NOTIFICATION_META 와 동일한 "n1" / "n2" 사용.
-    // 이전엔 `n1-${postId}` 처럼 post 별로 달라서 list 에서 markRead 를 호출해도 헤더 배지가
-    // "n1" 기준으로만 검사해 unread 가 줄지 않는 동기화 버그가 있었다.
-    list.push({
-      id: "n1",
-      type: "comment",
-      title: "댓글 알림",
-      body: `보송보송한 햄찌님이 내 글 "${myPost.title}"에 댓글을 달았어요. "저요! 저요!"`,
-      time: "방금 전",
-      ageMs: 30 * 1000,
-      read: false,
-      link: `/board/${myPost.id}`,
-    });
-    list.push({
-      id: "n2",
-      type: "like",
-      title: "좋아요 알림",
-      body: `단무지팬님이 내 글 "${myPost.title}"에 좋아요를 눌렀어요.`,
-      time: "5분 전",
-      ageMs: 5 * 60 * 1000,
-      read: false,
-      link: `/board/${myPost.id}`,
-    });
-  }
-
-  if (hasChatRoom3) {
-    list.push({
-      id: "n4",
-      type: "chat",
-      title: "채팅 알림",
-      body: "\"동네 떡볶이 모임\" 채팅방에 새 메시지가 도착했어요. \"맛있겠다 ㅋㅋㅋ\"",
-      time: "30분 전",
-      ageMs: 30 * 60 * 1000,
-      read: true,
-      link: "/chat/3",
-    });
-  }
-
-  if (hasJoinedPost3) {
-    list.push({
-      id: "n5",
-      type: "meeting",
-      title: "모임 알림",
-      body: "\"강아지 산책친구 구해요\" 모임에 새 멤버가 합류했어요.",
-      time: "1시간 전",
-      ageMs: 60 * 60 * 1000,
-      read: true,
-      link: "/board/3",
-    });
-  }
-
-  list.push({
-    id: "n6",
-    type: "event",
-    title: "이벤트 알림",
-    body: "오늘의 출석 체크를 완료하고 포인트를 받아가세요! 🎁",
-    time: "오전 9:00",
-    ageMs: 8 * 60 * 60 * 1000,
-    read: true,
-    link: "/event/attendance",
-  });
-
-  return list;
-}
 
 const TYPE_TO_SETTING: Record<NotifType, keyof ReturnType<typeof getNotificationSettings>> = {
   comment: "comment",
@@ -141,42 +48,16 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 export function NotificationsListScreen() {
   const navigate = useNavigate();
   const [nSettings, setNSettings] = useState(getNotificationSettings);
-  const [readSet, setReadSet] = useState(() => getReadIds());
   const dynNotifications = useDynNotifications();
   const [filter, setFilter] = useState<FilterTab>("all");
-  const profile = useProfile();
-
-  // postsStore 변경(새 글 등록 등)에 반응하도록 게시글 목록을 state 로 보관.
-  const [posts, setPosts] = useState(postsStore.getPosts);
-  useEffect(() => {
-    return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
-  }, []);
-
-  // 현재 로그인한 사용자가 작성한 게시글 중 가장 최신 한 건 — 알림 카피의 "내 글" 대상으로 사용.
-  const myPost: Post | null = useMemo(() => {
-    return posts.find((p) => p.authorNickname === profile.nickname) ?? null;
-  }, [posts, profile.nickname]);
 
   useEffect(() =>
     subscribeNotificationSettings(() => {
       setNSettings(getNotificationSettings());
-      setReadSet(new Set(getReadIds()));
     }),
   []);
 
-  // 채팅방 / 참여 게시글 상태 — 신규 가입자는 모두 비어있어 어색한 mock 알림이 안 뜬다.
-  const rooms = useRooms();
-  const joinedSet = useJoinedSet();
-  const hasChatRoom3 = useMemo(() => rooms.some((r) => r.id === "3"), [rooms]);
-  const hasJoinedPost3 = useMemo(() => joinedSet.has("3"), [joinedSet]);
-
-  // 정적 알림은 사용자 상태 기준으로 그때그때 빌드 — 관련 데이터가 없으면 항목 자체가 빠진다.
-  const staticItems: Notification[] = useMemo(
-    () => buildStaticNotifications(myPost, hasChatRoom3, hasJoinedPost3),
-    [myPost, hasChatRoom3, hasJoinedPost3],
-  );
-
-  // 동적 알림 → 공통 형식으로 매핑. friend 외 kind 는 event 카테고리로 분류.
+  // 동적 알림 → 공통 형식으로 매핑 (kind → NotifType 정확히 대응)
   const dynItems: Notification[] = useMemo(
     () =>
       dynNotifications.map((d) => ({
@@ -184,6 +65,14 @@ export function NotificationsListScreen() {
         type:
           d.kind === "friend-received" || d.kind === "friend-accepted"
             ? ("friend" as const)
+            : d.kind === "comment"
+            ? ("comment" as const)
+            : d.kind === "like"
+            ? ("like" as const)
+            : d.kind === "chat"
+            ? ("chat" as const)
+            : d.kind === "meeting-joined" || d.kind === "meeting-full"
+            ? ("meeting" as const)
             : ("event" as const),
         title: d.title,
         body: d.body,
@@ -191,24 +80,19 @@ export function NotificationsListScreen() {
         ageMs: Date.now() - d.createdAt,
         read: d.read,
         link: d.link,
-        dynamic: true,
       })),
     [dynNotifications],
   );
 
-  // 설정 + 필터 적용
+  // 알림 설정 + 탭 필터 적용
   const visible: Notification[] = useMemo(() => {
     if (!nSettings.master) return [];
-    const merged = [...dynItems, ...staticItems]
+    const items = dynItems
       .filter((n) => nSettings[TYPE_TO_SETTING[n.type]])
-      .filter((n) => matchFilter(n.type, filter))
-      .map((n) => ({
-        ...n,
-        read: n.dynamic ? n.read : n.read || readSet.has(n.id),
-      }));
-    merged.sort((a, b) => a.ageMs - b.ageMs);
-    return merged;
-  }, [nSettings, dynItems, staticItems, readSet, filter]);
+      .filter((n) => matchFilter(n.type, filter));
+    items.sort((a, b) => a.ageMs - b.ageMs);
+    return items;
+  }, [nSettings, dynItems, filter]);
 
   const unreadCount = visible.filter((n) => !n.read).length;
 
@@ -224,13 +108,11 @@ export function NotificationsListScreen() {
   }, [visible]);
 
   const handleItemClick = (n: Notification) => {
-    if (n.dynamic) markDynRead(n.id);
-    else markRead(n.id);
+    markDynRead(n.id);
     navigate(n.link);
   };
 
   const handleMarkAllRead = () => {
-    markAllRead(staticItems.map((n) => n.id));
     markAllDynRead();
   };
 

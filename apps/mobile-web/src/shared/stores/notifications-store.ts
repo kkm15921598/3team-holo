@@ -57,7 +57,9 @@ export type DynNotification = {
   link: string;
 };
 
-const STORAGE_KEY = "holo.notifications.dynamic.v1";
+// v2: 테스트 계정 잔여 알림 초기화를 위해 키 버전 업.
+// 기존 v1 데이터는 더 이상 읽지 않으며 새 앱 로드 시 깨끗하게 시작된다.
+const STORAGE_KEY = "holo.notifications.dynamic.v2";
 
 function load(): DynNotification[] {
   if (typeof window === "undefined") return [];

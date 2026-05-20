@@ -63,7 +63,9 @@ function loadInitial(): ProfileState {
   } catch {
     // ignore
   }
-  return DEFAULT_STATE;
+  // localStorage 가 비어있거나 파싱 실패 — friendCode 없이 DEFAULT_STATE 를 그대로 반환하면
+  // 신규 가입 직후 ID 탭이 공백으로 보이므로, 여기서도 즉시 생성해 반환한다.
+  return { ...DEFAULT_STATE, friendCode: generateFriendCode() };
 }
 
 let _state: ProfileState = loadInitial();

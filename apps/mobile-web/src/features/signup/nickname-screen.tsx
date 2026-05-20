@@ -4,11 +4,13 @@ import { useSignup } from "@/shared/contexts/signup-context";
 import { containsProfanity } from "@/shared/utils/profanity";
 import { MAN_FACES, WOMAN_FACES } from "@/features/chat/avatars";
 import { SignupLayout } from "./signup-layout";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 const KOREAN_ONLY = /^[가-힣\s]+$/;
 const MAX_LEN = 10;
 
-const MOCK_TAKEN_NICKNAMES = ["관리자", "운영자", "테스트", "단무지", "어드민"];
+/** 서비스 예약어 — Supabase 조회 전에 클라이언트에서 먼저 차단 */
+const RESERVED_NICKNAMES = ["관리자", "운영자", "테스트", "어드민", "admin", "holo", "홀로"];
 
 // 일반 형용사 — 모든 명사 카테고리와 조합 가능
 const GENERAL_ADJECTIVES = [
@@ -220,7 +222,7 @@ function generateSuggestions(count = 4): string[] {
     const candidate = `${adj} ${noun}`;
     if (
       candidate.length <= MAX_LEN &&
-      !MOCK_TAKEN_NICKNAMES.includes(candidate) &&
+      !RESERVED_NICKNAMES.includes(candidate) &&
       !containsProfanity(candidate)
     ) {
       used.add(candidate);
@@ -236,6 +238,7 @@ export function NicknameScreen() {
 
   const [checked, setChecked] = useState(false);
   const [taken, setTaken] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(() => generateSuggestions());
   const [showFacePicker, setShowFacePicker] = useState(false);
 
@@ -269,17 +272,43 @@ export function NicknameScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  const canCheck = isFormatValid && !isProfane && !checked;
+  const canCheck = isFormatValid && !isProfane && !checked && !checking;
   const canNext = checked && !!data.profileFace;
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
     if (!canCheck) return;
-    if (MOCK_TAKEN_NICKNAMES.includes(value.trim())) {
+    const trimmed = value.trim();
+
+    // 1) 예약어 클라이언트 차단
+    if (RESERVED_NICKNAMES.some((r) => r === trimmed)) {
       setTaken(true);
       setChecked(false);
-    } else {
-      setTaken(false);
-      setChecked(true);
+      return;
+    }
+
+    // 2) Supabase에서 실제 중복 여부 조회
+    setChecking(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from("users")
+        .select("nickname")
+        .eq("nickname", trimmed)
+        .limit(1);
+
+      if (error) {
+        // 네트워크 오류 등 — 일단 통과시키고 가입 단계에서 재확인
+        console.warn("닉네임 중복 확인 실패:", error.message);
+        setTaken(false);
+        setChecked(true);
+      } else if (rows && rows.length > 0) {
+        setTaken(true);
+        setChecked(false);
+      } else {
+        setTaken(false);
+        setChecked(true);
+      }
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -364,7 +393,7 @@ export function NicknameScreen() {
                   : "bg-holo-ink-4 text-white"
             }`}
           >
-            {checked ? "확인 완료" : "중복확인"}
+            {checking ? "확인 중…" : checked ? "확인 완료" : "중복확인"}
           </button>
         </div>
 

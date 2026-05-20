@@ -19,6 +19,7 @@ import { setMyroomItems, purchaseItem, addPoints } from "../myroom/myroom-store"
 import {
   setNickname,
   setProfileFace,
+  setFriendCode,
   setEquippedBadgeId,
   setTitle as setEquippedTitle,
 } from "@/shared/stores/profile-store";
@@ -263,6 +264,10 @@ export function RoomScreen() {
   // 5) 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
   if (data.nickname.trim()) setNickname(data.nickname.trim());
   if (data.profileFace) setProfileFace(data.profileFace);
+  // 5-1) 신규 가입 시 고유 친구 코드를 생성·저장한다.
+  //      빈 문자열을 넘기면 setFriendCode 내부에서 generateFriendCode() 를 호출해
+  //      5자 랜덤 코드를 만들고 localStorage + Supabase 에 함께 저장한다.
+  setFriendCode("");
 
   // 6) 가입 보너스 포인트 적립
   addPoints(SIGNUP_BONUS_POINTS, { title: "가입 보너스" });
