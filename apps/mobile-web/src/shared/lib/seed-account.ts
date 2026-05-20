@@ -179,8 +179,9 @@ export function seedAccount(account: TestAccount): void {
   );
 
   // 작성한 게시글 — 같은 id 가 이미 있으면 먼저 제거 (재로그인 시 중복 방지)
+  // prependLocal/removeLocal 사용 → Supabase 에 저장하지 않음 (테스트 데이터 오염 방지)
   const seededIds = seed.authoredPosts.map((p) => p.id);
-  postsStore.remove(seededIds);
+  postsStore.removeLocal(seededIds);
   for (const p of seed.authoredPosts) {
     const fullPost: Post = {
       id: p.id,
@@ -199,7 +200,7 @@ export function seedAccount(account: TestAccount): void {
       peopleCount: p.peopleCount,
       place: p.place,
     };
-    postsStore.prepend(fullPost);
+    postsStore.prependLocal(fullPost);
   }
 
   // 테스트 계정 시드 시 mock 의 모임 채팅방(주말 등산 크루, 공구러 모임 등)은 제거하고

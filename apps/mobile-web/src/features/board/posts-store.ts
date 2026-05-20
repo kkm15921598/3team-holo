@@ -207,6 +207,17 @@ export const postsStore = {
         });
     }
   },
+  /** 로컬에만 추가 — 테스트 계정 시드용, Supabase 저장 안 함 */
+  prependLocal(post: Post): void {
+    _posts = [post, ..._posts];
+    notify();
+  },
+  /** 로컬에서만 제거 — 테스트 계정 시드용, Supabase 건드리지 않음 */
+  removeLocal(ids: string[]): void {
+    const set = new Set(ids);
+    _posts = _posts.filter((p) => !set.has(p.id));
+    notify();
+  },
   /** 수동 새로고침 */
   async refresh(): Promise<void> {
     await loadFromSupabase();
