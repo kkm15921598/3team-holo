@@ -138,3 +138,42 @@ export function markAllRead(ids: string[]) {
   notify();
   syncSettingsToSupabase(_state, _readIds);
 }
+
+/**
+ * 로그인 후 Supabase users 테이블에서 알림 설정과 읽음 목록을 읽어
+ * 로컬 상태를 덮어쓴다. 다른 기기에서 변경한 알림 설정이 반영된다.
+ */
+export async function syncNotificationSettingsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("notification_settings, notification_read_ids")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Supabase 알림설정 읽기 실패:", error.message);
+    return;
+  }
+  if (!data) return;
+
+  if (data.notification_settings && typeof data.notification_settings === "object") {
+    _state = { ...DEFAULT_SETTINGS, ...(data.notification_settings as Partial<NotificationSettings>) };
+    persistSettings();
+  }
+
+  if (Array.isArray(data.notification_read_ids) && (data.notification_read_ids as unknown[]).length > 0) {
+    _readIds = new Set<string>(data.notification_read_ids as string[]);
+    persistReadIds();
+  }
+
+  notify();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncNotificationSettingsFromSupabase(), 800);
+  });
+}

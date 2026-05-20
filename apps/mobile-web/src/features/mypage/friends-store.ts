@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import {
   getDynNotifications,
   pushBecameFriendByMe,
-  pushFriendRequestAccepted,
   pushFriendRequestReceived,
   removeReceivedNotificationByNickname,
 } from "@/shared/stores/notifications-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { getProfile } from "@/shared/stores/profile-store";
 
 export type Friend = { id: string; nickname: string; avatarBg: string };
 
@@ -67,52 +67,9 @@ function saveToStorage<T>(key: string, value: T) {
   }
 }
 
-/** 받은 요청 데모용 시드 — 신규 사용자는 두 명에게서 친구 요청을 받은 상태로 시작 */
-function seedRequests(): FriendRequest[] {
-  const now = Date.now();
-  return [
-    {
-      id: "req-seed-1",
-      nickname: "포근한 두부",
-      avatarBg: "#C7BDFF",
-      direction: "received",
-      timeAgo: "10분 전",
-      createdAt: now - 10 * 60 * 1000,
-    },
-    {
-      id: "req-seed-2",
-      nickname: "노래하는 햇살",
-      avatarBg: "#FCEBB5",
-      direction: "received",
-      timeAgo: "2시간 전",
-      createdAt: now - 2 * 60 * 60 * 1000,
-    },
-  ];
-}
-
-let _friends: Friend[] = loadFromStorage<Friend[]>(
-  STORAGE_KEY,
-  [],
-);
+let _friends: Friend[] = loadFromStorage<Friend[]>(STORAGE_KEY, []);
 let _blocked: Friend[] = loadFromStorage<Friend[]>(BLOCKED_STORAGE_KEY, []);
-let _requests: FriendRequest[] = loadFromStorage<FriendRequest[]>(
-  REQUESTS_STORAGE_KEY,
-  seedRequests(),
-);
-
-// 최초 로딩 시 — 받은 요청이 있는데 동적 알림 store 에는 아직 아무것도 없다면
-// 시드 요청에 대응되는 알림을 만들어 둔다(데모 초기 진입 시 패널에 자연스럽게 표시).
-if (typeof window !== "undefined") {
-  const existing = getDynNotifications();
-  if (existing.length === 0) {
-    for (const r of _requests.filter((r) => r.direction === "received")) {
-      pushFriendRequestReceived(r.nickname, {
-        createdAt: r.createdAt,
-        id: `dn-seed-${r.id}`,
-      });
-    }
-  }
-}
+let _requests: FriendRequest[] = loadFromStorage<FriendRequest[]>(REQUESTS_STORAGE_KEY, []);
 
 const listeners = new Set<() => void>();
 
@@ -188,7 +145,6 @@ export type SendRequestResult =
 
 /**
  * 친구 요청 보내기. 상대가 이미 친구거나 이미 보낸 요청이 있으면 다른 결과를 반환한다.
- * 데모 환경이라 상대편의 수락 시뮬레이션은 별도의 acceptFriendRequest 로 트리거된다.
  */
 export function sendFriendRequest(nickname: string): SendRequestResult {
   const trimmed = nickname.trim();
@@ -236,26 +192,7 @@ export function sendFriendRequest(nickname: string): SendRequestResult {
     });
   }
 
-  // 데모용 — 6초 뒤 상대편이 수락한 것처럼 시뮬레이션해서 친구로 이동시키고
-  // "X님이 친구 요청을 수락했어요" 알림을 발행한다.
-  if (typeof window !== "undefined") {
-    window.setTimeout(() => simulateRemoteAccept(req.id), 6000);
-  }
-
   return "sent";
-}
-
-/** 데모 — 상대편이 내 요청을 수락한 것처럼 처리 */
-function simulateRemoteAccept(requestId: string): void {
-  const req = _requests.find((r) => r.id === requestId);
-  if (!req || req.direction !== "sent") return; // 이미 취소/처리됐으면 무시
-  // 정원 초과면 시뮬레이션 자체를 보류 — 보낸 요청은 그대로 두어 사용자가 직접 처리하게 함.
-  if (_friends.length >= MAX_FRIENDS) return;
-  const friend = addFriendInternal(req.nickname, req.avatarBg);
-  if (!friend) return; // 안전망 (addFriendInternal 자체에서도 정원 검사함)
-  _requests = _requests.filter((r) => r.id !== requestId);
-  notify();
-  pushFriendRequestAccepted(req.nickname);
 }
 
 /** 수락 결과 — UI 토스트 분기용 */
@@ -277,6 +214,16 @@ export function acceptFriendRequest(requestId: string): AcceptRequestResult {
   // 수락 직후 알림 패널에 "친구가 됐어요" 한 줄을 남겨, 종소리 배지만 들어오고 내역이 비는
   // 현상을 막는다 (이전엔 push 가 없어 패널이 비어 있었다).
   pushBecameFriendByMe(req.nickname);
+  // Supabase friend_requests에서 삭제 (best-effort)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friend_requests")
+      .delete()
+      .eq("request_id", requestId)
+      .then(({ error }) => {
+        if (error) console.warn("Supabase 친구 요청 수락 삭제 실패:", error.message);
+      });
+  }
   return { ok: true, friend };
 }
 
@@ -293,7 +240,6 @@ export function declineFriendRequest(requestId: string): void {
   if (userPhone) {
     supabase.from("friend_requests")
       .delete()
-      .eq("user_phone", userPhone)
       .eq("request_id", requestId)
       .then(({ error }) => {
         if (error) console.warn("Supabase 친구 요청 거절 삭제 실패:", error.message);
@@ -478,30 +424,135 @@ export async function syncFriendsFromSupabase(): Promise<void> {
   }
   if (!data || data.length === 0) return;
 
-  const fromSupabase: Friend[] = data.map((row: any) => ({
-    id: row.friend_id ?? row.id ?? `fr-sb-${row.friend_nickname}`,
+  const fromSupabase: Friend[] = data.map((row: Record<string, unknown>) => ({
+    id: (row.friend_id as string | undefined) ?? (row.id as string | undefined) ?? `fr-sb-${row.friend_nickname as string}`,
     nickname: row.friend_nickname as string,
-    avatarBg: row.avatar_bg ?? pickAvatarBg(row.friend_nickname as string),
+    avatarBg: (row.avatar_bg as string | undefined) ?? pickAvatarBg(row.friend_nickname as string),
   }));
 
-  const mockNicknames = new Set<string>();
-  const realFriends = _friends.filter((f) => !mockNicknames.has(f.nickname));
-  const existingNicknames = new Set(realFriends.map((f) => f.nickname));
+  const existingNicknames = new Set(_friends.map((f) => f.nickname));
   const toAdd = fromSupabase.filter((f) => !existingNicknames.has(f.nickname));
 
-  if (realFriends.length === 0 && toAdd.length > 0) {
+  if (_friends.length === 0 && toAdd.length > 0) {
     _friends = fromSupabase;
   } else {
-    _friends = [...realFriends, ...toAdd];
+    _friends = [..._friends, ...toAdd];
   }
 
   saveToStorage(STORAGE_KEY, _friends);
   listeners.forEach((l) => l());
 }
 
-if (typeof window !== "undefined") {
-  window.addEventListener("load", () => {
-    window.setTimeout(() => syncFriendsFromSupabase(), 600);
-  });
+/**
+ * Supabase friend_requests 테이블에서 보낸/받은 요청을 불러와 로컬 상태와 병합.
+ *
+ * - 보낸 요청: WHERE user_phone = 내 번호 AND direction = 'sent'
+ * - 받은 요청: WHERE direction = 'sent' AND nickname = 내 닉네임
+ *   (상대방이 저장한 direction='sent' 행에서 nickname이 나인 것을 조회)
+ */
+export async function syncFriendRequestsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const myNickname = getProfile().nickname;
+  if (!myNickname || myNickname === "새로운 입주자") return;
+
+  // 보낸 요청
+  const { data: sentData, error: sentError } = await supabase
+    .from("friend_requests")
+    .select("*")
+    .eq("user_phone", userPhone)
+    .eq("direction", "sent");
+
+  if (sentError) {
+    console.warn("Supabase 보낸 요청 읽기 실패:", sentError.message);
+  }
+
+  // 받은 요청 (상대방이 direction='sent'로 저장하고 nickname=내 닉네임인 것)
+  const { data: receivedData, error: receivedError } = await supabase
+    .from("friend_requests")
+    .select("*")
+    .eq("direction", "sent")
+    .eq("nickname", myNickname);
+
+  if (receivedError) {
+    console.warn("Supabase 받은 요청 읽기 실패:", receivedError.message);
+  }
+
+  const existingIds = new Set(_requests.map((r) => r.id));
+
+  const fromSent: FriendRequest[] = (sentData ?? [])
+    .filter((row: Record<string, unknown>) => !existingIds.has(row.request_id as string))
+    .map((row: Record<string, unknown>) => ({
+      id: row.request_id as string,
+      nickname: row.nickname as string,
+      avatarBg: (row.avatar_bg as string | undefined) ?? pickAvatarBg(row.nickname as string),
+      direction: "sent" as const,
+      timeAgo: (row.time_ago as string | undefined) ?? "이전",
+      createdAt: row.created_at
+        ? new Date(row.created_at as string).getTime()
+        : Date.now(),
+    }));
+
+  const fromReceived: FriendRequest[] = (receivedData ?? [])
+    .filter((row: Record<string, unknown>) => {
+      // 이미 로컬에 있거나, 내가 보낸 요청(user_phone이 나인 것)은 제외
+      if (row.user_phone === userPhone) return false;
+      return !existingIds.has(row.request_id as string);
+    })
+    .map((row: Record<string, unknown>) => ({
+      id: row.request_id as string,
+      nickname: row.user_phone as string, // 발신자 전화번호를 임시 id로만 쓰고 닉네임은 별도 조회 불필요
+      avatarBg: (row.avatar_bg as string | undefined) ?? pickAvatarBg(row.user_phone as string),
+      direction: "received" as const,
+      timeAgo: (row.time_ago as string | undefined) ?? "이전",
+      createdAt: row.created_at
+        ? new Date(row.created_at as string).getTime()
+        : Date.now(),
+    }));
+
+  if (fromSent.length === 0 && fromReceived.length === 0) return;
+
+  // 받은 요청의 nickname을 Supabase users 테이블에서 조회
+  const receivedPhones = fromReceived.map((r) => r.nickname); // nickname 필드에 전화번호가 들어있음
+  let phoneToNickname: Record<string, string> = {};
+  if (receivedPhones.length > 0) {
+    const { data: usersData } = await supabase
+      .from("users")
+      .select("phone, nickname")
+      .in("phone", receivedPhones);
+    if (usersData) {
+      for (const u of usersData as { phone: string; nickname: string }[]) {
+        phoneToNickname[u.phone] = u.nickname;
+      }
+    }
+  }
+
+  const resolvedReceived: FriendRequest[] = fromReceived.map((r) => ({
+    ...r,
+    nickname: phoneToNickname[r.nickname] ?? r.nickname,
+    avatarBg: pickAvatarBg(phoneToNickname[r.nickname] ?? r.nickname),
+  }));
+
+  _requests = [..._requests, ...fromSent, ...resolvedReceived];
+  saveToStorage(REQUESTS_STORAGE_KEY, _requests);
+
+  // 받은 요청에 대해 알림 store에도 등록 (이미 같은 id의 알림이 있으면 스킵)
+  const existingNotiIds = new Set(getDynNotifications().map((n) => n.id));
+  for (const r of resolvedReceived) {
+    const notiId = `dn-sync-${r.id}`;
+    if (!existingNotiIds.has(notiId)) {
+      pushFriendRequestReceived(r.nickname, { createdAt: r.createdAt, id: notiId });
+    }
+  }
+
+  listeners.forEach((l) => l());
 }
 
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(async () => {
+      await syncFriendsFromSupabase();
+      await syncFriendRequestsFromSupabase();
+    }, 600);
+  });
+}

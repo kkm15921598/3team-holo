@@ -582,3 +582,62 @@ export function getDailyCount(key: string): number {
   if (dailyCaps.date !== todayKey()) return 0;
   return dailyCaps.counts[key] ?? 0;
 }
+
+// ─── Supabase 동기화 (읽기) ─────────────────────────────────
+/**
+ * 로그인 후 Supabase users 테이블에서 마이룸 데이터를 읽어
+ * 로컬 상태를 덮어쓴다. Supabase가 source of truth.
+ * null / 빈 값이면 기존 로컬 상태를 그대로 유지한다.
+ */
+export async function syncMyroomFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("placed_furniture, owned_furniture, points, status_message, point_history")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Supabase 마이룸 읽기 실패:", error.message);
+    return;
+  }
+  if (!data) return;
+
+  if (Array.isArray(data.placed_furniture) && (data.placed_furniture as unknown[]).length > 0) {
+    state = data.placed_furniture as PlacedFurniture[];
+    persist();
+    emit();
+  }
+
+  if (Array.isArray(data.owned_furniture) && (data.owned_furniture as unknown[]).length > 0) {
+    ownedState = new Set<string>(data.owned_furniture as string[]);
+    persistOwned();
+    emitOwned();
+  }
+
+  if (typeof data.points === "number" && (data.points as number) > 0) {
+    pointsState = data.points as number;
+    persistPoints();
+    emitPoints();
+  }
+
+  if (typeof data.status_message === "string" && (data.status_message as string).trim()) {
+    statusState = (data.status_message as string).trim();
+    persistStatus();
+    emitStatus();
+  }
+
+  if (Array.isArray(data.point_history) && (data.point_history as unknown[]).length > 0) {
+    historyState = data.point_history as PointEvent[];
+    persistHistory();
+    emitHistory();
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncMyroomFromSupabase(), 700);
+  });
+}

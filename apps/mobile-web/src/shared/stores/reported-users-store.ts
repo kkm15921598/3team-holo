@@ -94,3 +94,38 @@ const snapshot = () => state;
 export function useReportedNicknames(): Set<string> {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * 로그인 후 Supabase users 테이블에서 신고 목록을 읽어 로컬 상태와 병합.
+ * 다른 기기에서 신고한 항목도 이 기기에서 반영된다.
+ */
+export async function syncReportedUsersFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("reported_nicknames")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Supabase 신고 목록 읽기 실패:", error.message);
+    return;
+  }
+  if (!data || !Array.isArray(data.reported_nicknames) || (data.reported_nicknames as unknown[]).length === 0) return;
+
+  const merged = new Set(state);
+  for (const n of data.reported_nicknames as string[]) {
+    merged.add(n);
+  }
+  state = merged;
+  persist();
+  emit();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncReportedUsersFromSupabase(), 900);
+  });
+}
