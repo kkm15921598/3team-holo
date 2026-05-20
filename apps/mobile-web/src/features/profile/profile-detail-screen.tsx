@@ -27,6 +27,7 @@ import { ME_PERSONA } from "@/features/home/home-faces";
 import { postsStore } from "@/features/board/posts-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 import { useActivityState } from "@/shared/stores/activity-store";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 function hashString(s: string): number {
   let h = 2166136261;
@@ -49,6 +50,7 @@ function buildOtherUser(
   nickname: string,
   postsCount: number,
   commentsCount: number,
+  levelOverride?: number,
 ) {
   const h = hashString(nickname);
   // starter(가입 칭호)는 모두가 가진 거라 다른 사용자 프로필에 노출하긴 어색 → 제외
@@ -57,7 +59,7 @@ function buildOtherUser(
   const badge = BADGE_LIB[(h >>> 3) % BADGE_LIB.length];
   return {
     nickname,
-    level: 1 + (h % 30),
+    level: levelOverride ?? (1 + (h % 30)),
     title,
     badgeId: badge?.id ?? "badge_24",
     badgeSrc: badge?.src,
@@ -136,9 +138,24 @@ export function ProfileDetailScreen() {
   // 댓글 카운트: comments-store에서 해당 닉네임의 댓글 수를 실시간으로 집계
   const otherCommentsCount = 0; // Supabase 기반으로 추후 구현
 
+  // 친구 프로필 레벨 — Supabase에서 실제 값을 조회. 로딩 중엔 해시 기반 임시값 사용.
+  const [otherLevel, setOtherLevel] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (isMe) return;
+    setOtherLevel(undefined); // 닉네임 변경 시 초기화
+    supabase
+      .from("users")
+      .select("level")
+      .eq("nickname", nickname)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.level != null) setOtherLevel(data.level as number);
+      });
+  }, [nickname, isMe]);
+
   const otherUser = useMemo(
-    () => buildOtherUser(nickname, otherPostsCount, otherCommentsCount),
-    [nickname, otherPostsCount, otherCommentsCount],
+    () => buildOtherUser(nickname, otherPostsCount, otherCommentsCount, otherLevel),
+    [nickname, otherPostsCount, otherCommentsCount, otherLevel],
   );
   const user = isMe ? meUser : otherUser;
 

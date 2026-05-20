@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import type { Post, PostLocation } from "@/shared/mock/data";
 import { LocationPicker } from "@/features/map/post-map";
 import { useProfile } from "@/shared/hooks/use-profile";
+import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { awardXp } from "@/shared/stores/xp-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
 import { pushPostCreated } from "@/shared/stores/notifications-store";
@@ -88,6 +89,7 @@ export function BoardWriteScreen() {
   const location = useLocation();
   const incomingState = (location.state as WriteLocationState) ?? null;
   const profile = useProfile();
+  const stats = useAccountStats();
 
   // Capture initial values once for dirty detection.
   const [initialTitle] = useState<string>(incomingState?.title ?? "");
@@ -336,7 +338,7 @@ export function BoardWriteScreen() {
         comments: 0,
         timeAgo: "방금 전",
         authorNickname: profile.nickname,
-        authorLevel: 24,
+        authorLevel: stats.level,
         meetupType: isSimpleCategory ? undefined : (meetupType ?? undefined),
         eventDate: isSimpleCategory ? undefined : date,
         // 종료일은 모임 + 장기성 두 조건 다 만족할 때만 저장.

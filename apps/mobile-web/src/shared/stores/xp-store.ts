@@ -406,12 +406,15 @@ export function getLevelProgress(currentLevel = 1): {
   percent: number;
 } {
   const required = xpRequiredForLevel(currentLevel);
-  const current = state.totalXp % required;
+  // 현재 레벨 구간 내 누적 XP — 해당 레벨 진입 시점의 총 XP를 빼야 정확한 진행도가 나온다.
+  // (totalXp % required 는 레벨 구간과 무관한 나머지라 틀린 값이 나올 수 있음)
+  const base = cumulativeXpForLevel(currentLevel);
+  const current = Math.max(0, state.totalXp - base);
   return {
     current,
     required,
-    remaining: required - current,
-    percent: Math.round((current / required) * 100),
+    remaining: Math.max(0, required - current),
+    percent: Math.min(100, Math.round((current / required) * 100)),
   };
 }
 

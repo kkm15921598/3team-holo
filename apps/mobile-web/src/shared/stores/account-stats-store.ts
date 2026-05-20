@@ -221,12 +221,14 @@ export async function syncStatsFromSupabase(): Promise<void> {
     .eq("phone", userPhone)
     .single();
   if (error || !data) return;
-  state = {
+  // backfillStarterItems 를 거쳐 스타터 뱃지/칭호가 항상 보장되도록 한다.
+  // Supabase에 데이터가 비어있는 신규 기기 로그인 시에도 기본 아이템이 사라지지 않음.
+  state = backfillStarterItems({
     level: (data.level as number) ?? state.level,
     acquiredBadgeIds: (data.acquired_badge_ids as string[]) ?? state.acquiredBadgeIds,
     acquiredTitles: (data.acquired_titles as string[]) ?? state.acquiredTitles,
     acquiredBadgeDates: (data.acquired_badge_dates as Record<string, string>) ?? state.acquiredBadgeDates,
-  };
+  });
   persist();
   listeners.forEach((l) => l());
 }

@@ -52,13 +52,18 @@ function avatarFor(nickname: string): string {
 }
 
 /**
- * 게시글 카드에 표시되는 댓글 수 — 사용자가 작성한 댓글 수만 카운트.
+ * 게시글 카드에 표시되는 댓글 수.
+ * Supabase 저장값(post.comments)을 기준으로 하고,
+ * 아직 서버에 반영되지 않은 내 댓글이 있으면 그만큼 더해서 낙관적 업데이트.
  */
 function buildCommentCounter(
   userCounts: Map<string, number>,
 ): (post: Post) => number {
   return (post) => {
-    return userCounts.get(post.id) ?? 0;
+    const base = post.comments ?? 0;
+    const myLocal = userCounts.get(post.id) ?? 0;
+    // 내 로컬 댓글이 아직 base에 반영 안 됐을 수 있으므로 초과분만 추가
+    return base + Math.max(0, myLocal - base);
   };
 }
 
