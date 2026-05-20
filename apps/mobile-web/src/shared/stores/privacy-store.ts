@@ -106,3 +106,30 @@ export const privacyStore = {
 export function usePrivacy(): PrivacySettings {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
+
+/**
+ * 로그인 후 Supabase users 테이블에서 개인정보 설정을 읽어 로컬 상태를 덮어쓴다.
+ */
+export async function syncPrivacyFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("privacy_settings")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) { console.warn("Supabase 개인정보 설정 읽기 실패:", error.message); return; }
+  if (!data?.privacy_settings || typeof data.privacy_settings !== "object") return;
+
+  _state = { ...DEFAULTS, ...(data.privacy_settings as Partial<PrivacySettings>) };
+  save(_state);
+  notify();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncPrivacyFromSupabase(), 850);
+  });
+}

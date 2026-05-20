@@ -162,3 +162,35 @@ export function formatBumpRemaining(ms: number): string {
   if (h > 0) return `${h}시간 ${m}분`;
   return `${m}분`;
 }
+
+/**
+ * 로그인 후 Supabase users 테이블에서 응원 데이터를 읽어 로컬과 병합.
+ */
+export async function syncBumpsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("bump_data")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) { console.warn("Supabase 응원 데이터 읽기 실패:", error.message); return; }
+  if (!data?.bump_data || typeof data.bump_data !== "object") return;
+
+  const remote = data.bump_data as BumpMap;
+  const merged: BumpMap = { ..._bumps };
+  for (const [postId, entry] of Object.entries(remote)) {
+    if (!merged[postId]) merged[postId] = entry;
+  }
+  _bumps = merged;
+  save(_bumps);
+  notify();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncBumpsFromSupabase(), 1050);
+  });
+}

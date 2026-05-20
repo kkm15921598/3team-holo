@@ -140,3 +140,45 @@ const snapshot = () => state;
 export function useActivityState(): ActivityState {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * 로그인 후 Supabase users 테이블에서 활동 데이터를 읽어 로컬과 병합.
+ * activeDates는 합집합으로 병합해 어느 기기의 출석도 누락되지 않게 한다.
+ */
+export async function syncActivityFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("signup_date, active_dates")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) { console.warn("Supabase 활동 데이터 읽기 실패:", error.message); return; }
+  if (!data) return;
+
+  let changed = false;
+
+  if (typeof data.signup_date === "string" && data.signup_date && !state.signupDate) {
+    state = { ...state, signupDate: data.signup_date as string };
+    changed = true;
+  }
+
+  if (Array.isArray(data.active_dates) && (data.active_dates as unknown[]).length > 0) {
+    const merged = new Set([...state.activeDates, ...(data.active_dates as string[])]);
+    const sorted = [...merged].sort();
+    if (sorted.length !== state.activeDates.length) {
+      state = { ...state, activeDates: sorted };
+      changed = true;
+    }
+  }
+
+  if (changed) { persist(); emit(); }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncActivityFromSupabase(), 1000);
+  });
+}

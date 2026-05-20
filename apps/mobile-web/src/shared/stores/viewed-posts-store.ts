@@ -108,3 +108,34 @@ const snapshot = () => state;
 export function useViewedEntries(): ViewedEntry[] {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * 로그인 후 Supabase users 테이블에서 본 게시글 목록을 읽어 로컬과 병합.
+ */
+export async function syncViewedPostsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("viewed_posts")
+    .eq("phone", userPhone)
+    .maybeSingle();
+
+  if (error) { console.warn("Supabase 본 게시글 읽기 실패:", error.message); return; }
+  if (!data || !Array.isArray(data.viewed_posts) || (data.viewed_posts as unknown[]).length === 0) return;
+
+  const existingIds = new Set(state.map((e) => e.id));
+  const toAdd = (data.viewed_posts as ViewedEntry[]).filter((e) => !existingIds.has(e.id));
+  if (toAdd.length === 0) return;
+
+  state = [...state, ...toAdd].sort((a, b) => b.viewedAt - a.viewedAt);
+  persist();
+  emit();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncViewedPostsFromSupabase(), 950);
+  });
+}
