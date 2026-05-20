@@ -189,10 +189,13 @@ export async function syncRoomsFromSupabase(): Promise<void> {
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
 
+  // 최근 30일 이내 생성된 방만 복원 (오래된 테스트 데이터 제외)
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("chat_rooms")
     .select("*")
     .eq("creator_phone", userPhone)
+    .gte("created_at", since)
     .order("created_at", { ascending: false });
 
   if (error || !data || data.length === 0) return;

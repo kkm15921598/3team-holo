@@ -311,28 +311,20 @@ export function ChatRoomScreen() {
   const [locDraftAddress, setLocDraftAddress] = useState<string>("");
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    // 1) 캐시된 메시지가 있으면 그대로 복원 (재진입 시 이전 대화 유지)
+    // 캐시된 메시지가 있으면 그대로 복원 (재진입 시 이전 대화 유지)
     const cached = getMessagesForRoom(id);
     if (cached) return cached;
-    // 2) 처음 진입이면 베이스 mock(필터된)만 깔아두기 — 잘못된 last 메시지로 잔상이 보이지 않게.
-    //    실제 메시지는 곧 이어 useEffect 의 loadFromSupabase 에서 합쳐진다.
-    return initialRoomRef.current
-      ? baseMockMessages(initialRoomRef.current)
-      : CHAT_MESSAGES;
+    // 처음 진입이면 빈 상태로 시작 — Supabase 로드 완료 후 채워짐
+    return [];
   });
 
   // 라우트 id가 바뀌면 메시지 갈아끼우고 읽음 처리
   useEffect(() => {
     if (!id) return;
 
-    // 1) preset mock 대화를 먼저 깔고 (demo 흐름 보존)
-    // 2) 그 뒤에 Supabase 에 저장된 실제 메시지를 시간 순으로 붙인다.
-    // baseMockMessages 가 자동 last 메시지를 잘라내므로, 내 메시지가 상대 자리로
-    // 잘못 가는 잔상도 없다.
     let cancelled = false;
     const loadFromSupabase = async () => {
       const r = getRoom(id);
-      const mockMessages: ChatMessage[] = r ? baseMockMessages(r) : [];
 
       const { data: rows, error } = await supabase
         .from("messages")
@@ -344,9 +336,9 @@ export function ChatRoomScreen() {
 
       if (error) {
         console.warn("Supabase 메시지 조회 실패:", error.message);
-        // 조회 실패 → 캐시 또는 mock 만으로
         const cached = getMessagesForRoom(id);
-        setMessages(cached ?? mockMessages);
+        // 조회 실패 → 캐시 있으면 캐시, 없으면 시스템 메시지만
+        setMessages(cached ?? (r ? baseMockMessages(r).slice(0, 1) : []));
         return;
       }
 
@@ -359,8 +351,10 @@ export function ChatRoomScreen() {
         mine: row.sender_phone === userPhone,
       }));
 
-      // mock + 실제 메시지 합쳐서 표시
-      const combined = [...mockMessages, ...remote];
+      // Supabase 메시지가 있으면 실제 메시지만 표시 (mock 잔상 제거)
+      // 없으면 시스템 메시지("채팅방이 시작됐어요") 한 줄만 표시
+      const sysMsg = r ? baseMockMessages(r).slice(0, 1) : [];
+      const combined = remote.length > 0 ? remote : sysMsg;
       setMessages(combined);
       persistWithoutUnreadDivider(id, combined);
     };
