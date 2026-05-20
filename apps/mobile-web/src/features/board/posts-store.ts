@@ -1,127 +1,110 @@
-// Module-level posts store. Initial data comes from the mock POSTS array.
-// New posts published from Board5 are prepended via `prepend` and consumed
-// reactively by Board2 (board-list-screen) through `subscribe`.
-//
-// ── 영속화 (localStorage) ───────────────────────────────────────────
-// 이전엔 메모리에만 저장해서 새 글 작성 직후 페이지를 새로고침하거나
-// 개발 중 Vite HMR 이 발생하면 작성한 글이 사라졌다. 이제 모든 변경을
-// localStorage 에 기록하고 모듈 로드 시점에 복원한다.
-//   - INITIAL_POSTS (mock) 은 항상 베이스로 깔리고
-//   - 사용자가 새로 만든 글만 별도로 저장해서 다음 로드 때 prepend 한다.
+// Supabase 기반 posts store.
+// - 앱 시작 시 Supabase에서 글 목록을 불러온다.
+// - Supabase가 비어있으면 mock 데이터를 fallback으로 보여준다.
+// - 새 글 작성/수정/삭제는 Supabase에 반영된다.
 
-import { POSTS as INITIAL_POSTS, type Post } from "@/shared/mock/data";
+import { POSTS as MOCK_POSTS, type Post } from "@/shared/mock/data";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
-const STORAGE_KEY = "holo:user-posts:v1";
-
-/**
- * "방금 전 / N분 전 / N시간 전 / N일 전 / N주 전" 표기를 분 단위 수치로 변환.
- * 게시판 글을 최신순(분 단위 작은 값이 먼저)으로 정렬할 때 사용한다.
- */
-function parseTimeAgoMinutes(timeAgo: string): number {
-  if (!timeAgo) return Number.POSITIVE_INFINITY;
-  if (/방금/.test(timeAgo)) return 0;
-  const m = timeAgo.match(/(\d+)\s*(분|시간|일|주)/);
-  if (!m) return Number.POSITIVE_INFINITY;
-  const n = Number(m[1]);
-  switch (m[2]) {
-    case "분":
-      return n;
-    case "시간":
-      return n * 60;
-    case "일":
-      return n * 60 * 24;
-    case "주":
-      return n * 60 * 24 * 7;
-    default:
-      return Number.POSITIVE_INFINITY;
-  }
+/** created_at timestamp → "방금 전 / N분 전 / N시간 전 / N일 전 / N주 전" */
+export function computeTimeAgo(createdAt: string | null): string {
+  if (!createdAt) return "방금 전";
+  const diffMs = Date.now() - new Date(createdAt).getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}시간 전`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7) return `${diffD}일 전`;
+  return `${Math.floor(diffD / 7)}주 전`;
 }
 
-/**
- * 게시판에 노출되는 글을 최신순(작성 시점이 가까운 순)으로 정렬.
- * timeAgo 값이 같으면 입력 순서를 유지한다.
- */
+/** Supabase row → Post 타입으로 변환 */
+function rowToPost(row: Record<string, unknown>): Post {
+  return {
+    id: row.id as string,
+    category: row.category as string,
+    status: (row.status as Post["status"]) ?? "모집중",
+    title: row.title as string,
+    description: (row.description as string) ?? "",
+    distance: (row.distance as string) ?? "0m",
+    duration: (row.duration as string) ?? "0분",
+    likes: (row.likes as number) ?? 0,
+    comments: (row.comments_count as number) ?? 0,
+    timeAgo: computeTimeAgo(row.created_at as string),
+    authorNickname: (row.author_nickname as string) ?? "",
+    authorLevel: (row.author_level as number) ?? 1,
+    location: row.location
+      ? (row.location as Post["location"])
+      : undefined,
+    participants: row.participants
+      ? (row.participants as Post["participants"])
+      : undefined,
+    meetupType: (row.meetup_type as string) ?? undefined,
+    eventDate: (row.event_date as string) ?? undefined,
+    eventTime: (row.event_time as string) ?? undefined,
+    photoUrls: row.photo_urls
+      ? (row.photo_urls as string[])
+      : undefined,
+    endDate: (row.end_date as string) ?? undefined,
+    peopleCount:
+      row.people_count != null ? (row.people_count as number) : null,
+    place: (row.place as string) ?? undefined,
+  };
+}
+
 function sortByRecency(posts: Post[]): Post[] {
   return [...posts].sort((a, b) => {
-    const da = parseTimeAgoMinutes(a.timeAgo);
-    const db = parseTimeAgoMinutes(b.timeAgo);
-    return da - db;
+    const parse = (t: string) => {
+      if (/방금/.test(t)) return 0;
+      const m = t.match(/(\d+)\s*(분|시간|일|주)/);
+      if (!m) return Number.POSITIVE_INFINITY;
+      const n = Number(m[1]);
+      const mul: Record<string, number> = { 분: 1, 시간: 60, 일: 1440, 주: 10080 };
+      return n * (mul[m[2]] ?? 1);
+    };
+    return parse(a.timeAgo) - parse(b.timeAgo);
   });
 }
 
-/**
- * localStorage 에서 사용자가 만든 / 수정한 글을 복원해 mock INITIAL_POSTS 와 병합.
- *  - 같은 id 가 있으면 user 측 값으로 덮어씀 (수정 반영)
- *  - mock 에 없던 새 글은 그대로 추가
- *  - removed id 목록도 함께 저장돼 mock 글 삭제 상태도 복원
- */
-type PersistedShape = {
-  /** 사용자가 새로 만든 / 수정한 글 */
-  posts?: Post[];
-  /** 사용자가 삭제한 글 id (mock 글 삭제도 기억) */
-  removedIds?: string[];
-};
-
-function loadPersisted(): PersistedShape {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as PersistedShape;
-    return {
-      posts: Array.isArray(parsed.posts) ? parsed.posts : [],
-      removedIds: Array.isArray(parsed.removedIds) ? parsed.removedIds : [],
-    };
-  } catch {
-    return {};
-  }
-}
-
-function persist() {
-  if (typeof window === "undefined") return;
-  try {
-    // mock 에는 없는 글 + mock 글 중 수정된 것 = 사용자 변경분.
-    // 모든 _posts 를 그대로 저장하면 mock 데이터까지 중복 저장되니, mock 과 다른 항목만 골라낸다.
-    const baseMap = new Map(INITIAL_POSTS.map((p) => [p.id, p]));
-    const userPosts = _posts.filter((p) => {
-      const base = baseMap.get(p.id);
-      return !base || JSON.stringify(base) !== JSON.stringify(p);
-    });
-    const baseIds = new Set(INITIAL_POSTS.map((p) => p.id));
-    const currentIds = new Set(_posts.map((p) => p.id));
-    const removedIds = [...baseIds].filter((id) => !currentIds.has(id));
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ posts: userPosts, removedIds }),
-    );
-  } catch {
-    // quota / private 모드 — 영속화는 best-effort.
-  }
-}
-
-function buildInitial(): Post[] {
-  const persisted = loadPersisted();
-  const removed = new Set(persisted.removedIds ?? []);
-  const userPosts = persisted.posts ?? [];
-  const userById = new Map(userPosts.map((p) => [p.id, p]));
-  // mock 베이스에서 삭제된 글 제거 + 같은 id 면 사용자 값으로 덮어씀.
-  const merged: Post[] = [];
-  for (const p of INITIAL_POSTS) {
-    if (removed.has(p.id)) continue;
-    merged.push(userById.get(p.id) ?? p);
-  }
-  // mock 에 없던 새 글 (사용자 작성) 은 그대로 추가.
-  for (const p of userPosts) {
-    if (!INITIAL_POSTS.some((m) => m.id === p.id)) merged.push(p);
-  }
-  return sortByRecency(merged);
-}
-
-let _posts: Post[] = buildInitial();
+// 초기값은 mock 데이터 (Supabase 로드 전 빠른 표시)
+let _posts: Post[] = sortByRecency(MOCK_POSTS);
+let _loadedFromSupabase = false;
 const listeners = new Set<() => void>();
 
 function notify() {
   listeners.forEach((l) => l());
+}
+
+/** Supabase에서 글 목록 로드 후 store 갱신 */
+async function loadFromSupabase() {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("is_deleted", false)
+    .order("bumped_at", { ascending: false });
+
+  if (error) {
+    console.warn("Supabase 글 목록 로드 실패:", error.message);
+    return;
+  }
+
+  if (data && data.length > 0) {
+    // Supabase 글이 있으면 → Supabase 글만 표시
+    _posts = sortByRecency(data.map(rowToPost));
+  } else {
+    // Supabase가 비어있으면 → mock 데이터 fallback
+    _posts = sortByRecency(MOCK_POSTS);
+  }
+  _loadedFromSupabase = true;
+  notify();
+}
+
+// 앱 시작 시 자동 로드
+if (typeof window !== "undefined") {
+  loadFromSupabase();
 }
 
 export const postsStore = {
@@ -134,34 +117,66 @@ export const postsStore = {
       listeners.delete(fn);
     };
   },
-  /**
-   * 새 글 추가. 추가 후 항상 최신순(timeAgo 분 단위 오름차순)으로 재정렬.
-   * 시드 계정에서 여러 글이 연속 prepend 돼도 timeAgo 기준으로 올바르게 노출됨.
-   */
+  /** 새 글 추가 — 로컬 즉시 반영 + Supabase 저장 */
   prepend(post: Post): void {
     _posts = sortByRecency([post, ..._posts]);
-    persist();
     notify();
+    // Supabase 저장
+    const userPhone = getCurrentAccount();
+    supabase.from("posts").insert({
+      id: post.id,
+      category: post.category,
+      status: post.status,
+      title: post.title,
+      description: post.description,
+      distance: post.distance ?? "0m",
+      duration: post.duration ?? "0분",
+      likes: post.likes ?? 0,
+      comments_count: post.comments ?? 0,
+      author_nickname: post.authorNickname,
+      author_phone: userPhone ?? null,
+      author_level: post.authorLevel ?? 1,
+      location: post.location ?? null,
+      participants: post.participants ?? null,
+      meetup_type: post.meetupType ?? null,
+      event_date: post.eventDate ?? null,
+      event_time: post.eventTime ?? null,
+      photo_urls: post.photoUrls ?? null,
+      end_date: post.endDate ?? null,
+      people_count: post.peopleCount ?? null,
+      place: post.place ?? null,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 글 저장 실패:", error.message);
+    });
   },
+  /** 글 수정 — 로컬 즉시 반영 + Supabase 업데이트 */
   update(post: Post): void {
     const idx = _posts.findIndex((p) => p.id === post.id);
     if (idx >= 0) {
       const next = [..._posts];
       next[idx] = post;
-      // timeAgo 가 바뀌었을 수도 있으니 업데이트 후에도 재정렬
       _posts = sortByRecency(next);
-      persist();
       notify();
     }
+    // Supabase 업데이트
+    supabase.from("posts").update({
+      category: post.category,
+      status: post.status,
+      title: post.title,
+      description: post.description,
+      location: post.location ?? null,
+      meetup_type: post.meetupType ?? null,
+      event_date: post.eventDate ?? null,
+      event_time: post.eventTime ?? null,
+      photo_urls: post.photoUrls ?? null,
+      end_date: post.endDate ?? null,
+      people_count: post.peopleCount ?? null,
+      place: post.place ?? null,
+    }).eq("id", post.id).then(({ error }) => {
+      if (error) console.warn("Supabase 글 수정 실패:", error.message);
+    });
   },
-  /**
-   * 끌어올리기 — 글을 현재 위치에서 제거하고 최상단으로 이동.
-   *
-   * 단순히 timeAgo 를 "방금 전" 으로 바꿔 update() 하면 다른 "방금 전" 글들과
-   * 동률이 되어 stable sort 가 원래 순서를 유지하므로 시각적으로 위로 안 올라간다.
-   * 이 메서드는 명시적으로 배열에서 제거 → 최상단 prepend 후 재정렬해서 확실히
-   * 최상단으로 보낸다(동률 안에서도 첫 번째 위치 확보).
-   */
+  /** 끌어올리기 — 최상단 이동 + Supabase bumped_at 갱신 */
   bumpToTop(post: Post): void {
     const idx = _posts.findIndex((p) => p.id === post.id);
     if (idx < 0) return;
@@ -169,26 +184,33 @@ export const postsStore = {
     next.splice(idx, 1);
     next.unshift({ ...post, timeAgo: "방금 전" });
     _posts = sortByRecency(next);
-    persist();
     notify();
+    // Supabase bumped_at 갱신
+    supabase.from("posts").update({ bumped_at: new Date().toISOString() })
+      .eq("id", post.id).then(({ error }) => {
+        if (error) console.warn("Supabase 끌어올리기 실패:", error.message);
+      });
   },
+  /** 글 삭제 — 로컬 제거 + Supabase soft delete */
   remove(ids: string[]): void {
     const set = new Set(ids);
     _posts = _posts.filter((p) => !set.has(p.id));
-    persist();
     notify();
-  },
-  /** 신규 가입 시 게시글을 mock 초기값으로 되돌림 (테스트 계정이 prepend 한 글 제거) */
-  resetToInitial(): void {
-    _posts = sortByRecency(INITIAL_POSTS);
-    // 영속화된 사용자 변경분도 같이 비움
-    if (typeof window !== "undefined") {
-      try {
-        window.localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // ignore
-      }
+    // Supabase soft delete
+    for (const id of ids) {
+      supabase.from("posts").update({ is_deleted: true })
+        .eq("id", id).then(({ error }) => {
+          if (error) console.warn("Supabase 글 삭제 실패:", error.message);
+        });
     }
+  },
+  /** 수동 새로고침 */
+  async refresh(): Promise<void> {
+    await loadFromSupabase();
+  },
+  /** 신규 가입 시 mock 초기값으로 리셋 */
+  resetToInitial(): void {
+    _posts = sortByRecency(MOCK_POSTS);
     notify();
   },
 };
