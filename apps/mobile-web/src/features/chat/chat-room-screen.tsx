@@ -337,24 +337,30 @@ export function ChatRoomScreen() {
       if (error) {
         console.warn("Supabase 메시지 조회 실패:", error.message);
         const cached = getMessagesForRoom(id);
-        // 조회 실패 → 캐시 있으면 캐시, 없으면 시스템 메시지만
-        setMessages(cached ?? (r ? baseMockMessages(r).slice(0, 1) : []));
+        const sysMsg = r ? baseMockMessages(r).slice(0, 1) : [];
+        setMessages(cached ?? sysMsg);
         return;
       }
 
       const userPhone = getCurrentAccount();
-      const remote: ChatMessage[] = (rows ?? []).map((row: any) => ({
-        id: String(row.message_id ?? row.id),
-        nickname: row.sender_nickname ?? "",
-        content: row.content ?? "",
-        time: row.sent_time ?? "",
-        mine: row.sender_phone === userPhone,
-      }));
+      const remote: ChatMessage[] = (rows ?? []).map((row: any) => {
+        // created_at → 날짜 구분선용 date 필드 (YYYY-MM-DD)
+        const createdAt = row.created_at ? new Date(row.created_at) : new Date();
+        const date = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, "0")}-${String(createdAt.getDate()).padStart(2, "0")}`;
+        return {
+          id: String(row.message_id ?? row.id),
+          nickname: row.sender_nickname ?? "",
+          content: row.content ?? "",
+          time: row.sent_time ?? "",
+          mine: row.sender_phone === userPhone,
+          date,
+        };
+      });
 
-      // Supabase 메시지가 있으면 실제 메시지만 표시 (mock 잔상 제거)
-      // 없으면 시스템 메시지("채팅방이 시작됐어요") 한 줄만 표시
+      // 시스템 메시지("채팅방이 시작됐어요")는 항상 첫 줄에 표시
+      // 실제 메시지가 없으면 시스템 메시지만 (대화 시작 전 상태)
       const sysMsg = r ? baseMockMessages(r).slice(0, 1) : [];
-      const combined = remote.length > 0 ? remote : sysMsg;
+      const combined = [...sysMsg, ...remote];
       setMessages(combined);
       persistWithoutUnreadDivider(id, combined);
     };
