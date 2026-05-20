@@ -41,6 +41,7 @@ import { LocationMap, LocationPicker } from "@/features/map/post-map";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
 import { ConfirmModal as SharedConfirmModal } from "@/shared/components/confirm-modal";
+import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
 
 type ReplyTarget = { nickname: string; content: string } | null;
 
@@ -301,6 +302,7 @@ export function ChatRoomScreen() {
             time: row.sent_time ?? "",
             mine: isMine,
             readBy: isMine ? Math.max(0, memberCount - 1 - readByArr.length) : undefined,
+            ...(row.image_url ? { type: "image" as const, imageUrl: row.image_url } : {}),
           };
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -610,26 +612,55 @@ export function ChatRoomScreen() {
       .padStart(2, "0")}`;
   };
 
-  // 이미지 파일을 Data URL로 읽어 메시지에 추가
+  // 이미지 파일을 Storage에 업로드 후 메시지에 추가
   const handleImageFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const roomId = id ?? "unknown";
+    const myNickname = getProfile().nickname;
+    const userPhone = getCurrentAccount();
+
     Array.from(files).forEach((file, idx) => {
+      const msgId = `${Date.now()}-${idx}`;
+      const time = nowTime();
+
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+
+        // Storage 업로드 (실패 시 base64 fallback)
+        const resolvedUrl = await uploadPhotoToStorage(dataUrl, `chat/${roomId}`);
+
+        // UI에 즉시 표시
         setMessages((prev) => [
           ...prev,
           {
-            id: `${Date.now()}-${idx}`,
-            nickname: "",
+            id: msgId,
+            nickname: myNickname,
             content: "",
-            time: nowTime(),
+            time,
             mine: true,
-            type: "image",
-            imageUrl: reader.result as string,
+            type: "image" as const,
+            imageUrl: resolvedUrl,
             read: false,
             readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
           },
         ]);
+
+        // Supabase messages 테이블에 저장 (best-effort)
+        if (userPhone && id) {
+          supabase.from("messages").insert({
+            message_id: msgId,
+            room_id: id,
+            sender_phone: userPhone,
+            sender_nickname: myNickname,
+            content: "",
+            image_url: resolvedUrl,
+            sent_time: time,
+            read_by: [],
+          }).then(({ error }) => {
+            if (error) console.warn("Supabase 이미지 메시지 저장 실패:", error.message);
+          });
+        }
       };
       reader.readAsDataURL(file);
     });
@@ -3064,6 +3095,34 @@ rentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hid
 function CrownIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFCB3B" stroke="#FFCB3B" strokeWidth="1" aria-hidden>
+      <path d="m3 18 2-9 5 4 2-7 2 7 5-4 2 9z" />
+    </svg>
+  );
+}
+function UserPlusIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21c0-4 3.6-7 7-7s7 3 7 7" />
+      <path d="M19 8v6M16 11h6" />
+    </svg>
+  );
+}
+function FileIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+16" height="16" viewBox="0 0 24 24" fill="#FFCB3B" stroke="#FFCB3B" strokeWidth="1" aria-hidden>
       <path d="m3 18 2-9 5 4 2-7 2 7 5-4 2 9z" />
     </svg>
   );

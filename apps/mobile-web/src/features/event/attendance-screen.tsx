@@ -4,7 +4,6 @@ import {
   awardXp,
   getAttendanceCycleStatus,
   getAttendanceDayCount,
-  getCurrentStreak,
 } from "@/shared/stores/xp-store";
 import { addPoints } from "@/features/myroom/myroom-store";
 import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
@@ -73,7 +72,6 @@ export function AttendanceScreen() {
     checked: r.checked,
     isToday: r.isToday,
   }));
-  const streak = getCurrentStreak();
   const todayDay = attendanceDays.find((d) => d.isToday);
   const checkedCount = attendanceDays.filter((d) => d.checked).length;
   const alreadyCheckedToday = todayDay?.checked ?? false;

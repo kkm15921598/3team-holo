@@ -2,16 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const TYPE_FILTERS = ["단기성 모임", "장기성 모임"];
-const BOARD_FILTERS = [
-  "자유게시판",
-  "공동구매 / 소분하기",
-  "추천해요",
-  "게임파티",
-  "같이 운동해요",
-  "드라마 · 영화",
-  "맛집 & 먹거리",
-  "도와주세요!",
-];
+
 const DISTANCE_FILTERS = ["1km 이하", "1km~5km", "5km~10km"];
 const GENDER_FILTERS = ["남자", "여자"];
 const AGE_FILTERS = ["10대", "20대", "30대", "40대", "50대", "60대 이상"];
@@ -247,13 +238,6 @@ function PeopleIcon() {
   );
 }
 
-function ChatIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z" />
-    </svg>
-  );
-}
 
 function PinIcon() {
   return (

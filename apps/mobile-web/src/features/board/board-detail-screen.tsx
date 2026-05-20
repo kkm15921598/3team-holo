@@ -203,7 +203,6 @@ export function BoardDetailScreen() {
     };
     reader.readAsDataURL(file);
   };
-  const initialComments: { id: string; nickname: string; content: string; timeAgo: string }[] = [];
   // Supabase에서 이 게시글의 실제 댓글 로드
   const [supabaseComments, setSupabaseComments] = useState<StoredComment[]>([]);
   useEffect(() => {
@@ -1790,61 +1789,6 @@ function PlusIcon() {
   );
 }
 function CameraIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 7h3l2-3h8l2 3h3v13H3z" />
-      <circle cx="12" cy="13" r="4" />
-    </svg>
-  );
-}
-function PhotoIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="9" cy="9" r="2" />
-      <path d="m21 15-5-5L5 21" />
-    </svg>
-  );
-}
-function PinIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z" />
-      <circle cx="12" cy="9" r="2.5" />
-    </svg>
-  );
-}
-
-function XIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M6 6l12 12M6 18 18 6" />
-    </svg>
-  );
-}
-function CheckMark({ color = "currentColor" }: { color?: string }) {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-function SendIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 11 21 3l-8 18-2-8z" />
-    </svg>
-  );
-}
-function ReplyArrowIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="mt-1">
-      <path d="M9 14 4 9l5-5" />
-      <path d="M4 9h12a4 4 0 0 1 4 4v7" />
-    </svg>
-  );
-}
-{
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M3 7h3l2-3h8l2 3h3v13H3z" />
