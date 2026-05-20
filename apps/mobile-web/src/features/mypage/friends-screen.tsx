@@ -5,6 +5,7 @@ import { getAvatarUrl } from "@/features/chat/avatars";
 import {
   MAX_FRIENDS,
   blockFriendById,
+  getBlocked,
   removeFriendById,
   unblockFriendById,
   useBlocked,
@@ -15,7 +16,7 @@ import {
 } from "./friends-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { markReported } from "@/shared/stores/reported-users-store";
-import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
+import { markBlocked, unmarkBlocked } from "@/shared/stores/blocked-nicknames-store";
 
 type Mode = "view" | "block" | "report" | "delete";
 
@@ -57,8 +58,13 @@ export function FriendsScreen() {
   };
 
   const handleUnblock = (id: string) => {
+    // 차단 해제 전에 닉네임을 먼저 꺼내야 한다.
+    // unblockFriendById 호출 후엔 _blocked 에서 제거되어 닉네임을 찾을 수 없음.
+    const nickname = getBlocked().find((b) => b.id === id)?.nickname;
     const ok = unblockFriendById(id);
     if (ok) {
+      // blocked-nicknames-store 에서도 제거 — 이웃 추천 필터와 상태 일치 보장
+      if (nickname) unmarkBlocked(nickname);
       showToast("차단이 해제되었습니다.");
     } else {
       showToast("친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요.");
