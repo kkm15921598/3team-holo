@@ -5,9 +5,13 @@ import { PasswordToggle } from "@/shared/components/password-toggle";
 import { PasswordStrength } from "@/shared/components/password-strength";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
+import { supabase } from "@/shared/lib/supabaseClient";
 
-// mock 데모용: 어떤 이름/번호든 인증번호 6자리만 맞으면 통과시킨다.
-const MOCK_CODE = "123456";
+// 데모용: 실제 SMS 발송 없이 가짜 6자리 인증번호를 생성.
+// 실제 SMS API 연동 전까지 사용. 코드 생성 시 토스트로 보여줌.
+function generateOtp(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 type Step = "verify" | "reset" | "done";
 
@@ -20,6 +24,8 @@ export function FindPasswordScreen() {
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [verifyError, setVerifyError] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [showSmsToast, setShowSmsToast] = useState(false);
 
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent && step === "verify");
@@ -51,12 +57,30 @@ export function FindPasswordScreen() {
   const isPwMatch = !!confirmPw && newPw === confirmPw;
   const canSubmitReset = isPwValid && isPwMatch;
 
-  const handleVerifySubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleVerifySubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setVerifyError("");
 
     if (!codeSent) {
       if (!baseFilled) return;
+      // Supabase에서 이름+번호 일치 여부 확인
+      const { data: dbUser } = await supabase
+        .from("users")
+        .select("phone")
+        .eq("name", name.trim())
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (!dbUser) {
+        setVerifyError("입력하신 정보와 일치하는 계정을 찾을 수 없습니다.");
+        return;
+      }
+
+      // 가짜 SMS 발송: 무작위 6자리 코드 생성 + 토스트 노출
+      const otp = generateOtp();
+      setGeneratedCode(otp);
+      setShowSmsToast(true);
+      setTimeout(() => setShowSmsToast(false), 10000);
       setCodeSent(true);
       return;
     }
@@ -67,22 +91,24 @@ export function FindPasswordScreen() {
       return;
     }
 
-    // mock 환경이라 입력한 이름/번호는 형식 검증(길이)만 통과하면 OK.
-    // 실서비스에서는 서버 응답으로 일치 여부를 받아야 함.
-    if (code === MOCK_CODE) {
+    if (code === generatedCode) {
       setStep("reset");
     } else {
-      setVerifyError("인증번호가 올바르지 않습니다. (데모: 123456)");
+      setVerifyError("인증번호가 올바르지 않습니다.");
     }
   };
 
   const handleResendCode = () => {
+    const otp = generateOtp();
+    setGeneratedCode(otp);
+    setShowSmsToast(true);
+    setTimeout(() => setShowSmsToast(false), 10000);
     setCode("");
     setVerifyError("");
     restartTimer();
   };
 
-  const handleResetSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleResetSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPwError("");
 
@@ -94,6 +120,14 @@ export function FindPasswordScreen() {
       setPwError("비밀번호가 일치하지 않습니다.");
       return;
     }
+
+    // Supabase users 테이블 비밀번호 실제 업데이트
+    await supabase
+      .from("users")
+      .update({ password: newPw })
+      .eq("name", name.trim())
+      .eq("phone", phone);
+
     setStep("done");
   };
 
@@ -307,7 +341,7 @@ export function FindPasswordScreen() {
             <div className="flex flex-col gap-1">
               <div className="relative">
                 <Input
-                  placeholder="인증번호 입력 (123456)"
+                  placeholder="인증번호 입력"
                   value={code}
                   onChange={(v) => {
                     setCode(v.replace(/\D/g, "").slice(0, 6));
@@ -341,6 +375,9 @@ export function FindPasswordScreen() {
               </button>
             </div>
           )}
+          {!codeSent && verifyError && (
+            <p className="pl-2 text-[13px] text-holo-error">{verifyError}</p>
+          )}
         </div>
 
         <div className="mt-auto pt-6">
@@ -355,7 +392,45 @@ export function FindPasswordScreen() {
           </button>
         </div>
       </form>
+
+      {showSmsToast && (
+        <SmsToast
+          code={generatedCode}
+          onClose={() => setShowSmsToast(false)}
+        />
+      )}
     </main>
+  );
+}
+
+/**
+ * 가짜 SMS 알림 토스트.
+ * 실제 SMS API 연동 전까지 데모용으로 화면 상단에 iOS/Android 알림처럼 노출.
+ */
+function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
+  return (
+    <div
+      role="alert"
+      onClick={onClose}
+      className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl bg-white/95 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-holo-purple-mid text-[16px] font-bold text-white">
+          H
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[13px] font-semibold text-holo-ink">HOLO</span>
+            <span className="shrink-0 text-[11px] text-holo-ink-3">방금</span>
+          </div>
+          <p className="mt-0.5 text-[13px] leading-snug text-holo-ink">
+            [HOLO] 본인확인 인증번호는{" "}
+            <span className="font-bold text-holo-purple-mid">{code}</span> 입니다.
+            정확히 입력해주세요.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
