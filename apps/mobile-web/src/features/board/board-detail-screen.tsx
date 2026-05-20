@@ -7,6 +7,7 @@ import { LocationMap, LocationPicker } from "@/features/map/post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   calcJoined,
   ensureMeetupRoom,
@@ -383,7 +384,12 @@ export function BoardDetailScreen() {
   const hasCommentText = commentText.trim().length > 0;
   const hasReplyText = replyText.trim().length > 0;
   // "내 글" 여부는 현재 로그인 계정 닉네임(profile-store)과 비교한다.
-  const isMine = post.authorNickname === profile.nickname;
+  // 닉네임은 변경될 수 있으므로 전화번호로 "내 글" 여부 판별.
+  // authorPhone 이 없는 구(舊) 게시글은 닉네임으로 fallback.
+  const myPhone = getCurrentAccount();
+  const isMine = myPhone
+    ? (post.authorPhone ? post.authorPhone === myPhone : post.authorNickname === profile.nickname)
+    : post.authorNickname === profile.nickname;
 
   const handleSendComment = () => {
     // 사진/지도만 첨부하고 텍스트가 없어도 전송 가능 — 답글 입력과 동일한 정책.
@@ -426,7 +432,7 @@ export function BoardDetailScreen() {
       nickname: profile.nickname,
       content: replyText.trim(),
       timeAgo: "방금 전",
-      isAuthor: profile.nickname === post.authorNickname,
+      isAuthor: isMine,
       hasMap: replyHasMap,
       hasPhoto: replyHasPhoto,
       photoUrl: replyPhotoUrl ?? undefined,
@@ -526,7 +532,7 @@ export function BoardDetailScreen() {
     // 이번 참여로 정원이 채워지고 + 이 모임을 내가 주최한 경우 → 호스트(=현재 사용자)에게 모집 완료 알림.
     // baseJoined + 1(이번 참여) >= capacity 이면 정원 채움.
     const willBeFull = Math.min(capacity, baseJoined + 1) >= capacity;
-    if (willBeFull && post.authorNickname === profile.nickname) {
+    if (willBeFull && isMine) {
       pushMeetingFull(post.title, post.id);
     }
   };
@@ -719,7 +725,7 @@ export function BoardDetailScreen() {
           >
             <img
               src={
-                post.authorNickname === profile.nickname
+                isMine
                   ? (profile.profileFace ?? ME_PERSONA.face)
                   : getAvatarUrl(post.authorNickname)
               }

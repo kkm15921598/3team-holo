@@ -50,6 +50,8 @@ export type Post = {
   comments: number;
   timeAgo: string;
   authorNickname: string;
+  /** 작성자 전화번호 — 닉네임 변경 이후에도 "내 글" 판별에 사용 */
+  authorPhone?: string | null;
   authorLevel: number;
   location?: PostLocation;
   /** 현재 참여자. 4명 이상이면 카드에 +N 표시. */

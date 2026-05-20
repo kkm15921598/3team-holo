@@ -16,6 +16,7 @@ import { postsStore } from "./posts-store";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 import {
   getAuthorGender,
@@ -40,15 +41,14 @@ import { useBumpCount } from "@/shared/stores/bump-store";
  */
 const BOARD_NEARBY_RADIUS_M = 10000;
 
-// 내 게시글이면 profile-store 의 얼굴, 아니면 닉네임 해시 face.
-// "내 게시글" 여부는 현재 로그인한 계정의 닉네임(profile-store)과 비교한다 —
-// ME.nickname 은 데모용 고정값이라 테스트 계정으로 로그인하면 어긋난다.
-function avatarFor(nickname: string): string {
-  const profile = getProfile();
-  if (nickname === profile.nickname) {
+// "내 게시글" 여부는 전화번호로 판별 — 닉네임은 변경될 수 있으므로 신뢰할 수 없음.
+function avatarFor(post: { authorNickname: string; authorPhone?: string | null }): string {
+  const myPhone = getCurrentAccount();
+  if (myPhone && post.authorPhone === myPhone) {
+    const profile = getProfile();
     return profile.profileFace ?? ME_PERSONA.face;
   }
-  return getAvatarUrl(nickname);
+  return getAvatarUrl(post.authorNickname);
 }
 
 /**
@@ -681,7 +681,7 @@ function PostCard({
         {rank !== undefined && <RankBadge rank={rank} />}
         <div className="flex shrink-0 flex-col items-center">
           <img
-            src={avatarFor(post.authorNickname)}
+            src={avatarFor(post)}
             alt={post.authorNickname}
             className="h-12 w-12 rounded-full bg-holo-yellow-room object-cover"
             draggable={false}

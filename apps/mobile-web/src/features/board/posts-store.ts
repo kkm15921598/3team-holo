@@ -44,6 +44,7 @@ function rowToPost(row: Record<string, unknown>): Post {
     comments: (row.comments as number) ?? 0,
     timeAgo: computeTimeAgo(row.created_at as string),
     authorNickname: (row.author_nickname as string) ?? "",
+    authorPhone: (row.author_phone as string | null) ?? null,
     authorLevel: (row.author_level as number) ?? 1,
     location,
     participants: row.participants
