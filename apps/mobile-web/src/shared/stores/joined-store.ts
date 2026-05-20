@@ -24,11 +24,10 @@ function syncToSupabase(s: Set<string>) {
  * 모임 참여 상태 store.
  *
  * - 게시글 상세에서 "함께하기" 버튼을 누르면 해당 post.id 가 set 에 추가된다.
- * - "모임 참여중" 상태에서 다시 한 번 누르면 leavePost 로 참여가 취소된다 — 채팅방 퇴장은 호출 측에서 처리.
+ * - "모임 참여중" 상태에서 다시 한 번 누르면 leavePost 로 참여가 취소된다.
  * - localStorage 에 영속화되어 새로고침 후에도 유지된다.
  */
 
-// v2: 테스트 계정 잔여 모임 참여 데이터 자동 초기화
 const STORAGE_KEY = "holo:joined:v2";
 
 function loadInitial(): Set<string> {
@@ -65,9 +64,6 @@ export function isPostJoined(id: string): boolean {
   return state.has(id);
 }
 
-/**
- * 참여 추가. 이미 참여 중이면 no-op.
- */
 export function joinPost(id: string): void {
   if (state.has(id)) return;
   const next = new Set(state);
@@ -79,10 +75,6 @@ export function joinPost(id: string): void {
   postsStore.patchParticipants(id, userAvatarBg(), "join");
 }
 
-/**
- * 참여 취소 — "모임 참여중" 상태에서 다시 한 번 클릭했을 때 사용.
- * 참여 중이 아니면 no-op. 채팅방 퇴장은 호출 측에서 별도로 수행한다.
- */
 export function leavePost(id: string): void {
   if (!state.has(id)) return;
   const next = new Set(state);
@@ -98,7 +90,6 @@ export function getJoinedIds(): string[] {
   return [...state];
 }
 
-/** 참여 set 전체 교체 — 테스트 계정 시드 / 리셋 시 사용 */
 export function setJoinedIds(ids: string[]): void {
   state = new Set(ids);
   persist();
@@ -114,14 +105,10 @@ const subscribe = (cb: () => void) => {
 };
 const snapshot = () => state;
 
-/** 참여한 post.id 의 Set 을 React 컴포넌트에서 구독 */
 export function useJoinedSet(): Set<string> {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
 
-/**
- * Supabase users.joined_post_ids 에서 참여 목록 읽어와 병합.
- */
 export async function syncJoinedFromSupabase(): Promise<void> {
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
@@ -139,10 +126,6 @@ export async function syncJoinedFromSupabase(): Promise<void> {
 
 if (typeof window !== "undefined") {
   window.addEventListener("load", () => {
-    window.setTimeout(() => syncJoinedFromSupabase(), 800);
-  });
-}
-> {
     window.setTimeout(() => syncJoinedFromSupabase(), 800);
   });
 }
