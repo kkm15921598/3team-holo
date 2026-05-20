@@ -33,28 +33,6 @@ type Inquiry = {
   reply?: string;
 };
 
-// 데모용 mock 내역 — 실제 서비스에서는 사용자별 store 에서 불러온다.
-const MOCK_INQUIRIES: Inquiry[] = [
-  {
-    id: "iq-001",
-    category: "포인트",
-    title: "출석 체크 포인트가 적립되지 않아요",
-    content: "어제 출석 체크를 했는데 포인트가 들어오지 않았어요. 확인 부탁드려요.",
-    status: "답변 완료",
-    createdAt: "26.05.16",
-    reply:
-      "안녕하세요, HOLO 운영팀입니다. 확인해본 결과 일일 적립 한도에 도달하셔서 추가 적립이 되지 않은 상태였습니다. 자정 이후 다시 적립 가능하니 참고 부탁드려요.",
-  },
-  {
-    id: "iq-002",
-    category: "채팅",
-    title: "사진 첨부가 안 돼요",
-    content: "채팅방에서 + 버튼을 눌러도 사진 첨부 메뉴가 뜨지 않아요.",
-    status: "답변 대기",
-    createdAt: "26.05.18",
-  },
-];
-
 // FAQ 데이터 — 카테고리별로 묶음.
 type QaItem = {
   id: string;
@@ -223,7 +201,7 @@ function TabButton({
 function InquiryTab() {
   const [showForm, setShowForm] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [inquiries, setInquiries] = useState<Inquiry[]>(MOCK_INQUIRIES);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {

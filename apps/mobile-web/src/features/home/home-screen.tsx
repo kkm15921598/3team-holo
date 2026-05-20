@@ -191,8 +191,9 @@ export function HomeScreen() {
           </button>
         </div>
         {meetups.length === 0 ? (
-          <div className="flex h-[120px] items-center justify-center rounded-[16px] bg-holo-surface text-[14px] text-holo-ink-3">
-            아직 근처 모임이 없어요 — 첫 번째로 만들어보세요!
+          <div className="flex h-[140px] flex-col items-center justify-center gap-[10px] rounded-[16px] bg-holo-surface">
+            <span className="text-[14px] font-semibold text-holo-ink-2">아직 근처 모임이 없어요</span>
+            <span className="text-[14px] text-holo-ink-3">첫 번째로 만들어보세요!</span>
           </div>
         ) : (
           <div
