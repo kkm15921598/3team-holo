@@ -160,6 +160,10 @@ export function getEquippedBadgeSrc(): string | null {
  * 로그인 후 앱 시작 시 자동 호출.
  */
 export async function syncProfileFromSupabase(): Promise<void> {
+  // 신규 가입 직후 2분간은 Supabase 구(舊) 데이터가 방금 저장한 프로필을 덮어쓰지 않도록 skip.
+  const freshSignupTs = typeof window !== "undefined" ? window.localStorage.getItem("holo:fresh-signup") : null;
+  if (freshSignupTs && Date.now() - parseInt(freshSignupTs) < 120_000) return;
+
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
   const { data, error } = await supabase

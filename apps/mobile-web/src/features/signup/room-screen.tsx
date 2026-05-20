@@ -242,6 +242,10 @@ export function RoomScreen() {
   //    이 호출 이후에 가입 보상을 발급해야 reset 으로 지워지지 않는다.
   resetAllStoresForFreshSignup();
 
+  // 2-1) 신규 가입 타임스탬프 기록 — 이후 2분간 Supabase sync 함수들이
+  //      구(舊) 데이터로 덮어쓰지 않도록 각 store 에서 이 값을 확인하고 skip 한다.
+  localStorage.setItem("holo:fresh-signup", Date.now().toString());
+
   // 3) 가입 보상 — "홀로 입주자" 뱃지 / 칭호 자동 발급 + 기본 장착
   recordBadgeAcquired("badge_24");
   setEquippedBadgeId("badge_24");

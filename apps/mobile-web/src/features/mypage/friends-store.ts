@@ -410,6 +410,10 @@ export function useBlocked(): Friend[] {
  * Supabase friends 테이블에서 친구 목록을 읽어와 로컬 상태와 병합.
  */
 export async function syncFriendsFromSupabase(): Promise<void> {
+  // 신규 가입 직후 2분간은 Supabase 구(舊) 데이터가 방금 저장한 데이터를 덮어쓰지 않도록 skip.
+  const _freshTs = typeof window !== "undefined" ? window.localStorage.getItem("holo:fresh-signup") : null;
+  if (_freshTs && Date.now() - parseInt(_freshTs) < 120_000) return;
+
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
 
@@ -451,6 +455,10 @@ export async function syncFriendsFromSupabase(): Promise<void> {
  *   (상대방이 저장한 direction='sent' 행에서 nickname이 나인 것을 조회)
  */
 export async function syncFriendRequestsFromSupabase(): Promise<void> {
+  // 신규 가입 직후 2분간은 Supabase 구(舊) 데이터가 방금 저장한 데이터를 덮어쓰지 않도록 skip.
+  const _freshTs = typeof window !== "undefined" ? window.localStorage.getItem("holo:fresh-signup") : null;
+  if (_freshTs && Date.now() - parseInt(_freshTs) < 120_000) return;
+
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
   const myNickname = getProfile().nickname;

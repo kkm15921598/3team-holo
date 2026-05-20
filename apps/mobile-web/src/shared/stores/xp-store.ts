@@ -434,6 +434,10 @@ export function useXpState(): XpState {
  * Supabase users 테이블에서 XP/출석 데이터 읽어와 로컬 상태 갱신.
  */
 export async function syncXpFromSupabase(): Promise<void> {
+  // 신규 가입 직후 2분간은 Supabase 구(舊) 데이터가 방금 저장한 데이터를 덮어쓰지 않도록 skip.
+  const _freshTs = typeof window !== "undefined" ? window.localStorage.getItem("holo:fresh-signup") : null;
+  if (_freshTs && Date.now() - parseInt(_freshTs) < 120_000) return;
+
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
   const { data, error } = await supabase

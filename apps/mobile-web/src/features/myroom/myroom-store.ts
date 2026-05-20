@@ -590,6 +590,10 @@ export function getDailyCount(key: string): number {
  * null / 빈 값이면 기존 로컬 상태를 그대로 유지한다.
  */
 export async function syncMyroomFromSupabase(): Promise<void> {
+  // 신규 가입 직후 2분간은 방금 저장한 마이룸 데이터가 덮어쓰이지 않도록 skip.
+  const freshSignupTs = typeof window !== "undefined" ? window.localStorage.getItem("holo:fresh-signup") : null;
+  if (freshSignupTs && Date.now() - parseInt(freshSignupTs) < 120_000) return;
+
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
 
