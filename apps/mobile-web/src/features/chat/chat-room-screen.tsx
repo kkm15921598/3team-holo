@@ -311,11 +311,24 @@ export function ChatRoomScreen() {
   const [locDraftAddress, setLocDraftAddress] = useState<string>("");
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    // 캐시된 메시지가 있으면 그대로 복원 (재진입 시 이전 대화 유지)
+    // 1) 캐시 있으면 그대로 복원 (재진입 시 이전 대화 유지)
     const cached = getMessagesForRoom(id);
     if (cached) return cached;
-    // 처음 진입이면 빈 상태로 시작 — Supabase 로드 완료 후 채워짐
-    return [];
+    // 2) 처음 진입: 시스템 메시지를 즉시 표시 (Supabase 로드 완료 전에도 보임)
+    //    initialRoomRef 는 이미 line 267에서 설정됨
+    const r = initialRoomRef.current;
+    if (!r) return [];
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return [{
+      id: `${r.id}-sys`,
+      nickname: "",
+      content: `${r.name} 채팅방이 시작됐어요`,
+      time: "",
+      mine: false,
+      date: todayStr,
+      type: "system" as const,
+    }];
   });
 
   // 라우트 id가 바뀌면 메시지 갈아끼우고 읽음 처리
