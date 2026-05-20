@@ -1,5 +1,6 @@
-import { personaByName } from "./home-faces";
+import { personaByName, pickPersonas } from "./home-faces";
 import type { Meetup } from "./home-meetup-card";
+import type { Post } from "@/shared/mock/data";
 
 const p = (name: string) => {
   const persona = personaByName(name);
@@ -107,4 +108,58 @@ export function pickRandomMeetups(count: number, exclude?: Meetup[]): Meetup[] {
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
   return candidates.slice(0, count);
+}
+
+/**
+ * Post → Meetup 변환.
+ * 참여자 아바타는 post.id 기반으로 personas 풀에서 결정론적으로 선택.
+ */
+function hashId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+export function postToMeetup(post: Post): Meetup {
+  const seed = hashId(post.id);
+  const memberCount = Math.min(Math.max(post.participants?.length ?? 1, 1), 3);
+  const members = pickPersonas(seed, memberCount);
+  return {
+    id: post.id,
+    title: post.title,
+    distance: post.distance,
+    duration: post.duration,
+    description: post.description,
+    members,
+    totalCount: post.peopleCount ?? post.participants?.length ?? memberCount,
+    dim: post.status === "모집완료",
+  };
+}
+
+/**
+ * Supabase 실게시글을 우선 사용하고 부족하면 MEETUP_POOL로 채워서 count개 반환.
+ */
+export function pickMeetupsFromPosts(
+  posts: Post[],
+  count: number,
+  exclude?: Meetup[],
+): Meetup[] {
+  const excludeIds = new Set((exclude ?? []).map((m) => m.id));
+  const realMeetups = posts
+    .filter((p) => p.status !== "모집완료" && !excludeIds.has(p.id))
+    .slice(0, count)
+    .map(postToMeetup);
+
+  if (realMeetups.length >= count) return realMeetups.slice(0, count);
+
+  const needed = count - realMeetups.length;
+  const usedIds = new Set([...excludeIds, ...realMeetups.map((m) => m.id)]);
+  const fallback = MEETUP_POOL.filter((m) => !usedIds.has(m.id));
+  for (let i = fallback.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [fallback[i], fallback[j]] = [fallback[j], fallback[i]];
+  }
+  return [...realMeetups, ...fallback.slice(0, needed)];
 }

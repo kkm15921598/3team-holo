@@ -460,3 +460,49 @@ export function useBlocked(): Friend[] {
   }, []);
   return list;
 }
+
+/**
+ * Supabase friends 테이블에서 친구 목록을 읽어와 로컬 상태와 병합.
+ */
+export async function syncFriendsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("friends")
+    .select("*")
+    .eq("user_phone", userPhone);
+
+  if (error) {
+    console.warn("Supabase 친구 목록 읽기 실패:", error.message);
+    return;
+  }
+  if (!data || data.length === 0) return;
+
+  const fromSupabase: Friend[] = data.map((row: any) => ({
+    id: row.friend_id ?? row.id ?? `fr-sb-${row.friend_nickname}`,
+    nickname: row.friend_nickname as string,
+    avatarBg: row.avatar_bg ?? pickAvatarBg(row.friend_nickname as string),
+  }));
+
+  const mockNicknames = new Set(FRIENDS.map((f) => f.nickname));
+  const realFriends = _friends.filter((f) => !mockNicknames.has(f.nickname));
+  const existingNicknames = new Set(realFriends.map((f) => f.nickname));
+  const toAdd = fromSupabase.filter((f) => !existingNicknames.has(f.nickname));
+
+  if (realFriends.length === 0 && toAdd.length > 0) {
+    _friends = fromSupabase;
+  } else {
+    _friends = [...realFriends, ...toAdd];
+  }
+
+  saveToStorage(STORAGE_KEY, _friends);
+  listeners.forEach((l) => l());
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncFriendsFromSupabase(), 600);
+  });
+}
+

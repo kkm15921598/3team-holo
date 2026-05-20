@@ -185,3 +185,32 @@ export function useVerification() {
     () => _state,
   );
 }
+
+/**
+ * Supabase users 테이블에서 인증 상태 읽어와 로컬 상태 갱신.
+ */
+export async function syncVerificationFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("phone_verified, region_verified, verified_region, last_region_verified_at")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data) return;
+  _state = {
+    ..._state,
+    phoneVerified: (data.phone_verified as boolean) ?? _state.phoneVerified,
+    regionVerified: (data.region_verified as boolean) ?? _state.regionVerified,
+    verifiedRegion: (data.verified_region as string | null) ?? _state.verifiedRegion,
+    lastRegionVerifiedAt: (data.last_region_verified_at as number | null) ?? _state.lastRegionVerifiedAt,
+  };
+  persist();
+  notify();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncVerificationFromSupabase(), 550);
+  });
+}

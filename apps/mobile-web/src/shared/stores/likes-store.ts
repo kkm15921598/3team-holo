@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { postsStore } from "@/features/board/posts-store";
 
 /**
  * 게시글 좋아요 상태 store.
@@ -55,24 +56,36 @@ export function togglePostLike(id: string): boolean {
   persist();
   emit();
 
-  // Supabase 저장/삭제 (best-effort)
+  // postsStore 좋아요 수 즉시 반영 (optimistic)
+  postsStore.patchLikes(id, wasLiked ? -1 : 1);
+
+  // Supabase 저장/삭제 (best-effort) + posts.likes 카운트 업데이트
   const userPhone = getCurrentAccount();
   if (userPhone) {
     if (!wasLiked) {
-      // 좋아요 추가
       supabase.from("post_likes").insert({
         post_id: id,
         user_id: userPhone,
       }).then(({ error }) => {
-        if (error) console.warn("Supabase 좋아요 저장 실패:", error.message);
+        if (error) { console.warn("Supabase 좋아요 저장 실패:", error.message); return; }
+        // 좋아요 수 카운트 후 posts.likes 업데이트
+        supabase.from("post_likes").select("*", { count: "exact", head: true })
+          .eq("post_id", id)
+          .then(({ count: c }) => {
+            if (c != null) supabase.from("posts").update({ likes: c }).eq("id", id).then(() => {});
+          });
       });
     } else {
-      // 좋아요 취소
       supabase.from("post_likes").delete()
         .eq("post_id", id)
         .eq("user_id", userPhone)
         .then(({ error }) => {
-          if (error) console.warn("Supabase 좋아요 삭제 실패:", error.message);
+          if (error) { console.warn("Supabase 좋아요 삭제 실패:", error.message); return; }
+          supabase.from("post_likes").select("*", { count: "exact", head: true })
+            .eq("post_id", id)
+            .then(({ count: c }) => {
+              if (c != null) supabase.from("posts").update({ likes: c }).eq("id", id).then(() => {});
+            });
         });
     }
   }
@@ -101,6 +114,36 @@ export function setLikedIds(ids: string[]): void {
   persist();
   emit();
 }
+
+/** Supabase post_likes 테이블에서 읽어와 localStorage와 병합 */
+export async function syncLikesFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+
+  const { data, error } = await supabase
+    .from("post_likes")
+    .select("post_id")
+    .eq("user_id", userPhone);
+
+  if (error) {
+    console.warn("Supabase 좋아요 읽기 실패:", error.message);
+    return;
+  }
+  if (!data || data.length === 0) return;
+
+  const remoteIds = data.map((row: any) => row.post_id as string);
+  const merged = new Set([...state, ...remoteIds]);
+  state = merged;
+  persist();
+  emit();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncLikesFromSupabase(), 700);
+  });
+}
+
 
 const subscribe = (cb: () => void) => {
   listeners.add(cb);

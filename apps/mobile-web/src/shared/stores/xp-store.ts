@@ -426,3 +426,32 @@ const snapshot = () => state;
 export function useXpState(): XpState {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * Supabase users 테이블에서 XP/출석 데이터 읽어와 로컬 상태 갱신.
+ */
+export async function syncXpFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("total_xp, daily_xp")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data) return;
+  if (data.total_xp != null) {
+    state = {
+      ...state,
+      totalXp: Math.max(state.totalXp, (data.total_xp as number)),
+      daily: (data.daily_xp as typeof state.daily) ?? state.daily,
+    };
+    persist();
+    listeners.forEach((l) => l());
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncXpFromSupabase(), 500);
+  });
+}

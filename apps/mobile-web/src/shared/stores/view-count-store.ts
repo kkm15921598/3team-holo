@@ -122,3 +122,31 @@ const snapshot = () => counts;
 export function useViewCounts(): Record<string, number> {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * Supabase users.view_counts 에서 조회수 증분 맵 읽어와 병합.
+ */
+export async function syncViewCountsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("view_counts")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data || !data.view_counts) return;
+  const remote = data.view_counts as Record<string, number>;
+  const merged: Record<string, number> = { ...remote };
+  for (const [k, v] of Object.entries(counts)) {
+    merged[k] = Math.max(merged[k] ?? 0, v);
+  }
+  counts = merged;
+  persist();
+  emit();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncViewCountsFromSupabase(), 900);
+  });
+}

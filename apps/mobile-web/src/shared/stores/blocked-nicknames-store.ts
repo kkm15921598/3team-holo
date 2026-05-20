@@ -101,3 +101,27 @@ const snapshot = () => state;
 export function useBlockedNicknames(): Set<string> {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * Supabase users.blocked_nicknames 에서 차단 목록 읽어와 병합.
+ */
+export async function syncBlockedFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("blocked_nicknames")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data || !data.blocked_nicknames) return;
+  const remote = data.blocked_nicknames as string[];
+  state = new Set([...state, ...remote]);
+  persist();
+  emit();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncBlockedFromSupabase(), 750);
+  });
+}

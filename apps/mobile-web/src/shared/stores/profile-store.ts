@@ -155,3 +155,34 @@ export function subscribeProfile(fn: () => void) {
 export function getEquippedBadgeSrc(): string | null {
   return BADGE_LIB.find((b) => b.id === _state.equippedBadgeId)?.src ?? null;
 }
+
+/**
+ * Supabase users 테이블에서 프로필을 읽어와 로컬 상태 갱신.
+ * 로그인 후 앱 시작 시 자동 호출.
+ */
+export async function syncProfileFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("nickname, title, equipped_badge_id, profile_face, friend_code")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data) return;
+  _state = {
+    ..._state,
+    nickname: (data.nickname as string) ?? _state.nickname,
+    title: (data.title as string) ?? _state.title,
+    equippedBadgeId: (data.equipped_badge_id as string) ?? _state.equippedBadgeId,
+    profileFace: (data.profile_face as string | null) ?? _state.profileFace,
+    friendCode: (data.friend_code as string) ?? _state.friendCode,
+  };
+  persist();
+  notify();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncProfileFromSupabase(), 400);
+  });
+}

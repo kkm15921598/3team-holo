@@ -208,3 +208,31 @@ const snapshot = () => state;
 export function useAccountStats(): AccountStats {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/**
+ * Supabase users 테이블에서 뱃지/칭호/레벨 읽어와 로컬 상태 갱신.
+ */
+export async function syncStatsFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("level, acquired_badge_ids, acquired_titles, acquired_badge_dates")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data) return;
+  state = {
+    level: (data.level as number) ?? state.level,
+    acquiredBadgeIds: (data.acquired_badge_ids as string[]) ?? state.acquiredBadgeIds,
+    acquiredTitles: (data.acquired_titles as string[]) ?? state.acquiredTitles,
+    acquiredBadgeDates: (data.acquired_badge_dates as Record<string, string>) ?? state.acquiredBadgeDates,
+  };
+  persist();
+  listeners.forEach((l) => l());
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncStatsFromSupabase(), 450);
+  });
+}

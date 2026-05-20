@@ -4,7 +4,8 @@ import { getBadgeById } from "../../badge";
 import { ME_PERSONA } from "./home-faces";
 import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
-import { pickRandomMeetups } from "./home-meetups-data";
+import { pickMeetupsFromPosts } from "./home-meetups-data";
+import { postsStore } from "@/features/board/posts-store";
 import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
 import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
 import { useProfile } from "@/shared/hooks/use-profile";
@@ -12,7 +13,16 @@ import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function HomeScreen() {
-  const [meetups, setMeetups] = useState(() => pickRandomMeetups(3));
+  const [allPosts, setAllPosts] = useState(() => postsStore.getPosts());
+  const [meetups, setMeetups] = useState(() =>
+    pickMeetupsFromPosts(postsStore.getPosts(), 3),
+  );
+
+  useEffect(() => {
+    return postsStore.subscribe(() => {
+      setAllPosts(postsStore.getPosts());
+    });
+  }, []);
   const status = useStatusMessage();
   const statusPos = useStatusPosition();
   const profile = useProfile();
@@ -47,7 +57,7 @@ export function HomeScreen() {
   const dragRef = useRef({ down: false, startX: 0, scrollLeft: 0, moved: false });
 
   const handleRefresh = () => {
-    setMeetups((prev) => pickRandomMeetups(3, prev));
+    setMeetups((prev) => pickMeetupsFromPosts(allPosts, 3, prev));
     // 새로고침 시 카드 캐러셀을 첫 번째 카드 위치로 되돌린다.
     const el = cardsRef.current;
     if (el) {

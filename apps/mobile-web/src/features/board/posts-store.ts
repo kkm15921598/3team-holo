@@ -222,6 +222,36 @@ export const postsStore = {
   async refresh(): Promise<void> {
     await loadFromSupabase();
   },
+  /** 좋아요 수 로컬 즉시 반영 (좋아요 토글 시 optimistic update) */
+  patchLikes(postId: string, delta: number): void {
+    const idx = _posts.findIndex((p) => p.id === postId);
+    if (idx < 0) return;
+    const next = [..._posts];
+    next[idx] = { ...next[idx], likes: Math.max(0, (next[idx].likes ?? 0) + delta) };
+    _posts = next;
+    notify();
+  },
+  /** 참여자 추가/제거 — 로컬 즉시 반영 + Supabase 업데이트 */
+  patchParticipants(postId: string, avatarBg: string, action: "join" | "leave"): void {
+    const idx = _posts.findIndex((p) => p.id === postId);
+    if (idx < 0) return;
+    const post = _posts[idx];
+    let participants = [...(post.participants ?? [])];
+    if (action === "join") {
+      participants = [...participants, { avatarBg }];
+    } else {
+      const removeIdx = participants.findIndex((p) => p.avatarBg === avatarBg);
+      if (removeIdx >= 0) participants.splice(removeIdx, 1);
+    }
+    const next = [..._posts];
+    next[idx] = { ...post, participants };
+    _posts = next;
+    notify();
+    supabase.from("posts").update({ participants })
+      .eq("id", postId).then(({ error }) => {
+        if (error) console.warn("Supabase 참여자 업데이트 실패:", error.message);
+      });
+  },
   /** 신규 가입 시 mock 초기값으로 리셋 */
   resetToInitial(): void {
     _posts = sortByRecency(MOCK_POSTS);

@@ -1,6 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { postsStore } from "@/features/board/posts-store";
+
+const AVATAR_BG_POOL = ["#C7BDFF","#FFCFCF","#FCEBB5","#CCBCE0","#DDC0FF","#CAE4B9"];
+function userAvatarBg(): string {
+  const phone = getCurrentAccount() ?? "default";
+  let h = 0;
+  for (let i = 0; i < phone.length; i++) h = (Math.imul(31, h) + phone.charCodeAt(i)) | 0;
+  return AVATAR_BG_POOL[Math.abs(h) % AVATAR_BG_POOL.length];
+}
 
 function syncToSupabase(s: Set<string>) {
   const userPhone = getCurrentAccount();
@@ -66,6 +75,7 @@ export function joinPost(id: string): void {
   persist();
   emit();
   syncToSupabase(state);
+  postsStore.patchParticipants(id, userAvatarBg(), "join");
 }
 
 /**
@@ -80,6 +90,7 @@ export function leavePost(id: string): void {
   persist();
   emit();
   syncToSupabase(state);
+  postsStore.patchParticipants(id, userAvatarBg(), "leave");
 }
 
 export function getJoinedIds(): string[] {
@@ -105,4 +116,28 @@ const snapshot = () => state;
 /** 참여한 post.id 의 Set 을 React 컴포넌트에서 구독 */
 export function useJoinedSet(): Set<string> {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+
+/**
+ * Supabase users.joined_post_ids 에서 참여 목록 읽어와 병합.
+ */
+export async function syncJoinedFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("joined_post_ids")
+    .eq("phone", userPhone)
+    .single();
+  if (error || !data || !data.joined_post_ids) return;
+  const remote = data.joined_post_ids as string[];
+  state = new Set([...state, ...remote]);
+  persist();
+  emit();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => syncJoinedFromSupabase(), 800);
+  });
 }
