@@ -98,7 +98,7 @@ export function addRoom(room: ChatRoom) {
       room_id: stamped.id,
       name: stamped.name,
       room_name: stamped.name,
-      post_id: stamped.meeting?.postId ?? null,
+      post_id: stamped.id.startsWith("meetup-") ? stamped.id.replace("meetup-", "") : null,
       creator_phone: userPhone,
     }).then(({ error }) => {
       if (error) console.warn("Supabase 채팅방 저장 실패:", error.message);
