@@ -452,16 +452,3 @@ export function RoomScreen() {
     </SignupLayout>
   );
 }
-m={confirmTutorialPurchase}
-        onCancel={() => setPendingPurchase(null)}
-      />
-
-      <ConfirmModal
-        open={limitAlertOpen}
-        message="이미 2개를 구매하셨습니다."
-        singleAction
-        onConfirm={() => setLimitAlertOpen(false)}
-      />
-    </SignupLayout>
-  );
-}

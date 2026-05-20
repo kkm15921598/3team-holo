@@ -566,11 +566,3 @@ if (typeof window !== "undefined") {
     }, 600);
   });
 }
-ined") {
-  window.addEventListener("load", () => {
-    window.setTimeout(async () => {
-      await syncFriendsFromSupabase();
-      await syncFriendRequestsFromSupabase();
-    }, 600);
-  });
-}

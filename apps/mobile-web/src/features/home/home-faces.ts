@@ -73,5 +73,3 @@ export const MALE_DEFAULT_FACE: string = MALE_FACES[0];
 export function defaultFaceForGender(gender: "M" | "F"): string {
   return gender === "M" ? MALE_DEFAULT_FACE : FEMALE_DEFAULT_FACE;
 }
-CE;
-}

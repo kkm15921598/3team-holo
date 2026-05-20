@@ -700,18 +700,3 @@ function FlagIcon() {
     </svg>
   );
 }
-
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 22V4" />
-      <path d="M4 4h13l-2 4 2 4H4" />
-    </svg>
-  );
-}

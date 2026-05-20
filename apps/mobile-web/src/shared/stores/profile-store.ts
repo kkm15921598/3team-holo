@@ -191,16 +191,3 @@ if (typeof window !== "undefined") {
     window.setTimeout(() => syncProfileFromSupabase(), 400);
   });
 }
-e.profileFace;
-  friendCode: (data.friend_code as string) ?? _state.friendCode;
-  persist();
-  notify();
-}
-
-if (typeof window !== "undefined") {
-  window.addEventListener("load", () => {
-    window.setTimeout(() => syncProfileFromSupabase(), 400);
-  });
-}
- });
-}

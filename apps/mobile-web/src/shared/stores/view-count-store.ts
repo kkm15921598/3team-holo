@@ -20,15 +20,22 @@ export function incrementViewCount(id: string): void {
   postsStore.patchViews(id);
 }
 
+// getSnapshot은 매 호출마다 새 객체를 반환하면 무한 루프가 발생하므로
+// postsStore가 notify할 때만 캐시를 교체하고, 그 외에는 같은 참조를 반환한다.
+let _viewCache: Record<string, number> = {};
+postsStore.subscribe(() => {
+  const map: Record<string, number> = {};
+  postsStore.getPosts().forEach((p) => {
+    map[p.id] = p.views ?? 0;
+  });
+  _viewCache = map;
+});
+
 /** React 컴포넌트용 — postsStore 구독으로 조회수 변경 시 재렌더 트리거 */
 export function useViewCounts(): Record<string, number> {
   return useSyncExternalStore(
     (cb) => postsStore.subscribe(cb),
-    () => {
-      const map: Record<string, number> = {};
-      postsStore.getPosts().forEach((p) => { map[p.id] = p.views ?? 0; });
-      return map;
-    },
-    () => ({}),
+    () => _viewCache,
+    () => _viewCache,
   );
 }

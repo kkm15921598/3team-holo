@@ -123,5 +123,3 @@ const snapshot = () => state;
 export function useUserComments(): StoredComment[] {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
-re(subscribe, snapshot, snapshot);
-}

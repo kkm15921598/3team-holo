@@ -315,22 +315,3 @@ export const postsStore = {
     notify();
   },
 };
- */
-  patchViews(postId: string): void {
-    const idx = _posts.findIndex((p) => p.id === postId);
-    if (idx >= 0) {
-      const next = [..._posts];
-      next[idx] = { ...next[idx], views: (next[idx].views ?? 0) + 1 };
-      _posts = next;
-      notify();
-    }
-    supabase.rpc("increment_post_views", { post_id: postId }).then(({ error }) => {
-      if (error) console.warn("Supabase 조회수 업데이트 실패:", error.message);
-    });
-  },
-  /** 신규 가입 시 mock 초기값으로 리셋 */
-  resetToInitial(): void {
-    _posts = [];
-    notify();
-  },
-};
