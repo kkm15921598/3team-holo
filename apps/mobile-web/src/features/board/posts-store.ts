@@ -76,7 +76,7 @@ async function loadFromSupabase() {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
-    .eq("is_deleted", false)
+    .neq("is_deleted", true)   // false 또는 NULL 모두 포함 (기존 데이터 호환)
     .order("bumped_at", { ascending: false });
 
   if (error) {
@@ -189,6 +189,7 @@ export const postsStore = {
       people_count: post.peopleCount ?? null,
       place: post.place ?? null,
       bumped_at: new Date().toISOString(),
+      is_deleted: false,  // 명시적으로 false 저장 — NULL이면 eq("is_deleted", false) 조회에서 누락됨
     }).then(({ error }) => {
       if (error) console.warn("Supabase 글 저장 실패:", error.message);
     });
