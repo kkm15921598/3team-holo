@@ -21,24 +21,31 @@ export function computeTimeAgo(createdAt: string | null): string {
   return `${Math.floor(diffD / 7)}주 전`;
 }
 
-/** Supabase row → Post 타입으로 변환 */
+/** Supabase row → Post 타입으로 변환 (실제 테이블 컬럼명 기준) */
 function rowToPost(row: Record<string, unknown>): Post {
+  // location: lat/lng/place_name 컬럼 → PostLocation 객체
+  const lat = row.lat as number | null;
+  const lng = row.lng as number | null;
+  const placeName = row.place_name as string | null;
+  const location =
+    lat != null && lng != null
+      ? { lat, lng, placeName: placeName ?? undefined }
+      : undefined;
+
   return {
     id: row.id as string,
-    category: row.category as string,
-    status: (row.status as Post["status"]) ?? "모집중",
-    title: row.title as string,
+    category: (row.category as string) ?? "free",
+    status: ((row.status as string) ?? "모집중") as Post["status"],
+    title: (row.title as string) ?? "",
     description: (row.description as string) ?? "",
     distance: (row.distance as string) ?? "0m",
     duration: (row.duration as string) ?? "0분",
     likes: (row.likes as number) ?? 0,
-    comments: (row.comments_count as number) ?? 0,
+    comments: (row.comments as number) ?? 0,
     timeAgo: computeTimeAgo(row.created_at as string),
     authorNickname: (row.author_nickname as string) ?? "",
     authorLevel: (row.author_level as number) ?? 1,
-    location: row.location
-      ? (row.location as Post["location"])
-      : undefined,
+    location,
     participants: row.participants
       ? (row.participants as Post["participants"])
       : undefined,
@@ -71,7 +78,6 @@ function sortByRecency(posts: Post[]): Post[] {
 
 // 초기값은 mock 데이터 (Supabase 로드 전 빠른 표시)
 let _posts: Post[] = sortByRecency(MOCK_POSTS);
-let _loadedFromSupabase = false;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -92,13 +98,10 @@ async function loadFromSupabase() {
   }
 
   if (data && data.length > 0) {
-    // Supabase 글이 있으면 → Supabase 글만 표시
-    _posts = sortByRecency(data.map(rowToPost));
+    _posts = data.map(rowToPost);
   } else {
-    // Supabase가 비어있으면 → mock 데이터 fallback
     _posts = sortByRecency(MOCK_POSTS);
   }
-  _loadedFromSupabase = true;
   notify();
 }
 
@@ -119,9 +122,8 @@ export const postsStore = {
   },
   /** 새 글 추가 — 로컬 즉시 반영 + Supabase 저장 */
   prepend(post: Post): void {
-    _posts = sortByRecency([post, ..._posts]);
+    _posts = [post, ..._posts];
     notify();
-    // Supabase 저장
     const userPhone = getCurrentAccount();
     supabase.from("posts").insert({
       id: post.id,
@@ -132,12 +134,13 @@ export const postsStore = {
       distance: post.distance ?? "0m",
       duration: post.duration ?? "0분",
       likes: post.likes ?? 0,
-      comments_count: post.comments ?? 0,
+      comments: post.comments ?? 0,
       author_nickname: post.authorNickname,
       author_phone: userPhone ?? null,
       author_level: post.authorLevel ?? 1,
-      location: post.location ?? null,
-      participants: post.participants ?? null,
+      lat: post.location?.lat ?? null,
+      lng: post.location?.lng ?? null,
+      place_name: post.location?.placeName ?? null,
       meetup_type: post.meetupType ?? null,
       event_date: post.eventDate ?? null,
       event_time: post.eventTime ?? null,
@@ -145,6 +148,7 @@ export const postsStore = {
       end_date: post.endDate ?? null,
       people_count: post.peopleCount ?? null,
       place: post.place ?? null,
+      bumped_at: new Date().toISOString(),
     }).then(({ error }) => {
       if (error) console.warn("Supabase 글 저장 실패:", error.message);
     });
@@ -155,16 +159,17 @@ export const postsStore = {
     if (idx >= 0) {
       const next = [..._posts];
       next[idx] = post;
-      _posts = sortByRecency(next);
+      _posts = next;
       notify();
     }
-    // Supabase 업데이트
     supabase.from("posts").update({
       category: post.category,
       status: post.status,
       title: post.title,
       description: post.description,
-      location: post.location ?? null,
+      lat: post.location?.lat ?? null,
+      lng: post.location?.lng ?? null,
+      place_name: post.location?.placeName ?? null,
       meetup_type: post.meetupType ?? null,
       event_date: post.eventDate ?? null,
       event_time: post.eventTime ?? null,
@@ -183,9 +188,8 @@ export const postsStore = {
     const next = [..._posts];
     next.splice(idx, 1);
     next.unshift({ ...post, timeAgo: "방금 전" });
-    _posts = sortByRecency(next);
+    _posts = next;
     notify();
-    // Supabase bumped_at 갱신
     supabase.from("posts").update({ bumped_at: new Date().toISOString() })
       .eq("id", post.id).then(({ error }) => {
         if (error) console.warn("Supabase 끌어올리기 실패:", error.message);
@@ -196,7 +200,6 @@ export const postsStore = {
     const set = new Set(ids);
     _posts = _posts.filter((p) => !set.has(p.id));
     notify();
-    // Supabase soft delete
     for (const id of ids) {
       supabase.from("posts").update({ is_deleted: true })
         .eq("id", id).then(({ error }) => {
