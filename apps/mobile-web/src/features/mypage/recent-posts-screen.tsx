@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { POSTS, type Post } from "@/shared/mock/data";
+import type { Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "./managed-list";
 import {
   removeViewedPosts,
@@ -34,8 +35,8 @@ export function RecentPostsScreen() {
   const items = useMemo(
     () =>
       viewedEntries
-        .map((e) => POSTS.find((p) => p.id === e.id))
-        .filter((p): p is (typeof POSTS)[number] => !!p),
+        .map((e) => postsStore.getPosts().find((p) => p.id === e.id))
+        .filter((p): p is Post => !!p),
     [viewedEntries],
   );
 

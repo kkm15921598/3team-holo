@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { type ChatRoom, TITLES_META, POST_COMMENTS } from "@/shared/mock/data";
+import { type ChatRoom, TITLES_META } from "@/shared/mock/data";
 import { BADGES as BADGE_LIB } from "@/badge";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
@@ -133,16 +133,8 @@ export function ProfileDetailScreen() {
     return postsStore.getPosts().filter((p) => p.authorNickname === nickname)
       .length;
   }, [nickname, postsTick]);
-  const otherCommentsCount = useMemo(() => {
-    // friend-comments-screen 과 동일한 집계: POST_COMMENTS 에서 그 닉네임이 댓글을 단 unique 게시글 수
-    const postIds = new Set<string>();
-    for (const [postId, comments] of Object.entries(POST_COMMENTS)) {
-      if (comments.some((c) => c.nickname === nickname)) {
-        postIds.add(postId);
-      }
-    }
-    return postIds.size;
-  }, [nickname]);
+  // 댓글 카운트: comments-store에서 해당 닉네임의 댓글 수를 실시간으로 집계
+  const otherCommentsCount = 0; // Supabase 기반으로 추후 구현
 
   const otherUser = useMemo(
     () => buildOtherUser(nickname, otherPostsCount, otherCommentsCount),

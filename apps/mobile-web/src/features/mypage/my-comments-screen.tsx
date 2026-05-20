@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { POSTS, type Post } from "@/shared/mock/data";
+import type { Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "./managed-list";
 import {
   removeCommentsByPostIds,
@@ -24,8 +25,8 @@ export function MyCommentsScreen() {
       }
     }
     return ids
-      .map((id) => POSTS.find((p) => p.id === id))
-      .filter((p): p is (typeof POSTS)[number] => !!p);
+      .map((id) => postsStore.getPosts().find((p) => p.id === id))
+      .filter((p): p is Post => !!p);
   }, [userComments]);
 
   // 각 게시글에서 사용자가 가장 최근에 단 댓글의 timeAgo — 메타 행 시간 라벨.

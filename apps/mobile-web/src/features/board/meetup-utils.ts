@@ -1,7 +1,7 @@
 // 게시글(모임) ↔ 채팅방 ↔ 홈/맵 카드 간 인원 계산과 멤버 도출을 단일 출처로 관리하는 헬퍼.
 // 홈 카드, 맵 카드, 게시글 상세, 채팅방이 모두 동일한 결과를 쓰도록 여기로 모았다.
 
-import { POST_COMMENTS, type ChatRoom, type Post } from "@/shared/mock/data";
+import { type ChatRoom, type Post } from "@/shared/mock/data";
 import { MEETUP_POOL } from "@/features/home/home-meetups-data";
 import { addRoom, getRoom, getRooms, setRooms } from "@/features/chat/rooms-store";
 import { clearMessagesForRoom } from "@/features/chat/messages-store";
@@ -95,7 +95,7 @@ export function deriveMeetupMembers(post: Post, targetCount: number): string[] {
   const home = MEETUP_POOL.find((m) => m.id === post.id);
   if (home) for (const m of home.members) add(m.name);
   // 3) 댓글 작성자
-  const comments = POST_COMMENTS[post.id] ?? [];
+  const comments: { nickname: string }[] = [];
   for (const c of comments) add(c.nickname);
   // 4) Fallback 풀로 부족분 채움
   for (const n of MEMBER_FALLBACK_POOL) {

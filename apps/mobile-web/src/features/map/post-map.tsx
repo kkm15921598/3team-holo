@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
-import { MY_LOCATION, type Post, type PostLocation } from "@/shared/mock/data";
+import { type Post, type PostLocation } from "@/shared/mock/data";
 
 /**
  * GPS fix 가 아직 안 잡혔거나 좌표가 지정되지 않은 경우의 지도 기본 중심.
@@ -657,11 +657,7 @@ export function LocationPicker({ value, onChange, className, onPlaceName }: Loca
   const [searching, setSearching] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   // 거리 정렬 기준점 — 실제 GPS fix 가 들어오면 그 좌표로 갱신.
-  // 그 전엔 mock 의 MY_LOCATION (미금역) 을 사용해 분당 지역 결과가 위로 오게 함.
-  const userPosRef = useRef<{ lat: number; lng: number }>({
-    lat: MY_LOCATION.lat,
-    lng: MY_LOCATION.lng,
-  });
+  const userPosRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const runSearch = async (q: string) => {
     if (q.trim().length < 2) {
@@ -671,7 +667,7 @@ export function LocationPicker({ value, onChange, className, onPlaceName }: Loca
     }
     setSearching(true);
     setSearchOpen(true);
-    const results = await searchAddress(q, userPosRef.current);
+    const results = await searchAddress(q, userPosRef.current ?? undefined);
     setSearchResults(results);
     setSearching(false);
   };
@@ -704,11 +700,10 @@ export function LocationPicker({ value, onChange, className, onPlaceName }: Loca
 
     // 초기 중심 우선순위:
     //  1) 사용자가 이미 선택한 좌표 (value)
-    //  2) mock 환경의 내 위치 (MY_LOCATION — 미금역 인근)
     //  3) 서울 시청 폴백 (네트워크 이슈 / mock 데이터 미설정 시)
     // 이전엔 value 가 없을 때 무조건 서울 시청으로 떨어졌어서, 분당 사용자가
     // 위치 선택 모달을 열면 서울 도심이 떴다.
-    const center = value ?? MY_LOCATION ?? SEOUL_FALLBACK_CENTER;
+    const center = value ?? SEOUL_FALLBACK_CENTER;
 
     const map = L.map(elRef.current, {
       center: [center.lat, center.lng],

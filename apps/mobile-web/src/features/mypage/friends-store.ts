@@ -2,7 +2,6 @@
 // localStorage에 영속화하여 HMR/새로고침에도 보존된다.
 
 import { useEffect, useState } from "react";
-import { FRIENDS } from "@/shared/mock/data";
 import {
   getDynNotifications,
   pushBecameFriendByMe,
@@ -13,7 +12,7 @@ import {
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
-export type Friend = (typeof FRIENDS)[number];
+export type Friend = { id: string; nickname: string; avatarBg: string };
 
 /** 친구 정원 — 이 수를 초과하는 추가 시도는 모두 차단된다. */
 export const MAX_FRIENDS = 30;
@@ -93,7 +92,7 @@ function seedRequests(): FriendRequest[] {
 
 let _friends: Friend[] = loadFromStorage<Friend[]>(
   STORAGE_KEY,
-  FRIENDS.map((f) => ({ ...f })),
+  [],
 );
 let _blocked: Friend[] = loadFromStorage<Friend[]>(BLOCKED_STORAGE_KEY, []);
 let _requests: FriendRequest[] = loadFromStorage<FriendRequest[]>(
@@ -485,7 +484,7 @@ export async function syncFriendsFromSupabase(): Promise<void> {
     avatarBg: row.avatar_bg ?? pickAvatarBg(row.friend_nickname as string),
   }));
 
-  const mockNicknames = new Set(FRIENDS.map((f) => f.nickname));
+  const mockNicknames = new Set<string>();
   const realFriends = _friends.filter((f) => !mockNicknames.has(f.nickname));
   const existingNicknames = new Set(realFriends.map((f) => f.nickname));
   const toAdd = fromSupabase.filter((f) => !existingNicknames.has(f.nickname));

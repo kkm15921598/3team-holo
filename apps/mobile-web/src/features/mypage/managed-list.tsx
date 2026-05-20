@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { POST_COMMENTS, type Post } from "@/shared/mock/data";
+import type { Post } from "@/shared/mock/data";
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 
@@ -208,11 +208,10 @@ export function ManagedList({
                         <HeartIcon /> {p.likes + (likedSet.has(p.id) ? 1 : 0)}
                       </span>
                       <span className="h-0.5 w-0.5 rounded-full bg-holo-line-2" />
-                      {/* 💬 댓글 — mock POST_COMMENTS + 사용자가 단 댓글 합산 */}
+                      {/* 💬 댓글 수 */}
                       <span className="inline-flex items-center gap-1">
                         <ChatBubbleIcon />{" "}
-                        {(POST_COMMENTS[p.id]?.length ?? 0) +
-                          userComments.filter((c) => c.postId === p.id).length}
+                        {userComments.filter((c) => c.postId === p.id).length}
                       </span>
                       <span className="h-0.5 w-0.5 rounded-full bg-holo-line-2" />
                       <span>{getTimeLabel?.(p) || p.timeAgo}</span>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { POSTS, type Post } from "@/shared/mock/data";
+import type { Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "./managed-list";
 import { setPostLiked, useLikedSet } from "@/shared/stores/likes-store";
 
@@ -14,7 +15,7 @@ export function LikesScreen() {
   // 역순으로 뒤집어서 최신이 위로 오게 한다.
   // 시드 데이터(setLikedIds(["hm3","hm4",...])) 도 같은 규칙: 배열의 뒤쪽일수록 "최근에 좋아요" 로 노출.
   const items = useMemo(() => {
-    const postById = new Map<string, Post>(POSTS.map((p) => [p.id, p]));
+    const postById = new Map<string, Post>(postsStore.getPosts().map((p) => [p.id, p]));
     const ordered: Post[] = [];
     // Array.from(set) 으로 삽입 순서 배열 후 reverse — set 자체엔 reverse 가 없음
     const orderedIds = Array.from(likedSet).reverse();

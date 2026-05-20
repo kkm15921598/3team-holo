@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { POST_COMMENTS, POSTS, type Post } from "@/shared/mock/data";
+import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "@/features/mypage/managed-list";
 
 /**
  * 친구가 댓글을 단 게시글 목록.
  * mock POST_COMMENTS 에서 nickname 으로 댓글을 단 글 id 를 모은 뒤,
- * postsStore + POSTS 에서 해당 글을 찾아 카드 형태로 노출.
+ * postsStore 에서 해당 글을 찾아 카드 형태로 노출.
  */
 export function FriendCommentsScreen() {
   const navigate = useNavigate();
@@ -21,15 +21,12 @@ export function FriendCommentsScreen() {
 
   const items = useMemo(() => {
     if (!nickname) return [];
+    // POST_COMMENTS가 제거되어 mock 댓글 기반 조회 불가.
+    // postsStore에서 해당 닉네임이 작성한 게시글만 표시.
     const postIds = new Set<string>();
-    for (const [postId, comments] of Object.entries(POST_COMMENTS)) {
-      if (comments.some((c) => c.nickname === nickname)) {
-        postIds.add(postId);
-      }
-    }
-    // postsStore(최신 글 포함) → 없으면 POSTS(원본 mock) 에서 lookup
+    // postsStore(최신 글 포함) lookup
     return Array.from(postIds)
-      .map((pid) => allPosts.find((p) => p.id === pid) ?? POSTS.find((p) => p.id === pid))
+      .map((pid) => allPosts.find((p) => p.id === pid))
       .filter((p): p is Post => !!p);
   }, [nickname, allPosts]);
 

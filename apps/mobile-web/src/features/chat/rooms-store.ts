@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CHATROOMS, type ChatRoom } from "@/shared/mock/data";
+import type { ChatRoom } from "@/shared/mock/data";
 import { clearMessagesForRoom } from "./messages-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
@@ -7,13 +7,8 @@ import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
 const STORAGE_KEY = "holo:rooms:v1";
-const SEED_BASE_TS = Date.now();
-
 function defaultRooms(): ChatRoom[] {
-  return CHATROOMS.map((r, i) => ({
-    ...r,
-    updatedAt: r.updatedAt ?? SEED_BASE_TS - i * 60_000, // 한 칸당 1분씩 과거
-  }));
+  return [];
 }
 
 function loadInitial(): ChatRoom[] {

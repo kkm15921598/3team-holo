@@ -5,7 +5,6 @@
  * localStorage 에 영속화되어 회원가입 시 설정한 닉네임/얼굴/제목/뱃지가
  * 홈·마이페이지 모든 화면에 그대로 노출되도록 한다.
  */
-import { ME } from "@/shared/mock/data";
 import { BADGES as BADGE_LIB } from "@/badge";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
@@ -40,12 +39,12 @@ function generateFriendCode(): string {
 }
 
 const DEFAULT_STATE: ProfileState = {
-  nickname: ME.nickname,
-  title: ME.title,
+  nickname: "새로운 입주자",
+  title: "#홀로_입주자",
   // 신규 가입 시 자동으로 장착되는 기본 뱃지 — "홀로 입주자"
   equippedBadgeId: "badge_24",
   profileFace: null,
-  friendCode: ME.friendCode, // 기본 ME 데이터의 코드를 폴백으로 사용 (이후 가입/로그인 시 덮어씀)
+  friendCode: "", // 로그인/가입 시 덮어씌워짐
 };
 
 function loadInitial(): ProfileState {

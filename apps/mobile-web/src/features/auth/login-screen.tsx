@@ -98,7 +98,7 @@ export function LoginScreen() {
       setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
       setNickname(dbUser.nickname ?? "");
       setTitle("");
-      setEquippedBadgeId(null);
+      setEquippedBadgeId("badge_24"); // 기본 장착 뱃지
       setFriendCode("");
       setMyroomItems([]);
       setStatusMessage("");

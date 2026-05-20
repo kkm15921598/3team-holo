@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ME } from "@/shared/mock/data";
 import {
   canEarnRegionVerifyPoints,
   setRegionVerified,
@@ -349,7 +348,6 @@ export function VerifyRegionScreen() {
       />
 
       {/* 미사용 변수 워닝 방지 */}
-      <span className="hidden">{ME.region}</span>
     </main>
   );
 }

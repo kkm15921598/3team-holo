@@ -3,11 +3,11 @@
 // (실제 백엔드 연동 전까지의 mock 상태)
 
 import { useSyncExternalStore } from "react";
-import { CHATROOMS as INITIAL_CHATROOMS } from "@/shared/mock/data";
+import type { ChatRoom } from "@/shared/mock/data";
 
-type ChatRoom = (typeof INITIAL_CHATROOMS)[number];
 
-let rooms: ChatRoom[] = [...INITIAL_CHATROOMS];
+
+let rooms: ChatRoom[] = [];
 const subscribers = new Set<() => void>();
 
 function subscribe(cb: () => void) {

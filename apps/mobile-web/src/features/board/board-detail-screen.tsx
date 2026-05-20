@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { POST_COMMENTS, type Post, type PostLocation } from "@/shared/mock/data";
+import { type Post, type PostLocation } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
 import { StatusBadge } from "./board-list-screen";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
@@ -201,8 +201,7 @@ export function BoardDetailScreen() {
     };
     reader.readAsDataURL(file);
   };
-  // POST_COMMENTS 에 등록된 글만 더미 댓글이 보이고, 그 외엔 빈 배열 — 진짜 "댓글 0" 상태.
-  const initialComments = POST_COMMENTS[post.id] ?? [];
+  const initialComments: { id: string; nickname: string; content: string; timeAgo: string }[] = [];
   // Supabase에서 이 게시글의 실제 댓글 로드
   const [supabaseComments, setSupabaseComments] = useState<StoredComment[]>([]);
   useEffect(() => {

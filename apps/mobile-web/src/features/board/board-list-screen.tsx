@@ -10,7 +10,6 @@ import {
 import {
   BOARD_CATEGORIES,
   CATEGORY_SHORT,
-  POST_COMMENTS,
   type Post,
 } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
@@ -53,17 +52,13 @@ function avatarFor(nickname: string): string {
 }
 
 /**
- * 게시글 카드에 표시되는 댓글 수.
- * 게시글 상세(board-detail-screen)의 totalComments 와 동일한 식으로 계산:
- *   POST_COMMENTS[post.id] 길이 + 사용자가 작성한 댓글/대댓글 수.
- * post.comments(롱테일 분포 mock 값)는 더 이상 사용하지 않음 — 리스트/상세 카운트 불일치 방지.
+ * 게시글 카드에 표시되는 댓글 수 — 사용자가 작성한 댓글 수만 카운트.
  */
 function buildCommentCounter(
   userCounts: Map<string, number>,
 ): (post: Post) => number {
   return (post) => {
-    const base = (POST_COMMENTS[post.id] ?? []).length;
-    return base + (userCounts.get(post.id) ?? 0);
+    return userCounts.get(post.id) ?? 0;
   };
 }
 

@@ -1,9 +1,9 @@
+import type { Post } from "@/shared/mock/data";
 // Supabase 기반 posts store.
 // - 앱 시작 시 Supabase에서 글 목록을 불러온다.
 // - Supabase가 비어있으면 mock 데이터를 fallback으로 보여준다.
 // - 새 글 작성/수정/삭제는 Supabase에 반영된다.
 
-import { POSTS as MOCK_POSTS, type Post } from "@/shared/mock/data";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
@@ -62,22 +62,9 @@ function rowToPost(row: Record<string, unknown>): Post {
   };
 }
 
-function sortByRecency(posts: Post[]): Post[] {
-  return [...posts].sort((a, b) => {
-    const parse = (t: string) => {
-      if (/방금/.test(t)) return 0;
-      const m = t.match(/(\d+)\s*(분|시간|일|주)/);
-      if (!m) return Number.POSITIVE_INFINITY;
-      const n = Number(m[1]);
-      const mul: Record<string, number> = { 분: 1, 시간: 60, 일: 1440, 주: 10080 };
-      return n * (mul[m[2]] ?? 1);
-    };
-    return parse(a.timeAgo) - parse(b.timeAgo);
-  });
-}
 
 // 초기값은 mock 데이터 (Supabase 로드 전 빠른 표시)
-let _posts: Post[] = sortByRecency(MOCK_POSTS);
+let _posts: Post[] = [];
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -100,7 +87,7 @@ async function loadFromSupabase() {
   if (data && data.length > 0) {
     _posts = data.map(rowToPost);
   } else {
-    _posts = sortByRecency(MOCK_POSTS);
+    _posts = [];
   }
   notify();
 }
@@ -254,7 +241,7 @@ export const postsStore = {
   },
   /** 신규 가입 시 mock 초기값으로 리셋 */
   resetToInitial(): void {
-    _posts = sortByRecency(MOCK_POSTS);
+    _posts = [];
     notify();
   },
 };
