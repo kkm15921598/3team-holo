@@ -11,8 +11,6 @@ const CARRIER_GROUPS: { label: string; items: string[] }[] = [
   { label: "알뜰폰", items: ["SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"] },
 ];
 
-const MOCK_REGISTERED_PHONES = ["01012345678"];
-
 // 데모용: 실제 SMS 발송 없이 가짜 6자리 인증번호를 생성.
 // 실제 SMS API 연동 전까지 사용. 가입 화면에서 발송 시점에 무작위 코드를 만들어
 // 화면 상단의 가짜 알림 토스트로 보여주고, 그 값과 사용자가 입력한 값을 비교한다.
@@ -131,11 +129,6 @@ export function VerificationScreen() {
     }
     if (code !== generatedCode) {
       setVerifyError("인증번호가 일치하지 않습니다.");
-      return;
-    }
-
-    if (MOCK_REGISTERED_PHONES.includes(phone)) {
-      setShowAlreadyJoined(true);
       return;
     }
 
@@ -606,7 +599,7 @@ function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) 
 function formatPhone(v: string) {
   if (!v) return "";
   const digits = v.replace(/\D/g, "");
-  if (digits.length < 4) return digits;
-  if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
 }

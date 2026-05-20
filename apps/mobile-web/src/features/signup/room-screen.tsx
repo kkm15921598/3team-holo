@@ -27,6 +27,7 @@ import {
   recordTitleAcquired,
 } from "@/shared/stores/account-stats-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
+import { setCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   pushRewardNotification,
   pushWelcomeNotification,
@@ -232,17 +233,22 @@ export function RoomScreen() {
     return;
   }
 
-  // 1) 모든 사용자 store 를 가입 직전 상태로 리셋 — 이전 테스트 계정 데이터 등을 정리.
+  // 1) 현재 계정을 신규 가입 phone 으로 먼저 확정한다.
+  //    이전 테스트 계정으로 로그인한 상태였다면 currentAccount 가 테스트 번호로
+  //    남아있어 이후 Supabase sync 가 테스트 계정 데이터를 조회해 덮어쓰는 문제를 방지.
+  setCurrentAccount(data.phone);
+
+  // 2) 모든 사용자 store 를 가입 직전 상태로 리셋 — 이전 테스트 계정 데이터 등을 정리.
   //    이 호출 이후에 가입 보상을 발급해야 reset 으로 지워지지 않는다.
   resetAllStoresForFreshSignup();
 
-  // 2) 가입 보상 — "홀로 입주자" 뱃지 / 칭호 자동 발급 + 기본 장착
+  // 3) 가입 보상 — "홀로 입주자" 뱃지 / 칭호 자동 발급 + 기본 장착
   recordBadgeAcquired("badge_24");
   setEquippedBadgeId("badge_24");
   recordTitleAcquired("#홀로_입주자");
   setEquippedTitle("#홀로_입주자");
 
-  // 3) 회원가입 마지막 단계에서 배치/구매한 가구를 myroom store 에 저장.
+  // 4) 회원가입 마지막 단계에서 배치/구매한 가구를 myroom store 에 저장.
   // → 홈 화면 RoomScene 과 마이룸 화면에 동일한 배치가 그대로 노출된다.
   setMyroomItems(items);
   ownedKeys.forEach((key) => {
@@ -250,14 +256,14 @@ export function RoomScreen() {
     if (kind && variant) purchaseItem(kind, variant);
   });
 
-  // 4) 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
+  // 5) 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
   if (data.nickname.trim()) setNickname(data.nickname.trim());
   if (data.profileFace) setProfileFace(data.profileFace);
 
-  // 5) 가입 보너스 포인트 적립
+  // 6) 가입 보너스 포인트 적립
   addPoints(SIGNUP_BONUS_POINTS, { title: "가입 보너스" });
 
-  // 6) 알림 발행 — 환영 인사 + 무료 포인트 안내 (둘 다 알림창에 즉시 노출)
+  // 7) 알림 발행 — 환영 인사 + 무료 포인트 안내 (둘 다 알림창에 즉시 노출)
   const finalNickname = data.nickname.trim() || "회원";
   pushWelcomeNotification(finalNickname);
   pushRewardNotification(

@@ -13,12 +13,7 @@ import {
 } from "@/shared/stores/profile-store";
 import { defaultFaceForGender } from "@/features/home/home-faces";
 import { setMyroomItems, setStatusMessage } from "@/features/myroom/myroom-store";
-import { TEST_ACCOUNTS } from "@/shared/mock/test-accounts";
-import { seedAccount } from "@/shared/lib/seed-account";
-import {
-  getChoices,
-  setCurrentAccount,
-} from "@/shared/stores/account-choices-store";
+import { setCurrentAccount } from "@/shared/stores/account-choices-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
@@ -106,31 +101,9 @@ export function LoginScreen() {
       return;
     }
 
-    // 2) 테스트 계정 확인 (기존 mock 로그인)
-    const account = TEST_ACCOUNTS[phone];
-    if (!account) {
-      setPhoneError(true);
-      setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
-      return;
-    }
-
-    if (password === account.password) {
-      setGender(account.gender);
-      setCurrentAccount(account.phone);
-      const saved = getChoices(account.phone);
-      setProfileFace(account.profileFace ?? defaultFaceForGender(account.gender));
-      setNickname(account.nickname);
-      setTitle(saved.title ?? account.title);
-      setEquippedBadgeId(saved.equippedBadgeId ?? account.equippedBadgeId);
-      setFriendCode(account.friendCode);
-      setMyroomItems(account.myroomItems);
-      setStatusMessage(account.statusMessage);
-      seedAccount(account);
-      navigate("/home", { replace: true });
-    } else {
-      setPasswordError(true);
-      setPasswordErrorMessage("비밀번호를 다시 확인해 주세요.");
-    }
+    // Supabase에 없으면 미가입 번호
+    setPhoneError(true);
+    setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
   };
 
   return (

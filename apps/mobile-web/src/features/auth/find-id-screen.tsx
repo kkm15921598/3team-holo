@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
-import { findAccountByNameAndPhone, type TestAccount } from "@/shared/mock/test-accounts";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 export function FindIdScreen() {
   const navigate = useNavigate();
@@ -9,9 +9,9 @@ export function FindIdScreen() {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
-  const [foundAccount, setFoundAccount] = useState<TestAccount | null>(null);
+  const [foundUser, setFoundUser] = useState<{ phone: string; nickname: string; created_at: string } | null>(null);
   const [error, setError] = useState("");
-  const foundId = foundAccount?.id ?? null;
+  const foundId = foundUser ? foundUser.phone : null;
   const { formatted: codeTimer, expired: codeExpired, restart: restartTimer } =
     useCountdown(180, codeSent && !foundId);
 
@@ -20,7 +20,7 @@ export function FindIdScreen() {
   const baseFilled = isNameValid && isPhoneValid;
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -36,9 +36,16 @@ export function FindIdScreen() {
       return;
     }
 
-    const account = findAccountByNameAndPhone(name, phone);
-    if (account && code === "123456") {
-      setFoundAccount(account);
+    // 인증번호 확인 후 Supabase에서 이름+번호로 가입 여부 조회
+    const { data: dbUser } = await supabase
+      .from("users")
+      .select("phone, nickname, created_at")
+      .eq("name", name.trim())
+      .eq("phone", phone)
+      .maybeSingle();
+
+    if (dbUser) {
+      setFoundUser(dbUser);
     } else {
       setError("일치하는 정보를 찾을 수 없습니다.");
     }
@@ -68,14 +75,18 @@ export function FindIdScreen() {
           </p>
 
           <div className="mt-7 flex flex-col items-center justify-center rounded-holo-input border border-holo-line-2 bg-holo-purple/5 px-5 py-10">
-            <p className="text-[13px] text-holo-ink-3">회원님의 아이디</p>
+            <p className="text-[13px] text-holo-ink-3">가입된 계정 닉네임</p>
             <p className="mt-3 text-[20px] font-bold text-holo-purple-mid">
-              {foundId}
+              {foundUser?.nickname}
             </p>
             <div className="mt-4 flex items-center gap-2 rounded-full bg-white/70 px-3 py-1">
               <CalendarIcon />
               <span className="text-[12px] text-holo-ink-3">
-                <span className="text-holo-ink">{foundAccount?.joinedAt}</span> 가입
+                <span className="text-holo-ink">
+                  {foundUser?.created_at
+                    ? new Date(foundUser.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\.\s?/g, ".").replace(/\.$/, "")
+                    : ""}
+                </span>{" "}가입
               </span>
             </div>
           </div>
