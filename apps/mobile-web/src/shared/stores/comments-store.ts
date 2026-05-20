@@ -71,6 +71,8 @@ export function addComment(c: StoredComment): void {
       post_id: c.postId,
       user_id: userPhone,
       content: c.content,
+      nickname: c.nickname,
+      parent_id: c.parentId ?? null,
     }).then(({ error }) => {
       if (error) console.warn("Supabase 댓글 저장 실패:", error.message);
     });

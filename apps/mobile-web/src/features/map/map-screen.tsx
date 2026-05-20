@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { POSTS, type Post } from "@/shared/mock/data";
+import { type Post } from "@/shared/mock/data";
+import { postsStore } from "@/features/board/posts-store";
 import { MapView } from "./post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
@@ -74,11 +75,12 @@ function persistModalState(s: ModalMapState) {
 }
 
 function filterPosts(
+  allPosts: Post[],
   filter: Filter,
   userPos: GeoPosition | null,
   radiusM: number,
 ): Post[] {
-  let list = POSTS.filter((p) => !!p.location);
+  let list = allPosts.filter((p) => !!p.location);
   // GPS 있을 때만 거리 필터링 — 아직 fix 가 없으면 전체 표시
   if (userPos) {
     list = list.filter((p) => {
@@ -99,6 +101,9 @@ function filterPosts(
 export function MapScreen() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  // postsStore 구독 — 새 글 작성/삭제 시 지도 핀 자동 갱신
+  const [allPosts, setAllPosts] = useState<Post[]>(() => postsStore.getPosts());
+  useEffect(() => postsStore.subscribe(() => setAllPosts(postsStore.getPosts())), []);
   // 채팅방 "장소" 핀 클릭으로 진입한 경우: ?focusPostId=<id>
   // URL 파라미터는 mount 직후 정리해버리지만, 그 id 는 별도 state 로 붙들어둬서
   //  - 강조 핀/말풍선이 계속 표시되도록
@@ -112,8 +117,8 @@ export function MapScreen() {
   );
   const focusPost = useMemo<Post | null>(() => {
     if (!chatReturnPostId) return null;
-    return POSTS.find((p) => p.id === chatReturnPostId && !!p.location) ?? null;
-  }, [chatReturnPostId]);
+    return allPosts.find((p) => p.id === chatReturnPostId && !!p.location) ?? null;
+  }, [chatReturnPostId, allPosts]);
   // 강조 핀 + 말풍선 (post.place 우선, 없으면 location.placeName, 둘 다 없으면 "모임 장소")
   const focusMarker = useMemo(() => {
     if (!focusPost?.location) return null;
@@ -172,18 +177,18 @@ export function MapScreen() {
 
   // 미리보기/카드 영역은 1km 고정, 확장 모달은 사용자가 선택한 반경(5km/10km).
   const previewPosts = useMemo(
-    () => filterPosts(filter, userPos, PREVIEW_RADIUS_M),
-    [filter, userPos],
+    () => filterPosts(allPosts, filter, userPos, PREVIEW_RADIUS_M),
+    [allPosts, filter, userPos],
   );
   const modalPosts = useMemo(() => {
-    const base = filterPosts(filter, userPos, modalRadius);
+    const base = filterPosts(allPosts, filter, userPos, modalRadius);
     // focusPost 가 반경/필터 밖이라도 항상 표시 — 채팅방에서 핀 클릭으로 들어왔을 때
     // 그 모임 마커가 보이지 않으면 동선이 끊긴다.
     if (focusPost && !base.some((p) => p.id === focusPost.id)) {
       return [...base, focusPost];
     }
     return base;
-  }, [filter, userPos, modalRadius, focusPost]);
+  }, [allPosts, filter, userPos, modalRadius, focusPost]);
 
   // URL 파라미터(focusPostId)는 mount 직후 한 번만 제거 — 뒤로가기/재진입 시
   // 또 강제로 재오픈되지 않도록. chatReturnPostId state 는 그대로 유지되어

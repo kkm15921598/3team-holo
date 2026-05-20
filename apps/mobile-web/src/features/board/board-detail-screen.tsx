@@ -16,7 +16,8 @@ import {
 import { leaveRoomById } from "@/features/chat/rooms-store";
 import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, leavePost, useJoinedSet } from "@/shared/stores/joined-store";
-import { addComment, useUserComments } from "@/shared/stores/comments-store";
+import { addComment, useUserComments, type StoredComment } from "@/shared/stores/comments-store";
+import { supabase } from "@/shared/lib/supabaseClient";
 import { markPostViewed } from "@/shared/stores/viewed-posts-store";
 import {
   getTotalViews,
@@ -202,6 +203,27 @@ export function BoardDetailScreen() {
   };
   // POST_COMMENTS 에 등록된 글만 더미 댓글이 보이고, 그 외엔 빈 배열 — 진짜 "댓글 0" 상태.
   const initialComments = POST_COMMENTS[post.id] ?? [];
+  // Supabase에서 이 게시글의 실제 댓글 로드
+  const [supabaseComments, setSupabaseComments] = useState<StoredComment[]>([]);
+  useEffect(() => {
+    supabase
+      .from("comments")
+      .select("*")
+      .eq("post_id", post.id)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setSupabaseComments(data.map((row: any) => ({
+            id: String(row.id),
+            postId: row.post_id ?? post.id,
+            nickname: row.nickname ?? "알 수 없음",
+            content: row.content ?? "",
+            timeAgo: "방금 전",
+            parentId: row.parent_id ?? undefined,
+          })));
+        }
+      });
+  }, [post.id]);
   // 사용자가 작성한 댓글/대댓글은 store 에서 가져와 mock 과 합친다.
   const userComments = useUserComments();
   const comments = useMemo<CommentThread[]>(() => {
@@ -212,6 +234,13 @@ export function BoardDetailScreen() {
       timeAgo: c.timeAgo,
       replies: [],
     }));
+    // Supabase 댓글 추가 (localStorage와 중복 제거)
+    const localIds = new Set(userComments.map((c) => c.id));
+    for (const c of supabaseComments) {
+      if (!localIds.has(c.id) && !c.parentId) {
+        parents.push({ id: c.id, nickname: c.nickname, content: c.content, timeAgo: c.timeAgo, replies: [] });
+      }
+    }
     const myForThisPost = userComments.filter((c) => c.postId === post.id);
     // 사용자가 단 일반 댓글들을 뒤에 붙인다.
     for (const c of myForThisPost) {
@@ -249,7 +278,7 @@ export function BoardDetailScreen() {
     return parents;
     // initialComments 는 mock 상수라 매 렌더마다 새 배열일 수 있어 의존성에 넣지 않는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userComments, post.id]);
+  }, [userComments, supabaseComments, post.id]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyHasPhoto, setReplyHasPhoto] = useState(false);

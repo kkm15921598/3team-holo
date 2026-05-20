@@ -5,7 +5,7 @@ import { LocationPicker } from "@/features/map/post-map";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { awardXp } from "@/shared/stores/xp-store";
 import { tryDailyEarn } from "@/features/myroom/myroom-store";
-import { pushPostCreated, pushMeetingFull } from "@/shared/stores/notifications-store";
+import { pushPostCreated } from "@/shared/stores/notifications-store";
 import { draftsStore } from "./drafts-store";
 import { postsStore } from "./posts-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
@@ -370,13 +370,6 @@ export function BoardWriteScreen() {
       if (isMeetupPost(newPost)) {
         ensureMeetupRoom(newPost);
         joinPost(newPostId);
-        // mock 환경에서 다른 사용자의 참여를 시뮬레이션 — 30~90초 후에 정원이
-        // 채워졌다는 알림을 호스트(현재 사용자) 에게 발행.
-        // 실제 서비스에선 서버가 정원 도달을 감지해서 푸시한다.
-        const fillDelay = 30000 + Math.random() * 60000;
-        window.setTimeout(() => {
-          pushMeetingFull(newPost.title, newPost.id);
-        }, fillDelay);
         setChatRoomCreatedFor(newPost);
         return; // 모달에서 분기 처리하므로 navigate 호출은 잠시 보류.
       }
