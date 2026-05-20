@@ -139,7 +139,7 @@ export function postToMeetup(post: Post): Meetup {
 }
 
 /**
- * Supabase 실게시글을 우선 사용하고 부족하면 MEETUP_POOL로 채워서 count개 반환.
+ * Supabase 실게시글만 사용해 count개 반환. 부족하면 있는 만큼만 반환.
  */
 export function pickMeetupsFromPosts(
   posts: Post[],
@@ -147,19 +147,8 @@ export function pickMeetupsFromPosts(
   exclude?: Meetup[],
 ): Meetup[] {
   const excludeIds = new Set((exclude ?? []).map((m) => m.id));
-  const realMeetups = posts
+  return posts
     .filter((p) => p.status !== "모집완료" && !excludeIds.has(p.id))
     .slice(0, count)
     .map(postToMeetup);
-
-  if (realMeetups.length >= count) return realMeetups.slice(0, count);
-
-  const needed = count - realMeetups.length;
-  const usedIds = new Set([...excludeIds, ...realMeetups.map((m) => m.id)]);
-  const fallback = MEETUP_POOL.filter((m) => !usedIds.has(m.id));
-  for (let i = fallback.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [fallback[i], fallback[j]] = [fallback[j], fallback[i]];
-  }
-  return [...realMeetups, ...fallback.slice(0, needed)];
 }

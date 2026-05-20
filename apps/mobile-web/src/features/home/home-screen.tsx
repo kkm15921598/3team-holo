@@ -190,20 +190,26 @@ export function HomeScreen() {
             <RefreshIcon />
           </button>
         </div>
-        <div
-          ref={cardsRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          onPointerLeave={onPointerUp}
-          onClickCapture={onClickCapture}
-          className="no-scrollbar -mx-[14px] flex cursor-grab select-none gap-3 overflow-x-auto px-[14px] pb-2 active:cursor-grabbing"
-        >
-          {meetups.map((m) => (
-            <MeetupCard key={m.id} m={m} />
-          ))}
-        </div>
+        {meetups.length === 0 ? (
+          <div className="flex h-[120px] items-center justify-center rounded-[16px] bg-holo-surface text-[14px] text-holo-ink-3">
+            아직 근처 모임이 없어요 — 첫 번째로 만들어보세요!
+          </div>
+        ) : (
+          <div
+            ref={cardsRef}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onPointerLeave={onPointerUp}
+            onClickCapture={onClickCapture}
+            className="no-scrollbar -mx-[14px] flex cursor-grab select-none gap-3 overflow-x-auto px-[14px] pb-2 active:cursor-grabbing"
+          >
+            {meetups.map((m) => (
+              <MeetupCard key={m.id} m={m} />
+            ))}
+          </div>
+        )}
       </section>
 
       <Link

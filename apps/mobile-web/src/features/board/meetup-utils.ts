@@ -2,7 +2,6 @@
 // 홈 카드, 맵 카드, 게시글 상세, 채팅방이 모두 동일한 결과를 쓰도록 여기로 모았다.
 
 import { type ChatRoom, type Post } from "@/shared/mock/data";
-import { MEETUP_POOL } from "@/features/home/home-meetups-data";
 import { addRoom, getRoom, getRooms, setRooms } from "@/features/chat/rooms-store";
 import { clearMessagesForRoom } from "@/features/chat/messages-store";
 import { postsStore } from "./posts-store";
@@ -61,7 +60,7 @@ export function calcJoined(post: Post): { capacity: number; baseJoined: number }
   return { capacity, baseJoined: Math.min(capacity, adjusted) };
 }
 
-/** MEETUP_POOL / POST_COMMENTS 로 채울 수 없을 때 쓰는 대체 닉네임 풀. */
+/** 닉네임 부족 시 사용하는 대체 닉네임 풀. */
 export const MEMBER_FALLBACK_POOL = [
   "고소한 감자",
   "보송보송한 햄찌",
@@ -74,7 +73,6 @@ export const MEMBER_FALLBACK_POOL = [
 /**
  * 게시글에서 채팅방/카드 멤버 닉네임 N개를 도출.
  * - 1순위: 작성자 (첫 번째 → 방장)
- * - 2순위: 홈 추천 모임 데이터(MEETUP_POOL) 의 멤버
  * - 3순위: 댓글 작성자
  * - 4순위: 일반 닉네임 fallback 풀
  * 정확히 targetCount 개를 반환하며, 부족하면 풀로 채우고 넘치면 잘라낸다.
@@ -91,9 +89,6 @@ export function deriveMeetupMembers(post: Post, targetCount: number): string[] {
 
   // 1) 작성자
   add(post.authorNickname);
-  // 2) 홈 MEETUP_POOL 멤버
-  const home = MEETUP_POOL.find((m) => m.id === post.id);
-  if (home) for (const m of home.members) add(m.name);
   // 3) 댓글 작성자
   const comments: { nickname: string }[] = [];
   for (const c of comments) add(c.nickname);
