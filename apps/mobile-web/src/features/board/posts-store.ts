@@ -92,9 +92,62 @@ async function loadFromSupabase() {
   notify();
 }
 
-// 앱 시작 시 자동 로드
+/** Supabase Realtime 구독 — INSERT/UPDATE 이벤트를 로컬 스토어에 즉시 반영.
+ *
+ * 사전 요건 (Supabase 대시보드 또는 SQL):
+ *   ALTER TABLE posts REPLICA IDENTITY FULL;
+ *   ALTER PUBLICATION supabase_realtime ADD TABLE posts;
+ */
+function subscribeToRealtime() {
+  supabase
+    .channel("posts-realtime")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "posts" },
+      (payload) => {
+        const row = payload.new as Record<string, unknown>;
+        if (row.is_deleted) return;
+        const post = rowToPost(row);
+        const idx = _posts.findIndex((p) => p.id === post.id);
+        if (idx >= 0) {
+          // optimistic update 이미 반영됨 — 서버 값(created_at 등)으로 교체
+          const next = [..._posts];
+          next[idx] = post;
+          _posts = next;
+        } else {
+          // 다른 기기/사용자가 작성한 새 글
+          _posts = [post, ..._posts];
+        }
+        notify();
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "posts" },
+      (payload) => {
+        const row = payload.new as Record<string, unknown>;
+        if (row.is_deleted) {
+          // soft delete — 목록에서 제거
+          _posts = _posts.filter((p) => p.id !== (row.id as string));
+        } else {
+          const post = rowToPost(row);
+          const idx = _posts.findIndex((p) => p.id === post.id);
+          if (idx >= 0) {
+            const next = [..._posts];
+            next[idx] = post;
+            _posts = next;
+          }
+          // 목록에 없는 row UPDATE는 무시 (is_deleted=false 복구 케이스 등)
+        }
+        notify();
+      },
+    )
+    .subscribe();
+}
+
+// 앱 시작 시 자동 로드 + Realtime 구독
 if (typeof window !== "undefined") {
-  loadFromSupabase();
+  loadFromSupabase().then(() => subscribeToRealtime());
 }
 
 export const postsStore = {
