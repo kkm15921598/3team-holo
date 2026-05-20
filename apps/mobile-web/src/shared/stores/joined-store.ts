@@ -28,7 +28,8 @@ function syncToSupabase(s: Set<string>) {
  * - localStorage 에 영속화되어 새로고침 후에도 유지된다.
  */
 
-const STORAGE_KEY = "holo:joined:v1";
+// v2: 테스트 계정 잔여 모임 참여 데이터 자동 초기화
+const STORAGE_KEY = "holo:joined:v2";
 
 function loadInitial(): Set<string> {
   if (typeof window === "undefined") return new Set();

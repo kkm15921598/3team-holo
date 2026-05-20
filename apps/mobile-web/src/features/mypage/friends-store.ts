@@ -32,9 +32,11 @@ export type FriendRequest = {
   createdAt: number;
 };
 
-const STORAGE_KEY = "holo.friends.v1";
-const BLOCKED_STORAGE_KEY = "holo.friends.blocked.v1";
-const REQUESTS_STORAGE_KEY = "holo.friends.requests.v1";
+// v2: 테스트 계정 잔여 데이터 자동 초기화 — 모든 기기에서 앱 재오픈 시 깨끗하게 시작.
+// 친구·차단·요청 목록은 Supabase에서 다시 불러온다.
+const STORAGE_KEY = "holo.friends.v2";
+const BLOCKED_STORAGE_KEY = "holo.friends.blocked.v2";
+const REQUESTS_STORAGE_KEY = "holo.friends.requests.v2";
 
 const AVATAR_BG_POOL = [
   "#C7BDFF",

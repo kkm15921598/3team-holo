@@ -7,7 +7,8 @@ import { pushChatMessage } from "@/shared/stores/notifications-store";
 
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
-const STORAGE_KEY = "holo:rooms:v1";
+// v2: 테스트 계정 잔여 채팅방 자동 초기화
+const STORAGE_KEY = "holo:rooms:v2";
 function defaultRooms(): ChatRoom[] {
   return [];
 }
