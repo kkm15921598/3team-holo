@@ -3,6 +3,7 @@ import type { ChatRoom } from "@/shared/mock/data";
 import { clearMessagesForRoom } from "./messages-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { pushChatMessage } from "@/shared/stores/notifications-store";
 
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
@@ -221,5 +222,58 @@ if (typeof window !== "undefined") {
   window.addEventListener("load", () => {
     // account 로드 시간을 위해 짧은 딜레이
     window.setTimeout(() => syncRoomsFromSupabase(), 500);
+  });
+}
+// ─── 채팅 알림 글로벌 리스너 ──────────────────────────────────
+/**
+ * 내가 속한 모든 채팅방의 새 메시지를 Supabase Realtime으로 구독.
+ * 조건: 내가 보낸 메시지가 아님 + 현재 그 방 화면에 있지 않음
+ * → 위 조건 충족 시 알림 store에 채팅 알림 발행 (인앱 알림 패널 표시)
+ */
+function initChatNotificationListener() {
+  supabase
+    .channel("global-chat-messages")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages" },
+      (payload) => {
+        const row = payload.new as Record<string, unknown>;
+        const userPhone = getCurrentAccount();
+        if (!userPhone) return;
+
+        // 내가 보낸 메시지면 무시
+        if (row.sender_phone === userPhone) return;
+
+        // 내가 속한 방인지 확인
+        const roomId = row.room_id as string;
+        const room = rooms.find((r) => r.id === roomId);
+        if (!room) return;
+
+        // 현재 그 방 화면에 있으면 무시 (chat-room-screen에서 이미 실시간으로 보임)
+        const currentPath = window.location.pathname;
+        if (currentPath === `/chat/${roomId}`) return;
+
+        // 채팅 알림 발행
+        pushChatMessage(
+          (row.sender_nickname as string) ?? "알 수 없음",
+          room.name,
+          roomId,
+          (row.content as string) ?? "",
+        );
+
+        // 채팅 목록 unread 카운트 +1
+        setRooms((prev) =>
+          prev.map((r) =>
+            r.id === roomId ? { ...r, unread: (r.unread ?? 0) + 1 } : r,
+          ),
+        );
+      },
+    )
+    .subscribe();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => initChatNotificationListener(), 600);
   });
 }

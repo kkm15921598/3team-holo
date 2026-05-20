@@ -36,7 +36,8 @@ export type DynNotifKind =
   | "meeting-joined"
   | "meeting-full"
   | "comment"
-  | "like";
+  | "like"
+  | "chat";
 
 export type DynNotification = {
   id: string;
@@ -415,4 +416,29 @@ export function useDynNotifications(): DynNotification[] {
     };
   }, []);
   return list;
+}
+
+/** 채팅 메시지 수신 알림 발행 — 내가 속한 방에 새 메시지가 왔을 때 */
+export function pushChatMessage(
+  senderNickname: string,
+  roomName: string,
+  roomId: string,
+  content: string,
+): DynNotification {
+  if (!isAllowed("chat")) return SUPPRESSED;
+  const createdAt = Date.now();
+  const preview = content.length > 30 ? content.slice(0, 30) + "…" : content;
+  const item: DynNotification = {
+    id: `dn-chat-${roomId}-${createdAt}`,
+    kind: "chat",
+    title: roomName,
+    body: `${senderNickname}: ${preview}`,
+    time: timeAgo(createdAt),
+    createdAt,
+    read: false,
+    link: `/chat/${roomId}`,
+  };
+  _addNotif(item);
+  
+  return item;
 }
