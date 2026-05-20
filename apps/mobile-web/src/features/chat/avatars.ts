@@ -16,76 +16,76 @@ const BASE = "/illustrations/icons_face";
 // 카테고리별 파일명 (실제 디스크와 일치)
 const FACES = {
   man_man: [
-    "Gemini_Generated_Image_29yowa29yowa29yo 7.png",
-    "Gemini_Generated_Image_2yfg492yfg492yfg 5.png",
-    "Gemini_Generated_Image_4wzr754wzr754wzr 7.png",
-    "Gemini_Generated_Image_8zak848zak848zak 7.png",
-    "Gemini_Generated_Image_ggx8izggx8izggx8 10.png",
-    "Gemini_Generated_Image_lakj7nlakj7nlakj 4.png",
-    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m 9.png",
-    "Gemini_Generated_Image_n1h0oln1h0oln1h0 7.png",
-    "Gemini_Generated_Image_rbemzqrbemzqrbem 7.png",
-    "Gemini_Generated_Image_sale38sale38sale 5.png",
-    "Gemini_Generated_Image_uexnvbuexnvbuexn 7.png",
-    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x 7.png",
+    "Gemini_Generated_Image_29yowa29yowa29yo_7.png",
+    "Gemini_Generated_Image_2yfg492yfg492yfg_5.png",
+    "Gemini_Generated_Image_4wzr754wzr754wzr_7.png",
+    "Gemini_Generated_Image_8zak848zak848zak_7.png",
+    "Gemini_Generated_Image_ggx8izggx8izggx8_10.png",
+    "Gemini_Generated_Image_lakj7nlakj7nlakj_4.png",
+    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m_9.png",
+    "Gemini_Generated_Image_n1h0oln1h0oln1h0_7.png",
+    "Gemini_Generated_Image_rbemzqrbemzqrbem_7.png",
+    "Gemini_Generated_Image_sale38sale38sale_5.png",
+    "Gemini_Generated_Image_uexnvbuexnvbuexn_7.png",
+    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x_7.png",
   ].map((f) => `${BASE}/man/man/${f}`),
   woman_woman: [
-    "Gemini_Generated_Image_29yowa29yowa29yo 5.png",
-    "Gemini_Generated_Image_4wzr754wzr754wzr 4.png",
-    "Gemini_Generated_Image_8zak848zak848zak 4.png",
-    "Gemini_Generated_Image_ggx8izggx8izggx8 7.png",
-    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m 6.png",
-    "Gemini_Generated_Image_n1h0oln1h0oln1h0 4.png",
-    "Gemini_Generated_Image_rbemzqrbemzqrbem 4.png",
-    "Gemini_Generated_Image_sale38sale38sale 4.png",
-    "Gemini_Generated_Image_uexnvbuexnvbuexn 5.png",
-    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x 4.png",
+    "Gemini_Generated_Image_29yowa29yowa29yo_5.png",
+    "Gemini_Generated_Image_4wzr754wzr754wzr_4.png",
+    "Gemini_Generated_Image_8zak848zak848zak_4.png",
+    "Gemini_Generated_Image_ggx8izggx8izggx8_7.png",
+    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m_6.png",
+    "Gemini_Generated_Image_n1h0oln1h0oln1h0_4.png",
+    "Gemini_Generated_Image_rbemzqrbemzqrbem_4.png",
+    "Gemini_Generated_Image_sale38sale38sale_4.png",
+    "Gemini_Generated_Image_uexnvbuexnvbuexn_5.png",
+    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x_4.png",
   ].map((f) => `${BASE}/woman/woman/${f}`),
   man_boy: [
-    "Gemini_Generated_Image_1kmbpd1kmbpd1kmb 4.png",
-    "Gemini_Generated_Image_4wzr754wzr754wzr 8.png",
-    "Gemini_Generated_Image_6fq25v6fq25v6fq2 3.png",
-    "Gemini_Generated_Image_8zak848zak848zak 8.png",
-    "Gemini_Generated_Image_ggx8izggx8izggx8 11.png",
-    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m 10.png",
-    "Gemini_Generated_Image_n1h0oln1h0oln1h0 8.png",
-    "Gemini_Generated_Image_rbemzqrbemzqrbem 8.png",
-    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x 8.png",
+    "Gemini_Generated_Image_1kmbpd1kmbpd1kmb_4.png",
+    "Gemini_Generated_Image_4wzr754wzr754wzr_8.png",
+    "Gemini_Generated_Image_6fq25v6fq25v6fq2_3.png",
+    "Gemini_Generated_Image_8zak848zak848zak_8.png",
+    "Gemini_Generated_Image_ggx8izggx8izggx8_11.png",
+    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m_10.png",
+    "Gemini_Generated_Image_n1h0oln1h0oln1h0_8.png",
+    "Gemini_Generated_Image_rbemzqrbemzqrbem_8.png",
+    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x_8.png",
   ].map((f) => `${BASE}/man/boy/${f}`),
   woman_girl: [
-    "Gemini_Generated_Image_1kmbpd1kmbpd1kmb 3.png",
-    "Gemini_Generated_Image_4wzr754wzr754wzr 5.png",
-    "Gemini_Generated_Image_6fq25v6fq25v6fq2 2.png",
-    "Gemini_Generated_Image_8zak848zak848zak 5.png",
-    "Gemini_Generated_Image_ggx8izggx8izggx8 8.png",
-    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m 7.png",
-    "Gemini_Generated_Image_n1h0oln1h0oln1h0 5.png",
-    "Gemini_Generated_Image_rbemzqrbemzqrbem 5.png",
-    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x 5.png",
+    "Gemini_Generated_Image_1kmbpd1kmbpd1kmb_3.png",
+    "Gemini_Generated_Image_4wzr754wzr754wzr_5.png",
+    "Gemini_Generated_Image_6fq25v6fq25v6fq2_2.png",
+    "Gemini_Generated_Image_8zak848zak848zak_5.png",
+    "Gemini_Generated_Image_ggx8izggx8izggx8_8.png",
+    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m_7.png",
+    "Gemini_Generated_Image_n1h0oln1h0oln1h0_5.png",
+    "Gemini_Generated_Image_rbemzqrbemzqrbem_5.png",
+    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x_5.png",
   ].map((f) => `${BASE}/woman/girl/${f}`),
   man_grandfa: [
-    "Gemini_Generated_Image_29yowa29yowa29yo 8.png",
-    "Gemini_Generated_Image_2yfg492yfg492yfg 6.png",
-    "Gemini_Generated_Image_4wzr754wzr754wzr 9.png",
-    "Gemini_Generated_Image_8zak848zak848zak 9.png",
-    "Gemini_Generated_Image_ggx8izggx8izggx8 12.png",
-    "Gemini_Generated_Image_lakj7nlakj7nlakj 5.png",
-    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m 11.png",
-    "Gemini_Generated_Image_n1h0oln1h0oln1h0 9.png",
-    "Gemini_Generated_Image_rbemzqrbemzqrbem 9.png",
-    "Gemini_Generated_Image_uexnvbuexnvbuexn 8.png",
-    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x 9.png",
+    "Gemini_Generated_Image_29yowa29yowa29yo_8.png",
+    "Gemini_Generated_Image_2yfg492yfg492yfg_6.png",
+    "Gemini_Generated_Image_4wzr754wzr754wzr_9.png",
+    "Gemini_Generated_Image_8zak848zak848zak_9.png",
+    "Gemini_Generated_Image_ggx8izggx8izggx8_12.png",
+    "Gemini_Generated_Image_lakj7nlakj7nlakj_5.png",
+    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m_11.png",
+    "Gemini_Generated_Image_n1h0oln1h0oln1h0_9.png",
+    "Gemini_Generated_Image_rbemzqrbemzqrbem_9.png",
+    "Gemini_Generated_Image_uexnvbuexnvbuexn_8.png",
+    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x_9.png",
   ].map((f) => `${BASE}/man/grandfa/${f}`),
   woman_grandma: [
-    "Gemini_Generated_Image_29yowa29yowa29yo 6.png",
-    "Gemini_Generated_Image_4wzr754wzr754wzr 6.png",
-    "Gemini_Generated_Image_8zak848zak848zak 6.png",
-    "Gemini_Generated_Image_ggx8izggx8izggx8 9.png",
-    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m 8.png",
-    "Gemini_Generated_Image_n1h0oln1h0oln1h0 6.png",
-    "Gemini_Generated_Image_rbemzqrbemzqrbem 6.png",
-    "Gemini_Generated_Image_uexnvbuexnvbuexn 6.png",
-    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x 6.png",
+    "Gemini_Generated_Image_29yowa29yowa29yo_6.png",
+    "Gemini_Generated_Image_4wzr754wzr754wzr_6.png",
+    "Gemini_Generated_Image_8zak848zak848zak_6.png",
+    "Gemini_Generated_Image_ggx8izggx8izggx8_9.png",
+    "Gemini_Generated_Image_mv2mdrmv2mdrmv2m_8.png",
+    "Gemini_Generated_Image_n1h0oln1h0oln1h0_6.png",
+    "Gemini_Generated_Image_rbemzqrbemzqrbem_6.png",
+    "Gemini_Generated_Image_uexnvbuexnvbuexn_6.png",
+    "Gemini_Generated_Image_xf9xwvxf9xwvxf9x_6.png",
   ].map((f) => `${BASE}/woman/grandma/${f}`),
 };
 
@@ -104,14 +104,14 @@ export const MAN_FACES = [
   ...FACES.man_man,
   ...FACES.man_boy,
   ...FACES.man_grandfa,
-].map((p) => encodeURI(p));
+];
 
 /** 여성 프로필 이미지 풀 (성인+소녀+노인) — 가입 시 프로필 선택용 */
 export const WOMAN_FACES = [
   ...FACES.woman_woman,
   ...FACES.woman_girl,
   ...FACES.woman_grandma,
-].map((p) => encodeURI(p));
+];
 
 // 닉네임 → 안정적인 정수 해시 (FNV-1a 변형)
 function hashString(s: string): number {
@@ -132,12 +132,8 @@ export function getAvatar(nickname: string | undefined | null): string {
   if (!nickname) return DEFAULT_FACE;
   // 1) PERSONAS 에 고정 얼굴이 있으면 그대로 사용 (얼굴 경로의 /man/ 또는 /woman/
   //    이 곧 그 닉네임의 성별이므로 자동으로 일치).
-  // 주의: PERSONAS.face 는 home-faces.ts 의 enc() 헬퍼에서 이미 encodeURI 된 상태로
-  // 저장돼 있다. 반면 getAvatar 의 다른 경로는 raw 문자열을 돌려주고 getAvatarUrl 에서
-  // 한 번만 인코딩한다. 통일성을 맞추기 위해 여기선 decodeURI 로 raw 로 되돌린다 —
-  // 그래야 getAvatarUrl 이 다시 encodeURI 했을 때 이중 인코딩(%2520) 으로 깨지지 않는다.
   const persona = personaByName(nickname);
-  if (persona) return decodeURI(persona.face);
+  if (persona) return persona.face;
   // 2) 그 외 닉네임은 성별 판정 후 같은 성별 풀에서만 해시로 얼굴 선택.
   //    80% 성인 풀 / 20% 변형 풀(소년·소녀·노인) 로 다양성 유지.
   const h = hashString(nickname);
@@ -159,5 +155,5 @@ export function getAvatar(nickname: string | undefined | null): string {
  * <img src={...} />에 그대로 넣을 때 사용.
  */
 export function getAvatarUrl(nickname: string | undefined | null): string {
-  return encodeURI(getAvatar(nickname));
+  return getAvatar(nickname);
 }
