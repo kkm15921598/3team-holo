@@ -4,6 +4,8 @@ import { type ChatRoom, TITLES_META } from "@/shared/mock/data";
 import { BADGES as BADGE_LIB } from "@/badge";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
+import { dmRoomIdFor, lookupPhoneByNickname } from "@/features/chat/dm-utils";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   acceptFriendRequest,
   cancelFriendRequest,
@@ -338,7 +340,7 @@ export function ProfileDetailScreen() {
       },
     });
 
-  const goToChat = () => {
+  const goToChat = async () => {
     const existing = getRooms().find(
       (r) => !r.isGroup && r.name === nickname,
     );
@@ -348,7 +350,21 @@ export function ProfileDetailScreen() {
       return;
     }
 
-    const newId = `dm-${Date.now()}`;
+    // 두 사용자가 같은 room_id 를 공유하도록 phone 기반 결정론적 ID 사용.
+    // 친구의 phone 조회 실패 시(미가입자 등) 기존 방식으로 폴백.
+    const myPhone = getCurrentAccount();
+    const friendPhone = await lookupPhoneByNickname(nickname);
+    const newId =
+      myPhone && friendPhone
+        ? dmRoomIdFor(myPhone, friendPhone)
+        : `dm-${Date.now()}`;
+
+    // 결정론적 ID 라 이미 만든 방이 있을 수 있음 — 중복 추가 방지
+    const dup = getRooms().find((r) => r.id === newId);
+    if (dup) {
+      navigate(`/chat/${newId}`);
+      return;
+    }
 
     const newRoom: ChatRoom = {
       id: newId,
