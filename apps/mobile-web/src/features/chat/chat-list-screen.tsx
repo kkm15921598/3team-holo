@@ -13,6 +13,8 @@ import {
 import { getMessagesForRoom } from "./messages-store";
 import { getAvatarUrl } from "./avatars";
 import { GroupAvatar } from "./group-avatar";
+import { dmRoomIdFor, lookupPhoneByNickname } from "./dm-utils";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 type Filter = "all" | "unread" | "groups" | "meetings";
 
@@ -194,7 +196,7 @@ export function ChatListScreen() {
         <NewChatSheet
           existingRooms={allRooms}
           onClose={() => setShowNew(false)}
-          onStart1to1={(friendId, friendNick) => {
+          onStart1to1={async (friendId, friendNick) => {
             const existing = allRooms.find(
               (r) => !r.isGroup && r.name === friendNick,
             );
@@ -203,7 +205,21 @@ export function ChatListScreen() {
               navigate(`/chat/${existing.id}`);
               return;
             }
-            const newId = `f${friendId}-${Date.now()}`;
+            // 두 사용자가 같은 room_id 를 공유하도록 phone 기반 결정론적 ID 사용.
+            // 친구의 phone 조회 실패 시(미가입자 등) 기존 방식으로 폴백.
+            const myPhone = getCurrentAccount();
+            const friendPhone = await lookupPhoneByNickname(friendNick);
+            const newId =
+              myPhone && friendPhone
+                ? dmRoomIdFor(myPhone, friendPhone)
+                : `f${friendId}-${Date.now()}`;
+            // 결정론적 ID 라 이미 만든 방이 있을 수 있음 — 중복 추가 방지
+            const dup = allRooms.find((r) => r.id === newId);
+            if (dup) {
+              setShowNew(false);
+              navigate(`/chat/${newId}`);
+              return;
+            }
             const newRoom: ChatRoom = {
               id: newId,
               name: friendNick,
@@ -252,7 +268,7 @@ function NewChatSheet({
 }: {
   existingRooms: ChatRoom[];
   onClose: () => void;
-  onStart1to1: (friendId: string, friendNick: string) => void;
+  onStart1to1: (friendId: string, friendNick: string) => void | Promise<void>;
   onStartGroup: (friendIds: string[], friendNicks: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);

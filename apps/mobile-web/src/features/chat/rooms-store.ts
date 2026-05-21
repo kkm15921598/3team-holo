@@ -4,6 +4,7 @@ import { clearMessagesForRoom } from "./messages-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { pushChatMessage } from "@/shared/stores/notifications-store";
+import { isDmRoomId, getOtherPhoneFromDmId } from "./dm-utils";
 
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
@@ -181,6 +182,10 @@ export function useRooms() {
  * Supabase chat_rooms 에서 현재 계정의 방 목록을 불러와
  * localStorage 에 없는 방만 보충한다.
  * 브라우저 캐시 삭제 / 다른 기기 접속 시 채팅방 복원용.
+ *
+ * - 내가 만든 방(creator_phone = me)
+ * - 1:1 방(room_id = "dm-<A>-<B>") 중 내 phone 이 포함된 방 → 상대가 먼저 만든 방
+ *   둘 다 가져온다.
  */
 export async function syncRoomsFromSupabase(): Promise<void> {
   const userPhone = getCurrentAccount();
@@ -188,29 +193,56 @@ export async function syncRoomsFromSupabase(): Promise<void> {
 
   // 최근 30일 이내 생성된 방만 복원 (오래된 테스트 데이터 제외)
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  // PostgREST OR — 내가 만든 방, 또는 내 phone 이 들어간 DM 방
+  const orFilter = [
+    `creator_phone.eq.${userPhone}`,
+    `room_id.like.dm-${userPhone}-*`,
+    `room_id.like.dm-*-${userPhone}`,
+  ].join(",");
   const { data, error } = await supabase
     .from("chat_rooms")
     .select("*")
-    .eq("creator_phone", userPhone)
+    .or(orFilter)
     .gte("created_at", since)
     .order("created_at", { ascending: false });
 
   if (error || !data || data.length === 0) return;
 
   const existingIds = new Set(rooms.map((r) => r.id));
-  const toAdd: ChatRoom[] = data
-    .filter((row) => !existingIds.has(row.room_id as string))
-    .map((row) => ({
-      id: row.room_id as string,
-      name: (row.name ?? row.room_name ?? "") as string,
-      subtitle: row.is_group ? "그룹" : "1:1",
-      isGroup: (row.is_group ?? false) as boolean,
-      memberCount: row.is_group ? 3 : 2,
+  const toAddRaw = data.filter(
+    (row) => !existingIds.has(row.room_id as string),
+  );
+
+  // 상대가 만든 DM 방은 chat_rooms.name 에 "내 닉네임" 이 들어 있다.
+  // 내 입장에선 상대 닉네임이 표시돼야 하므로 users 테이블에서 다시 조회.
+  const toAdd: ChatRoom[] = [];
+  for (const row of toAddRaw) {
+    const roomId = row.room_id as string;
+    const isDm = isDmRoomId(roomId);
+    let name = (row.name ?? row.room_name ?? "") as string;
+    if (isDm) {
+      const otherPhone = getOtherPhoneFromDmId(roomId, userPhone);
+      if (otherPhone) {
+        const { data: u } = await supabase
+          .from("users")
+          .select("nickname")
+          .eq("phone", otherPhone)
+          .maybeSingle();
+        if (u?.nickname) name = u.nickname as string;
+      }
+    }
+    toAdd.push({
+      id: roomId,
+      name,
+      subtitle: isDm ? "1:1" : row.is_group ? "그룹" : "1:1",
+      isGroup: isDm ? false : ((row.is_group ?? false) as boolean),
+      memberCount: isDm ? 2 : row.is_group ? 3 : 2,
       lastMessage: "(대화를 시작해보세요)",
       lastTime: "",
       unread: 0,
       updatedAt: new Date(row.created_at as string).getTime(),
-    }));
+    });
+  }
 
   if (toAdd.length > 0) {
     rooms = [...toAdd, ...rooms];
@@ -245,9 +277,56 @@ function initChatNotificationListener() {
         // 내가 보낸 메시지면 무시
         if (row.sender_phone === userPhone) return;
 
-        // 내가 속한 방인지 확인
         const roomId = row.room_id as string;
-        const room = rooms.find((r) => r.id === roomId);
+        let room = rooms.find((r) => r.id === roomId);
+
+        // 1:1 방인데 아직 로컬에 없으면 — 상대가 먼저 보낸 첫 메시지.
+        // 내 phone 이 room_id 에 포함돼 있으면 내가 속한 방이라 보고 자동 생성한다.
+        if (!room && isDmRoomId(roomId)) {
+          const otherPhone = getOtherPhoneFromDmId(roomId, userPhone);
+          if (otherPhone) {
+            const senderNickname =
+              (row.sender_nickname as string | undefined) ?? "알 수 없음";
+            const created: ChatRoom = {
+              id: roomId,
+              name: senderNickname,
+              subtitle: "1:1",
+              isGroup: false,
+              memberCount: 2,
+              lastMessage: "",
+              lastTime: "방금",
+              unread: 0,
+              online: false,
+              updatedAt: Date.now(),
+            };
+            rooms = [created, ...rooms];
+            emit();
+            room = created;
+            // 상대가 chat_rooms insert 에 실패했을 수도 있으니, 내 쪽에서도 upsert.
+            // room_id 가 PK 라 충돌해도 영향 없음.
+            supabase
+              .from("chat_rooms")
+              .upsert(
+                {
+                  room_id: roomId,
+                  name: senderNickname,
+                  room_name: senderNickname,
+                  post_id: null,
+                  creator_phone: userPhone,
+                },
+                { onConflict: "room_id", ignoreDuplicates: true },
+              )
+              .then(({ error }) => {
+                if (error)
+                  console.warn(
+                    "Supabase DM 방 upsert 실패:",
+                    error.message,
+                  );
+              });
+          }
+        }
+
+        // 그래도 못 찾으면 내 방이 아님 — 무시
         if (!room) return;
 
         // 현재 그 방 화면에 있으면 무시 (chat-room-screen에서 이미 실시간으로 보임)
