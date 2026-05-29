@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/;
 
@@ -10,6 +12,8 @@ export function PasswordChangeScreen() {
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const nextValid = PASSWORD_PATTERN.test(next);
   const nextInvalid = next.length > 0 && !nextValid;
@@ -20,8 +24,48 @@ export function PasswordChangeScreen() {
   const canSubmit =
     current.length > 0 && nextValid && confirmMatch && !sameAsCurrent;
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
+  const handleSubmit = async () => {
+    if (!canSubmit || submitting) return;
+    const phone = getCurrentAccount();
+    if (!phone) {
+      setError("로그인 정보를 찾을 수 없어요. 다시 로그인해주세요.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+
+    // 1) 현재 비밀번호가 실제 DB 값과 일치하는지 확인.
+    //    (이전엔 입력만 받고 검증·저장을 전혀 안 해서 비밀번호 변경이 동작하지 않았음)
+    const { data: user, error: fetchError } = await supabase
+      .from("users")
+      .select("password")
+      .eq("phone", phone)
+      .single();
+
+    if (fetchError || !user) {
+      setSubmitting(false);
+      setError("계정 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    if (user.password !== current) {
+      setSubmitting(false);
+      setError("현재 비밀번호가 올바르지 않아요.");
+      return;
+    }
+
+    // 2) 새 비밀번호를 Supabase 에 저장.
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ password: next })
+      .eq("phone", phone);
+
+    if (updateError) {
+      setSubmitting(false);
+      setError("비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    setSubmitting(false);
     setDone(true);
   };
 
@@ -48,7 +92,10 @@ export function PasswordChangeScreen() {
             autoComplete="current-password"
             placeholder="현재 비밀번호 입력"
             value={current}
-            onChange={(e) => setCurrent(e.target.value.slice(0, 16))}
+            onChange={(e) => {
+              setCurrent(e.target.value.slice(0, 16));
+              setError("");
+            }}
             maxLength={16}
             className="h-[58px] rounded-holo-input border border-holo-ink-4 px-5 text-[15px] outline-none placeholder:text-holo-ink-4 focus:border-2 focus:border-holo-purple-mid focus:text-holo-purple-mid"
           />
@@ -104,15 +151,18 @@ export function PasswordChangeScreen() {
         </div>
 
         <div className="mt-auto pb-4 pt-6">
+          {error && (
+            <p className="mb-2 pl-2 text-[13px] text-holo-error">{error}</p>
+          )}
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
             className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
-              canSubmit ? "bg-holo-ink" : "bg-holo-ink-4"
+              canSubmit && !submitting ? "bg-holo-ink" : "bg-holo-ink-4"
             }`}
           >
-            변경 완료
+            {submitting ? "변경 중…" : "변경 완료"}
           </button>
         </div>
       </section>

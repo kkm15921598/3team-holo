@@ -92,3 +92,21 @@ export function saveChoice<K extends keyof AccountChoices>(
 export function getChoices(phone: string): AccountChoices {
   return state[phone] ?? {};
 }
+
+/**
+ * 번호 변경 시 phone 키 마이그레이션.
+ * phone 이 곧 계정 식별자이므로, 변경 시 기존 선택(뱃지/칭호)을 새 번호로 옮기고
+ * 현재 계정 포인터도 갱신한다. 안 하면 번호 변경 후 다음 로그인에서 선택이 초기화됨.
+ */
+export function renameAccount(oldPhone: string, newPhone: string): void {
+  if (!oldPhone || !newPhone || oldPhone === newPhone) return;
+  if (state[oldPhone]) {
+    state = { ...state, [newPhone]: state[oldPhone] };
+    delete state[oldPhone];
+    persist();
+  }
+  if (currentPhone === oldPhone) {
+    currentPhone = newPhone;
+    persistCurrent();
+  }
+}

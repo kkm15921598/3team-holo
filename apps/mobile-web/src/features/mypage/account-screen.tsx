@@ -7,6 +7,7 @@ import {
   subscribeVerification,
 } from "@/shared/stores/verification-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
+import { getCurrentPhoneMasked } from "@/shared/lib/phone";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function AccountScreen() {
@@ -24,6 +25,8 @@ export function AccountScreen() {
   // 실제 위치 인증을 거치면 '인증완료' 로 자동 전환된다.
   const regionVerified = verification.regionVerified;
   const faceSrc = profile.profileFace ?? ME_PERSONA.face;
+  // 가입/로그인 시 저장된 실제 번호를 마스킹해 표시 (하드코딩 제거).
+  const phoneMasked = getCurrentPhoneMasked();
 
   // 가입년도 — localStorage 의 holoUser.signupAt 에서 추출. 없으면 현재 년도 폴백.
   const signupYear = (() => {
@@ -99,7 +102,7 @@ export function AccountScreen() {
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
           {/* 이메일 변경 항목은 휴대폰 본인인증 기반 가입이라 의미가 없어 제거 */}
           <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
-          <Row label="휴대폰 번호 변경" hint="010-****-1234" onClick={() => navigate("/mypage/account/phone")} />
+          <Row label="휴대폰 번호 변경" hint={phoneMasked} onClick={() => navigate("/mypage/account/phone")} />
         </ul>
       </section>
 

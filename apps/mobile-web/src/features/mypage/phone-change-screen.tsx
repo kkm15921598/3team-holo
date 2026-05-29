@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { setPhoneVerified } from "@/shared/stores/verification-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { getCurrentAccount, renameAccount } from "@/shared/stores/account-choices-store";
+import { maskPhone } from "@/shared/lib/phone";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 const CARRIERS = ["SKT", "KT", "LG U+", "SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"];
-const CURRENT_PHONE = "010-****-1234";
 
 export function PhoneChangeScreen() {
   const navigate = useNavigate();
@@ -15,6 +17,12 @@ export function PhoneChangeScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [verified, setVerified] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  // 가입/로그인 시 저장된 실제 현재 번호 (raw 숫자). 마스킹해서 표시.
+  const currentPhone = getCurrentAccount();
+  const currentPhoneMasked = maskPhone(currentPhone);
 
   const phoneValid = phone.length >= 10;
   const codeValid = code.length === 6;
@@ -28,11 +36,39 @@ export function PhoneChangeScreen() {
   const handleVerify = () => {
     if (codeValid) setVerified(true);
   };
-  const handleSubmit = () => {
-    if (verified) {
-      setPhoneVerified(true);
-      setDone(true);
+  const handleSubmit = async () => {
+    if (!verified || submitting) return;
+    setSubmitting(true);
+    setError("");
+
+    const newPhone = phone.replace(/\D/g, "");
+
+    // 변경 전 번호가 있으면 Supabase users.phone 을 실제로 갱신한다.
+    // (이전엔 메시지만 띄우고 DB·로컬 어디에도 저장하지 않아 변경이 반영되지 않았음)
+    if (currentPhone) {
+      const { error: dbError } = await supabase
+        .from("users")
+        .update({ phone: newPhone })
+        .eq("phone", currentPhone);
+
+      if (dbError) {
+        setSubmitting(false);
+        // 이미 가입된 번호(unique 위반)
+        if (dbError.code === "23505") {
+          setError("이미 가입된 번호예요. 다른 번호로 시도해주세요.");
+        } else {
+          setError("번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+        }
+        return;
+      }
+
+      // 로컬 계정 포인터 + 선택(뱃지/칭호) 키도 새 번호로 이전.
+      renameAccount(currentPhone, newPhone);
     }
+
+    setPhoneVerified(true);
+    setSubmitting(false);
+    setDone(true);
   };
 
   return (
@@ -50,7 +86,7 @@ export function PhoneChangeScreen() {
         <div className="rounded-holo-input bg-holo-lilac-card-2 px-4 py-3">
           <p className="text-[12px] text-holo-ink-3">현재 번호</p>
           <p className="mt-0.5 text-[15px] font-semibold text-holo-ink">
-            {CURRENT_PHONE}
+            {currentPhoneMasked}
           </p>
         </div>
       </section>
@@ -159,15 +195,18 @@ export function PhoneChangeScreen() {
         </div>
 
         <div className="mt-auto pb-4 pt-6">
+          {error && (
+            <p className="mb-2 pl-2 text-[13px] text-holo-error">{error}</p>
+          )}
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!verified}
+            disabled={!verified || submitting}
             className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
-              verified ? "bg-holo-ink" : "bg-holo-ink-4"
+              verified && !submitting ? "bg-holo-ink" : "bg-holo-ink-4"
             }`}
           >
-            번호 변경하기
+            {submitting ? "변경 중…" : "번호 변경하기"}
           </button>
         </div>
       </section>
