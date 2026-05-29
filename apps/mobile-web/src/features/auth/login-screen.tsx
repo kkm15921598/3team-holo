@@ -9,7 +9,6 @@ import {
   setNickname,
   setTitle,
   setEquippedBadgeId,
-  setFriendCode,
 } from "@/shared/stores/profile-store";
 import { defaultFaceForGender } from "@/features/home/home-faces";
 import { setCurrentAccount } from "@/shared/stores/account-choices-store";
@@ -114,7 +113,9 @@ export function LoginScreen() {
       setNickname(dbUser.nickname ?? "");
       setTitle("");
       setEquippedBadgeId("badge_24");
-      setFriendCode("");
+      // ※ setFriendCode("") 는 호출하지 않는다 — 빈 값이면 새 랜덤 코드를 생성해
+      //   Supabase 에 덮어써서, 로그인할 때마다 친구코드(ID)가 바뀌는 버그가 있었다.
+      //   친구코드는 아래 syncProfileFromSupabase 가 가입 때 저장된 값을 그대로 복원한다.
 
       // 3) 가입 직후 2분 skip 플래그 제거 — 로그인은 신규가입이 아니므로 즉시 복원 허용.
       try {
