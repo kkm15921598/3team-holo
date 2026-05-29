@@ -20,7 +20,7 @@ import { joinPost, leavePost, useJoinedSet } from "@/shared/stores/joined-store"
 import { addComment, useUserComments, type StoredComment } from "@/shared/stores/comments-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
-import { markPostViewed } from "@/shared/stores/viewed-posts-store";
+import { markPostViewed, hasViewedPost } from "@/shared/stores/viewed-posts-store";
 import {
   getTotalViews,
   incrementViewCount,
@@ -130,14 +130,15 @@ export function BoardDetailScreen() {
   const post = posts.find((p) => p.id === id) ?? posts[0];
   const profile = useProfile();
 
-  // Mock-only display fields not present on the Post type.
-  const place = post.place ?? post.location?.placeName ?? "미금역 사거리";
+  // 장소 정보가 없으면 가짜 지명("미금역 사거리") 대신 중립 문구를 표시한다.
+  const place = post.place ?? post.location?.placeName ?? "장소 미정";
   // "시간" 라인 표시
   //  - 장기성: 시작일 ~ 종료일 (시간 표시 없음)
   //  - 단기성: 단일 날짜 + 시작 시각 (HH:MM)
   //  - eventDate 가 없는 옛 mock 글은 종전 데모 문구로 폴백.
   const timeText = useMemo(() => {
-    if (!post.eventDate) return "26.04.02  19:00";
+    // 일정 정보가 없으면 가짜 날짜("26.04.02") 대신 중립 문구.
+    if (!post.eventDate) return "일정 미정";
     const start = formatYmdShort(post.eventDate);
     const isLongTerm = post.meetupType === "장기성 모임";
     if (isLongTerm && post.endDate && post.endDate !== post.eventDate) {
@@ -392,15 +393,17 @@ export function BoardDetailScreen() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // 게시글 진입 시 "최근 본 글" 에 기록 (마이페이지 목록의 원천) + 조회수 +1.
-  // React 18 StrictMode 에서는 effect 가 mount-unmount-mount 로 두 번 실행되므로
-  // 이미 카운트한 post.id 는 ref 에 기록해 중복 증가를 막는다.
+  // 조회수는 "이 글을 처음 본 사용자" 에 한해 1회만 증가시킨다(hasViewedPost 가드).
+  // → 재진입/새로고침마다 +1 되어 조회수가 부풀려지던 문제를 막는다.
+  // viewedOnceRef 는 StrictMode 의 mount-unmount-mount 이중 실행만 방어.
   const viewedOnceRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!post?.id) return;
     if (viewedOnceRef.current.has(post.id)) return;
     viewedOnceRef.current.add(post.id);
+    const firstView = !hasViewedPost(post.id);
     markPostViewed(post.id);
-    incrementViewCount(post.id);
+    if (firstView) incrementViewCount(post.id);
   }, [post?.id]);
 
   // 조회수 (baseline + 사용자 증분) — 증분이 변경되면 자동 재렌더
@@ -669,14 +672,9 @@ export function BoardDetailScreen() {
   const handleRefresh = async () => {
     // 기존엔 메모리 캐시만 다시 읽어서 실제로는 아무것도 갱신되지 않았다.
     // Supabase 에서 글 목록과 이 글의 댓글을 실제로 다시 가져온다.
+    // (새로고침은 조회수를 다시 올리지 않는다 — 조회수 부풀려짐 방지)
     await Promise.allSettled([postsStore.refresh(), loadComments()]);
     setPosts(postsStore.getPosts());
-    viewedOnceRef.current = new Set();
-    if (post?.id) {
-      markPostViewed(post.id);
-      incrementViewCount(post.id);
-      viewedOnceRef.current.add(post.id);
-    }
     showToast("새로고침 됐어요");
   };
 

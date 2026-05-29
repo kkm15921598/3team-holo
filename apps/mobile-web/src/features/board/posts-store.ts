@@ -78,7 +78,10 @@ async function loadFromSupabase() {
   const { data, error } = await supabase
     .from("posts")
     .select("*")
-    .neq("is_deleted", true)   // false 또는 NULL 모두 포함 (기존 데이터 호환)
+    // is_deleted 가 false 이거나 NULL 인 행을 모두 포함.
+    // (.neq("is_deleted", true) 는 SQL 3치논리상 NULL 행을 제외해버려, 명시적 false 저장
+    //  이전에 만들어진 레거시 글이 목록에서 누락됐다 — .or 로 NULL 까지 명시 포함)
+    .or("is_deleted.is.null,is_deleted.eq.false")
     .order("bumped_at", { ascending: false });
 
   if (error) {

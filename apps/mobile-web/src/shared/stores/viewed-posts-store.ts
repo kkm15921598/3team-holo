@@ -71,6 +71,11 @@ export function markPostViewed(id: string): void {
   syncToSupabase(state);
 }
 
+/** 이미 본(=조회 기록이 있는) 글인지 — 조회수 중복 증가 방지 가드용. */
+export function hasViewedPost(id: string): boolean {
+  return state.some((e) => e.id === id);
+}
+
 /** 마이페이지 관리 삭제 — 지정한 id 들을 viewed 목록에서 제거 */
 export function removeViewedPosts(ids: string[]): void {
   const set = new Set(ids);
