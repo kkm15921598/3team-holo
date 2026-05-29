@@ -52,10 +52,10 @@ export function calcJoined(post: Post): { capacity: number; baseJoined: number }
     return { capacity, baseJoined: Math.max(0, capacity - kicked) };
   }
   const fromParticipants = post.participants?.length;
-  const raw =
-    fromParticipants !== undefined
-      ? fromParticipants
-      : Math.max(1, capacity - 2);
+  // 참여자 데이터가 없으면 '작성자(방장) 1명'만 센다.
+  // (이전엔 capacity-2 명이 참여한 것처럼 가짜로 채워서, 모임 글을 올리자마자
+  //  "3/5" 같은 가짜 인원이 차 보이던 문제 — 실제 '함께하기' 누른 인원만 반영)
+  const raw = fromParticipants !== undefined ? fromParticipants : 1;
   const adjusted = Math.max(0, raw - kicked);
   return { capacity, baseJoined: Math.min(capacity, adjusted) };
 }
