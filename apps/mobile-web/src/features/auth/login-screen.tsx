@@ -113,7 +113,9 @@ export function LoginScreen() {
       setGender(dbUser.gender ?? "female");
       setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
       setNickname(dbUser.nickname ?? "");
-      setTitle("");
+      // 칭호 기본값은 빈 문자열이 아니라 입주자 칭호 — 서버 title 이 비어 있어도(과거 손상)
+      // 홈/프로필에 칭호가 안 보이지 않도록. 실제 칭호가 있으면 아래 sync 가 덮어쓴다.
+      setTitle("#홀로_입주자");
       setEquippedBadgeId("badge_24");
 
       // 3) 가입 직후 2분 skip 플래그 제거 — 로그인은 신규가입이 아니므로 즉시 복원 허용.

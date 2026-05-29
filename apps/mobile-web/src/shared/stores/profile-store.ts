@@ -177,7 +177,12 @@ export async function syncProfileFromSupabase(): Promise<void> {
   _state = {
     ..._state,
     nickname: (data.nickname as string) ?? _state.nickname,
-    title: (data.title as string) ?? _state.title,
+    // Supabase title 이 빈 문자열(과거 버그로 덮어써진 경우)이면 로컬 기본값을 유지한다.
+    // (?? 는 ""를 통과시켜 칭호가 빈 채로 남던 문제 — 빈 값은 '없음' 으로 취급)
+    title:
+      typeof data.title === "string" && data.title.trim()
+        ? (data.title as string)
+        : _state.title,
     equippedBadgeId: (data.equipped_badge_id as string) ?? _state.equippedBadgeId,
     profileFace: (data.profile_face as string | null) ?? _state.profileFace,
     friendCode: (data.friend_code as string) ?? _state.friendCode,

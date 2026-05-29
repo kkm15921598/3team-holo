@@ -183,7 +183,7 @@ export function StatusBubble() {
               isSelected ? "outline outline-2 outline-dashed outline-holo-purple-mid" : ""
             }`}
           >
-            <span className="min-w-0 break-keep">{status}</span>
+            <span className="min-w-0 break-all">{status}</span>
             <button
               type="button"
               aria-label="텍스트 수정"
