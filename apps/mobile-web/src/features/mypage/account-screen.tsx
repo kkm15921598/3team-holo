@@ -8,6 +8,7 @@ import {
 } from "@/shared/stores/verification-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
 import { getCurrentPhone, getCurrentPhoneMasked } from "@/shared/lib/phone";
+import { clearCurrentAccount } from "@/shared/stores/account-choices-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
@@ -151,6 +152,9 @@ export function AccountScreen() {
         confirmLabel="탈퇴"
         onCancel={() => setShowWithdraw(false)}
         onConfirm={() => {
+          // 현재 계정 포인터를 먼저 비운다 — 아래 리셋이 일으키는 setter 의 Supabase 쓰기가
+          // 탈퇴하는 계정 row 를 기본값(레벨1 등)으로 덮어쓰지 않도록(웬디 QA 지적 비대칭 차단).
+          clearCurrentAccount();
           // 모든 사용자 store 초기화 — 글/댓글/좋아요/참여/친구/마이룸/포인트/인증/접속이력 등.
           // 로그인 화면으로 보낼 때 잔여 데이터가 다음 가입자에게 누설되지 않게 한다.
           resetAllStoresForFreshSignup();

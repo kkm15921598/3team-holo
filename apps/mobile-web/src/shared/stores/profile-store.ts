@@ -185,7 +185,12 @@ export async function syncProfileFromSupabase(): Promise<void> {
         : _state.title,
     equippedBadgeId: (data.equipped_badge_id as string) ?? _state.equippedBadgeId,
     profileFace: (data.profile_face as string | null) ?? _state.profileFace,
-    friendCode: (data.friend_code as string) ?? _state.friendCode,
+    // 서버 friend_code 가 비어 있으면 이전 계정의 코드를 잔존시키지 말고 비운다(누설 방지).
+    // 로그인 흐름에서 비어 있으면 setFriendCode("") 로 새 코드를 생성·저장해 안정화한다.
+    friendCode:
+      typeof data.friend_code === "string" && data.friend_code.trim()
+        ? (data.friend_code as string)
+        : "",
   };
   persist();
   notify();

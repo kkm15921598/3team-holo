@@ -9,6 +9,8 @@ import {
   setNickname,
   setTitle,
   setEquippedBadgeId,
+  setFriendCode,
+  getProfile,
 } from "@/shared/stores/profile-store";
 import { defaultFaceForGender } from "@/features/home/home-faces";
 import { setCurrentAccount, clearCurrentAccount } from "@/shared/stores/account-choices-store";
@@ -130,6 +132,10 @@ export function LoginScreen() {
       //    (계정 확정을 sync 직전에 해야 위 리셋이 Supabase 를 건드리지 않는다)
       setCurrentAccount(dbUser.phone);
       await syncAllUserDataFromSupabase();
+
+      // 친구코드가 비어 있으면(서버 미보유 계정) 새 코드를 생성·저장해 안정화.
+      // 빈 문자열을 넘기면 generateFriendCode 가 동작하고 Supabase 에도 1회 저장된다.
+      if (!getProfile().friendCode) setFriendCode("");
 
       navigate("/home", { replace: true });
       return;

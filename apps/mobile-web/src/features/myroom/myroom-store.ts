@@ -609,31 +609,36 @@ export async function syncMyroomFromSupabase(): Promise<void> {
   }
   if (!data) return;
 
-  if (Array.isArray(data.placed_furniture) && (data.placed_furniture as unknown[]).length > 0) {
+  // 읽기 가드는 "값이 존재(서버 컬럼이 NULL 아님)" 기준으로 한다.
+  // (이전엔 length>0 / points>0 만 적용해, 다른 기기에서 가구를 모두 비우거나 포인트를
+  //  0으로 쓴 상태가 복원되지 않았다 — 빈 배열/0 도 서버에 저장된 '진짜 값'이므로 반영)
+  // 컬럼이 NULL(한 번도 저장 안 함)이면 Array.isArray/typeof 가 false 라 로컬 유지.
+  if (Array.isArray(data.placed_furniture)) {
     state = data.placed_furniture as PlacedFurniture[];
     persist();
     emit();
   }
 
-  if (Array.isArray(data.owned_furniture) && (data.owned_furniture as unknown[]).length > 0) {
+  if (Array.isArray(data.owned_furniture)) {
     ownedState = new Set<string>(data.owned_furniture as string[]);
     persistOwned();
     emitOwned();
   }
 
-  if (typeof data.points === "number" && (data.points as number) > 0) {
+  if (typeof data.points === "number") {
     pointsState = data.points as number;
     persistPoints();
     emitPoints();
   }
 
-  if (typeof data.status_message === "string" && (data.status_message as string).trim()) {
-    statusState = (data.status_message as string).trim();
+  if (typeof data.status_message === "string") {
+    const s = (data.status_message as string).trim();
+    statusState = s || DEFAULT_STATUS;
     persistStatus();
     emitStatus();
   }
 
-  if (Array.isArray(data.point_history) && (data.point_history as unknown[]).length > 0) {
+  if (Array.isArray(data.point_history)) {
     historyState = data.point_history as PointEvent[];
     persistHistory();
     emitHistory();

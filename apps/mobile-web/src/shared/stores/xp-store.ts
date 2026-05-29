@@ -177,7 +177,10 @@ export function levelFromTotalXp(totalXp: number): number {
 export function reconcileLevelFromXp(): void {
   const correct = levelFromTotalXp(state.totalXp);
   const stats = getStats();
-  if (stats.level !== correct) {
+  // ★상향만★ — XP sync 가 일시 실패해 totalXp 가 0/구값으로 남았을 때 레벨을 끌어내려
+  // Supabase 에 잘못 덮어쓰는 사고를 막는다(웬디 QA 지적). 손상 복구는 본래 '레벨이
+  // 부당하게 낮아진' 케이스이므로 올리는 방향만 허용하면 충분하고 안전하다.
+  if (correct > stats.level) {
     setStats({ ...stats, level: correct });
   }
 }
