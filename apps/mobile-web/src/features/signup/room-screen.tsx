@@ -15,7 +15,7 @@ import type { CatalogItem } from "../myroom/myroom-data";
 import { CATALOG } from "../myroom/myroom-catalog";
 import { getPlacementWidth, getPlacementHeight } from "../myroom/myroom-dimensions";
 import { RoomEditorView } from "../myroom/myroom-room-view";
-import { setMyroomItems, purchaseItem, addPoints } from "../myroom/myroom-store";
+import { setMyroomItems, grantOwnedFurniture, addPoints } from "../myroom/myroom-store";
 import {
   setNickname,
   setProfileFace,
@@ -256,10 +256,9 @@ export function RoomScreen() {
   // 4) 회원가입 마지막 단계에서 배치/구매한 가구를 myroom store 에 저장.
   // → 홈 화면 RoomScene 과 마이룸 화면에 동일한 배치가 그대로 노출된다.
   setMyroomItems(items);
-  ownedKeys.forEach((key) => {
-    const [kind, variant] = key.split(":");
-    if (kind && variant) purchaseItem(kind, variant);
-  });
+  // 소유 가구는 한 번에 묶어 저장 — purchaseItem 을 연달아 부르면 Supabase 쓰기 경합으로
+  // 일부(예: 2개 중 1개)가 누락 저장되던 버그가 있었다. grantOwnedFurniture 로 1회 저장.
+  grantOwnedFurniture([...ownedKeys]);
 
   // 5) 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
   if (data.nickname.trim()) setNickname(data.nickname.trim());

@@ -188,6 +188,26 @@ export function purchaseItem(kind: string, variant: string): void {
   }
 }
 
+/**
+ * 여러 가구를 한 번에 소유 처리 — Supabase 저장도 1회로 묶는다.
+ * purchaseItem 을 연달아 호출하면 매번 owned_furniture 전체를 fire-and-forget 으로 써서
+ * 경합 시 나중 호출이 먼저 호출을 덮어 일부 가구가 누락 저장되는 문제가 있었다
+ * (가입 시 2개 지급했는데 1개만 남던 버그). 배치로 한 번만 저장해 경합을 없앤다.
+ * keys 는 "kind:variant" 형식 문자열.
+ */
+export function grantOwnedFurniture(keys: string[]): void {
+  if (keys.length === 0) return;
+  const next = new Set(ownedState);
+  for (const k of keys) next.add(k);
+  ownedState = next;
+  persistOwned();
+  emitOwned();
+  syncMyroomToSupabase({ owned_furniture: [...next] });
+  if (next.size >= 20) {
+    recordBadgeAcquired("badge_25");
+  }
+}
+
 /** 소유 여부 조회 */
 export function isOwned(kind: string, variant: string): boolean {
   return ownedState.has(`${kind}:${variant}`);
