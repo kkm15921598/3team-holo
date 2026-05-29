@@ -329,6 +329,9 @@ function initChatNotificationListener() {
         if (row.sender_phone === userPhone) return;
 
         const roomId = row.room_id as string;
+        // 내가 나간/차단한 방이면 실시간 메시지가 와도 방을 되살리거나 알림하지 않는다.
+        // (동기화 경로뿐 아니라 이 알림 경로에서도 부활하던 문제 — 웬디 QA 지적)
+        if (getLeftSet(userPhone).has(roomId)) return;
         let room = rooms.find((r) => r.id === roomId);
 
         // 1:1 방인데 아직 로컬에 없으면 — 상대가 먼저 보낸 첫 메시지.
