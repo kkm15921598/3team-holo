@@ -38,6 +38,49 @@ function persist() {
   }
 }
 
+// ─── 나간 방 추적 (계정별) ───────────────────────────────────
+// leaveRoomById 는 로컬 목록에서만 제거하므로, syncRoomsFromSupabase 가 다음 로드 때
+// 같은 방을 다시 복원해 "나간/차단한 방이 부활"하는 문제가 있었다.
+// 계정(phone)별로 "나간 방 id" 를 영속화하고 복원에서 제외한다.
+// (그룹방 id 는 계정 간 공유되므로 전역 set 이면 누설 — 반드시 phone 별로 분리)
+const LEFT_KEY = "holo:left-rooms:v1"; // { [phone]: string[] }
+function loadLeftMap(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(LEFT_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed as Record<string, string[]>;
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+let leftMap: Record<string, string[]> = loadLeftMap();
+function persistLeftMap() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LEFT_KEY, JSON.stringify(leftMap));
+  } catch {
+    // ignore
+  }
+}
+function getLeftSet(phone: string): Set<string> {
+  return new Set(leftMap[phone] ?? []);
+}
+function addLeftRoom(phone: string, id: string) {
+  const set = new Set(leftMap[phone] ?? []);
+  set.add(id);
+  leftMap = { ...leftMap, [phone]: [...set] };
+  persistLeftMap();
+}
+function removeLeftRoom(phone: string, id: string) {
+  if (!leftMap[phone]) return;
+  leftMap = { ...leftMap, [phone]: leftMap[phone].filter((x) => x !== id) };
+  persistLeftMap();
+}
+
 let rooms: ChatRoom[] = loadInitial();
 const listeners = new Set<() => void>();
 
@@ -79,6 +122,9 @@ export function toggleMuted(id: string) {
 export function leaveRoomById(id: string) {
   setRooms((prev) => prev.filter((r) => r.id !== id));
   clearMessagesForRoom(id);
+  // 나간 방으로 기록 → 다음 Supabase 동기화에서 다시 복원되지 않도록(부활 방지).
+  const phone = getCurrentAccount();
+  if (phone) addLeftRoom(phone, id);
 }
 
 export function addRoom(room: ChatRoom) {
@@ -91,6 +137,8 @@ export function addRoom(room: ChatRoom) {
 
   // Supabase 저장 (best-effort)
   const userPhone = getCurrentAccount();
+  // 재입장(다시 방 생성/합류) 시 '나간 방' 기록 해제 — 이후 동기화에서 다시 보이도록.
+  if (userPhone) removeLeftRoom(userPhone, stamped.id);
   if (userPhone) {
     supabase.from("chat_rooms").insert({
       room_id: stamped.id,
@@ -209,8 +257,11 @@ export async function syncRoomsFromSupabase(): Promise<void> {
   if (error || !data || data.length === 0) return;
 
   const existingIds = new Set(rooms.map((r) => r.id));
+  const leftSet = getLeftSet(userPhone); // 내가 나간/차단해서 떠난 방은 복원하지 않음
   const toAddRaw = data.filter(
-    (row) => !existingIds.has(row.room_id as string),
+    (row) =>
+      !existingIds.has(row.room_id as string) &&
+      !leftSet.has(row.room_id as string),
   );
 
   // 상대가 만든 DM 방은 chat_rooms.name 에 "내 닉네임" 이 들어 있다.

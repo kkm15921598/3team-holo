@@ -378,24 +378,40 @@ export function VerificationScreen() {
  * 클릭하면 닫히고, handleMain 쪽에서 10초 뒤 자동 닫힘 처리도 한다.
  */
 function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
+  // HOLO 디자인 톤(보라/라일락, 둥근 카드, 부드러운 그림자)에 맞춘 인증번호 안내 말풍선.
+  // 상단 중앙에서 살짝 내려온 카드 + 아래쪽 꼬리로 "메시지 도착" 느낌을 준다.
   return (
     <div
       role="alert"
       onClick={onClose}
-      className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+      className="fixed left-1/2 top-5 z-[1100] w-[88%] max-w-[330px] -translate-x-1/2 cursor-pointer animate-holo-logo-in"
     >
-      <div className="flex items-start gap-3">
-        <span className="text-[20px]">🛠️</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[12px] font-bold text-yellow-700">개발 테스트 모드</span>
-            <span className="shrink-0 text-[11px] text-yellow-600">SMS 미연동</span>
+      <div className="relative rounded-[16px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(116,72,221,0.22)] ring-1 ring-holo-lilac-deep/40">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-holo-lilac-card text-[18px]">
+            💬
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold text-holo-purple-mid">
+              HOLO 인증번호가 도착했어요
+            </p>
+            <p className="mt-0.5 text-[15px] font-bold tracking-[0.18em] text-holo-ink">
+              {code}
+            </p>
           </div>
-          <p className="mt-0.5 text-[13px] leading-snug text-yellow-800">
-            테스트 인증번호:{" "}
-            <span className="font-bold text-yellow-900">{code}</span>
-          </p>
         </div>
+        {/* 말풍선 꼬리 — 카드 하단 좌측. 카드 배경색과 동일한 흰색 삼각형. */}
+        <span
+          aria-hidden
+          className="absolute h-0 w-0"
+          style={{
+            bottom: "-7px",
+            left: "26px",
+            borderLeft: "6px solid transparent",
+            borderRight: "6px solid transparent",
+            borderTop: "8px solid #fff",
+          }}
+        />
       </div>
     </div>
   );
