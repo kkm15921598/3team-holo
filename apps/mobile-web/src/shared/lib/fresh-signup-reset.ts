@@ -23,6 +23,9 @@ import { clearAllMessages } from "@/features/chat/messages-store";
 import { resetKickedMembers } from "@/features/chat/kicked-members-store";
 import { resetVerification } from "@/shared/stores/verification-store";
 import { resetActivityStore } from "@/shared/stores/activity-store";
+import { resetBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
+import { resetReportedUsers } from "@/shared/stores/reported-users-store";
+import { bumpStore } from "@/shared/stores/bump-store";
 
 /**
  * 신규 가입한 사용자가 깨끗한 시작점에서 출발하도록 모든 store 리셋.
@@ -55,4 +58,35 @@ export function resetAllStoresForFreshSignup(): void {
   resetVerification();
   // 가입일 = 오늘 / 접속일수 = 1 로 초기화 (이전 세션의 활동 이력 누설 방지)
   resetActivityStore();
+}
+
+/**
+ * 로그인 직후(다른 계정으로 전환 포함) 호출 — 이전 계정의 "사용자별" 데이터를 비운다.
+ *
+ * 배경: 로그아웃은 localStorage 를 비우지 않고, 인앱 로그인은 페이지 리로드가 없다.
+ * 게다가 각 store 의 syncFromSupabase 는 대부분 '병합'(union/Math.max)이거나 빈/0 값을
+ * 건너뛰므로, 비우지 않고 sync 하면 이전 계정의 좋아요/참여/차단/신고/끌어올리기/XP/
+ * 포인트/가구/인증 등이 새 계정에 남아 노출·오염된다.
+ * → sync 전에 사용자별 store 를 기본값으로 비우면, 비어있는 로컬 + 원격 병합 = 정확히
+ *   현재 계정의 데이터가 된다.
+ *
+ * 주의: posts/rooms/drafts 같은 "전역/공개" 목록은 SPA 에서 재로딩되지 않으므로 건드리지 않는다
+ * (게시판이 빈 화면이 되는 회귀 방지). 이들은 계정별 데이터가 아니라 누설 위험도 없다.
+ */
+export function resetUserStoresForLogin(): void {
+  resetStats();
+  resetXp();
+  setLikedIds([]);
+  setJoinedIds([]);
+  setViewedIds([]);
+  setComments([]);
+  resetBlockedNicknames();
+  resetReportedUsers();
+  bumpStore.reset();
+  resetMyroomStore();
+  resetVerification();
+  resetActivityStore();
+  resetFriendsStore();
+  clearAllDynNotifications();
+  resetKickedMembers();
 }

@@ -12,8 +12,8 @@ import {
   setFriendCode,
 } from "@/shared/stores/profile-store";
 import { defaultFaceForGender } from "@/features/home/home-faces";
-import { setMyroomItems, setStatusMessage } from "@/features/myroom/myroom-store";
 import { setCurrentAccount } from "@/shared/stores/account-choices-store";
+import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
 
@@ -79,13 +79,21 @@ export function LoginScreen() {
       return;
     }
 
-    // 1) Supabase DB에서 실제 가입 계정 확인
-    const { data: dbUser } = await supabase
+    // 1) Supabase DB에서 실제 가입 계정 확인.
+    //    maybeSingle: 0건이면 data=null(정상), 실제 오류(네트워크/RLS/중복행)는 error 로 구분.
+    //    (이전엔 .single() + error 무시라 모든 실패가 '미가입'으로 잘못 안내됐음)
+    const { data: dbUser, error: loginError } = await supabase
       .from("users")
       .select("*")
       .eq("phone", phone)
       .eq("password", password)
-      .single();
+      .maybeSingle();
+
+    if (loginError) {
+      setPhoneError(true);
+      setPhoneErrorMessage("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
 
     if (dbUser) {
       // Supabase 계정으로 로그인 성공
@@ -93,15 +101,15 @@ export function LoginScreen() {
       setCurrentAccount(dbUser.phone);
       setGender(dbUser.gender ?? "female");
 
-      // 2) 이전 계정/세션의 localStorage 잔여 데이터가 노출되지 않도록 기본값으로 초기화.
-      //    (바로 아래 sync 가 Supabase 의 실제 값으로 덮어쓴다)
+      // 2) 이전 계정/세션의 localStorage 잔여 데이터(좋아요/참여/차단/신고/끌어올리기/
+      //    XP/포인트/가구/인증 등)를 모두 비운다 — 비우지 않고 sync 하면 병합되어 누설된다.
+      resetUserStoresForLogin();
+      // 프로필 store 는 별도 전체 리셋이 없어 기본값을 직접 세팅(아래 sync 가 실제 값으로 덮어씀).
       setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
       setNickname(dbUser.nickname ?? "");
       setTitle("");
       setEquippedBadgeId("badge_24");
       setFriendCode("");
-      setMyroomItems([]);
-      setStatusMessage("");
 
       // 3) 가입 직후 2분 skip 플래그 제거 — 로그인은 신규가입이 아니므로 즉시 복원 허용.
       try {

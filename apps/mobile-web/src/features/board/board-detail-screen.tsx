@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { type Post, type PostLocation } from "@/shared/mock/data";
-import { postsStore } from "./posts-store";
+import { postsStore, computeTimeAgo } from "./posts-store";
 import { StatusBadge } from "./board-list-screen";
 import { LocationMap, LocationPicker } from "@/features/map/post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
@@ -218,7 +218,7 @@ export function BoardDetailScreen() {
         postId: row.post_id ?? post.id,
         nickname: row.nickname ?? "알 수 없음",
         content: row.content ?? "",
-        timeAgo: "방금 전",
+        timeAgo: computeTimeAgo(row.created_at),
         parentId: row.parent_id ?? undefined,
         hasPhoto: row.photo_url ? true : undefined,
         photoUrl: row.photo_url ?? undefined,

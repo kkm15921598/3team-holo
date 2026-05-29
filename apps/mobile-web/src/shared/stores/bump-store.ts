@@ -120,6 +120,12 @@ export const bumpStore = {
     }
     return true;
   },
+  /** 끌어올리기 기록 전체 초기화 — 계정 전환/로그인 시 이전 계정 잔여 제거용. */
+  reset(): void {
+    _bumps = {};
+    save(_bumps);
+    notify();
+  },
 };
 
 /** React: 끌어올리기 맵 전체 구독 */

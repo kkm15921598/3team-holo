@@ -140,9 +140,9 @@ export function HomeScreen() {
                 className="absolute z-[5] max-w-[180px] whitespace-normal break-keep rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]"
                 style={{
                   // 긴 상태메시지가 화면 밖으로 나가지 않도록 최대 너비(180px) 안에서 줄바꿈하고,
-                  // left 를 룸 컨테이너(ROOM_W) 안쪽으로 클램프한다.
+                  // left/top 을 룸 컨테이너(ROOM_W×ROOM_H) 안쪽으로 클램프한다.
                   left: Math.max(8, Math.min(statusPos.x, ROOM_W - 188)),
-                  top: statusPos.y,
+                  top: Math.max(8, Math.min(statusPos.y, ROOM_H - 48)),
                 }}
               >
                 {status}
