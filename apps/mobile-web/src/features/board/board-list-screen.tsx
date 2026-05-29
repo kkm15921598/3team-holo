@@ -287,14 +287,27 @@ export function BoardListScreen() {
         });
       }
     }
-    // 거리 필터 — 위치 있는 글은 10km 이내만, 위치 없는 글(자유/추천)은 전부 노출.
+    // 거리 필터 — 위치 있는 글에만 적용. 위치 없는 글(자유/추천)은 항상 통과.
     // GPS fix 가 아직 없으면 (userPos === null) 필터 건너뛰고 전체 노출.
+    // 사용자가 검색에서 고른 거리 범위(1km 이하 / 1km~5km / 5km~10km)를 실제로 반영한다.
+    // (이전엔 선택을 무시하고 항상 10km 고정이었음)
     if (userPos) {
+      const DIST_RANGES: Record<string, [number, number]> = {
+        "1km 이하": [0, 1000],
+        "1km~5km": [1000, 5000],
+        "5km~10km": [5000, 10000],
+      };
+      const ranges = distanceFilters
+        .map((label) => DIST_RANGES[label])
+        .filter(Boolean) as [number, number][];
       list = list.filter((p) => {
-        if (!p.location) return true; // 자유/추천 등 위치 없는 글은 항상 통과
-        return (
-          distanceMeters(userPos, p.location) <= BOARD_NEARBY_RADIUS_M
-        );
+        if (!p.location) return true; // 위치 없는 글은 항상 통과
+        const d = distanceMeters(userPos, p.location);
+        // 선택된 범위가 있으면 그중 하나라도 들어야 통과, 없으면 기본 반경(10km) 이내.
+        if (ranges.length > 0) {
+          return ranges.some(([lo, hi]) => d >= lo && d <= hi);
+        }
+        return d <= BOARD_NEARBY_RADIUS_M;
       });
     }
     return list;
@@ -308,6 +321,7 @@ export function BoardListScreen() {
     boardFilterIds,
     typeFilters,
     ageFilters,
+    distanceFilters,
     // 랭킹이 사용자의 실시간 좋아요·댓글에 즉각 반응하도록 deps 에 추가.
     // 조회수는 useViewCounts() 가 위쪽에서 호출돼 컴포넌트 자체가 매번 리렌더되므로 따로 deps 에 둘 필요 없음.
     likedSet,

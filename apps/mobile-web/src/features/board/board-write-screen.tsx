@@ -119,20 +119,21 @@ export function BoardWriteScreen() {
   const [meetupType, setMeetupType] = useState<MeetupType | null>(
     incomingState?.meetupType ?? null,
   );
+  // 모임 날짜 기본값 = 오늘(고정 하드코딩 날짜 제거). 수정 진입 시 기존 값 복원.
   const [date, setDate] = useState<string>(
-    incomingState?.eventDate ?? "2026-05-18",
+    incomingState?.eventDate ?? formatYMD(new Date()),
   );
-  // 종료일 — 수정 진입 시 기존 endDate 가 있으면 그걸 살리고, 없으면 시작일로 초기화 (단기성으로 진입한 흐름).
+  // 종료일 — 수정 진입 시 기존 endDate 가 있으면 그걸 살리고, 없으면 시작일(오늘)로 초기화.
   const [endDate, setEndDate] = useState<string>(
-    incomingState?.endDate ?? incomingState?.eventDate ?? "2026-05-18",
+    incomingState?.endDate ?? incomingState?.eventDate ?? formatYMD(new Date()),
   );
-  // 단기성 모임 시작 시각 — 기본 19:00. 수정 진입 시 기존 값 복원.
+  // 모임 시작 시각 기본값 = 00:00. 수정 진입 시 기존 값 복원.
   const [eventTime, setEventTime] = useState<string>(
-    incomingState?.eventTime ?? "19:00",
+    incomingState?.eventTime ?? "00:00",
   );
   const [rangeMode, setRangeMode] = useState<"start" | "end">("start");
   const [calMonth, setCalMonth] = useState<Date>(
-    () => parseYMD(incomingState?.eventDate ?? "2026-05-18") ?? new Date(),
+    () => parseYMD(incomingState?.eventDate ?? formatYMD(new Date())) ?? new Date(),
   );
   const [peopleCount, setPeopleCount] = useState<number | null>(
     incomingState?.peopleCount ?? null,
