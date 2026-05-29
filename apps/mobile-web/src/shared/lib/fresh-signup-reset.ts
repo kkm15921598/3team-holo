@@ -30,34 +30,20 @@ import { bumpStore } from "@/shared/stores/bump-store";
 /**
  * 신규 가입한 사용자가 깨끗한 시작점에서 출발하도록 모든 store 리셋.
  * 가입 직후 호출하고, 그 다음에 가입 보상(뱃지/칭호/포인트/마이룸 가구) 발급.
+ *
+ * = 사용자별 store 전부(resetUserStoresForLogin) + 전역/공개 목록(글/임시저장/채팅).
+ * 사용자별 리셋 목록은 resetUserStoresForLogin 한 곳에서만 관리한다(중복/누락 방지).
  */
 export function resetAllStoresForFreshSignup(): void {
-  // 통계 — 레벨 1, 뱃지/칭호는 DEFAULT_STATS 의 가입 기본값([badge_24]/[#홀로_입주자])
-  resetStats();
-  // 활동 store — 모두 비움
-  setLikedIds([]);
-  setJoinedIds([]);
-  setViewedIds([]);
-  setComments([]);
-  resetXp();
-  // 친구 / 친구 요청 / 차단 / 친구 알림
-  resetFriendsStore();
-  clearAllDynNotifications();
-  // 마이룸 — 가구 / 소유 / 포인트 / 이용내역 / 상태 / 일일 cap
-  resetMyroomStore();
-  // 게시글 / 임시저장 — 테스트 계정이 prepend 한 글 제거
+  // 사용자별 store 전부 비움 — 통계/XP/좋아요/참여/조회/댓글/차단/신고/끌어올리기/
+  // 마이룸/인증/활동/친구/동적알림/강퇴. (단일 출처 = resetUserStoresForLogin)
+  resetUserStoresForLogin();
+  // 전역/공개 목록 — 신규 가입에서만 추가로 비운다(테스트 계정이 prepend 한 글 등 제거).
   postsStore.resetToInitial();
   draftsStore.clearAll();
   // 채팅 — 시드 CHATROOMS 만 남기고, 모든 메시지 캐시 비움
   resetRoomsStore();
   clearAllMessages();
-  // 모임 강퇴 기록 초기화
-  resetKickedMembers();
-  // 위치/휴대폰 인증 — 신규 가입자는 미인증 상태에서 시작.
-  // (이전 세션의 인증이 localStorage 에 남아 자동 인증된 것처럼 보이는 문제 방지)
-  resetVerification();
-  // 가입일 = 오늘 / 접속일수 = 1 로 초기화 (이전 세션의 활동 이력 누설 방지)
-  resetActivityStore();
 }
 
 /**

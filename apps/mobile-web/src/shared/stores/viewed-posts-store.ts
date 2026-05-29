@@ -134,7 +134,11 @@ export async function syncViewedPostsFromSupabase(): Promise<void> {
   const toAdd = (data.viewed_posts as ViewedEntry[]).filter((e) => !existingIds.has(e.id));
   if (toAdd.length === 0) return;
 
-  state = [...state, ...toAdd].sort((a, b) => b.viewedAt - a.viewedAt);
+  // 병합 결과에도 동일 상한(MAX_ENTRIES) 적용 — 여러 기기 누적분이 합쳐져 50개를
+  // 넘겨 저장·서버 반영되던 문제 방지(markPostViewed 와 동일 불변식 유지).
+  state = [...state, ...toAdd]
+    .sort((a, b) => b.viewedAt - a.viewedAt)
+    .slice(0, MAX_ENTRIES);
   persist();
   emit();
 }
