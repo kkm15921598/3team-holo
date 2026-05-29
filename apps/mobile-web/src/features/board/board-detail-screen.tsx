@@ -425,7 +425,9 @@ export function BoardDetailScreen() {
   // free / recommend 인데도 모임 정보가 붙어있으면 모임 게시글로 본다.
   // 자유 / 추천이면서 모임 메타데이터도 없는 글만 단순 레이아웃.
   const isSimple = !isMeetupPost(post);
-  const likes = liked ? post.likes + 1 : post.likes;
+  // post.likes 는 togglePostLike→patchLikes 로 이미 낙관적 +1/-1 반영된 값이므로
+  // 여기서 또 +1 하면 안 된다(하트가 2씩 오르던 버그). store 값을 그대로 표시.
+  const likes = post.likes;
   const joined = Math.min(capacity, baseJoined + (joining ? 1 : 0));
   const displayStatus: "모집중" | "모집완료" =
     joined >= capacity ? "모집완료" : "모집중";

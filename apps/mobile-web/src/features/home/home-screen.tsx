@@ -65,7 +65,12 @@ export function HomeScreen() {
   const dragRef = useRef({ down: false, startX: 0, scrollLeft: 0, moved: false });
 
   const handleRefresh = () => {
-    setMeetups((prev) => pickMeetupsFromPosts(allPosts, 3, prev, userPos));
+    setMeetups((prev) => {
+      // 직전 카드를 제외하고 다시 뽑되, 후보가 3개 이하라 제외 후 빈 목록이 되면
+      // 제외 없이 다시 뽑아 "근처 모임 없음" 으로 잘못 표시되는 것을 막는다.
+      const next = pickMeetupsFromPosts(allPosts, 3, prev, userPos);
+      return next.length > 0 ? next : pickMeetupsFromPosts(allPosts, 3, undefined, userPos);
+    });
     // 새로고침 시 카드 캐러셀을 첫 번째 카드 위치로 되돌린다.
     const el = cardsRef.current;
     if (el) {

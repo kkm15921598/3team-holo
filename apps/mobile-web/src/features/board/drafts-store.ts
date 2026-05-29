@@ -1,5 +1,6 @@
-// Module-level draft store shared between BoardDraftsScreen and BoardWriteScreen.
-// Mock-only — survives in-app navigation but resets on full page reload.
+// 임시저장 store — BoardDraftsScreen ↔ BoardWriteScreen 공유.
+// localStorage 에 영속화되어 새로고침/재방문에도 사용자가 저장한 임시글이 유지된다.
+// (이전엔 메모리 변수에만 있어 새로고침 시 모두 사라지고 모든 사용자가 같은 샘플 3건을 공유했음)
 
 export type Draft = {
   id: string;
@@ -7,14 +8,33 @@ export type Draft = {
   description: string;
 };
 
-const SAMPLE_DRAFTS: Draft[] = [
-  { id: "d1", title: "점심 번개", description: "오피스 단지 떡볶이 메이트!" },
-  { id: "d2", title: "수박 소분", description: "마트에서 산 큰 수박 나눌 분~" },
-  { id: "d3", title: "강아지 산책친구 구해요", description: "매주 주말 한강공원 산책" },
-];
+const STORAGE_KEY = "holo:drafts:v1";
 
-let _drafts: Draft[] = [...SAMPLE_DRAFTS];
+function load(): Draft[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as Draft[];
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+let _drafts: Draft[] = load();
 const listeners = new Set<() => void>();
+
+function persist() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(_drafts));
+  } catch {
+    // ignore (quota / private mode)
+  }
+}
 
 function notify() {
   listeners.forEach((l) => l());
@@ -39,16 +59,19 @@ export const draftsStore = {
     } else {
       _drafts = [draft, ..._drafts];
     }
+    persist();
     notify();
   },
   remove(ids: string[]): void {
     const set = new Set(ids);
     _drafts = _drafts.filter((d) => !set.has(d.id));
+    persist();
     notify();
   },
   /** 신규 가입 시 임시저장 모두 비움 */
   clearAll(): void {
     _drafts = [];
+    persist();
     notify();
   },
 };

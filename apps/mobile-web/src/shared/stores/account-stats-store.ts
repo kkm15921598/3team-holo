@@ -156,8 +156,9 @@ export function setStats(stats: Partial<AccountStats> & Pick<AccountStats, "leve
  */
 export function recordBadgeAcquired(badgeId: string): boolean {
   if (state.acquiredBadgeIds.includes(badgeId)) return false;
-  const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // 뱃지 획득일은 점(.) 포맷으로 통일 — todayKey()(스타터 뱃지)와 동일하게 맞춰
+  // 화면에서 "2026.05.30" / "2026-05-30" 가 섞이지 않도록 한다.
+  const today = todayKey();
   state = {
     ...state,
     acquiredBadgeIds: [...state.acquiredBadgeIds, badgeId],

@@ -26,6 +26,12 @@ const RADIUS_LABEL: Record<ModalRadius, string> = {
 const FILTERS = ["전체", "지금바로", "계속 함께"] as const;
 type Filter = (typeof FILTERS)[number];
 
+/** 미터 → "350m" / "1.2km" 표시 문자열 */
+function fmtDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)}km`;
+}
+
 // ─── 모달 상태 영속화 ───────────────────────────────────────
 // 게시글 상세로 이동했다 뒤로가기로 돌아왔을 때 모달 / 반경 / 지도 view 가
 // 그대로 복원되도록 sessionStorage 에 저장. 탭 닫으면 사라짐 → 새 세션엔 초기화.
@@ -395,7 +401,11 @@ export function MapScreen() {
                   {p.title}
                 </div>
                 <div className="mt-[5px] text-[12px] font-medium text-holo-purple-mid opacity-80">
-                  {p.distance} · {p.duration}
+                  {/* 거리: 내 위치+글 위치가 있을 때만 실제 계산(없으면 생략), 시간: 등록 경과(timeAgo).
+                      이전엔 저장된 가짜 "0m · 0분" 을 그대로 표시했음. */}
+                  {userPos && p.location
+                    ? `${fmtDistance(distanceMeters(userPos, p.location))} · ${p.timeAgo}`
+                    : p.timeAgo}
                 </div>
                 <p className="mt-[10px] line-clamp-2 text-[13px] leading-[1.45] text-[#333]">
                   {p.description}
