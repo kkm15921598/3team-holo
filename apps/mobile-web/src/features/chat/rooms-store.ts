@@ -5,6 +5,8 @@ import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { pushChatMessage } from "@/shared/stores/notifications-store";
 import { isDmRoomId, getOtherPhoneFromDmId } from "./dm-utils";
+import { postsStore } from "@/features/board/posts-store";
+import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
 
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
@@ -269,6 +271,48 @@ export async function syncRoomsFromSupabase(): Promise<void> {
   const toAdd: ChatRoom[] = [];
   for (const row of toAddRaw) {
     const roomId = row.room_id as string;
+
+    // 모임 채팅방(meetup-<postId>) 복원 — 게시글에서 그룹/방장/인원수를 재구성한다.
+    // chat_rooms 에 is_group 이 저장돼있지 않아 1:1 로 잘못 복원되면, buildMembersFor 가
+    // room.name(=게시글 제목)을 상대 유저로 끼워넣어 "제목 유저" 가 멤버로 보이던 버그를 차단.
+    // (게시글이 아직 로드 전이면 최소한 그룹으로만 복원 — 제목을 멤버로 쓰지 않음)
+    if (roomId.startsWith("meetup-")) {
+      const postId = roomId.slice("meetup-".length);
+      const post = postsStore.getPosts().find((p) => p.id === postId);
+      let memberNames: string[] = [];
+      let memberCount = 2;
+      let mName = (row.name ?? row.room_name ?? "모임") as string;
+      let hostNickname: string | undefined;
+      if (post) {
+        // 게시글 상세/카드와 동일한 calcJoined 단일 출처로 인원수를 맞춘다(연동).
+        const { capacity, baseJoined } = calcJoined(post);
+        const targetTotal = Math.min(capacity, baseJoined + 1);
+        memberNames = deriveMeetupMembers(post, Math.max(0, targetTotal - 1));
+        memberCount = 1 + memberNames.length;
+        mName = post.title;
+        hostNickname = post.authorNickname;
+      }
+      const subHead = memberNames.slice(0, 2).join(", ");
+      const subtitle =
+        memberNames.length > 2
+          ? `${subHead}, 외 ${memberNames.length - 2}명`
+          : subHead || "단체";
+      toAdd.push({
+        id: roomId,
+        name: mName,
+        subtitle,
+        isGroup: true,
+        memberCount,
+        memberNames,
+        hostNickname,
+        lastMessage: "(대화를 시작해보세요)",
+        lastTime: "",
+        unread: 0,
+        updatedAt: new Date(row.created_at as string).getTime(),
+      });
+      continue;
+    }
+
     const isDm = isDmRoomId(roomId);
     let name = (row.name ?? row.room_name ?? "") as string;
     if (isDm) {

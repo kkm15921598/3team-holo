@@ -65,7 +65,12 @@ function buildMembersFor(room: ChatRoom): Member[] {
   const friendNicks = new Set(getFriends().map((f) => f.nickname));
   // 본인 멤버의 닉네임은 현재 로그인 계정(profile-store)을 사용한다.
   const me: Member = { id: "me", nickname: getProfile().nickname, isMe: true, isHost: false, isFriend: false };
-  if (!room.isGroup) {
+  // 모임 채팅방(meetup-*)은 절대 1:1 로 취급하지 않는다.
+  // (과거 is_group 미저장으로 Supabase 에서 복원된 모임방이 1:1 로 잡혀,
+  //  room.name(=게시글 제목)이 상대 유저처럼 멤버에 끼던 버그 방지 —
+  //  모임방은 항상 그룹 경로로 멤버를 도출한다.)
+  const isMeetupRoom = room.id.startsWith("meetup-");
+  if (!room.isGroup && !isMeetupRoom) {
     return [
       me,
       {
