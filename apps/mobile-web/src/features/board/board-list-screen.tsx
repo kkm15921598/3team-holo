@@ -25,7 +25,6 @@ import {
 } from "@/shared/lib/author-gender";
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useUserComments } from "@/shared/stores/comments-store";
-import { useJoinedSet } from "@/shared/stores/joined-store";
 import {
   getTotalViews,
   useViewCounts,
@@ -112,7 +111,6 @@ export function BoardListScreen() {
   );
   const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
   const likedSet = useLikedSet();
-  const joinedSet = useJoinedSet();
   const userComments = useUserComments();
   // 프로필(닉네임/얼굴) 변경 시 리스트의 내 글 아바타가 즉시 갱신되도록 구독
   useProfile();
@@ -638,7 +636,6 @@ export function BoardListScreen() {
               rank={isTopView ? i + 1 : undefined}
               liked={likedSet.has(p.id)}
               commentCount={getCommentCount(p)}
-              joined={joinedSet.has(p.id)}
               // '전체' 탭에서만 모든 카테고리 배지를 노출 (TOP/검색은 기존 동작 유지)
               showAllCategoryBadges={!isTopView && activeCat === "all"}
             />
@@ -662,14 +659,12 @@ function PostCard({
   rank,
   liked = false,
   commentCount,
-  joined = false,
   showAllCategoryBadges = false,
 }: {
   post: Post;
   rank?: number;
   liked?: boolean;
   commentCount: number;
-  joined?: boolean;
   /**
    * '전체' 탭처럼 여러 카테고리가 섞여 노출되는 화면에서 true.
    * true 면 모든 카테고리 글의 제목 앞에 짧은 카테고리 배지(추천/소분/산책 등)를 표시한다.
@@ -685,8 +680,12 @@ function PostCard({
   const showCategoryBadge = showAllCategoryBadges;
 
   const { capacity, baseJoined } = calcJoined(post);
-  // 게시글 상세와 동일한 계산식: baseJoined + (현재 사용자 참여 여부)
-  const joinedCount = Math.min(capacity, baseJoined + (joined ? 1 : 0));
+  // baseJoined 는 participants 로 이미 본인을 포함하므로 joined 플래그로 +1 하지 않는다(이중 카운트 방지).
+  const joinedCount = Math.min(capacity, baseJoined);
+  // 상태 배지(색/라벨)도 인원수와 같은 출처로 파생 — 정원이 차면 빨강 '모집완료'.
+  // (이전엔 저장값 post.status 를 써서 '5/5'인데 초록 '모집중'으로 상세화면과 어긋났다.)
+  const displayStatus: "모집중" | "모집완료" =
+    joinedCount >= capacity ? "모집완료" : "모집중";
   const shortLabel = CATEGORY_SHORT[post.category] ?? "";
 
   return (
@@ -705,10 +704,10 @@ function PostCard({
           <div className="mt-auto flex flex-col items-center gap-2">
             {/* 보이지 않더라도 invisible로 자리를 차지해 카드 높이를 일정하게 유지 */}
             <div className={isSimple ? "invisible" : ""}>
-              <StatusText status={post.status} />
+              <StatusText status={displayStatus} />
             </div>
             <div className={isSimple ? "invisible" : ""}>
-              <FractionPill status={post.status} text={`${joinedCount}/${capacity}`} />
+              <FractionPill status={displayStatus} text={`${joinedCount}/${capacity}`} />
             </div>
           </div>
         </div>

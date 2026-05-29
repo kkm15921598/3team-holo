@@ -428,7 +428,9 @@ export function BoardDetailScreen() {
   // post.likes 는 togglePostLike→patchLikes 로 이미 낙관적 +1/-1 반영된 값이므로
   // 여기서 또 +1 하면 안 된다(하트가 2씩 오르던 버그). store 값을 그대로 표시.
   const likes = post.likes;
-  const joined = Math.min(capacity, baseJoined + (joining ? 1 : 0));
+  // baseJoined(=participants.length)는 joinPost→patchParticipants 로 이미 본인을 포함한다.
+  // 따라서 joining 플래그로 다시 +1 하면 본인이 이중 계산돼 인원이 2씩 부풀려진다(혼자인데 2/5).
+  const joined = Math.min(capacity, baseJoined);
   const displayStatus: "모집중" | "모집완료" =
     joined >= capacity ? "모집완료" : "모집중";
   // 실제 렌더링되는 댓글 + 대댓글 수 — post.comments(mock 카운트) 가 아니라

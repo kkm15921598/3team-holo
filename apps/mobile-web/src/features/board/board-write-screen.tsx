@@ -328,18 +328,20 @@ export function BoardWriteScreen() {
           category: CATEGORY_NAME_TO_ID[category],
           title: title.trim() || "(제목 없음)",
           description: content.trim() || "",
-          meetupType: meetupType ?? undefined,
-          eventDate: date,
+          // 단순 카테고리(자유/추천)로 바꾸면 모임 메타데이터를 전부 비운다 — 신규 작성 분기와 동일.
+          // (안 비우면 eventDate(오늘 기본값)·place 등이 남아 isMeetupPost 가 true → 단순 글인데
+          //  모임 레이아웃/채팅방으로 계속 취급되던 문제. place/location 까지 비워야 isMeetupPost=false)
+          meetupType: isSimpleCategory ? undefined : (meetupType ?? undefined),
+          eventDate: isSimpleCategory ? undefined : date,
           // 장기성 모임만 종료일을 함께 저장. 단기성으로 바뀐 경우엔 명시적으로 undefined 로 지워준다.
-          endDate: isLongTerm ? endDate : undefined,
+          endDate: !isSimpleCategory && isLongTerm ? endDate : undefined,
           // 단기성 모임만 시작 시각을 함께 저장. 장기성은 시간 개념이 없으니 undefined 로 지움.
-          eventTime: !isLongTerm ? eventTime : undefined,
-          peopleCount,
-          place:
-            postLocation?.placeName ??
-            incomingState.place ??
-            existing.place,
-          location: postLocation ?? existing.location,
+          eventTime: !isSimpleCategory && !isLongTerm ? eventTime : undefined,
+          peopleCount: isSimpleCategory ? null : peopleCount,
+          place: isSimpleCategory
+            ? undefined
+            : (postLocation?.placeName ?? incomingState.place ?? existing.place),
+          location: isSimpleCategory ? undefined : (postLocation ?? existing.location),
           // 첨부 사진 — 빈 배열이면 명시적으로 undefined 로 저장해 잔존 데이터 정리.
           photoUrls: resolvedPhotoUrls.length > 0 ? resolvedPhotoUrls : undefined,
         });
