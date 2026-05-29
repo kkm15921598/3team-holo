@@ -121,12 +121,24 @@ export function FindPasswordScreen() {
       return;
     }
 
-    // Supabase users 테이블 비밀번호 실제 업데이트
-    await supabase
+    // Supabase users 테이블 비밀번호 실제 업데이트.
+    // .select() 로 실제 갱신된 행을 돌려받아 검증 — 이전엔 error/행수 확인 없이
+    // 무조건 'done' 으로 넘어가 실패해도 성공 화면이 떴다.
+    const { data: updated, error } = await supabase
       .from("users")
       .update({ password: newPw })
       .eq("name", name.trim())
-      .eq("phone", phone);
+      .eq("phone", phone)
+      .select("phone");
+
+    if (error) {
+      setPwError("비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    if (!updated || updated.length === 0) {
+      setPwError("일치하는 계정을 찾지 못했어요. 이름과 휴대폰 번호를 확인해주세요.");
+      return;
+    }
 
     setStep("done");
   };

@@ -29,6 +29,9 @@ export function ReviewScreen() {
       password: data.password,
       nickname: data.nickname,
       gender: data.gender,
+      // 본인인증에서 받은 이름 저장 — 아이디/비밀번호 찾기가 name+phone 으로 본인확인하므로
+      // 저장하지 않으면 계정 복구가 영구 실패한다. (find-id/find-password 가 .eq("name",..) 사용)
+      name: data.name,
     });
 
     if (error) {

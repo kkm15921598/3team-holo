@@ -35,6 +35,8 @@ export function LoginScreen() {
   const [phoneErrorMessage, setPhoneErrorMessage] = useState("");
   const [passwordError, setPasswordError] = useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = useState("");
+  // 로그인 진행 중 — 버튼 비활성화 + 중복 제출 방지(느린 네트워크에서 연타 시 중복 요청)
+  const [submitting, setSubmitting] = useState(false);
 
   const { capsOn, capsHandlers } = useCapsLock();
 
@@ -60,6 +62,7 @@ export function LoginScreen() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting) return;
 
     if (!phone) {
       setPhoneError(true);
@@ -79,6 +82,8 @@ export function LoginScreen() {
       return;
     }
 
+    setSubmitting(true);
+    try {
     // 1) Supabase DB에서 실제 가입 계정 확인.
     //    maybeSingle: 0건이면 data=null(정상), 실제 오류(네트워크/RLS/중복행)는 error 로 구분.
     //    (이전엔 .single() + error 무시라 모든 실패가 '미가입'으로 잘못 안내됐음)
@@ -131,6 +136,13 @@ export function LoginScreen() {
     // Supabase에 없으면 미가입 번호
     setPhoneError(true);
     setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
+    } catch {
+      setPhoneError(true);
+      setPhoneErrorMessage("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      // 성공 시엔 navigate 로 화면을 떠나므로 사실상 영향 없음.
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -208,9 +220,10 @@ export function LoginScreen() {
 
         <button
           type="submit"
-          className="h-[60px] rounded-holo-pill bg-holo-gradient text-[16px] font-semibold text-white shadow-md transition active:scale-[0.99]"
+          disabled={submitting}
+          className="h-[60px] rounded-holo-pill bg-holo-gradient text-[16px] font-semibold text-white shadow-md transition active:scale-[0.99] disabled:opacity-60"
         >
-          로그인
+          {submitting ? "로그인 중…" : "로그인"}
         </button>
       </form>
 
