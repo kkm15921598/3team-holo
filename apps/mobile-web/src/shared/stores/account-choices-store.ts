@@ -75,6 +75,16 @@ export function getCurrentAccount(): string | null {
   return currentPhone;
 }
 
+/**
+ * 현재 계정 포인터 제거 — 로그인 직전에 호출.
+ * 이후 store 리셋/기본값 세팅이 일으키는 Supabase 쓰기는 getCurrentAccount()==null 이라
+ * 모두 건너뛴다(= 로컬 전용). 이전 계정 row 가 기본값으로 덮어써지는 것도 함께 방지.
+ */
+export function clearCurrentAccount(): void {
+  currentPhone = null;
+  persistCurrent();
+}
+
 /** 사용자가 뱃지/칭호 등 선택 시 호출 */
 export function saveChoice<K extends keyof AccountChoices>(
   field: K,

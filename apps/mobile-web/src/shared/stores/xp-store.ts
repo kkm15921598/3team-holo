@@ -168,6 +168,20 @@ export function levelFromTotalXp(totalXp: number): number {
   return level;
 }
 
+/**
+ * 레벨을 누적 XP 기준으로 재계산해 stats.level 과 일치시킨다(levelFromTotalXp 가 진실).
+ * 로그인 복원(syncAllUserDataFromSupabase) 직후 호출 — 과거 버그로 Supabase 의
+ * level 이 XP 와 어긋나 저장된 계정(레벨↔가구/활동 불일치)을 자동 보정한다.
+ * setStats 가 Supabase 에도 반영하므로 한 번 로그인하면 서버 값까지 치유된다.
+ */
+export function reconcileLevelFromXp(): void {
+  const correct = levelFromTotalXp(state.totalXp);
+  const stats = getStats();
+  if (stats.level !== correct) {
+    setStats({ ...stats, level: correct });
+  }
+}
+
 /** 레벨업 직후 축하 모달을 띄우기 위한 pending 상태. 한 액션이 한 단계 이상 점프하면 toLevel 이 가장 높은 도달 레벨. */
 type PendingLevelUp = { fromLevel: number; toLevel: number };
 let pendingLevelUp: PendingLevelUp | null = null;

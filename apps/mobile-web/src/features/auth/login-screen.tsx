@@ -11,7 +11,7 @@ import {
   setEquippedBadgeId,
 } from "@/shared/stores/profile-store";
 import { defaultFaceForGender } from "@/features/home/home-faces";
-import { setCurrentAccount } from "@/shared/stores/account-choices-store";
+import { setCurrentAccount, clearCurrentAccount } from "@/shared/stores/account-choices-store";
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
@@ -101,21 +101,20 @@ export function LoginScreen() {
 
     if (dbUser) {
       // Supabase 계정으로 로그인 성공
-      // 1) 현재 계정 확정 — 이후 모든 sync 가 이 phone 으로 Supabase 를 조회한다.
-      setCurrentAccount(dbUser.phone);
-      setGender(dbUser.gender ?? "female");
+      // 1) 현재 계정 포인터를 먼저 비운다. ★중요★
+      //    각 store 의 setter/reset 은 getCurrentAccount() 가 있으면 그 phone 의 Supabase
+      //    row 를 즉시 업데이트한다. 포인터가 남아 있으면 아래 "기본값으로 리셋" 들이
+      //    실제 사용자의 레벨/XP/프로필/접속일수 등을 기본값으로 덮어써 데이터가 손상된다.
+      //    포인터를 null 로 비우면 그 쓰기들이 전부 건너뛰어져(=로컬 전용) 안전하다.
+      clearCurrentAccount();
 
-      // 2) 이전 계정/세션의 localStorage 잔여 데이터(좋아요/참여/차단/신고/끌어올리기/
-      //    XP/포인트/가구/인증 등)를 모두 비운다 — 비우지 않고 sync 하면 병합되어 누설된다.
+      // 2) 이전 계정/세션의 localStorage 잔여 데이터를 비운다(로컬 전용, Supabase 미반영).
       resetUserStoresForLogin();
-      // 프로필 store 는 별도 전체 리셋이 없어 기본값을 직접 세팅(아래 sync 가 실제 값으로 덮어씀).
+      setGender(dbUser.gender ?? "female");
       setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
       setNickname(dbUser.nickname ?? "");
       setTitle("");
       setEquippedBadgeId("badge_24");
-      // ※ setFriendCode("") 는 호출하지 않는다 — 빈 값이면 새 랜덤 코드를 생성해
-      //   Supabase 에 덮어써서, 로그인할 때마다 친구코드(ID)가 바뀌는 버그가 있었다.
-      //   친구코드는 아래 syncProfileFromSupabase 가 가입 때 저장된 값을 그대로 복원한다.
 
       // 3) 가입 직후 2분 skip 플래그 제거 — 로그인은 신규가입이 아니므로 즉시 복원 허용.
       try {
@@ -124,10 +123,10 @@ export function LoginScreen() {
         // ignore
       }
 
-      // 4) Supabase(=source of truth)에서 프로필 사진/칭호/뱃지/마이룸 가구/포인트/
-      //    레벨/XP/인증/친구 등 저장된 모든 사용자 데이터를 즉시 복원.
-      //    인앱 로그인은 페이지 리로드가 없어 window:load sync 가 다시 안 돌기 때문에
-      //    여기서 직접 호출해야 재로그인 시 데이터가 기본값으로 남지 않는다.
+      // 4) 이제 현재 계정을 확정하고, Supabase(=source of truth)에서 프로필 사진/칭호/
+      //    뱃지/레벨/XP/마이룸/포인트/인증/친구/접속일수 등 저장된 값을 그대로 복원한다.
+      //    (계정 확정을 sync 직전에 해야 위 리셋이 Supabase 를 건드리지 않는다)
+      setCurrentAccount(dbUser.phone);
       await syncAllUserDataFromSupabase();
 
       navigate("/home", { replace: true });

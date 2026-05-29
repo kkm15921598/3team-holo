@@ -13,7 +13,7 @@
  */
 import { syncProfileFromSupabase } from "@/shared/stores/profile-store";
 import { syncStatsFromSupabase } from "@/shared/stores/account-stats-store";
-import { syncXpFromSupabase } from "@/shared/stores/xp-store";
+import { syncXpFromSupabase, reconcileLevelFromXp } from "@/shared/stores/xp-store";
 import { syncVerificationFromSupabase } from "@/shared/stores/verification-store";
 import { syncActivityFromSupabase } from "@/shared/stores/activity-store";
 import { syncLikesFromSupabase } from "@/shared/stores/likes-store";
@@ -55,4 +55,8 @@ export async function syncAllUserDataFromSupabase(): Promise<void> {
     syncFriendsFromSupabase(),
     syncFriendRequestsFromSupabase(),
   ]);
+
+  // 모든 값이 복원된 뒤 레벨을 누적 XP 기준으로 재보정 — 과거 버그로 stats.level 이
+  // XP 와 어긋나게 저장된 계정(레벨↔가구/활동 불일치)을 자동 치유한다.
+  reconcileLevelFromXp();
 }

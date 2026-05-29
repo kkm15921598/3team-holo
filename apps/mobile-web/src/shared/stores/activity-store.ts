@@ -160,21 +160,33 @@ export async function syncActivityFromSupabase(): Promise<void> {
 
   let changed = false;
 
-  if (typeof data.signup_date === "string" && data.signup_date && !state.signupDate) {
+  // 가입일은 서버에 저장된 값이 진실 — 항상 복원한다.
+  // (이전엔 !state.signupDate 일 때만 복원했는데, 로그인 리셋이 signupDate 를 오늘로
+  //  채워두기 때문에 실제 가입일이 영영 복원되지 않아 '가입일=오늘' 로 잘못 표시됐다)
+  if (typeof data.signup_date === "string" && data.signup_date && state.signupDate !== data.signup_date) {
     state = { ...state, signupDate: data.signup_date as string };
     changed = true;
   }
 
-  if (Array.isArray(data.active_dates) && (data.active_dates as unknown[]).length > 0) {
-    const merged = new Set([...state.activeDates, ...(data.active_dates as string[])]);
-    const sorted = [...merged].sort();
-    if (sorted.length !== state.activeDates.length) {
-      state = { ...state, activeDates: sorted };
-      changed = true;
-    }
+  // 접속일: 로컬 + 서버 합집합 + 오늘(이번 접속) 을 모두 포함.
+  const merged = new Set<string>(state.activeDates);
+  if (Array.isArray(data.active_dates)) {
+    for (const d of data.active_dates as string[]) merged.add(d);
+  }
+  merged.add(todayISO()); // 이번 로그인 접속도 반드시 포함
+  const sorted = [...merged].sort();
+  if (sorted.length !== state.activeDates.length) {
+    state = { ...state, activeDates: sorted };
+    changed = true;
   }
 
-  if (changed) { persist(); emit(); }
+  if (changed) {
+    persist();
+    emit();
+    // 합쳐진 결과(오늘 + 로컬 전용 날짜 포함)를 서버에도 반영해, 다음 기기/로그인에서
+    // 접속일수가 어긋나지 않도록 한다. (오늘 접속이 서버에 누락되던 문제 해소)
+    syncActivityToSupabase(state);
+  }
 }
 
 if (typeof window !== "undefined") {
