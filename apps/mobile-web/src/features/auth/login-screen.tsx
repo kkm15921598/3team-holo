@@ -14,6 +14,7 @@ import {
 import { defaultFaceForGender } from "@/features/home/home-faces";
 import { setMyroomItems, setStatusMessage } from "@/features/myroom/myroom-store";
 import { setCurrentAccount } from "@/shared/stores/account-choices-store";
+import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
@@ -88,15 +89,33 @@ export function LoginScreen() {
 
     if (dbUser) {
       // Supabase 계정으로 로그인 성공
-      setGender(dbUser.gender ?? "female");
+      // 1) 현재 계정 확정 — 이후 모든 sync 가 이 phone 으로 Supabase 를 조회한다.
       setCurrentAccount(dbUser.phone);
+      setGender(dbUser.gender ?? "female");
+
+      // 2) 이전 계정/세션의 localStorage 잔여 데이터가 노출되지 않도록 기본값으로 초기화.
+      //    (바로 아래 sync 가 Supabase 의 실제 값으로 덮어쓴다)
       setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
       setNickname(dbUser.nickname ?? "");
       setTitle("");
-      setEquippedBadgeId("badge_24"); // 기본 장착 뱃지
+      setEquippedBadgeId("badge_24");
       setFriendCode("");
       setMyroomItems([]);
       setStatusMessage("");
+
+      // 3) 가입 직후 2분 skip 플래그 제거 — 로그인은 신규가입이 아니므로 즉시 복원 허용.
+      try {
+        window.localStorage.removeItem("holo:fresh-signup");
+      } catch {
+        // ignore
+      }
+
+      // 4) Supabase(=source of truth)에서 프로필 사진/칭호/뱃지/마이룸 가구/포인트/
+      //    레벨/XP/인증/친구 등 저장된 모든 사용자 데이터를 즉시 복원.
+      //    인앱 로그인은 페이지 리로드가 없어 window:load sync 가 다시 안 돌기 때문에
+      //    여기서 직접 호출해야 재로그인 시 데이터가 기본값으로 남지 않는다.
+      await syncAllUserDataFromSupabase();
+
       navigate("/home", { replace: true });
       return;
     }

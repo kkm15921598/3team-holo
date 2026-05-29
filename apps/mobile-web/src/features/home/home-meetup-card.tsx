@@ -30,7 +30,7 @@ export function MeetupCard({ m }: { m: Meetup }) {
         {m.title}
       </div>
       <div className="mt-[5px] text-[12px] font-medium text-holo-purple-mid opacity-80">
-        {m.distance} · {m.duration}
+        {m.distance ? `${m.distance} · ${m.duration}` : m.duration}
       </div>
       <p className="mt-[10px] line-clamp-2 text-[13px] leading-[1.45] text-[#333]">
         {m.description}

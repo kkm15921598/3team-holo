@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   setStatusMessage,
   setStatusPosition,
@@ -29,6 +29,23 @@ export function StatusBubble() {
   const bubbleRef = useRef<HTMLDivElement>(null);
 
   const dragStart = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
+
+  // 상태메시지 텍스트가 길어지면 말풍선 폭이 커져 룸 영역 밖으로 새어나갈 수 있다.
+  // (드래그 클램프는 위치만 다루고, 텍스트 증가로 인한 폭 변화는 보정하지 못함)
+  // 메시지/위치가 바뀔 때마다 실제 크기를 측정해 부모 영역 안으로 위치를 재클램프한다.
+  useLayoutEffect(() => {
+    const el = bubbleRef.current;
+    const parent = el?.parentElement;
+    if (!el || !parent) return;
+    const PADDING = 4;
+    const maxX = Math.max(PADDING, parent.clientWidth - el.offsetWidth - PADDING);
+    const maxY = Math.max(PADDING, parent.clientHeight - el.offsetHeight - PADDING);
+    const clampedX = Math.max(PADDING, Math.min(maxX, pos.x));
+    const clampedY = Math.max(PADDING, Math.min(maxY, pos.y));
+    if (clampedX !== pos.x || clampedY !== pos.y) {
+      setStatusPosition({ x: clampedX, y: clampedY });
+    }
+  }, [status, pos.x, pos.y]);
 
   const handleDragStart = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -162,11 +179,11 @@ export function StatusBubble() {
               }
             }}
             aria-label="상태 메시지 — 클릭하면 위치 이동"
-            className={`group relative flex items-center gap-[6px] whitespace-nowrap rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[14px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)] transition-shadow hover:shadow-[0_4px_14px_rgba(116,72,221,0.25)] ${
+            className={`group relative flex max-w-[200px] items-center gap-[6px] rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[14px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)] transition-shadow hover:shadow-[0_4px_14px_rgba(116,72,221,0.25)] ${
               isSelected ? "outline outline-2 outline-dashed outline-holo-purple-mid" : ""
             }`}
           >
-            <span>{status}</span>
+            <span className="min-w-0 break-keep">{status}</span>
             <button
               type="button"
               aria-label="텍스트 수정"

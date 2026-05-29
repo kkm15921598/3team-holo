@@ -172,6 +172,26 @@ export function canEarnRegionVerifyPoints(): boolean {
   return Date.now() - last >= REGION_RENEWAL_INTERVAL_MS;
 }
 
+/**
+ * 지금 동네 "재인증" 이 가능한지 판정 — 갱신 주기(3개월)에 한 번만 허용.
+ * - 한 번도 인증한 적 없으면 (lastRegionVerifiedAt === null) → true
+ * - 마지막 인증으로부터 90일 이상 지났으면 → true
+ * - 그 외 (최근 90일 내 이미 인증) → false  (재인증 차단)
+ *
+ * 이전엔 적립 자격(canEarnRegionVerifyPoints)만 막고 재인증 행위 자체는 항상
+ * 허용돼서, 사용자가 90일 안에도 동네를 계속 바꿔 인증할 수 있었다.
+ */
+export function canReVerifyRegion(): boolean {
+  if (!_state.regionVerified || _state.lastRegionVerifiedAt === null) return true;
+  return Date.now() - _state.lastRegionVerifiedAt >= REGION_RENEWAL_INTERVAL_MS;
+}
+
+/** 다음 재인증이 가능해지는 시점(ms). 인증 이력이 없으면 null(지금 가능). */
+export function nextRegionVerifyAt(): number | null {
+  if (_state.lastRegionVerifiedAt === null) return null;
+  return _state.lastRegionVerifiedAt + REGION_RENEWAL_INTERVAL_MS;
+}
+
 /** React 컴포넌트에서 인증 상태 전체를 구독 */
 export function useVerification() {
   return useSyncExternalStore(

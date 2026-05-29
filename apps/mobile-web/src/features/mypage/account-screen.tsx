@@ -7,7 +7,8 @@ import {
   subscribeVerification,
 } from "@/shared/stores/verification-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
-import { getCurrentPhoneMasked } from "@/shared/lib/phone";
+import { getCurrentPhone, getCurrentPhoneMasked } from "@/shared/lib/phone";
+import { supabase } from "@/shared/lib/supabaseClient";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function AccountScreen() {
@@ -28,21 +29,38 @@ export function AccountScreen() {
   // 가입/로그인 시 저장된 실제 번호를 마스킹해 표시 (하드코딩 제거).
   const phoneMasked = getCurrentPhoneMasked();
 
-  // 가입년도 — localStorage 의 holoUser.signupAt 에서 추출. 없으면 현재 년도 폴백.
-  const signupYear = (() => {
+  // 가입 날짜 — 우선 localStorage 의 holoUser.signupAt 으로 즉시 표시하고,
+  // 이후 Supabase users.created_at 으로 정확히 보정한다(다른 기기 로그인 등 로컬값이 없는 경우 대비).
+  const [signupDate, setSignupDate] = useState<string>(() => {
     try {
       const raw = window.localStorage.getItem("holoUser");
       if (raw) {
         const parsed = JSON.parse(raw) as { signupAt?: number };
-        if (parsed?.signupAt) {
-          return new Date(parsed.signupAt).getFullYear();
-        }
+        if (parsed?.signupAt) return formatSignupDate(new Date(parsed.signupAt));
       }
     } catch {
       // ignore
     }
-    return new Date().getFullYear();
-  })();
+    return "";
+  });
+
+  useEffect(() => {
+    const phone = getCurrentPhone();
+    if (!phone) return;
+    let cancelled = false;
+    supabase
+      .from("users")
+      .select("created_at")
+      .eq("phone", phone)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled || error || !data?.created_at) return;
+        setSignupDate(formatSignupDate(new Date(data.created_at as string)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -93,7 +111,10 @@ export function AccountScreen() {
         {/* 가입년도 — 프로필 카드 바로 아래 작은 캡션. 카드 안에 넣으면 답답해 보여서
             카드 외곽에 라벨 형식으로 분리. */}
         <p className="mt-2 flex items-center gap-1.5 px-1 text-[12px] text-holo-ink-3">
-          <CalendarIcon /> {signupYear}년부터 HOLO와 함께하고 있어요
+          <CalendarIcon />{" "}
+          {signupDate
+            ? `${signupDate}부터 HOLO와 함께하고 있어요`
+            : "HOLO와 함께하고 있어요"}
         </p>
       </section>
 
@@ -167,6 +188,12 @@ function Row({
       </button>
     </li>
   );
+}
+
+/** 가입 시각을 "2026년 5월 29일" 형태로 포맷 */
+function formatSignupDate(d: Date): string {
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
 function BackIcon() {

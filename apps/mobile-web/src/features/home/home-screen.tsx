@@ -10,12 +10,14 @@ import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
 import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
+import { useGeolocation } from "@/shared/hooks/use-geolocation";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function HomeScreen() {
+  const userPos = useGeolocation();
   const [allPosts, setAllPosts] = useState(() => postsStore.getPosts());
   const [meetups, setMeetups] = useState(() =>
-    pickMeetupsFromPosts(postsStore.getPosts(), 3),
+    pickMeetupsFromPosts(postsStore.getPosts(), 3, undefined, null),
   );
 
   useEffect(() => {
@@ -23,6 +25,12 @@ export function HomeScreen() {
       setAllPosts(postsStore.getPosts());
     });
   }, []);
+
+  // 글 목록 변화 또는 내 위치(거리 계산용)가 확정되면 추천 카드를 다시 계산한다.
+  // → 비동기로 로드되는 Supabase 글과, 뒤늦게 잡히는 GPS 위치가 카드에 반영된다.
+  useEffect(() => {
+    setMeetups(pickMeetupsFromPosts(allPosts, 3, undefined, userPos));
+  }, [allPosts, userPos]);
   const status = useStatusMessage();
   const statusPos = useStatusPosition();
   const profile = useProfile();
@@ -57,7 +65,7 @@ export function HomeScreen() {
   const dragRef = useRef({ down: false, startX: 0, scrollLeft: 0, moved: false });
 
   const handleRefresh = () => {
-    setMeetups((prev) => pickMeetupsFromPosts(allPosts, 3, prev));
+    setMeetups((prev) => pickMeetupsFromPosts(allPosts, 3, prev, userPos));
     // 새로고침 시 카드 캐러셀을 첫 번째 카드 위치로 되돌린다.
     const el = cardsRef.current;
     if (el) {
@@ -129,8 +137,13 @@ export function HomeScreen() {
             <div className="relative" style={{ width: ROOM_W, height: ROOM_H }}>
               <RoomScene />
               <div
-                className="absolute z-[5] whitespace-nowrap rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]"
-                style={{ left: statusPos.x, top: statusPos.y }}
+                className="absolute z-[5] max-w-[180px] whitespace-normal break-keep rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]"
+                style={{
+                  // 긴 상태메시지가 화면 밖으로 나가지 않도록 최대 너비(180px) 안에서 줄바꿈하고,
+                  // left 를 룸 컨테이너(ROOM_W) 안쪽으로 클램프한다.
+                  left: Math.max(8, Math.min(statusPos.x, ROOM_W - 188)),
+                  top: statusPos.y,
+                }}
               >
                 {status}
                 <span

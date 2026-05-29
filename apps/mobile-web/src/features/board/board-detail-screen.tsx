@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { type Post, type PostLocation } from "@/shared/mock/data";
 import { postsStore } from "./posts-store";
@@ -205,27 +205,29 @@ export function BoardDetailScreen() {
   };
   // Supabase에서 이 게시글의 실제 댓글 로드
   const [supabaseComments, setSupabaseComments] = useState<StoredComment[]>([]);
-  useEffect(() => {
-    supabase
+  // 댓글 로더를 재사용 가능한 함수로 분리 — 최초 mount + 새로고침에서 동일하게 호출.
+  const loadComments = useCallback(async () => {
+    const { data } = await supabase
       .from("comments")
       .select("*")
       .eq("post_id", post.id)
-      .order("created_at", { ascending: true })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setSupabaseComments(data.map((row: any) => ({
-            id: String(row.id),
-            postId: row.post_id ?? post.id,
-            nickname: row.nickname ?? "알 수 없음",
-            content: row.content ?? "",
-            timeAgo: "방금 전",
-            parentId: row.parent_id ?? undefined,
-            hasPhoto: row.photo_url ? true : undefined,
-            photoUrl: row.photo_url ?? undefined,
-          })));
-        }
-      });
+      .order("created_at", { ascending: true });
+    setSupabaseComments(
+      (data ?? []).map((row: any) => ({
+        id: String(row.id),
+        postId: row.post_id ?? post.id,
+        nickname: row.nickname ?? "알 수 없음",
+        content: row.content ?? "",
+        timeAgo: "방금 전",
+        parentId: row.parent_id ?? undefined,
+        hasPhoto: row.photo_url ? true : undefined,
+        photoUrl: row.photo_url ?? undefined,
+      })),
+    );
   }, [post.id]);
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
   // 사용자가 작성한 댓글/대댓글은 store 에서 가져온다.
   const userComments = useUserComments();
   const comments = useMemo<CommentThread[]>(() => {
@@ -664,7 +666,10 @@ export function BoardDetailScreen() {
    * 조회수 가드(viewedOnceRef) 를 비워 이번 새로고침에서도 조회수 +1 이 한 번 더 반영되도록 한다.
    * 사용자에겐 짧은 토스트로 동작 완료를 알린다.
    */
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    // 기존엔 메모리 캐시만 다시 읽어서 실제로는 아무것도 갱신되지 않았다.
+    // Supabase 에서 글 목록과 이 글의 댓글을 실제로 다시 가져온다.
+    await Promise.allSettled([postsStore.refresh(), loadComments()]);
     setPosts(postsStore.getPosts());
     viewedOnceRef.current = new Set();
     if (post?.id) {
@@ -1003,16 +1008,7 @@ export function BoardDetailScreen() {
             return (
               <Fragment key={c.id}>
                 <li>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReplyingTo((prev) => (prev === c.id ? null : c.id));
-                      setReplyText("");
-                      setReplyHasPhoto(false);
-                      setReplyHasMap(false);
-                    }}
-                    className="w-full py-3 text-left"
-                  >
+                  <div className="w-full py-3 text-left">
                     <div className="flex items-center justify-between">
                       <span
                         role="link"
@@ -1060,7 +1056,23 @@ export function BoardDetailScreen() {
                         <LocationMap location={c.location} preview />
                       </div>
                     )}
-                  </button>
+                    {/* 대댓글 달기 — 댓글 본문 클릭이 아니라 명시적 버튼으로 답글 입력창을 토글.
+                        (이전엔 댓글 영역 전체가 버튼이라 본문을 누르면 입력창이 열렸음) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyingTo((prev) => (prev === c.id ? null : c.id));
+                        setReplyText("");
+                        setReplyHasPhoto(false);
+                        setReplyHasMap(false);
+                        setReplyPhotoUrl(null);
+                        setReplyLocation(null);
+                      }}
+                      className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-holo-ink-3 transition-colors hover:text-holo-purple-mid"
+                    >
+                      {isReplying ? "취소" : "답글 달기"}
+                    </button>
+                  </div>
 
                   {/* Replies — indented with arrow + vertical line */}
                   {c.replies.map((r) => (

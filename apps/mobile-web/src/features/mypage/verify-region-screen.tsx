@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   canEarnRegionVerifyPoints,
+  canReVerifyRegion,
+  nextRegionVerifyAt,
   setRegionVerified,
   setVerifiedRegion,
 } from "@/shared/stores/verification-store";
@@ -13,13 +15,16 @@ import {
 import { addPoints } from "@/features/myroom/myroom-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
-type Phase = "permission" | "detecting" | "confirm" | "success" | "error";
+type Phase = "permission" | "detecting" | "confirm" | "success" | "error" | "locked";
 
 type DetectedDong = KoreanDong & { distanceM: number };
 
 export function VerifyRegionScreen() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<Phase>("permission");
+  // 마지막 인증이 90일 이내면 재인증을 막고 "locked" 안내 화면부터 시작한다.
+  const [phase, setPhase] = useState<Phase>(() =>
+    canReVerifyRegion() ? "permission" : "locked",
+  );
   const [picked, setPicked] = useState<string>("");
   const [nearest, setNearest] = useState<DetectedDong[]>([]);
   // 이전엔 GPS accuracy(오차범위)를 노출했지만 브라우저 환경에 따라 50km 같은
@@ -70,6 +75,11 @@ export function VerifyRegionScreen() {
   const grant = () => detectLocation();
   const confirm = () => {
     if (!picked) return;
+    // 90일 이내 재인증 차단 — 화면을 열어둔 채 시간 경과 없이 우회하는 경우 방지.
+    if (!canReVerifyRegion()) {
+      setPhase("locked");
+      return;
+    }
     // 적립 자격 판정은 setRegionVerified() 호출 전에 해야 한다.
     // 호출 후엔 lastRegionVerifiedAt 이 now 로 갱신되어 항상 false 가 되기 때문.
     const eligible = canEarnRegionVerifyPoints();
@@ -132,6 +142,36 @@ export function VerifyRegionScreen() {
               className="mt-2 h-10 w-full text-[13px] text-holo-ink-3"
             >
               나중에 할게요
+            </button>
+          </div>
+        </section>
+      )}
+
+      {phase === "locked" && (
+        <section className="flex flex-1 flex-col items-center px-6 pt-6 text-center">
+          <div className="mt-2 flex h-32 w-32 items-center justify-center rounded-full bg-holo-lilac-card-2">
+            <PinIcon size={56} />
+          </div>
+          <h1 className="mt-6 text-[18px] font-bold leading-snug text-holo-ink">
+            이미 동네 인증을 마쳤어요
+          </h1>
+          <p className="mt-2 text-[13px] leading-6 text-holo-ink-3">
+            동네 인증은 3개월에 한 번만 갱신할 수 있어요.
+            <br />
+            다음 인증은{" "}
+            <span className="font-semibold text-holo-purple-mid">
+              {lockedNextDateLabel()}
+            </span>{" "}
+            부터 가능해요.
+          </p>
+
+          <div className="mt-auto w-full pb-4 pt-6">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="h-[60px] w-full rounded-holo-pill bg-holo-ink text-[16px] font-semibold text-white active:scale-[0.99]"
+            >
+              확인
             </button>
           </div>
         </section>
@@ -355,6 +395,16 @@ export function VerifyRegionScreen() {
 function nextRenewDate() {
   const d = new Date();
   d.setMonth(d.getMonth() + 3);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+/** 마지막 인증 기준 다음 재인증 가능일(=마지막+90일) 라벨. 이력 없으면 빈 문자열. */
+function lockedNextDateLabel() {
+  const ts = nextRegionVerifyAt();
+  if (ts === null) return "";
+  const d = new Date(ts);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
     d.getDate(),
   ).padStart(2, "0")}`;
