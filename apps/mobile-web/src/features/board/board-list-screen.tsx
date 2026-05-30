@@ -25,6 +25,7 @@ import {
 } from "@/shared/lib/author-gender";
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
+import { supabase } from "@/shared/lib/supabaseClient";
 import { useUserComments } from "@/shared/stores/comments-store";
 import {
   getTotalViews,
@@ -58,9 +59,12 @@ function avatarFor(post: { authorNickname: string; authorPhone?: string | null }
  */
 function buildCommentCounter(
   userCounts: Map<string, number>,
+  serverCounts: Map<string, number>,
 ): (post: Post) => number {
   return (post) => {
-    const base = post.comments ?? 0;
+    // base = Supabase comments 실집계(타인 댓글 포함). 로드 전이면 post.comments 로 폴백.
+    // (이전엔 post.comments 만 썼는데 댓글 작성 시 그 값이 갱신되지 않아 타인 댓글이 0으로 누락됐다.)
+    const base = serverCounts.get(post.id) ?? post.comments ?? 0;
     const myLocal = userCounts.get(post.id) ?? 0;
     // 내 로컬 댓글이 아직 base에 반영 안 됐을 수 있으므로 초과분만 추가
     return base + Math.max(0, myLocal - base);
@@ -120,13 +124,31 @@ export function BoardListScreen() {
   useViewCounts();
   // 거리 필터용 사용자 GPS — fix 가 없으면 거리 필터를 건너뛰고 전체 노출
   const userPos = useGeolocation();
+  // Supabase comments 테이블의 글별 실제 댓글 수(타인 포함) — 마운트 시 1회 로드.
+  const [serverCommentCounts, setServerCommentCounts] = useState<Map<string, number>>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    supabase
+      .from("comments")
+      .select("post_id")
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        const m = new Map<string, number>();
+        for (const row of data as { post_id: unknown }[]) {
+          const pid = String(row.post_id);
+          m.set(pid, (m.get(pid) ?? 0) + 1);
+        }
+        setServerCommentCounts(m);
+      });
+  }, []);
   const getCommentCount = useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of userComments) {
       counts.set(c.postId, (counts.get(c.postId) ?? 0) + 1);
     }
-    return buildCommentCounter(counts);
-  }, [userComments]);
+    return buildCommentCounter(counts, serverCommentCounts);
+  }, [userComments, serverCommentCounts]);
 
   // URL 의 cat 파라미터가 바뀌면 (예: 다른 카테고리로 다시 진입) activeCat 동기화
   useEffect(() => {

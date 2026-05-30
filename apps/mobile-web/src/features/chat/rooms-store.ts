@@ -445,15 +445,18 @@ function initChatNotificationListener() {
         const currentPath = window.location.pathname;
         if (currentPath === `/chat/${roomId}`) return;
 
-        // 채팅 알림 발행
-        pushChatMessage(
-          (row.sender_nickname as string) ?? "알 수 없음",
-          room.name,
-          roomId,
-          (row.content as string) ?? "",
-        );
+        // 채팅 알림 발행 — 단, 해당 방을 뮤트(알림 끄기)했으면 발행하지 않는다.
+        // (이전엔 muted 가 UI(아이콘/토스트)에만 쓰이고 실제 알림 게이트엔 빠져 있었다.)
+        if (!room.muted) {
+          pushChatMessage(
+            (row.sender_nickname as string) ?? "알 수 없음",
+            room.name,
+            roomId,
+            (row.content as string) ?? "",
+          );
+        }
 
-        // 채팅 목록 unread 카운트 +1
+        // 채팅 목록 unread 카운트 +1 (뮤트여도 안 읽음 표시는 유지)
         setRooms((prev) =>
           prev.map((r) =>
             r.id === roomId ? { ...r, unread: (r.unread ?? 0) + 1 } : r,

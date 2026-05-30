@@ -503,11 +503,16 @@ export function ChatRoomScreen() {
         })
       : messages;
     const out: Array<{ kind: "date" | "msg"; data: any }> = [];
+    // 로컬에서 갓 보낸 메시지/시스템 메시지는 date 가 비어 있다 — 오늘 날짜로 폴백해야
+    // 어제 구분선 아래에 잘못 묶이지 않고 새 '오늘' 구분선이 생긴다(Supabase 재로딩 결과와 일치).
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     let prev: string | undefined;
     filtered.forEach((m) => {
-      if (!q && m.date && m.date !== prev) {
-        out.push({ kind: "date", data: m.date });
-        prev = m.date;
+      const d = m.date || todayStr;
+      if (!q && d !== prev) {
+        out.push({ kind: "date", data: d });
+        prev = d;
       }
       out.push({ kind: "msg", data: m });
     });
