@@ -326,6 +326,10 @@ export function BoardWriteScreen() {
       } finally {
         setUploading(false);
       }
+      // 업로드에 실패해 여전히 data: URL(수 MB base64)인 항목은 DB(posts.photo_urls)에
+      // 저장하지 않는다 — 안 그러면 거대 base64 가 통째로 들어가 저장 실패/조회 성능 저하.
+      // 정상 업로드된 공개 URL 만 남긴다(스토리지 미설정 시 사진은 빠지되 글은 정상 등록).
+      resolvedPhotoUrls = resolvedPhotoUrls.filter((url) => !url.startsWith("data:"));
     }
 
     if (cameFromEdit && incomingState?.postId) {

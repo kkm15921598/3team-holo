@@ -93,9 +93,16 @@ export function isPostLiked(id: string): boolean {
   return state.has(id);
 }
 
-/** 내가 누른 좋아요 총 개수 (업적 평가용). */
+/** 내가 누른 좋아요 총 개수 (업적 평가용, 목록에서 '숨김' 처리한 항목 제외). */
 export function getLikedCount(): number {
-  return state.size;
+  // 좋아요는 유지하되 목록에서 숨긴 항목은 의식적 컬렉션이 아니므로 배지 평가에서 제외.
+  // hiddenState 에는 좋아요 취소 후 잔류 id 가 있을 수 있어 단순 size 차감 대신
+  // 실제 state 에 존재하는 항목 중 숨김을 뺀 개수를 센다(과대차감/음수 방지).
+  let n = 0;
+  for (const id of state) {
+    if (!hiddenState.has(id)) n++;
+  }
+  return n;
 }
 
 export function togglePostLike(id: string): boolean {

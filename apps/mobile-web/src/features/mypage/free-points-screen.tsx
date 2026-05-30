@@ -4,6 +4,7 @@ import { addPoints, getDailyCount, tryDailyEarn } from "@/features/myroom/myroom
 import { useProfile } from "@/shared/hooks/use-profile";
 import { postsStore } from "@/features/board/posts-store";
 import { isMyPost } from "@/features/board/author-identity";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { useVerification } from "@/shared/stores/verification-store";
 
 type Mission = {
@@ -79,10 +80,14 @@ export function FreePointsScreen() {
   };
 
   // 첫 글 작성 일회성 미션(+20P) — 글을 쓰면 '완료'로 바뀌지만 정작 20P 적립 코드가
-  // 없었다. 첫 글 작성을 감지하면 기기당 1회(localStorage 가드) 실제 적립한다.
+  // 없었다. 첫 글 작성을 감지하면 계정당 1회(localStorage 가드) 실제 적립한다.
+  // 가드 키를 현재 계정(phone)으로 스코프 — 한 기기를 공유하는 다계정 환경에서
+  // 한 계정이 받으면 다른 계정이 정당한 보상을 박탈당하던 문제 방지. 계정 미식별 시 보류.
   useEffect(() => {
     if (!hasAuthoredPost) return;
-    const KEY = "holo.onetime.first-post";
+    const account = getCurrentAccount();
+    if (!account) return;
+    const KEY = `holo.onetime.first-post.${account}`;
     try {
       if (localStorage.getItem(KEY)) return;
       localStorage.setItem(KEY, "1");

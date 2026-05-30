@@ -23,6 +23,37 @@ export type Draft = {
 };
 
 const STORAGE_KEY = "holo:drafts:v1";
+// 사진(data URL, 수 MB)은 localStorage 할당량(보통 5~10MB)을 쉽게 넘겨, 같이 저장하면
+// setItem 이 통째로 실패해 다른 임시글까지 전부 유실됐다. 사진만 sessionStorage(draft id 키)로
+// 분리 저장하고, localStorage 에는 가벼운 본문 메타만 둔다. (탭 세션 동안 복원 동작 유지)
+const PHOTO_KEY_PREFIX = "holo:draft-photos:";
+
+function readPhotos(id: string): string[] | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.sessionStorage.getItem(PHOTO_KEY_PREFIX + id);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0
+      ? (parsed as string[])
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writePhotos(id: string, photos: string[] | undefined): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (photos && photos.length > 0) {
+      window.sessionStorage.setItem(PHOTO_KEY_PREFIX + id, JSON.stringify(photos));
+    } else {
+      window.sessionStorage.removeItem(PHOTO_KEY_PREFIX + id);
+    }
+  } catch {
+    // ignore (quota / private mode) — 사진 미저장돼도 본문 draft 는 보존된다.
+  }
+}
 
 function load(): Draft[] {
   if (typeof window === "undefined") return [];
@@ -56,7 +87,11 @@ function notify() {
 
 export const draftsStore = {
   getDrafts(): Draft[] {
-    return _drafts;
+    // 세션에 보관된 사진을 본문 메타에 다시 합쳐 반환(호출부의 d.photoUrls 그대로 동작).
+    return _drafts.map((d) => {
+      const photos = readPhotos(d.id);
+      return photos ? { ...d, photoUrls: photos } : d;
+    });
   },
   subscribe(fn: () => void): () => void {
     listeners.add(fn);
@@ -65,25 +100,40 @@ export const draftsStore = {
     };
   },
   upsert(draft: Draft): void {
-    const idx = _drafts.findIndex((d) => d.id === draft.id);
+    // 사진은 sessionStorage 로 분리, localStorage 에는 사진 없는 가벼운 메타만 저장.
+    writePhotos(draft.id, draft.photoUrls);
+    const { photoUrls: _omit, ...rest } = draft;
+    void _omit;
+    const clean = rest as Draft;
+    const idx = _drafts.findIndex((d) => d.id === clean.id);
     if (idx >= 0) {
       const next = [..._drafts];
-      next[idx] = draft;
+      next[idx] = clean;
       _drafts = next;
     } else {
-      _drafts = [draft, ..._drafts];
+      _drafts = [clean, ..._drafts];
     }
     persist();
     notify();
   },
   remove(ids: string[]): void {
     const set = new Set(ids);
+    ids.forEach((id) => writePhotos(id, undefined));
     _drafts = _drafts.filter((d) => !set.has(d.id));
     persist();
     notify();
   },
   /** 신규 가입 시 임시저장 모두 비움 */
   clearAll(): void {
+    if (typeof window !== "undefined") {
+      try {
+        Object.keys(window.sessionStorage)
+          .filter((k) => k.startsWith(PHOTO_KEY_PREFIX))
+          .forEach((k) => window.sessionStorage.removeItem(k));
+      } catch {
+        // ignore
+      }
+    }
     _drafts = [];
     persist();
     notify();
