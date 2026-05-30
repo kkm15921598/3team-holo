@@ -2,6 +2,20 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { getStats, setStats } from "@/shared/stores/account-stats-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { addPoints } from "@/features/myroom/myroom-store";
+
+/**
+ * 레벨업 보너스 포인트 — my-level-screen 의 LEVEL_BENEFITS 표와 동일해야 한다.
+ * (UI 는 "보너스 포인트 +100P" 라고 약속하는데 실제 지급 코드가 없어 한 번도 안 줬다.)
+ */
+const LEVEL_BONUS: Record<number, number> = {
+  5: 100,
+  10: 300,
+  15: 500,
+  20: 1000,
+  25: 2000,
+  30: 5000,
+};
 
 /**
  * 경험치(XP) store.
@@ -290,6 +304,13 @@ export function awardXp(action: XpAction): { gained: number; capped: boolean } {
     }
     pendingLevelUp = { fromLevel: oldLevel, toLevel: newLevel };
     emitLevelUp();
+    // 도달한 마일스톤 레벨마다 보너스 포인트 지급 — UI 약속과 실제 지급을 일치시킨다.
+    // oldLevel(이미 보너스 받은 레벨) 초과 ~ newLevel 이하 구간의 마일스톤만 지급해
+    // 시드 보정/중복 적립을 막는다.
+    for (let lv = oldLevel + 1; lv <= newLevel; lv++) {
+      const bonus = LEVEL_BONUS[lv];
+      if (bonus) addPoints(bonus, { title: "레벨 업 보너스", note: `Lv.${lv}` });
+    }
   }
   return { gained: cfg.xp, capped: false };
 }

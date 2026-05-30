@@ -14,14 +14,20 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
  * 주가 바뀌면 자동으로 새 사이클로 인식되어 다시 사용 가능해진다.
  */
 function currentCycleKey(): string {
+  // "그 주 월요일 날짜"를 사이클 키로 사용한다. 종전엔 연(year)+주차 공식이었는데,
+  // 연말 경계(예: 12/30~1/1)에서 같은 ISO 주가 '2024-W53'/'2025-W1' 로 갈려
+  // 보너스를 한 번 더 받을 수 있는 우회가 있었다. 월요일 날짜는 경계와 무관하게 유일하다.
   const now = new Date();
-  const year = now.getFullYear();
-  const firstDay = new Date(year, 0, 1);
-  const dayOfYear = Math.floor(
-    (now.getTime() - firstDay.getTime()) / (24 * 60 * 60 * 1000),
+  const diffToMonday = (now.getDay() + 6) % 7; // 일=6, 월=0, 화=1 ...
+  const monday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() - diffToMonday,
   );
-  const week = Math.ceil((dayOfYear + firstDay.getDay() + 1) / 7);
-  return `${year}-W${week}`;
+  const y = monday.getFullYear();
+  const m = String(monday.getMonth() + 1).padStart(2, "0");
+  const d = String(monday.getDate()).padStart(2, "0");
+  return `W${y}-${m}-${d}`;
 }
 
 const BONUS_STORAGE_KEY = "holo:attendance-bonus";

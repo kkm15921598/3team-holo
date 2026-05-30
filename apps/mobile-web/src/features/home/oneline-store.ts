@@ -62,7 +62,7 @@ function emit() {
 function normalize(list: OnelineNews[]): OnelineNews[] {
   const now = Date.now();
   return list
-    .filter((n) => now - n.createdAt <= TTL_MS)
+    .filter((n) => now - n.createdAt < TTL_MS)
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, MAX_KEEP);
 }

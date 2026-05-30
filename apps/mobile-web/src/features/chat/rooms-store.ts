@@ -207,10 +207,18 @@ export function addMembersToRoom(id: string, nicknames: string[]) {
         const trulyNew = nicknames.filter((n) => !existing.has(n));
         if (trulyNew.length === 0) return r;
         const nextMemberNames = [...(r.memberNames ?? []), ...trulyNew];
+        // subtitle 도 함께 갱신 — 안 하면 멤버를 추가해도 '그룹'/옛 목록이 그대로 남아
+        // 표시 인원과 어긋난다(1:1→그룹 전환 경로와 동일 규약으로 재계산).
+        const head = nextMemberNames.slice(0, 2).join(", ");
+        const nextSubtitle =
+          nextMemberNames.length > 2
+            ? `${head}, 외 ${nextMemberNames.length - 2}명`
+            : head || "단체";
         return {
           ...r,
           memberCount: r.memberCount + trulyNew.length,
           memberNames: nextMemberNames,
+          subtitle: nextSubtitle,
         };
       }
 
@@ -424,14 +432,17 @@ function reconcileMeetupRoomsFromPosts() {
     const post = posts.find((p) => p.id === r.id.slice("meetup-".length));
     if (!post) return r;
     const { capacity, baseJoined } = calcJoined(post);
-    const memberNames = deriveMeetupMembers(post, Math.max(0, Math.min(capacity, baseJoined + 1) - 1));
+    const targetTotal = Math.min(capacity, baseJoined + 1);
+    const memberNames = deriveMeetupMembers(post, Math.max(0, targetTotal - 1));
     changed = true;
     return {
       ...r,
       name: post.title,
       hostNickname: post.authorNickname,
       memberNames,
-      memberCount: 1 + memberNames.length,
+      // 게시판/ensureMeetupRoom 과 동일하게 실제 총원(targetTotal)으로 — memberNames 는
+      // 작성자 1개뿐이라 1+length 로는 인원이 과소 표시됐다.
+      memberCount: targetTotal,
       meeting: {
         date: post.eventDate ?? "",
         time: post.eventTime ?? "",
