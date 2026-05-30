@@ -530,10 +530,13 @@ export function ProfileDetailScreen() {
             }
           />
           <span className="h-8 w-px bg-holo-line" />
-          {/* 접속일수는 내 활동 store(activeDates)로만 정확히 알 수 있다. 타인의 실제 접속일수는
-              추적 불가라, 이전처럼 닉네임 해시로 가짜 숫자(1~60)를 보여주면 "2주 된 앱인데 41일"
-              같은 모순이 생긴다. 친구 프로필에선 정직하게 "-" 로 표시. */}
-          <Stat label="접속일수" value={isMe ? user.daysActive : "-"} />
+          {/* 접속일수: 내 활동은 activity-store 로 정확히, 타인은 추적 불가하지만 가입한 이상
+              최소 1일은 접속한 것이므로 최소 1로 표시한다(닉네임 해시 가짜 숫자는 쓰지 않음).
+              (이전엔 "-" 로 떠서 "가입했는데 왜 -냐" 는 혼란을 줬다.) */}
+          <Stat
+            label="접속일수"
+            value={isMe ? user.daysActive : Math.max(1, user.daysActive)}
+          />
         </div>
 
         <div className="mt-7 flex w-full gap-2">

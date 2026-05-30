@@ -273,29 +273,54 @@ export function useVerification() {
 export async function syncVerificationFromSupabase(): Promise<void> {
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
+
+  // 계정별 로컬 백업 — 서버 읽기가 실패하거나(region 컬럼 미존재) 로그인 리셋으로 _state 가
+  // 비워져도 동네 인증을 복원하는 앵커. 이 라벨은 실제 인증 완료 시에만 기록되므로
+  // "백업 라벨 존재 = 과거에 인증함" 으로 본다.
+  const backupRegion = getVerifiedRegionForPhone(userPhone);
+
   const { data, error } = await supabase
     .from("users")
     .select("phone_verified, region_verified, verified_region, last_region_verified_at")
     .eq("phone", userPhone)
-    .single();
-  if (error || !data) return;
+    .maybeSingle();
+
+  // 서버 읽기 실패(컬럼 미존재/네트워크 등)라도 백업 라벨이 있으면 그것으로 복원한다.
+  // (이전엔 여기서 early return 만 해서, 로그인 직후 reset 된 미인증 상태가 그대로 남아
+  //  이미 인증했는데도 "동네를 인증해주세요" 가 계속 떴다.)
+  if (error || !data) {
+    if (backupRegion && (!_state.verifiedRegion || !_state.regionVerified)) {
+      _state = {
+        ..._state,
+        verifiedRegion: _state.verifiedRegion ?? backupRegion,
+        regionVerified: true,
+        lastRegionVerifiedAt: _state.lastRegionVerifiedAt ?? Date.now(),
+      };
+      persist();
+      notify();
+    }
+    return;
+  }
+
   // 동네 라벨: Supabase 값이 비문자열/빈문자열이면(컬럼 미저장 등) 로컬 상태 → 계정별 백업 순으로 복원.
-  // (빈 값이 로컬 라벨을 덮어써 마이페이지에서 동네가 사라지던 문제 방지)
   const remoteRegion =
     typeof data.verified_region === "string" && data.verified_region
       ? data.verified_region
       : null;
+  const region = remoteRegion ?? _state.verifiedRegion ?? backupRegion;
+  // regionVerified 는 단조(한 번 인증되면 유지) 값으로 다룬다 — 서버의 false/누락이 로컬·백업의
+  // true 를 덮어쓰지 않게 한다. 동네 라벨이 있으면(과거 인증 흔적) 인증된 것으로 본다.
+  // (이전엔 `data.region_verified ?? local` 이라 서버 false 가 로컬 true 를 덮어 다시 미인증이 됐다.)
+  const regionVerified =
+    data.region_verified === true || _state.regionVerified || !!region;
   _state = {
     ..._state,
     phoneVerified: (data.phone_verified as boolean) ?? _state.phoneVerified,
-    regionVerified: (data.region_verified as boolean) ?? _state.regionVerified,
-    verifiedRegion:
-      remoteRegion ?? _state.verifiedRegion ?? getVerifiedRegionForPhone(userPhone),
+    regionVerified,
+    verifiedRegion: region,
     lastRegionVerifiedAt: (data.last_region_verified_at as number | null) ?? _state.lastRegionVerifiedAt,
   };
-  // 모순 상태 보정: 인증은 됐는데 시점이 비어있는 레거시 계정(서버 컬럼 누락)은
-  // 시점을 현재로 백필한다. 안 하면 regionVerified=true & last=null 이 되어
-  // 90일 정책을 무시하고 +10P 재적립/재인증 우회가 가능했다.
+  // 모순 상태 보정: 인증은 됐는데 시점이 비어있으면 현재로 백필(90일 정책 우회 차단).
   if (_state.regionVerified && _state.lastRegionVerifiedAt === null) {
     _state = { ..._state, lastRegionVerifiedAt: Date.now() };
   }
