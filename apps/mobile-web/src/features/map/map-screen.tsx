@@ -9,6 +9,8 @@ import { useProfile } from "@/shared/hooks/use-profile";
 import { isMyNickname } from "@/shared/stores/profile-store";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { ME_PERSONA } from "@/features/home/home-faces";
+import { isMyPost } from "@/features/board/author-identity";
+import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import {
   useGeolocation,
   distanceMeters,
@@ -89,11 +91,16 @@ function filterPosts(
   filter: Filter,
   userPos: GeoPosition | null,
   radiusM: number,
+  blocked: Set<string>,
 ): Post[] {
   let list = allPosts.filter((p) => !!p.location);
+  // 차단한 작성자의 모임은 핀/카드에서 제외 — 게시판 목록과 동일 기준.
+  if (blocked.size > 0) list = list.filter((p) => !blocked.has(p.authorNickname));
   // GPS 있을 때만 거리 필터링 — 아직 fix 가 없으면 전체 표시
   if (userPos) {
     list = list.filter((p) => {
+      // 내 글은 거리와 무관하게 항상 노출(다른 동네에서 만든 내 모임이 지도에서 사라지던 문제).
+      if (isMyPost(p)) return true;
       if (!p.location) return false;
       return distanceMeters(userPos, p.location) <= radiusM;
     });
@@ -190,6 +197,8 @@ export function MapScreen() {
   const myProfile = useProfile();
   const myPhone = getCurrentAccount();
   const myFace = myProfile.profileFace ?? ME_PERSONA.face;
+  // 차단한 작성자 모임을 지도에서 제외하기 위한 구독.
+  const blockedSet = useBlockedNicknames();
   const avatarForSeed = (
     seed: string,
     isAuthor: boolean,
@@ -202,18 +211,18 @@ export function MapScreen() {
 
   // 미리보기/카드 영역은 1km 고정, 확장 모달은 사용자가 선택한 반경(5km/10km).
   const previewPosts = useMemo(
-    () => filterPosts(allPosts, filter, userPos, PREVIEW_RADIUS_M),
-    [allPosts, filter, userPos],
+    () => filterPosts(allPosts, filter, userPos, PREVIEW_RADIUS_M, blockedSet),
+    [allPosts, filter, userPos, blockedSet],
   );
   const modalPosts = useMemo(() => {
-    const base = filterPosts(allPosts, filter, userPos, modalRadius);
+    const base = filterPosts(allPosts, filter, userPos, modalRadius, blockedSet);
     // focusPost 가 반경/필터 밖이라도 항상 표시 — 채팅방에서 핀 클릭으로 들어왔을 때
     // 그 모임 마커가 보이지 않으면 동선이 끊긴다.
     if (focusPost && !base.some((p) => p.id === focusPost.id)) {
       return [...base, focusPost];
     }
     return base;
-  }, [allPosts, filter, userPos, modalRadius, focusPost]);
+  }, [allPosts, filter, userPos, modalRadius, focusPost, blockedSet]);
 
   // URL 파라미터(focusPostId)는 mount 직후 한 번만 제거 — 뒤로가기/재진입 시
   // 또 강제로 재오픈되지 않도록. chatReturnPostId state 는 그대로 유지되어

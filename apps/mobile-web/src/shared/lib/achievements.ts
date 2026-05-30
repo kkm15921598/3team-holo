@@ -15,6 +15,7 @@ import {
   recordTitleAcquired,
 } from "@/shared/stores/account-stats-store";
 import { postsStore } from "@/features/board/posts-store";
+import { isMyPost } from "@/features/board/author-identity";
 import { getUserComments } from "@/shared/stores/comments-store";
 import { getLikedCount } from "@/shared/stores/likes-store";
 import { getFriends } from "@/features/mypage/friends-store";
@@ -54,7 +55,7 @@ export function evaluateAchievements(): void {
   const nick = getProfile().nickname;
   if (!nick) return;
 
-  const myPosts = postsStore.getPosts().filter((p) => p.authorNickname === nick);
+  const myPosts = postsStore.getPosts().filter((p) => isMyPost(p));
   const m: Metrics = {
     level: stats.level,
     myPosts: myPosts.length,

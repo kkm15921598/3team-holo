@@ -8,7 +8,7 @@ import {
   useUserComments,
 } from "@/shared/stores/comments-store";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { useProfile } from "@/shared/hooks/use-profile";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /** ISO 시간 → 상대 시간 표현 */
 function relativeTime(isoString: string): string {
@@ -26,18 +26,20 @@ export function MyCommentsScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
   const userComments = useUserComments();
-  const myProfile = useProfile();
 
   // Supabase에서 내가 단 댓글의 post_id, created_at 조회 (다른 기기에서 작성한 것 포함)
   const [supabaseCommentMeta, setSupabaseCommentMeta] = useState<
     { postId: string; createdAt: string }[]
   >([]);
   useEffect(() => {
-    if (!myProfile.nickname) return;
+    // 전화번호(user_id, 안정 식별자)로 조회 — 닉네임을 바꿔도 옛 닉네임으로 단 댓글까지
+    // 모두 잡힌다(닉네임으로 조회하면 변경 후 옛 댓글이 누락됐다). user_id 컬럼은 이미 존재.
+    const userPhone = getCurrentAccount();
+    if (!userPhone) return;
     supabase
       .from("comments")
       .select("post_id, created_at")
-      .eq("nickname", myProfile.nickname)
+      .eq("user_id", userPhone)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
@@ -49,7 +51,7 @@ export function MyCommentsScreen() {
           );
         }
       });
-  }, [myProfile.nickname]);
+  }, []);
 
   // 사용자가 댓글을 단 적이 있는 게시글만 노출
   // localStorage(optimistic) + Supabase 합산, 중복 제거
@@ -102,11 +104,13 @@ export function MyCommentsScreen() {
     // (이전엔 로컬 store 만 비워, Supabase 에 남은 내 댓글이 재진입/재계산 시 부활했다.)
     removeCommentsByPostIds(ids);
     setSupabaseCommentMeta((prev) => prev.filter((m) => !ids.includes(m.postId)));
-    if (myProfile.nickname && ids.length > 0) {
+    const userPhone = getCurrentAccount();
+    if (userPhone && ids.length > 0) {
+      // user_id(전화번호)로 삭제 — 닉네임 변경 후 옛 닉네임으로 단 댓글도 확실히 삭제.
       supabase
         .from("comments")
         .delete()
-        .eq("nickname", myProfile.nickname)
+        .eq("user_id", userPhone)
         .in("post_id", ids)
         .then(({ error }) => {
           if (error) console.warn("Supabase 댓글 삭제 실패:", error.message);

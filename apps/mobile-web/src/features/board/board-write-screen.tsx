@@ -12,6 +12,7 @@ import { postsStore } from "./posts-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { ensureMeetupRoom, isMeetupPost, meetupRoomId } from "./meetup-utils";
 import { joinPost } from "@/shared/stores/joined-store";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { containsProfanity } from "@/shared/utils/profanity";
 import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
 
@@ -372,6 +373,9 @@ export function BoardWriteScreen() {
         comments: 0,
         timeAgo: "방금 전",
         authorNickname: profile.nickname,
+        // 전화번호(안정 식별자)도 로컬 Post 에 저장 — 닉네임 변경/새로고침 전에도 '내 글'
+        // 판별(아바타·수정삭제·내 글 목록)이 phone 기준으로 일관되게 동작하도록.
+        authorPhone: getCurrentAccount() ?? undefined,
         authorLevel: stats.level,
         meetupType: isSimpleCategory ? undefined : (meetupType ?? undefined),
         eventDate: isSimpleCategory ? undefined : date,

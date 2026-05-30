@@ -29,6 +29,7 @@ import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useMyroomItems } from "@/features/myroom/myroom-store";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { postsStore } from "@/features/board/posts-store";
+import { isMyPost } from "@/features/board/author-identity";
 import { useUserComments } from "@/shared/stores/comments-store";
 import { useActivityState } from "@/shared/stores/activity-store";
 import { supabase } from "@/shared/lib/supabaseClient";
@@ -97,10 +98,7 @@ export function ProfileDetailScreen() {
   // 내 게시글/댓글 수 — 실제 활동 데이터에서 집계.
   // (페이지 진입 시점의 스냅샷 — 페이지가 짧게 노출되는 화면이라 라이브 갱신 불필요)
   const myPostsCount = useMemo(
-    () =>
-      postsStore
-        .getPosts()
-        .filter((p) => p.authorNickname === myProfile.nickname).length,
+    () => postsStore.getPosts().filter((p) => isMyPost(p)).length,
     [myProfile.nickname],
   );
   // '댓글 단 고유 글 수' — 클릭해 들어가는 '내가 쓴 댓글' 리스트(postId 중복 제거)와 단위 통일.

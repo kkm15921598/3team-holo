@@ -5,6 +5,7 @@ import { postsStore } from "@/features/board/posts-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 import { useActivityState } from "@/shared/stores/activity-store";
 import { useProfile } from "@/shared/hooks/use-profile";
+import { isMyPost } from "@/features/board/author-identity";
 import { useViewedEntries } from "@/shared/stores/viewed-posts-store";
 
 /**
@@ -96,9 +97,9 @@ export function ActivityScreen() {
     return postsStore.subscribe(() => setAllPosts(postsStore.getPosts()));
   }, []);
 
-  // 실제 사용자가 작성한 글 / 댓글 수
+  // 실제 사용자가 작성한 글 / 댓글 수 — 전화번호 우선(닉네임 변경/과거 닉네임 포함).
   const postsCount = useMemo(
-    () => allPosts.filter((p) => p.authorNickname === profile.nickname).length,
+    () => allPosts.filter((p) => isMyPost(p)).length,
     [allPosts, profile.nickname],
   );
   // '댓글 단 고유 글 수' — /mypage/comments 리스트(postId 중복 제거) 및 프로필 stat 과 단위 통일.

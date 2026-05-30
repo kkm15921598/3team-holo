@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { useProfile } from "@/shared/hooks/use-profile";
+import { isMyPost } from "@/features/board/author-identity";
 import { ManagedList } from "./managed-list";
 
 export function MyPostsScreen() {
@@ -16,9 +17,9 @@ export function MyPostsScreen() {
     return postsStore.subscribe(() => setAllPosts(postsStore.getPosts()));
   }, []);
 
-  // 현재 프로필 닉네임으로 작성한 글만 노출
+  // 내가 쓴 글만 노출 — 전화번호 우선(닉네임 변경 후에도 유지), 과거 닉네임도 인정.
   const items = useMemo(
-    () => allPosts.filter((p) => p.authorNickname === profile.nickname),
+    () => allPosts.filter((p) => isMyPost(p)),
     [allPosts, profile.nickname],
   );
 

@@ -4,6 +4,7 @@ import type { Post } from "@/shared/mock/data";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
 import { distanceMeters, type GeoPosition } from "@/shared/hooks/use-geolocation";
+import { getBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 
 /** 미터 → "350m" / "1.2km" 표시 문자열 */
 function formatDistance(meters: number): string {
@@ -63,6 +64,9 @@ export function pickMeetupsFromPosts(
   radiusM = 5000,
 ): Meetup[] {
   const excludeIds = new Set((exclude ?? []).map((m) => m.id));
+  // 차단한 작성자의 모임은 추천에서 제외 — 게시판 목록(notBlocked)과 동일 기준.
+  // (이전엔 홈 추천 모임만 차단 필터가 빠져 차단한 사람의 모임이 카드로 떴다.)
+  const blocked = getBlockedNicknames();
   // 내 위치가 있으면 기본 '근처'(5km) 모임만 — 빈상태 문구('아직 근처 모임이 없어요')·맵과 일치.
   // (이전엔 거리 무시하고 앞에서 N개만 뽑아 50km 떨어진 글도 '추천 모임'에 떴다.)
   // 새로고침으로 근처가 동나면 radiusM=Infinity 로 반경을 넓혀 다른 모임을 보여준다.
@@ -71,6 +75,7 @@ export function pickMeetupsFromPosts(
       (p) =>
         p.status !== "모집완료" &&
         !excludeIds.has(p.id) &&
+        !blocked.has(p.authorNickname) &&
         (!userPos || !p.location || distanceMeters(userPos, p.location) <= radiusM),
     )
     .slice(0, count)

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { addPoints, getDailyCount, tryDailyEarn } from "@/features/myroom/myroom-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { postsStore } from "@/features/board/posts-store";
+import { isMyPost } from "@/features/board/author-identity";
 import { useVerification } from "@/shared/stores/verification-store";
 
 type Mission = {
@@ -49,7 +50,7 @@ export function FreePointsScreen() {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
   }, []);
   const hasAuthoredPost = useMemo(
-    () => posts.some((p) => p.authorNickname === profile.nickname),
+    () => posts.some((p) => isMyPost(p)),
     [posts, profile.nickname],
   );
 
