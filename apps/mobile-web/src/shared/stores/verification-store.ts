@@ -168,6 +168,8 @@ export function resetVerification() {
  */
 export function canEarnRegionVerifyPoints(): boolean {
   const last = _state.lastRegionVerifiedAt;
+  // 이미 인증됐는데 시점만 비어있는 모순 상태는 적립 불가로 본다(중복 적립 차단).
+  if (_state.regionVerified && last === null) return false;
   if (last === null) return true;
   return Date.now() - last >= REGION_RENEWAL_INTERVAL_MS;
 }
@@ -182,6 +184,8 @@ export function canEarnRegionVerifyPoints(): boolean {
  * 허용돼서, 사용자가 90일 안에도 동네를 계속 바꿔 인증할 수 있었다.
  */
 export function canReVerifyRegion(): boolean {
+  // 인증됐는데 시점만 비어있는 모순 상태는 재인증 불가(90일 우회 차단).
+  if (_state.regionVerified && _state.lastRegionVerifiedAt === null) return false;
   if (!_state.regionVerified || _state.lastRegionVerifiedAt === null) return true;
   return Date.now() - _state.lastRegionVerifiedAt >= REGION_RENEWAL_INTERVAL_MS;
 }
@@ -225,6 +229,12 @@ export async function syncVerificationFromSupabase(): Promise<void> {
     verifiedRegion: (data.verified_region as string | null) ?? _state.verifiedRegion,
     lastRegionVerifiedAt: (data.last_region_verified_at as number | null) ?? _state.lastRegionVerifiedAt,
   };
+  // 모순 상태 보정: 인증은 됐는데 시점이 비어있는 레거시 계정(서버 컬럼 누락)은
+  // 시점을 현재로 백필한다. 안 하면 regionVerified=true & last=null 이 되어
+  // 90일 정책을 무시하고 +10P 재적립/재인증 우회가 가능했다.
+  if (_state.regionVerified && _state.lastRegionVerifiedAt === null) {
+    _state = { ..._state, lastRegionVerifiedAt: Date.now() };
+  }
   persist();
   notify();
 }

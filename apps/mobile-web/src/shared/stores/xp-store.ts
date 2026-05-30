@@ -466,10 +466,24 @@ export async function syncXpFromSupabase(): Promise<void> {
     .single();
   if (error || !data) return;
   if (data.total_xp != null) {
+    // daily 도 totalXp 처럼 카운트가 줄지 않게 날짜·액션별 Math.max 로 병합한다.
+    // (이전엔 remote 로 통째 교체 → remote daily 가 비거나 더 작으면 오늘 캡이 되돌려져
+    //  일일 적립 한도를 우회할 수 있었다. awards 는 같은 날 단조 증가만 하므로 max 가 안전)
+    const remoteDaily = (data.daily_xp as typeof state.daily) ?? {};
+    const mergedDaily: typeof state.daily = { ...state.daily };
+    for (const date of Object.keys(remoteDaily)) {
+      const localDay = mergedDaily[date] ?? {};
+      const remoteDay = remoteDaily[date] ?? {};
+      const day: Partial<Record<XpAction, number>> = { ...localDay };
+      for (const action of Object.keys(remoteDay) as XpAction[]) {
+        day[action] = Math.max(localDay[action] ?? 0, remoteDay[action] ?? 0);
+      }
+      mergedDaily[date] = day;
+    }
     state = {
       ...state,
       totalXp: Math.max(state.totalXp, (data.total_xp as number)),
-      daily: (data.daily_xp as typeof state.daily) ?? state.daily,
+      daily: mergedDaily,
     };
     persist();
     listeners.forEach((l) => l());
