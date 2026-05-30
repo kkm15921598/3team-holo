@@ -359,12 +359,47 @@ export async function syncRoomsFromSupabase(): Promise<void> {
   }
 }
 
+// 모임방이 게시글 로드 전에 복원되면(race) meeting=undefined 로 add 되어 일정 배너가
+// 사라지고 채팅 목록에서 일반 그룹방으로 오분류된다. 게시글이 뒤늦게 로드되면 그 방을
+// 게시글 기반으로 자동 보정한다(meeting 이 아직 비어있는 meetup-* 방만 대상).
+function reconcileMeetupRoomsFromPosts() {
+  const posts = postsStore.getPosts();
+  if (posts.length === 0) return;
+  let changed = false;
+  const next = rooms.map((r) => {
+    if (!r.id.startsWith("meetup-") || r.meeting !== undefined) return r;
+    const post = posts.find((p) => p.id === r.id.slice("meetup-".length));
+    if (!post) return r;
+    const { capacity, baseJoined } = calcJoined(post);
+    const memberNames = deriveMeetupMembers(post, Math.max(0, Math.min(capacity, baseJoined + 1) - 1));
+    changed = true;
+    return {
+      ...r,
+      name: post.title,
+      hostNickname: post.authorNickname,
+      memberNames,
+      memberCount: 1 + memberNames.length,
+      meeting: {
+        date: post.eventDate ?? "",
+        time: post.eventTime ?? "",
+        place: post.place ?? post.location?.placeName ?? "",
+      },
+    };
+  });
+  if (changed) {
+    rooms = next;
+    emit();
+  }
+}
+
 // 앱 시작 시 로그인 상태면 Supabase 방 목록 보충
 if (typeof window !== "undefined") {
   window.addEventListener("load", () => {
     // account 로드 시간을 위해 짧은 딜레이
     window.setTimeout(() => syncRoomsFromSupabase(), 500);
   });
+  // 게시글 로드/갱신 시 비어있는 모임방을 자동 보정.
+  postsStore.subscribe(reconcileMeetupRoomsFromPosts);
 }
 // ─── 채팅 알림 글로벌 리스너 ──────────────────────────────────
 /**

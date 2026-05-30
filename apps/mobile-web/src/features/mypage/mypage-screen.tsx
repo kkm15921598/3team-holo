@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { useProfile } from "@/shared/hooks/use-profile";
@@ -17,6 +17,9 @@ export function MypageScreen() {
   const points = usePoints();
   const badgeSrc = getEquippedBadgeSrc();
   const joinedSet = useJoinedSet();
+  // 글 목록 변화(삭제/추가)에도 모임수가 갱신되도록 postsStore 구독.
+  const [, setPostsTick] = useState(0);
+  useEffect(() => postsStore.subscribe(() => setPostsTick((t) => t + 1)), []);
   // '모임 참여' 수 — 현재 살아있는 글만 센다(my-meetings 목록과 동일 기준).
   // joinedSet 은 글 삭제 시 정리되지 않아 size 를 그대로 쓰면 삭제된 모임까지 세어 목록과 어긋난다.
   const meetupCount = postsStore.getPosts().filter((p) => joinedSet.has(p.id)).length;

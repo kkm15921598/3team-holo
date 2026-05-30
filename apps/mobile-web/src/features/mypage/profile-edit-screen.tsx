@@ -56,7 +56,9 @@ export function ProfileEditScreen() {
   // 닉네임 중복확인 — 이전엔 하드코딩("감자는 감자"만 fail)이라 빈값/중복/비속어가
   // 전부 통과했다. 가입 화면과 동일하게 형식·비속어·예약어·Supabase 중복을 실제 검증한다.
   const handleCheck = async () => {
-    const trimmed = nickname.trim();
+    // 천지인 결합점('·')은 조합 중간 문자라 검증 전에 제거 — 입력은 허용하지만
+    // 완성형만 받는 KOREAN_ONLY 검증에서 '·'가 남아 거부되던 불일치 방지.
+    const trimmed = nickname.trim().replace(/·/g, "");
     if (
       trimmed.length === 0 ||
       !KOREAN_ONLY.test(trimmed) ||
