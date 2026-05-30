@@ -37,7 +37,7 @@ export function OnelineTicker() {
     <section className="mt-[68px] px-[14px]">
       <div className="mb-[10px] flex items-center justify-between">
         <div className="flex items-center gap-[6px] text-[18px]">
-          <span aria-hidden>📣</span>
+          <CampaignIcon />
           <span className="font-bold text-holo-purple-mid">동네 한 줄 소식</span>
         </div>
         <button
@@ -117,5 +117,29 @@ export function OnelineTicker() {
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * 확성기(campaign) 라인 아이콘 — 홀로 보라 톤의 stroke 스타일.
+ * (오로라: 채워진 아이콘보다 라인 아이콘이 헤더 텍스트와 톤이 맞고 가벼워 가독성↑)
+ */
+function CampaignIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#7448DD"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 11v2a1 1 0 0 0 1 1h2l3.5 3.5V7.5L6 11H4a1 1 0 0 0-1 0z" />
+      <path d="M9.5 7.5 18 4v16l-8.5-3.5" />
+      <path d="M21 9.5a3.5 3.5 0 0 1 0 5" />
+    </svg>
   );
 }

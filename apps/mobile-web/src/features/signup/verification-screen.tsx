@@ -340,7 +340,7 @@ export function VerificationScreen() {
           <div className="flex flex-col gap-1">
             <div className="relative">
               <Input
-                placeholder="인증번호 입력"
+                placeholder="인증번호 6자리"
                 value={code}
                 onChange={(v) => {
                   setCode(v.replace(/\D/g, "").slice(0, 6));
@@ -350,8 +350,10 @@ export function VerificationScreen() {
                 autoComplete="one-time-code"
                 valid={code.length === 6}
                 error={!!verifyError}
+                otp
               />
-              <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[13px] text-holo-error">
+              {/* 남은 시간 — OTP 입력은 가운데 정렬이라 우측 타이머와 안 겹친다(pr-16 확보). */}
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-medium text-holo-error">
                 {codeTimer}
               </span>
             </div>
@@ -475,6 +477,7 @@ function Input({
   maxLength,
   autoComplete,
   paddingRight,
+  otp,
 }: {
   placeholder: string;
   value: string;
@@ -486,6 +489,8 @@ function Input({
   maxLength?: number;
   autoComplete?: string;
   paddingRight?: boolean;
+  /** 인증번호 입력 — 가운데 정렬 + 큰 숫자/넓은 자간(토스·카카오 OTP 스타일). */
+  otp?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -512,7 +517,13 @@ function Input({
         if (v !== value) onChange(v);
       }}
       onBlur={onBlur}
-      className={`h-[62px] w-full shrink-0 rounded-holo-input ${paddingRight ? "pr-12 pl-5" : "px-5"} text-[15px] outline-none ${
+      className={`h-[62px] w-full shrink-0 rounded-holo-input ${
+        otp
+          ? "pr-16 pl-16 text-center text-[20px] font-semibold tracking-[0.4em] placeholder:text-[15px] placeholder:font-normal placeholder:tracking-normal"
+          : paddingRight
+            ? "pr-12 pl-5 text-[15px]"
+            : "px-5 text-[15px]"
+      } outline-none ${
         error
           ? "border-2 border-holo-error"
           : valid

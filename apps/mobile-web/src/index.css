@@ -296,3 +296,15 @@ body {
   border-top-color: #542bb4;
 }
 
+/* 푸시 알림 토스트가 위에서 부드럽게 내려오는 애니메이션 (가입 인증번호 푸시 등). */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
