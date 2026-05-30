@@ -15,6 +15,11 @@ import {
   meetupRoomId,
 } from "./meetup-utils";
 import { leaveRoomById } from "@/features/chat/rooms-store";
+import {
+  addMeetupReview,
+  useHasReviewed,
+  useHostRating,
+} from "./meetup-reviews-store";
 import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, leavePost, useJoinedSet } from "@/shared/stores/joined-store";
 import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
@@ -1101,6 +1106,16 @@ export function BoardDetailScreen() {
                 </button>
               )}
             </div>
+
+            {/* 모임 후기 — 종료된 모임에 참여했던 사람(방장 제외)만 별점+한 줄 남길 수 있다.
+                방장 프로필의 평점·"따뜻한 모임 ⭐" 뱃지로 집계된다. */}
+            {!isMine && joining && isExpired && (
+              <MeetupReviewBox
+                meetupPostId={post.id}
+                hostNickname={post.authorNickname}
+                hostPhone={post.authorPhone ?? undefined}
+              />
+            )}
           </>
         )}
 
@@ -1889,6 +1904,92 @@ export function BoardDetailScreen() {
         </div>
       )}
     </main>
+  );
+}
+
+/** 모임 후기 박스 — 종료된 모임 참여자(방장 제외)가 별점(1~5)+한 줄 후기를 남긴다. */
+function MeetupReviewBox({
+  meetupPostId,
+  hostNickname,
+  hostPhone,
+}: {
+  meetupPostId: string;
+  hostNickname: string;
+  hostPhone?: string;
+}) {
+  const [reviewed, refresh] = useHasReviewed(meetupPostId);
+  const rating = useHostRating(hostNickname);
+  const [stars, setStars] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  if (reviewed) {
+    return (
+      <div className="mt-3 rounded-[12px] bg-holo-lilac-card-2 px-4 py-3 text-[13px] text-holo-ink-2">
+        <span className="font-semibold text-holo-purple-mid">후기를 남겼어요 🙌</span>
+        {rating.count > 0 && (
+          <span className="ml-1">
+            · 방장 평점 ⭐ {rating.avg.toFixed(1)} ({rating.count})
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  const submit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const ok = await addMeetupReview({
+        meetupPostId,
+        hostNickname,
+        hostPhone,
+        rating: stars,
+        comment,
+      });
+      if (ok) refresh();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-[12px] border border-holo-line bg-white px-4 py-3">
+      <p className="text-[13px] font-semibold text-holo-ink">이 모임 어떠셨어요?</p>
+      <p className="mt-0.5 text-[12px] text-holo-ink-3">
+        별점과 한 줄 후기가 방장 프로필에 쌓여요.
+      </p>
+      <div className="mt-2 flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-label={`${n}점`}
+            onClick={() => setStars(n)}
+            className="text-[24px] leading-none active:scale-95"
+          >
+            <span className={n <= stars ? "text-holo-crown" : "text-holo-line"}>★</span>
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          maxLength={60}
+          placeholder="한 줄 후기 (선택)"
+          className="h-10 flex-1 rounded-holo-pill border border-holo-line bg-holo-surface px-3.5 text-[13px] text-holo-ink placeholder:text-holo-ink-4 focus:outline-none focus:ring-2 focus:ring-holo-purple-mid"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          disabled={submitting}
+          className="h-10 shrink-0 rounded-holo-pill bg-holo-purple-mid px-4 text-[13px] font-semibold text-white disabled:bg-holo-ink-4"
+        >
+          등록
+        </button>
+      </div>
+    </div>
   );
 }
 

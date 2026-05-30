@@ -31,6 +31,8 @@ import { useMyroomItems } from "@/features/myroom/myroom-store";
 import { ME_PERSONA } from "@/features/home/home-faces";
 import { postsStore } from "@/features/board/posts-store";
 import { isMyPost } from "@/features/board/author-identity";
+import { isMeetupPost } from "@/features/board/meetup-utils";
+import { useHostRating } from "@/features/board/meetup-reviews-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 import { useActivityState } from "@/shared/stores/activity-store";
 import { supabase } from "@/shared/lib/supabaseClient";
@@ -156,6 +158,19 @@ export function ProfileDetailScreen() {
     return postsStore.getPosts().filter((p) => p.authorNickname === nickname)
       .length;
   }, [nickname, postsTick]);
+
+  // 주최한 모임 횟수 — 내가(또는 이 친구가) 작성한 글 중 '모임' 글 수(실데이터).
+  const hostedMeetups = useMemo(() => {
+    void postsTick;
+    void myProfile.nickname;
+    return postsStore
+      .getPosts()
+      .filter(
+        (p) => (isMe ? isMyPost(p) : p.authorNickname === nickname) && isMeetupPost(p),
+      ).length;
+  }, [isMe, nickname, postsTick, myProfile.nickname]);
+  // 모임 평점 — 이 사람이 주최한 모임들의 평균 별점·후기 수(오픈 후 실데이터로 채워짐).
+  const hostRating = useHostRating(nickname);
   // 댓글 카운트: Supabase comments 테이블에서 해당 닉네임의 댓글 수 조회
   const [otherCommentsCount, setOtherCommentsCount] = useState(0);
   useEffect(() => {
@@ -497,6 +512,22 @@ export function ProfileDetailScreen() {
             />
           )}
         </p>
+
+        {/* 모임 평판 — 주최한 모임 수 + 평균 별점(후기 있을 때). 모임을 한 번도 안 열었고
+            후기도 없으면 숨긴다(불필요한 '0회' 노이즈 방지). */}
+        {(hostedMeetups > 0 || hostRating.count > 0) && (
+          <div className="mt-2 flex items-center gap-1.5 rounded-holo-pill bg-holo-lilac-card-2 px-3 py-1 text-[12px] font-medium text-holo-ink-2">
+            <span>🤝 주최 모임 {hostedMeetups}회</span>
+            {hostRating.count > 0 && (
+              <>
+                <span className="text-holo-ink-4">·</span>
+                <span className="text-holo-purple-mid">
+                  ⭐ {hostRating.avg.toFixed(1)} ({hostRating.count})
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="mt-6 flex w-full items-center">
           <Stat
