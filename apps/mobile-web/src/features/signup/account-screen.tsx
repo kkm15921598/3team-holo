@@ -119,6 +119,8 @@ export function AccountScreen() {
     passwordConfirm.length > 0 && password !== passwordConfirm;
 
   const canSubmit = passwordValid && passwordMatch;
+  // 다음 버튼 비활성 상태에서 눌렀을 때 빠진 항목을 안내하는 인라인 문구(알림창 대신).
+  const [nextHint, setNextHint] = useState<string | null>(null);
 
   return (
     <SignupLayout step={3}>
@@ -248,10 +250,30 @@ export function AccountScreen() {
       </div>
 
       <div className="mt-auto pt-6">
+        {nextHint && !canSubmit && (
+          <p className="mb-2 text-center text-[13px] font-medium text-holo-error">
+            {nextHint}
+          </p>
+        )}
         <button
           type="button"
-          onClick={() => canSubmit && navigate("/signup/nickname")}
-          disabled={!canSubmit}
+          onClick={() => {
+            // 비활성이어도 클릭을 받아 빠진 항목을 안내(첫 미충족 항목 우선).
+            if (password.length === 0) {
+              setNextHint("비밀번호를 입력해 주세요.");
+              return;
+            }
+            if (!passwordValid) {
+              setNextHint("비밀번호 형식을 확인해 주세요.");
+              return;
+            }
+            if (!passwordMatch) {
+              setNextHint("비밀번호가 일치하지 않아요.");
+              return;
+            }
+            setNextHint(null);
+            navigate("/signup/nickname");
+          }}
           className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
             canSubmit ? "bg-holo-ink" : "bg-holo-ink-4"
           }`}

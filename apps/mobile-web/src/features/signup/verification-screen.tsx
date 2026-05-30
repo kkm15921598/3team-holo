@@ -112,7 +112,19 @@ export function VerificationScreen() {
     setVerifyError("");
 
     if (!codeSent) {
-      if (!baseFilled) return;
+      // 비활성 상태에서 눌렀을 때 빠진 항목을 인라인으로 안내(알림창 대신).
+      if (!baseFilled) {
+        setVerifyError(
+          !isNameValid
+            ? "이름을 입력해 주세요."
+            : !isIdValid
+              ? "주민등록번호를 정확히 입력해 주세요."
+              : !carrier
+                ? "통신사를 선택해 주세요."
+                : "휴대폰 번호를 정확히 입력해 주세요.",
+        );
+        return;
+      }
       // 이미 가입된 번호인지 먼저 확인 — 중복 가입을 가입 초반에 차단.
       // (이전엔 검사가 없어 마지막 review-screen insert 의 23505 alert 까지 가서야 막혔고,
       //  구현돼 있던 AlreadyJoinedModal 은 호출처가 없어 절대 안 뜨는 dead UI 였다.)
@@ -139,7 +151,10 @@ export function VerificationScreen() {
       return;
     }
 
-    if (code.length < 6) return;
+    if (code.length < 6) {
+      setVerifyError("인증번호 6자리를 입력해 주세요.");
+      return;
+    }
     // 코드 발송 후 이름/주민번호/통신사/번호를 바꿔도 통과되던 문제 — 발송 시점이 아닌
     // 제출 시점의 입력 유효성을 다시 확인한다(중복확인 우회·잘못된 번호 가입 방지).
     if (!baseFilled) {
@@ -360,10 +375,13 @@ export function VerificationScreen() {
       </div>
 
       <div className="mt-auto shrink-0 pt-6">
+        {/* 코드 발송 전 빠진 항목 안내 — 코드 발송 후엔 입력칸 아래(verifyError)에 표시됨. */}
+        {!codeSent && verifyError && (
+          <p className="mb-2 pl-2 text-[13px] text-holo-error">{verifyError}</p>
+        )}
         <button
           type="button"
           onClick={handleMain}
-          disabled={!canSubmit}
           className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
             canSubmit ? "bg-holo-ink" : "bg-holo-ink-4"
           }`}

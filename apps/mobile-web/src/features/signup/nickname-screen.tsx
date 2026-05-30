@@ -241,6 +241,8 @@ export function NicknameScreen() {
   const [checking, setChecking] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(() => generateSuggestions());
   const [showFacePicker, setShowFacePicker] = useState(false);
+  // 다음 버튼을 눌렀을 때 빠진 항목을 필드처럼 안내하는 문구(알림창 대신 인라인).
+  const [nextHint, setNextHint] = useState<string | null>(null);
 
   // 주민번호로 인식된 성별에 따라 노출 가능한 프로필 이미지 풀.
   // 성별을 못 잡은 케이스(모바일에서 주민번호 흐름이 어긋난 경우 등)에서도
@@ -433,10 +435,27 @@ export function NicknameScreen() {
 
       <div className="mt-auto flex flex-col items-center gap-3 pt-6">
         <p className="text-[12px] text-holo-ink-3">나중에 다시 수정할 수 있어요!</p>
+        {/* 비활성 상태에서 눌렀을 때 빠진 항목 안내 — 알림창 대신 버튼 위 인라인 문구. */}
+        {nextHint && !canNext && (
+          <p className="text-[13px] font-medium text-holo-error">{nextHint}</p>
+        )}
         <button
           type="button"
-          onClick={() => canNext && navigate("/signup/interest")}
-          disabled={!canNext}
+          onClick={() => {
+            // 비활성 상태여도 클릭은 받아 빠진 항목을 안내한다(첫 미충족 항목 우선).
+            if (!data.profileFace) {
+              setNextHint("프로필 사진을 선택해 주세요.");
+              return;
+            }
+            if (!checked) {
+              setNextHint(
+                isFormatValid ? "닉네임 중복확인을 해주세요." : "닉네임을 입력해 주세요.",
+              );
+              return;
+            }
+            setNextHint(null);
+            navigate("/signup/interest");
+          }}
           className={`h-[60px] w-full rounded-holo-pill text-[16px] font-semibold text-white transition active:scale-[0.99] ${
             canNext ? "bg-holo-ink" : "bg-holo-ink-4"
           }`}
