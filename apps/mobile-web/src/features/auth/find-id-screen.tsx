@@ -100,10 +100,17 @@ export function FindIdScreen() {
           </p>
 
           <div className="mt-7 flex flex-col items-center justify-center rounded-holo-input border border-holo-line-2 bg-holo-purple/5 px-5 py-10">
-            <p className="text-[13px] text-holo-ink-3">가입된 계정 닉네임</p>
+            <p className="text-[13px] text-holo-ink-3">가입된 아이디 (휴대폰 번호)</p>
             <p className="mt-3 text-[20px] font-bold text-holo-purple-mid">
-              {foundUser?.nickname}
+              {foundUser?.phone
+                ? foundUser.phone.replace(/^(\d{3})\d{4}(\d{4})$/, "$1-****-$2")
+                : ""}
             </p>
+            {foundUser?.nickname && (
+              <p className="mt-1 text-[13px] text-holo-ink-3">
+                닉네임 {foundUser.nickname}
+              </p>
+            )}
             <div className="mt-4 flex items-center gap-2 rounded-full bg-white/70 px-3 py-1">
               <CalendarIcon />
               <span className="text-[12px] text-holo-ink-3">

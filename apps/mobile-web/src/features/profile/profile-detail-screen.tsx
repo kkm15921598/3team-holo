@@ -231,8 +231,27 @@ export function ProfileDetailScreen() {
       ),
       confirmLabel: "요청 보내기",
       onConfirm: () => {
-        sendFriendRequest(nickname);
-        setConfirm(null);
+        // 결과를 받아 실패(정원 초과/자기 자신)면 안내 — 이전엔 무조건 닫아서
+        // 정원이 차도 아무 반응 없이 '왜 안 되지?' 하고 반복 클릭하게 됐다.
+        const result = sendFriendRequest(nickname);
+        if (result === "max-reached") {
+          setConfirm({
+            message: "친구 정원이 가득 찼어요.",
+            description: "최대 30명까지 추가할 수 있어요.",
+            confirmLabel: "확인",
+            singleAction: true,
+            onConfirm: () => setConfirm(null),
+          });
+        } else if (result === "self") {
+          setConfirm({
+            message: "자기 자신에게는 친구 요청을 보낼 수 없어요.",
+            confirmLabel: "확인",
+            singleAction: true,
+            onConfirm: () => setConfirm(null),
+          });
+        } else {
+          setConfirm(null);
+        }
       },
     });
 

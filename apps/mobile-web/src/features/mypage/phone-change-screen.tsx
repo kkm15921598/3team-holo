@@ -8,6 +8,11 @@ import { supabase } from "@/shared/lib/supabaseClient";
 
 const CARRIERS = ["SKT", "KT", "LG U+", "SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰"];
 
+/** 가짜 SMS 6자리 인증번호 (SMS 미연동 — 다른 인증 화면과 동일 패턴). */
+function generateOtp(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 export function PhoneChangeScreen() {
   const navigate = useNavigate();
   const [carrier, setCarrier] = useState<string | null>("SKT");
@@ -15,6 +20,8 @@ export function PhoneChangeScreen() {
   const [showSheet, setShowSheet] = useState(false);
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [showSmsToast, setShowSmsToast] = useState(false);
   const [verified, setVerified] = useState(false);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -29,12 +36,25 @@ export function PhoneChangeScreen() {
 
   const handleSendCode = () => {
     if (!phoneValid) return;
+    // 가짜 SMS 발송 — 6자리 코드 생성 후 토스트로 노출.
+    const otp = generateOtp();
+    setGeneratedCode(otp);
+    setShowSmsToast(true);
+    setTimeout(() => setShowSmsToast(false), 10000);
     setCodeSent(true);
     setCode("");
     setVerified(false);
+    setError("");
   };
   const handleVerify = () => {
-    if (codeValid) setVerified(true);
+    if (!codeValid) return;
+    // 발송된 코드와 일치할 때만 인증 — 이전엔 길이만 보고 아무 6자리나 통과했다.
+    if (code !== generatedCode) {
+      setError("인증번호가 올바르지 않습니다.");
+      return;
+    }
+    setError("");
+    setVerified(true);
   };
   const handleSubmit = async () => {
     if (!verified || submitting) return;
@@ -260,6 +280,28 @@ export function PhoneChangeScreen() {
           navigate(-1);
         }}
       />
+
+      {showSmsToast && (
+        <div
+          role="alert"
+          onClick={() => setShowSmsToast(false)}
+          className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+        >
+          <div className="flex items-start gap-3">
+            <span className="text-[20px]">🛠️</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12px] font-bold text-yellow-700">개발 테스트 모드</span>
+                <span className="shrink-0 text-[11px] text-yellow-600">SMS 미연동</span>
+              </div>
+              <p className="mt-0.5 text-[13px] leading-snug text-yellow-800">
+                테스트 인증번호:{" "}
+                <span className="font-bold text-yellow-900">{generatedCode}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

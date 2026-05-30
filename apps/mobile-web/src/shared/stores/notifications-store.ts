@@ -27,6 +27,18 @@ function isAllowed(
   return true;
 }
 
+/**
+ * 사용자 행동 '확인' 알림(가입 환영 / 보상 도착 / 글 등록 완료)용 게이트.
+ * 마케팅성 'event' 토글(기본값 OFF)에 묶으면 기본 상태에서 영영 안 뜨므로,
+ * 마스터 스위치 + 방해금지만 따른다(카테고리 토글 무관).
+ */
+function isAllowedConfirmation(): boolean {
+  const s = getNotificationSettings();
+  if (!s.master) return false;
+  if (s.quietEnabled && isInQuietHoursNow()) return false;
+  return true;
+}
+
 export type DynNotifKind =
   | "friend-received"
   | "friend-accepted"
@@ -190,7 +202,7 @@ export function pushFriendRequestReceived(
 
 /** 가입 환영 알림 — event 범주로 게이트 */
 export function pushWelcomeNotification(nickname: string): DynNotification {
-  if (!isAllowed("event")) return SUPPRESSED;
+  if (!isAllowedConfirmation()) return SUPPRESSED;
   const createdAt = Date.now();
   const item: DynNotification = {
     id: `dn-welcome-${createdAt}`,
@@ -212,7 +224,7 @@ export function pushRewardNotification(
   body: string,
   link: string,
 ): DynNotification {
-  if (!isAllowed("event")) return SUPPRESSED;
+  if (!isAllowedConfirmation()) return SUPPRESSED;
   const createdAt = Date.now();
   const item: DynNotification = {
     id: `dn-reward-${createdAt}`,
@@ -234,7 +246,7 @@ export function pushPostCreated(
   postId: string,
 ): DynNotification {
   // 글 등록 확인 알림은 event 범주로 게이트 (정보성/확인 메시지)
-  if (!isAllowed("event")) return SUPPRESSED;
+  if (!isAllowedConfirmation()) return SUPPRESSED;
   const createdAt = Date.now();
   const item: DynNotification = {
     id: `dn-post-${createdAt}`,

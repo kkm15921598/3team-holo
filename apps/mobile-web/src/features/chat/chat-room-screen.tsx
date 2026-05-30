@@ -313,6 +313,21 @@ export function ChatRoomScreen() {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+          // 방 화면을 보고 있는 동안 받은 메시지도 즉시 읽음 처리 — 안 하면 상대 화면의
+          // 안읽음 배지가 방을 나갔다 들어오기 전까지 안 사라진다.
+          if (
+            !isMine &&
+            userPhone &&
+            id &&
+            (typeof document === "undefined" || document.visibilityState === "visible")
+          ) {
+            supabase
+              .rpc("mark_room_messages_read", { p_room_id: id, p_user_phone: userPhone })
+              .then(({ error }) => {
+                if (error) console.warn("읽음 처리 실패:", error.message);
+              });
+            markRoomRead(id);
+          }
         },
       )
       .on(

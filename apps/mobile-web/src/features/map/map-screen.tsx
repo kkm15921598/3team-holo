@@ -573,7 +573,9 @@ function LocationLabel({ userPos }: { userPos: GeoPosition | null }) {
   const verification = useVerification();
   const geoLabel = useReverseGeocodedRegion(userPos);
   // 핸드폰에서도 라벨이 한 줄에 잘리지 않게 truncate + min-w-0 처리.
-  const label = verification.verifiedRegion || geoLabel;
+  // 위치 공유 OFF/신호 없음(userPos=null)이면 geo 라벨을 쓰지 않는다 — 역지오코딩 훅이
+  // 깜빡임 방지로 직전 라벨을 유지하는데, 그게 끈 위치의 동네명을 계속 노출하던 문제 방지.
+  const label = verification.verifiedRegion || (userPos ? geoLabel : "");
 
   return (
     <div className="mx-4 mt-3 flex items-center gap-1.5 px-1 text-[13px] text-holo-ink-2">
