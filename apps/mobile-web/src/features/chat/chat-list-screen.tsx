@@ -208,7 +208,7 @@ export function ChatListScreen() {
         <NewChatSheet
           existingRooms={allRooms}
           onClose={() => setShowNew(false)}
-          onStart1to1={async (friendId, friendNick) => {
+          onStart1to1={async (_friendId, friendNick) => {
             const existing = allRooms.find(
               (r) => !r.isGroup && r.name === friendNick,
             );
@@ -224,7 +224,11 @@ export function ChatListScreen() {
             const newId =
               myPhone && friendPhone
                 ? dmRoomIdFor(myPhone, friendPhone)
-                : `f${friendId}-${Date.now()}`;
+                : `dm-${Date.now()}`;
+            // ↑ 폴백도 반드시 'dm-' 접두여야 한다. 'f...' 형식이면 받는 쪽 전역 리스너의
+            //   isDmRoomId() 체크에 걸려 방이 자동 생성되지 않아, 상대가 보낸 메시지가
+            //   방에 안 붙고 알림만 뜨던 버그(사막여우 채팅 유실)의 원인이었다.
+            //   (profile-detail goToChat 의 폴백과 동일 형식으로 통일.)
             // 결정론적 ID 라 이미 만든 방이 있을 수 있음 — 중복 추가 방지
             const dup = allRooms.find((r) => r.id === newId);
             if (dup) {
