@@ -5,6 +5,10 @@ import { postsStore } from "@/features/board/posts-store";
 import { MapView } from "./post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
+import { useProfile } from "@/shared/hooks/use-profile";
+import { isMyNickname } from "@/shared/stores/profile-store";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { ME_PERSONA } from "@/features/home/home-faces";
 import {
   useGeolocation,
   distanceMeters,
@@ -180,6 +184,21 @@ export function MapScreen() {
   }, [expanded, modalRadius]);
 
   const userPos = useGeolocation();
+
+  // 카드 아바타: 내 글/멤버는 내가 올린 실제 프로필 사진을 보여준다(닉네임 기반 생성 아바타 X).
+  // 내 판별은 전화번호 우선(닉네임 변경 대비) + 과거 닉네임 포함(isMyNickname). 타인은 생성 아바타.
+  const myProfile = useProfile();
+  const myPhone = getCurrentAccount();
+  const myFace = myProfile.profileFace ?? ME_PERSONA.face;
+  const avatarForSeed = (
+    seed: string,
+    isAuthor: boolean,
+    authorPhone?: string | null,
+  ): string => {
+    if (isMyNickname(seed)) return myFace;
+    if (isAuthor && myPhone && authorPhone && authorPhone === myPhone) return myFace;
+    return getAvatarUrl(seed);
+  };
 
   // 미리보기/카드 영역은 1km 고정, 확장 모달은 사용자가 선택한 반경(5km/10km).
   const previewPosts = useMemo(
@@ -429,7 +448,7 @@ export function MapScreen() {
                     {visibleSeeds.map((seed, i) => (
                       <img
                         key={seed + i}
-                        src={getAvatarUrl(seed)}
+                        src={avatarForSeed(seed, i === 0 && seed === p.authorNickname, p.authorPhone)}
                         alt=""
                         aria-hidden
                         draggable={false}
