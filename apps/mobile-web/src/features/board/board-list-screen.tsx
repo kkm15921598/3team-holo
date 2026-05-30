@@ -18,11 +18,6 @@ import { ME_PERSONA } from "@/features/home/home-faces";
 import { getProfile } from "@/shared/stores/profile-store";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { useProfile } from "@/shared/hooks/use-profile";
-import {
-  getAuthorGender,
-  getAuthorAgeAtPost,
-  ageRangeForFilterLabel,
-} from "@/shared/lib/author-gender";
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { supabase } from "@/shared/lib/supabaseClient";
@@ -142,6 +137,37 @@ export function BoardListScreen() {
         }
         setServerCommentCounts(m);
       });
+  }, []);
+  // users 테이블의 실제 성별(닉네임→"M"|"F") — 성별 검색 필터를 닉네임 해시(가짜)가
+  // 아니라 본인인증으로 저장된 실데이터로 수행하기 위해 마운트 시 1회 로드.
+  // 한글 "남"/"여" 표기도 정규화한다.
+  const [genderByNick, setGenderByNick] = useState<Map<string, "M" | "F">>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("users")
+      .select("nickname, gender")
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const m = new Map<string, "M" | "F">();
+        for (const row of data as { nickname: unknown; gender: unknown }[]) {
+          const nick = typeof row.nickname === "string" ? row.nickname : "";
+          const raw = typeof row.gender === "string" ? row.gender : "";
+          const g: "M" | "F" | null =
+            raw === "F" || raw.includes("여")
+              ? "F"
+              : raw === "M" || raw.includes("남")
+                ? "M"
+                : null;
+          if (nick && g) m.set(nick, g);
+        }
+        setGenderByNick(m);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const getCommentCount = useMemo(() => {
     const counts = new Map<string, number>();
@@ -287,7 +313,12 @@ export function BoardListScreen() {
     }
     // 성별 필터 — 검색 화면에서 "남자"/"여자" 만 단일 선택된 경우 URL ?gender=M|F 로 전달됨
     if (genderParam === "M" || genderParam === "F") {
-      list = list.filter((p) => getAuthorGender(p.authorNickname) === genderParam);
+      list = list.filter((p) => {
+        // 실제 users.gender(닉네임→성별 맵)로 필터. 아직 로드 안 됐거나
+        // 매핑 없는 작성자는 임의 제외하지 않고 통과(가짜 성별 산출 금지).
+        const g = genderByNick.get(p.authorNickname);
+        return g ? g === genderParam : true;
+      });
     }
     // 게시판 유형 필터 (검색 화면 다중 선택) — 한 개 이상이면 카테고리 id 가 그 중 하나여야 통과
     if (boardFilterIds.length > 0) {
@@ -299,20 +330,12 @@ export function BoardListScreen() {
       const set = new Set(typeFilters);
       list = list.filter((p) => p.meetupType && set.has(p.meetupType));
     }
-    // 나이대 필터 — "10대"/"20대"/"30대"/"40대 이상" 다중 선택. 선택된 범위 중 하나에라도
-    // 작성자 나이(getAuthorAge 가 currentYear - birthYear 로 계산)가 들어가면 통과.
+    // 나이대 필터 — 작성자의 실제 나이(생년) 데이터가 저장되지 않아 신뢰 가능한 출처가 없다.
+    // 이전엔 닉네임 해시로 만든 가짜 나이로 걸러 잘못된 결과를 보여줬다. 실제 생년이 연동되기
+    // 전까지는 나이대 필터로 글을 숨기지 않는다(가짜 필터링 제거). UI(ageFilters)는 유지 —
+    // 추후 users 에 생년 저장 시 이 자리에서 실제 값으로 거르면 된다.
     if (ageFilters.length > 0) {
-      const ranges = ageFilters
-        .map(ageRangeForFilterLabel)
-        .filter((r): r is [number, number] => r !== null);
-      if (ranges.length > 0) {
-        list = list.filter((p) => {
-          // 작성 시점 나이 — 글이 한 번 쓰이면 작성자가 나이를 먹어도 버킷은 고정.
-          // (19살에 쓴 글은 작성자가 20세가 돼도 "10대 필터" 에 그대로 남는다)
-          const age = getAuthorAgeAtPost(p.authorNickname, p.timeAgo);
-          return ranges.some(([lo, hi]) => age >= lo && age <= hi);
-        });
-      }
+      // no-op: 실데이터 없음 → 나이로 숨기지 않음.
     }
     // 거리 필터 — 위치 있는 글에만 적용. 위치 없는 글(자유/추천)은 항상 통과.
     // GPS fix 가 아직 없으면 (userPos === null) 필터 건너뛰고 전체 노출.
@@ -354,6 +377,8 @@ export function BoardListScreen() {
     typeFilters,
     ageFilters,
     distanceFilters,
+    // users.gender 실데이터 로드가 끝나면 성별 필터 결과가 갱신되도록 deps 에 추가.
+    genderByNick,
     // 랭킹이 사용자의 실시간 좋아요·댓글에 즉각 반응하도록 deps 에 추가.
     // 조회수는 useViewCounts() 가 위쪽에서 호출돼 컴포넌트 자체가 매번 리렌더되므로 따로 deps 에 둘 필요 없음.
     likedSet,
