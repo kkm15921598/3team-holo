@@ -43,6 +43,52 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+// ─── 좋아요 목록에서 '숨김' (좋아요 자체는 유지) ──────────────────
+// 마이페이지 좋아요 목록의 '관리하기 → 삭제' 는 좋아요를 취소하지 않고 목록에서만
+// 제거해야 한다(사용자 요청). 좋아요(state)는 그대로 두고, 숨긴 id 를 별도 영속화한다.
+const HIDDEN_KEY = "holo:likes-hidden:v1";
+function loadHidden(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set<string>(parsed);
+    }
+  } catch {
+    // ignore
+  }
+  return new Set();
+}
+let hiddenState: Set<string> = loadHidden();
+const hiddenListeners = new Set<() => void>();
+function persistHidden() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hiddenState]));
+  } catch {
+    // ignore
+  }
+}
+/** 좋아요 목록에서만 숨김(좋아요는 유지). */
+export function hideFromLikesList(ids: string[]): void {
+  const next = new Set(hiddenState);
+  for (const id of ids) next.add(id);
+  hiddenState = next;
+  persistHidden();
+  hiddenListeners.forEach((l) => l());
+}
+export function useHiddenLikes(): Set<string> {
+  return useSyncExternalStore(
+    (cb) => {
+      hiddenListeners.add(cb);
+      return () => hiddenListeners.delete(cb);
+    },
+    () => hiddenState,
+    () => hiddenState,
+  );
+}
+
 export function isPostLiked(id: string): boolean {
   return state.has(id);
 }
@@ -55,6 +101,15 @@ export function togglePostLike(id: string): boolean {
   state = next;
   persist();
   emit();
+
+  // 다시 좋아요를 누르면 목록 '숨김'을 해제 — 좋아요 목록에 다시 보이도록.
+  if (!wasLiked && hiddenState.has(id)) {
+    const nh = new Set(hiddenState);
+    nh.delete(id);
+    hiddenState = nh;
+    persistHidden();
+    hiddenListeners.forEach((l) => l());
+  }
 
   // postsStore 좋아요 수 즉시 반영 (optimistic)
   postsStore.patchLikes(id, wasLiked ? -1 : 1);

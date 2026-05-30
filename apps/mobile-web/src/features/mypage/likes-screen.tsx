@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "./managed-list";
-import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
+import { hideFromLikesList, useHiddenLikes, useLikedSet } from "@/shared/stores/likes-store";
 
 export function LikesScreen() {
   const navigate = useNavigate();
   const [manage, setManage] = useState(false);
   const likedSet = useLikedSet();
+  const hiddenSet = useHiddenLikes();
 
   // 좋아요한 게시글 목록 — 최근에 누른 글이 맨 위로 오도록 정렬.
   // likedSet (Set) 의 iteration 순서는 곧 삽입 순서(= 좋아요한 시점 순서, 오래된 → 최근)이므로
@@ -20,19 +21,17 @@ export function LikesScreen() {
     // Array.from(set) 으로 삽입 순서 배열 후 reverse — set 자체엔 reverse 가 없음
     const orderedIds = Array.from(likedSet).reverse();
     for (const id of orderedIds) {
+      if (hiddenSet.has(id)) continue; // 목록에서 숨긴 항목 제외
       const p = postById.get(id);
       if (p) ordered.push(p);
     }
     return ordered;
-  }, [likedSet]);
+  }, [likedSet, hiddenSet]);
 
-  // "관리하기" → "삭제" 시 좋아요 해제. setPostLiked(로컬 Set 만 변경)이 아니라
-  // togglePostLike 로 위임해야 게시글 좋아요 수 차감 + Supabase post_likes 행 삭제 +
-  // posts.likes 서버 카운트 갱신까지 처리된다(이전엔 로컬만 빠져 새로고침 시 부활).
+  // "관리하기" → "삭제" 는 목록에서만 제거하고 좋아요는 취소하지 않는다(사용자 요청).
+  // (게시글의 하트/좋아요 수는 그대로 유지 — hideFromLikesList 로 목록 숨김만 영속화.)
   const handleDelete = (ids: string[]) => {
-    ids.forEach((id) => {
-      if (likedSet.has(id)) togglePostLike(id);
-    });
+    hideFromLikesList(ids);
   };
 
   return (
