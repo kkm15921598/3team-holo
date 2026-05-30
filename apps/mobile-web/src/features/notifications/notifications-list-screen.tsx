@@ -88,6 +88,8 @@ export function NotificationsListScreen() {
   const visible: Notification[] = useMemo(() => {
     if (!nSettings.master) return [];
     const items = dynItems
+      // 안내 문구("지난 30일간의 알림만 보여드려요")와 동작 일치 — 30일 지난 알림은 숨김.
+      .filter((n) => n.ageMs <= 30 * ONE_DAY_MS)
       .filter((n) => nSettings[TYPE_TO_SETTING[n.type]])
       .filter((n) => matchFilter(n.type, filter));
     items.sort((a, b) => a.ageMs - b.ageMs);

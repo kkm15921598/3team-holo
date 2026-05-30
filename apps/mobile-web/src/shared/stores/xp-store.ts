@@ -103,13 +103,15 @@ export const XP_CONFIG: Record<
   likeReceived: { xp: 2,  dailyLimit: 20, label: "게시글 좋아요 받기" },
 };
 
-/** my-level-screen 에서 "경험치 획득 방법" 목록으로 노출할 액션 — friend 제외. */
+/** my-level-screen 에서 "경험치 획득 방법" 목록으로 노출할 액션 — friend 제외.
+ *  likeReceived 도 제외: 단일 기기 환경상 '내 글이 좋아요 받음' 적립 트리거(awardXp)가
+ *  코드에 없어 실제로 적립되지 않으므로, 안내만 떠서 혼란을 주지 않도록 숨긴다.
+ *  (키/타입은 유지 — 추후 멀티유저 적립 구현 시 재노출 가능) */
 export const VISIBLE_XP_ACTIONS: XpAction[] = [
   "post",
   "comment",
   "join",
   "attendance",
-  "likeReceived",
 ];
 
 type XpState = {

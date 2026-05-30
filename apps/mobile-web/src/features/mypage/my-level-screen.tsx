@@ -27,7 +27,6 @@ const ACTIVITY_ORDER: XpAction[] = [
   "comment",
   "join",
   "attendance",
-  "likeReceived",
 ];
 
 export function MyLevelScreen() {
