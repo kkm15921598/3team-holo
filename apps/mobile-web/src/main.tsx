@@ -5,6 +5,7 @@ import { DeviceFrame } from "@/shared/components/device-frame";
 import { LevelUpCelebration } from "@/shared/components/level-up-celebration";
 import { TabLayout } from "@/shared/components/tab-layout";
 import { SignupProvider } from "@/shared/contexts/signup-context";
+import { ErrorBoundary } from "@/shared/components/error-boundary";
 
 // Screens
 import { SplashScreen } from "@/features/splash/splash-screen";
@@ -91,6 +92,7 @@ pruneNonMeetupRooms();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <ErrorBoundary>
     <BrowserRouter>
       <DeviceFrame>
         <Routes>
@@ -185,5 +187,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <LevelUpCelebration />
       </DeviceFrame>
     </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>,
 );
