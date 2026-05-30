@@ -730,10 +730,11 @@ function PostCard({
   const { capacity, baseJoined } = calcJoined(post);
   // baseJoined 는 participants 로 이미 본인을 포함하므로 joined 플래그로 +1 하지 않는다(이중 카운트 방지).
   const joinedCount = Math.min(capacity, baseJoined);
-  // 상태 배지(색/라벨)도 인원수와 같은 출처로 파생 — 정원이 차면 빨강 '모집완료'.
-  // (이전엔 저장값 post.status 를 써서 '5/5'인데 초록 '모집중'으로 상세화면과 어긋났다.)
+  // 상태 배지(색/라벨) — 정원이 차면 빨강 '모집완료'. 정원 기반을 1차 출처로 쓰되
+  // (옛 stale post.status 로 '5/5'인데 '모집중' 어긋남 방지), 방장이 수동 마감한
+  // post.status="모집완료" 도 함께 반영해 상세화면과 일치시킨다.
   const displayStatus: "모집중" | "모집완료" =
-    joinedCount >= capacity ? "모집완료" : "모집중";
+    joinedCount >= capacity || post.status === "모집완료" ? "모집완료" : "모집중";
   const shortLabel = CATEGORY_SHORT[post.category] ?? "";
 
   return (

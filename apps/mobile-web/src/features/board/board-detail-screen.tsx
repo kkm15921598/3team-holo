@@ -413,6 +413,8 @@ export function BoardDetailScreen() {
   // 더보기(⋮) 메뉴 액션 — 신고/차단 확인 다이얼로그 + 새로고침/URL공유 토스트
   const [showReportConfirm, setShowReportConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  // 방장(작성자)이 모집을 수동 마감할 때 띄우는 확인 모달.
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   /** 짧게 떴다 사라지는 안내 — chat-room 의 패턴 그대로. */
@@ -463,8 +465,10 @@ export function BoardDetailScreen() {
   // baseJoined(=participants.length)는 joinPost→patchParticipants 로 이미 본인을 포함한다.
   // 따라서 joining 플래그로 다시 +1 하면 본인이 이중 계산돼 인원이 2씩 부풀려진다(혼자인데 2/5).
   const joined = Math.min(capacity, baseJoined);
+  // 정원이 찼거나, 방장이 수동으로 모집을 마감(post.status="모집완료")하면 모집완료.
   const displayStatus: "모집중" | "모집완료" =
-    joined >= capacity ? "모집완료" : "모집중";
+    joined >= capacity || post.status === "모집완료" ? "모집완료" : "모집중";
+  const isClosed = displayStatus === "모집완료";
   // 실제 렌더링되는 댓글 + 대댓글 수 — post.comments(mock 카운트) 가 아니라
   // 화면에 보이는 항목과 일치시킨다.
   const totalComments = comments.reduce(
@@ -612,8 +616,8 @@ export function BoardDetailScreen() {
     }
     // 날짜가 지난(종료된) 모임은 신규 참여 불가. (버튼도 '모임 종료'로 비활성화되지만 안전 가드)
     if (isExpired) return;
-    // 모집 정원이 다 찼으면 안내
-    if (baseJoined >= capacity) {
+    // 정원 충족 또는 방장이 수동 마감(모집완료)했으면 신규 참여 불가 안내.
+    if (isClosed) {
       setShowFullAlert(true);
       return;
     }
@@ -647,6 +651,19 @@ export function BoardDetailScreen() {
     leaveRoomById(meetupRoomId(post.id));
     // 참여 상태가 풀렸으므로 "모임이 만들어졌어요!" 배너도 닫는다.
     setShowJoinBanner(false);
+  };
+
+  /**
+   * 방장(작성자)의 수동 모집 마감 — 정원이 안 차도 더 이상 참여를 받지 않도록 닫는다.
+   * post.status="모집완료" 저장 → postsStore.update 가 Supabase 반영 + 실시간 전파해
+   * 모든 사용자의 '함께하기' 버튼이 비활성(모집 완료)으로 바뀐다.
+   */
+  const confirmCloseRecruiting = () => {
+    setShowCloseConfirm(false);
+    if (post.status !== "모집완료") {
+      postsStore.update({ ...post, status: "모집완료" });
+    }
+    showToast("모집을 마감했어요");
   };
 
   const handleEdit = () => {
@@ -967,21 +984,44 @@ export function BoardDetailScreen() {
                 </span>
               </span>
               {isMine ? (
-                // 내가 작성한 모임은 호스트이므로 "함께하기" 버튼 대신 호스트 표시.
-                <span
-                  className="ml-auto flex items-center gap-1 rounded-full border border-[#7448DD] bg-[#F4EEFF] px-4 py-1 text-[14px] font-semibold text-[#7448DD]"
-                  aria-label="내가 만든 모임 (호스트)"
-                >
-                  <CheckMark color="#7448DD" />
-                  내 모임
-                </span>
-              ) : isExpired && !joining ? (
-                // 날짜가 지난 모임 — '모임 종료'로 비활성화(신규 참여 불가).
+                // 내가 작성한 모임(호스트) — 모집 상태에 따라 분기.
+                isClosed ? (
+                  // 이미 모집완료(정원 충족 또는 수동 마감) — 닫힌 상태 표시.
+                  <span
+                    className="ml-auto flex items-center gap-1 rounded-full border border-holo-line-2 bg-holo-surface-2 px-4 py-1 text-[14px] font-semibold text-holo-ink-4"
+                    aria-label="모집 완료된 내 모임"
+                  >
+                    <CheckMark color="#A8A8A8" />
+                    모집 완료
+                  </span>
+                ) : isExpired ? (
+                  // 일정이 지난 내 모임 — 종료 표시(마감 불필요).
+                  <span
+                    className="ml-auto flex items-center gap-1 rounded-full border border-holo-line-2 bg-holo-surface-2 px-4 py-1 text-[14px] font-semibold text-holo-ink-4"
+                    aria-label="종료된 내 모임"
+                  >
+                    모임 종료
+                  </span>
+                ) : (
+                  // 모집 중인 내 모임 — 방장이 직접 모집을 마감할 수 있는 버튼.
+                  <button
+                    type="button"
+                    aria-label="모집 마감하기"
+                    onClick={() => setShowCloseConfirm(true)}
+                    className="ml-auto flex items-center gap-1 rounded-full border border-[#7448DD] bg-[#F4EEFF] px-4 py-1 text-[14px] font-semibold text-[#7448DD] transition active:scale-95"
+                  >
+                    <CheckMark color="#7448DD" />
+                    모집 마감
+                  </button>
+                )
+              ) : (isExpired || isClosed) && !joining ? (
+                // 날짜가 지났거나(종료) 모집이 마감된(완료) 모임 — 신규 참여 불가 표시.
+                // 단, 이미 참여 중(joining)이면 아래 버튼으로 '모임 참여중'/취소가 가능해야 한다.
                 <span
                   className="ml-auto flex items-center gap-1 rounded-full border border-holo-line-2 bg-holo-surface-2 px-4 py-1 text-[14px] font-semibold text-holo-ink-4"
-                  aria-label="종료된 모임"
+                  aria-label={isExpired ? "종료된 모임" : "모집 완료된 모임"}
                 >
-                  모임 종료
+                  {isExpired ? "모임 종료" : "모집 완료"}
                 </span>
               ) : (
                 <button
@@ -1667,6 +1707,23 @@ export function BoardDetailScreen() {
         message="모임에 참여하지 않았습니다."
         singleAction
         onConfirm={() => setShowNotJoinedAlert(false)}
+      />
+
+      {/* 모집 마감 확인 — 방장이 "모집 마감" 클릭 시 */}
+      <ConfirmModal
+        open={showCloseConfirm}
+        message="모집을 마감할까요?"
+        description={
+          <span>
+            마감하면 더 이상 새로운 참여를 받지 않아요.
+            <br />
+            이미 참여한 멤버와 채팅방은 그대로 유지돼요.
+          </span>
+        }
+        confirmLabel="모집 마감"
+        cancelLabel="닫기"
+        onCancel={() => setShowCloseConfirm(false)}
+        onConfirm={confirmCloseRecruiting}
       />
 
       {/* 참여 확인 — "함께하기" 클릭 시 (미참여 상태) */}
