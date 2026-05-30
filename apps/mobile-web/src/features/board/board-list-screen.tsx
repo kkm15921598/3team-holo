@@ -319,6 +319,10 @@ export function BoardListScreen() {
     // 사용자가 검색에서 고른 거리 범위(1km 이하 / 1km~5km / 5km~10km)를 실제로 반영한다.
     // (이전엔 선택을 무시하고 항상 10km 고정이었음)
     if (userPos) {
+      // 내가 쓴 글은 거리와 무관하게 항상 보이게 한다. (내 글 위치가 현재 GPS 에서 10km
+      //  밖이면 — 다른 동네에서 올렸거나 GPS 가 이동한 경우 — 리스트에서 사라지던 문제.
+      //  채팅방은 남는데 게시판엔 안 보이던 증상의 원인.)
+      const myNick = getProfile().nickname;
       const DIST_RANGES: Record<string, [number, number]> = {
         "1km 이하": [0, 1000],
         "1km~5km": [1000, 5000],
@@ -328,6 +332,7 @@ export function BoardListScreen() {
         .map((label) => DIST_RANGES[label])
         .filter(Boolean) as [number, number][];
       list = list.filter((p) => {
+        if (myNick && p.authorNickname === myNick) return true; // 내 글은 항상 통과
         if (!p.location) return true; // 위치 없는 글은 항상 통과
         const d = distanceMeters(userPos, p.location);
         // 선택된 범위가 있으면 그중 하나라도 들어야 통과, 없으면 기본 반경(10km) 이내.
