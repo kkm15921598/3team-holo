@@ -106,6 +106,22 @@ function buildMembersFor(room: ChatRoom): Member[] {
   return [me, ...others];
 }
 
+/** 실시간 퇴장 투표 제한시간(초) — 사장님 확정값. */
+const VOTE_DURATION_SEC = 30;
+/**
+ * 모임 해산 시 messages 테이블에 영구 저장하는 시스템 메시지.
+ * 재입장/타기기에서 이 문구를 가진 메시지가 있으면 "해산됨"으로 복원해 채팅을 잠근다.
+ * (chat_rooms 에 disbanded 컬럼을 추가하지 않고 SQL 없이 영속화하는 방식.)
+ */
+const DISBAND_SYSTEM_TEXT =
+  "🚫 방장이 강퇴되어 모임이 해산되었어요. 더 이상 대화할 수 없어요.";
+
+/** 투표 브로드캐스트 페이로드 — room-${id} 채널의 'vote' 이벤트로 주고받는다. */
+type VotePayload =
+  | { type: "start"; voteId: string; target: string; initiator: string; eligible: number }
+  | { type: "cast"; voteId: string; voter: string; choice: "yes" | "no" }
+  | { type: "result"; voteId: string; target: string; passed: boolean; disband: boolean };
+
 /**
  * Supabase messages 행 → ChatMessage 의 부가 필드(type/파일/위치/답장/전달) 매핑.
  * 2026-05-30 마이그레이션으로 추가된 컬럼(msg_type, file_name/size, lat·lng, place_name,
@@ -233,10 +249,39 @@ export function ChatRoomScreen() {
   const [showMeeting, setShowMeeting] = useState(false);
   /** 퇴장 투표 진행 상태 — 비어있지 않으면 모달 표시 */
   const [voteKick, setVoteKick] = useState<{
+    voteId?: string;
     target: string;
     /** "voting" → 진행중, "passed" → 만장일치, "rejected" → 부결 */
     phase: "selecting" | "voting" | "passed" | "rejected";
+    /** 내가 이 투표를 시작했는지(집계 권한자) */
+    amInitiator?: boolean;
+    /** 내가 투표 대상인지(투표 불가, 결과만 본다) */
+    amTarget?: boolean;
+    /** 내가 던진 표 — undefined 면 아직 미투표(찬성/반대 버튼 노출) */
+    myVote?: "yes" | "no";
+    /** 모달에 표시할 남은 시간(초) */
+    remainSec?: number;
   } | null>(null);
+  /** 모임 해산됨 — 입력 잠금. messages 의 해산 시스템 메시지로 복원된다. */
+  const [disbanded, setDisbanded] = useState(false);
+  /** room-${id} 실시간 채널 핸들 — 투표 브로드캐스트 송신용. */
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  /**
+   * 진행 중 투표 집계 — 시작자(권한자)만 채운다. 찬성/반대 닉네임 set 으로 중복표를 막고,
+   * 반대 1표면 즉시 부결, 찬성이 eligible 전원이면 즉시 가결, 아니면 타이머 만료 시 확정.
+   */
+  const voteTallyRef = useRef<{
+    voteId: string;
+    target: string;
+    yes: Set<string>;
+    no: Set<string>;
+    eligible: number;
+    timer: number | null;
+  } | null>(null);
+  /** 최신 멤버/방 정보 — [id] 의존 실시간 effect 안에서 stale 없이 읽기 위한 ref. */
+  const membersRef = useRef<Member[]>([]);
+  /** 최신 투표 브로드캐스트 핸들러 — 채널 effect 가 stale 클로저를 쓰지 않도록 ref 경유. */
+  const voteHandlerRef = useRef<(p: VotePayload) => void>(() => {});
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [alert, setAlert] = useState<{ title: string; description?: string; onConfirm?: () => void; danger?: boolean } | null>(null);
@@ -341,6 +386,8 @@ export function ChatRoomScreen() {
       const combined = [...sysMsg, ...remote];
       setMessages(combined);
       persistWithoutUnreadDivider(id, combined);
+      // 해산 시스템 메시지가 있으면 채팅 잠금 상태로 복원(재입장/타기기).
+      setDisbanded((rows ?? []).some((r: any) => r.content === DISBAND_SYSTEM_TEXT));
     };
 
     loadFromSupabase();
@@ -397,6 +444,8 @@ export function ChatRoomScreen() {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+          // 다른 멤버 기기에서 해산이 확정돼 시스템 메시지가 들어오면 이쪽도 채팅 잠금.
+          if (row.content === DISBAND_SYSTEM_TEXT) setDisbanded(true);
           // 방 화면을 보고 있는 동안 받은 메시지도 즉시 읽음 처리 — 안 하면 상대 화면의
           // 안읽음 배지가 방을 나갔다 들어오기 전까지 안 사라진다.
           if (
@@ -437,9 +486,16 @@ export function ChatRoomScreen() {
           );
         },
       )
+      // 실시간 퇴장 투표 — 접속 중인 멤버들끼리 찬/반을 주고받는다(브로드캐스트).
+      .on("broadcast", { event: "vote" }, ({ payload }) => {
+        voteHandlerRef.current(payload as VotePayload);
+      })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [id]);
@@ -521,6 +577,7 @@ export function ChatRoomScreen() {
   }, [messages]);
 
   const send = () => {
+    if (disbanded) return; // 해산된 모임은 전송 불가
     const v = text.trim();
     if (!v) return;
     const now = new Date();
@@ -734,6 +791,209 @@ export function ChatRoomScreen() {
   const displayMemberCount = members.length;
   // 읽음수 계산(로드/실시간 effect)이 참조할 최신 멤버수 동기화.
   latestMemberCountRef.current = displayMemberCount;
+  // 실시간 effect 의 stale 클로저 방지용으로 최신 멤버 리스트를 ref 에 보관.
+  membersRef.current = members;
+
+  // ── 실시간 만장일치 퇴장 투표 ──────────────────────────────
+  // 방장(=게시글 작성자) 닉네임. 대상이 방장이면 가결 시 "해산"으로 처리한다.
+  const hostNickname = useMemo(() => {
+    if (!room) return undefined;
+    if (room.hostNickname) return room.hostNickname;
+    if (postIdFromRoom) {
+      return postsStore.getPosts().find((p) => p.id === postIdFromRoom)?.authorNickname;
+    }
+    return undefined;
+  }, [room, postIdFromRoom, postsTick]);
+
+  /** room-${id} 채널로 투표 이벤트 송신(best-effort). */
+  const broadcastVote = (payload: VotePayload) => {
+    channelRef.current?.send({ type: "broadcast", event: "vote", payload });
+  };
+
+  /** 강퇴 적용 — 모든 기기에서 동일 실행(멤버 리스트/방 인원 정리). 로컬 store 라 기기별. */
+  const applyKick = (nickname: string) => {
+    if (postIdFromRoom) addKickedMember(postIdFromRoom, nickname);
+    if (room) {
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.id === room.id
+            ? {
+                ...r,
+                memberCount: Math.max(1, r.memberCount - 1),
+                memberNames: (r.memberNames ?? []).filter((n) => n !== nickname),
+              }
+            : r,
+        ),
+      );
+    }
+  };
+
+  /** 모임 모집 마감(②) — 게시글 status 를 모집완료로. */
+  const closeRecruiting = () => {
+    if (!postIdFromRoom) return;
+    const post = postsStore.getPosts().find((p) => p.id === postIdFromRoom);
+    if (post && post.status !== "모집완료") {
+      postsStore.update({ ...post, status: "모집완료" });
+    }
+  };
+
+  /**
+   * 투표 결과 적용 — 가결 시 강퇴, 대상이 방장이면 해산까지.
+   * authoritative=true(시작자)일 때만 시스템 메시지/모집마감을 DB 에 1회 영속화한다
+   * (다른 기기는 messages 실시간 INSERT 로 동일 메시지를 받아 중복을 피한다).
+   */
+  const applyVoteOutcome = (
+    voteId: string,
+    target: string,
+    passed: boolean,
+    disband: boolean,
+    authoritative: boolean,
+  ) => {
+    setVoteKick((prev) =>
+      prev ? { ...prev, phase: passed ? "passed" : "rejected" } : prev,
+    );
+    if (!passed) return;
+    applyKick(target);
+    if (disband) {
+      setDisbanded(true);
+      setAlert({
+        title: "모임 해산",
+        description: `방장(${target})이 강퇴되어 모임이 해산되었어요.`,
+        danger: true,
+      });
+    }
+    if (authoritative && id) {
+      const userPhone = getCurrentAccount();
+      const sysText = disband
+        ? DISBAND_SYSTEM_TEXT
+        : `${target}님이 퇴장 투표 결과로 채팅방에서 나갔습니다`;
+      const sysMsg: ChatMessage = {
+        id: `${disband ? "disband" : "kick"}-${voteId}`,
+        nickname: "",
+        content: sysText,
+        time: "",
+        mine: false,
+        type: "system",
+      };
+      // 시스템 메시지는 모두에게 보여야 하므로 messages 에 저장(실시간으로 전파).
+      if (userPhone) saveMessageRow(id, userPhone, sysMsg);
+      else setMessages((prev) => [...prev, sysMsg]);
+      if (disband) closeRecruiting();
+    }
+  };
+
+  /** 시작자(권한자) 집계 확정 → 결과 브로드캐스트 + 적용. */
+  const resolveVote = (voteId: string) => {
+    const t = voteTallyRef.current;
+    if (!t || t.voteId !== voteId) return;
+    if (t.timer) window.clearTimeout(t.timer);
+    voteTallyRef.current = null;
+    // 만장일치 = 반대 0표 + 찬성 1표 이상(미투표는 기권). 반대 1표라도 있으면 부결.
+    const passed = t.no.size === 0 && t.yes.size >= 1;
+    const disband = passed && !!hostNickname && t.target === hostNickname;
+    broadcastVote({ type: "result", voteId, target: t.target, passed, disband });
+    applyVoteOutcome(voteId, t.target, passed, disband, true);
+  };
+
+  /** 시작자(권한자) 표 기록 — 즉시 확정 조건 검사. */
+  const recordVote = (voteId: string, voter: string, choice: "yes" | "no") => {
+    const t = voteTallyRef.current;
+    if (!t || t.voteId !== voteId) return;
+    if (choice === "yes") t.yes.add(voter);
+    else t.no.add(voter);
+    if (t.no.size > 0) {
+      resolveVote(voteId); // 반대 1표 → 즉시 부결
+    } else if (t.yes.size >= t.eligible) {
+      resolveVote(voteId); // 전원 찬성 → 즉시 가결
+    }
+  };
+
+  /** 내가 시작자로서 투표 개시(대상 선택 시 호출). */
+  const startVote = (target: string) => {
+    if (!room) return;
+    const myNick = getProfile().nickname;
+    const voteId = `v-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const eligible = membersRef.current.filter(
+      (m) => m.nickname !== target && !m.isMe,
+    ).length + 1; // 나(시작자) 포함
+    voteTallyRef.current = {
+      voteId,
+      target,
+      yes: new Set(),
+      no: new Set(),
+      eligible,
+      timer: window.setTimeout(() => resolveVote(voteId), VOTE_DURATION_SEC * 1000),
+    };
+    setVoteKick({
+      voteId,
+      target,
+      phase: "voting",
+      amInitiator: true,
+      myVote: "yes",
+      remainSec: VOTE_DURATION_SEC,
+    });
+    broadcastVote({ type: "start", voteId, target, initiator: myNick, eligible });
+    recordVote(voteId, myNick, "yes"); // 시작자는 자동 찬성
+  };
+
+  /** 투표 대상이 아닌 멤버가 찬성/반대 클릭. */
+  const castVote = (choice: "yes" | "no") => {
+    const vk = voteKick;
+    if (!vk?.voteId || vk.myVote) return;
+    const myNick = getProfile().nickname;
+    broadcastVote({ type: "cast", voteId: vk.voteId, voter: myNick, choice });
+    setVoteKick((prev) => (prev ? { ...prev, myVote: choice } : prev));
+  };
+
+  // 들어오는 투표 브로드캐스트 처리 — 최신 클로저를 ref 로 노출(채널 effect 가 호출).
+  voteHandlerRef.current = (payload: VotePayload) => {
+    const myNick = getProfile().nickname;
+    if (payload.type === "start") {
+      if (payload.initiator === myNick) return; // 내가 시작 → 로컬에서 이미 처리
+      setVoteKick({
+        voteId: payload.voteId,
+        target: payload.target,
+        phase: "voting",
+        amTarget: payload.target === myNick,
+        remainSec: VOTE_DURATION_SEC,
+      });
+    } else if (payload.type === "cast") {
+      recordVote(payload.voteId, payload.voter, payload.choice); // 권한자만 실제 반영
+    } else if (payload.type === "result") {
+      applyVoteOutcome(
+        payload.voteId,
+        payload.target,
+        payload.passed,
+        payload.disband,
+        false,
+      );
+    }
+  };
+
+  // 모달 남은시간 카운트다운(표시용). voting 단계 동안만 1초씩 감소.
+  useEffect(() => {
+    if (voteKick?.phase !== "voting") return;
+    const iv = window.setInterval(() => {
+      setVoteKick((prev) => {
+        if (!prev || prev.phase !== "voting") return prev;
+        return { ...prev, remainSec: Math.max(0, (prev.remainSec ?? VOTE_DURATION_SEC) - 1) };
+      });
+    }, 1000);
+    return () => window.clearInterval(iv);
+  }, [voteKick?.phase, voteKick?.voteId]);
+
+  // 투표자 안전장치 — 시작자가 이탈해 result 가 안 오면 제한시간+6초 후 모달 자동 종료.
+  useEffect(() => {
+    if (voteKick?.phase !== "voting" || voteKick.amInitiator) return;
+    const t = window.setTimeout(
+      () =>
+        setVoteKick((prev) =>
+          prev && prev.phase === "voting" ? { ...prev, phase: "rejected" } : prev,
+        ),
+      (VOTE_DURATION_SEC + 6) * 1000,
+    );
+    return () => window.clearTimeout(t);
+  }, [voteKick?.phase, voteKick?.voteId, voteKick?.amInitiator]);
 
   const nowTime = () => {
     const now = new Date();
@@ -1106,8 +1366,14 @@ export function ChatRoomScreen() {
 
       {/* 입력바: article 바로 아래 flex 흐름. main의 px-4를 상쇄해 전폭 표시 */}
       <div className="-mx-4 shrink-0 border-t border-holo-line-3 bg-white ">
+        {/* 해산된 모임 안내 — 입력 비활성화 */}
+        {disbanded && (
+          <div className="bg-holo-surface-2 px-4 py-2 text-center text-[12px] text-holo-ink-3">
+            🚫 해산된 모임이에요. 더 이상 메시지를 보낼 수 없어요.
+          </div>
+        )}
         {/* 답장 미리보기 */}
-        {reply && (
+        {reply && !disbanded && (
           <div className="flex items-start gap-2 bg-holo-surface-2 px-3 py-2">
             <div className="w-1 self-stretch rounded bg-holo-purple-mid" />
             <div className="flex-1 overflow-hidden">
@@ -1132,11 +1398,12 @@ export function ChatRoomScreen() {
           <button
             type="button"
             aria-label="첨부"
+            disabled={disbanded}
             onClick={() => {
               setShowAttach((v) => !v);
               setShowEmoji(false);
             }}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full disabled:opacity-40 ${
               showAttach ? "bg-holo-purple-mid text-white" : "text-holo-ink-3"
             }`}
           >
@@ -1147,17 +1414,19 @@ export function ChatRoomScreen() {
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="메시지를 입력하세요"
-              className="h-[34px] w-0 min-w-0 flex-1 bg-transparent px-2 text-[16px] outline-none placeholder:text-[13px] placeholder:text-holo-ink-3"
+              disabled={disbanded}
+              placeholder={disbanded ? "해산된 모임이에요" : "메시지를 입력하세요"}
+              className="h-[34px] w-0 min-w-0 flex-1 bg-transparent px-2 text-[16px] outline-none placeholder:text-[13px] placeholder:text-holo-ink-3 disabled:opacity-50"
             />
             <button
               type="button"
               aria-label="이모지"
+              disabled={disbanded}
               onClick={() => {
                 setShowEmoji((v) => !v);
                 setShowAttach(false);
               }}
-              className="text-[16px]"
+              className="text-[16px] disabled:opacity-40"
             >
               😊
             </button>
@@ -1165,9 +1434,9 @@ export function ChatRoomScreen() {
           <button
             type="submit"
             aria-label="전송"
-            disabled={!text.trim()}
+            disabled={disbanded || !text.trim()}
             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-              text.trim()
+              text.trim() && !disbanded
                 ? "bg-holo-gradient text-white"
                 : "bg-holo-line-3 text-white"
             }`}
@@ -1312,49 +1581,16 @@ export function ChatRoomScreen() {
         <VoteKickModal
           phase={voteKick.phase}
           target={voteKick.target}
-          // 본인 제외한 멤버만 후보
+          // 본인 제외한 멤버만 후보 (방장 포함 — 방장 강퇴 가결 시 해산)
           candidates={members.filter((m) => !m.isMe).map((m) => m.nickname)}
-          onSelectTarget={(nickname) => {
-            setVoteKick({ target: nickname, phase: "voting" });
-            // 강퇴 투표 — 3초 뒤 통과 처리 (방장 단독 결정)
-            window.setTimeout(() => {
-              const passed = true;
-              setVoteKick({
-                target: nickname,
-                phase: passed ? "passed" : "rejected",
-              });
-              // 통과 시 실제 강퇴 처리
-              if (passed && postIdFromRoom) {
-                addKickedMember(postIdFromRoom, nickname);
-                // 채팅방 자체에서도 memberNames 갱신
-                setRooms((prev) =>
-                  prev.map((r) =>
-                    r.id === room.id
-                      ? {
-                          ...r,
-                          memberCount: Math.max(1, r.memberCount - 1),
-                          memberNames: (r.memberNames ?? []).filter(
-                            (n) => n !== nickname,
-                          ),
-                        }
-                      : r,
-                  ),
-                );
-                // 시스템 메시지로 안내
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: `kick-${Date.now()}`,
-                    nickname: "",
-                    content: `${nickname}님이 퇴장 투표 결과로 채팅방에서 나갔습니다`,
-                    time: "",
-                    mine: false,
-                    type: "system",
-                  },
-                ]);
-              }
-            }, 3000);
-          }}
+          amTarget={voteKick.amTarget}
+          amInitiator={voteKick.amInitiator}
+          myVote={voteKick.myVote}
+          remainSec={voteKick.remainSec}
+          hostNickname={hostNickname}
+          // 대상 선택 → 실시간 만장일치 투표 시작(브로드캐스트).
+          onSelectTarget={(nickname) => startVote(nickname)}
+          onCast={castVote}
           onClose={() => setVoteKick(null)}
         />
       )}
@@ -2554,15 +2790,29 @@ function VoteKickModal({
   phase,
   target,
   candidates,
+  amTarget,
+  amInitiator,
+  myVote,
+  remainSec,
+  hostNickname,
   onSelectTarget,
+  onCast,
   onClose,
 }: {
   phase: "selecting" | "voting" | "passed" | "rejected";
   target: string;
   candidates: string[];
+  amTarget?: boolean;
+  amInitiator?: boolean;
+  myVote?: "yes" | "no";
+  remainSec?: number;
+  hostNickname?: string;
   onSelectTarget: (nickname: string) => void;
+  onCast?: (choice: "yes" | "no") => void;
   onClose: () => void;
 }) {
+  // 대상이 방장이면 가결 시 모임이 해산된다 — 안내 문구 분기.
+  const targetIsHost = !!hostNickname && target === hostNickname;
   return (
     <div
       className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4"
@@ -2588,6 +2838,8 @@ function VoteKickModal({
           <>
             <p className="mt-3 text-[12px] text-holo-ink-3">
               퇴장 투표를 시작할 멤버를 선택해 주세요. 만장일치 찬성 시 채팅방에서 퇴장돼요.
+              <br />
+              방장을 선택해 가결되면 모임이 해산됩니다.
             </p>
             {candidates.length === 0 ? (
               <p className="my-6 text-center text-[13px] text-holo-ink-3">
@@ -2623,19 +2875,58 @@ function VoteKickModal({
 
         {/* 2) 투표 진행 중 */}
         {phase === "voting" && (
-          <div className="flex flex-col items-center gap-3 py-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-holo-lilac-card-2">
-              <span className="text-[28px]">🗳️</span>
+          <div className="flex flex-col items-center gap-3 py-5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-holo-lilac-card-2">
+              <span className="text-[26px]">🗳️</span>
             </div>
-            <p className="text-[15px] font-semibold text-holo-ink">
-              <strong>{target}</strong>님 퇴장 투표 진행 중
+            <p className="text-center text-[15px] font-semibold text-holo-ink">
+              <strong>{target}</strong>님 {targetIsHost ? "강퇴(해산) " : ""}퇴장 투표
             </p>
-            <p className="text-center text-[12px] text-holo-ink-3">
-              다른 멤버들이 투표하고 있어요.
-              <br />
-              잠시만 기다려주세요…
+            {/* 남은 시간 */}
+            <p className="text-[12px] text-holo-ink-3">
+              남은 시간 <strong className="text-holo-purple-mid">{remainSec ?? VOTE_DURATION_SEC}초</strong>
             </p>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-holo-line-3">
+
+            {amTarget ? (
+              // 내가 대상 — 투표 불가, 결과만 대기
+              <p className="text-center text-[12px] text-holo-ink-3">
+                나에 대한 퇴장 투표가 진행 중이에요.
+                <br />
+                결과를 기다리는 중…
+              </p>
+            ) : myVote || amInitiator ? (
+              // 이미 투표함(또는 시작자=자동 찬성) — 집계 대기
+              <p className="text-center text-[12px] text-holo-ink-3">
+                {myVote === "no" ? "반대" : "찬성"}했어요. 다른 멤버의 투표를 집계하는 중…
+              </p>
+            ) : (
+              // 아직 미투표 — 찬성/반대 선택
+              <>
+                <p className="text-center text-[12px] text-holo-ink-3">
+                  {targetIsHost
+                    ? "찬성하면 방장이 강퇴되고 모임이 해산돼요."
+                    : "만장일치 찬성 시 퇴장돼요. 한 명이라도 반대하면 부결."}
+                </p>
+                <div className="mt-1 flex w-full gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onCast?.("no")}
+                    className="h-11 flex-1 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink"
+                  >
+                    반대
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onCast?.("yes")}
+                    className="h-11 flex-1 rounded-holo-pill bg-holo-error text-[14px] font-semibold text-white"
+                  >
+                    찬성
+                  </button>
+                </div>
+              </>
+            )}
+
+            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-holo-line-3">
               <div className="h-full animate-pulse rounded-full bg-holo-purple-mid" />
             </div>
           </div>
@@ -2644,14 +2935,24 @@ function VoteKickModal({
         {/* 3) 만장일치 통과 */}
         {phase === "passed" && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <span className="text-[40px]">✅</span>
+            <span className="text-[40px]">{targetIsHost ? "📴" : "✅"}</span>
             <p className="text-[15px] font-semibold text-holo-ink">
-              만장일치 찬성!
+              {targetIsHost ? "모임 해산" : "만장일치 찬성!"}
             </p>
             <p className="text-[13px] text-holo-ink-3">
-              <strong>{target}</strong>님이 채팅방에서 퇴장되었어요.
-              <br />
-              모집 인원도 1명 줄어듭니다.
+              {targetIsHost ? (
+                <>
+                  방장 <strong>{target}</strong>님이 강퇴되어
+                  <br />
+                  모임이 해산되었어요. 채팅이 종료됩니다.
+                </>
+              ) : (
+                <>
+                  <strong>{target}</strong>님이 채팅방에서 퇴장되었어요.
+                  <br />
+                  모집 인원도 1명 줄어듭니다.
+                </>
+              )}
             </p>
             <button
               type="button"
