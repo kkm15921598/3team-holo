@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ChatRoom } from "@/shared/mock/data";
 import { clearMessagesForRoom } from "./messages-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
-import { pushChatMessage } from "@/shared/stores/notifications-store";
 import { isDmRoomId, getOtherPhoneFromDmId } from "./dm-utils";
 import { postsStore } from "@/features/board/posts-store";
 import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
@@ -107,6 +106,20 @@ export function getRoom(id: string | undefined): ChatRoom | undefined {
 
 export function markRoomRead(id: string) {
   setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, unread: 0 } : r)));
+}
+
+/** 모든 방의 안 읽은 메시지 총합 (하단 네비 채팅 배지용, 비-React). */
+export function getTotalUnread(): number {
+  return rooms.reduce((sum, r) => sum + (r.unread ?? 0), 0);
+}
+
+/** 하단 탭바 채팅 배지용 — 총 안읽음 수를 구독해 실시간 갱신. */
+export function useTotalUnread(): number {
+  const subscribe = (cb: () => void) => {
+    listeners.add(cb);
+    return () => listeners.delete(cb);
+  };
+  return useSyncExternalStore(subscribe, getTotalUnread, getTotalUnread);
 }
 
 export function togglePinned(id: string) {
@@ -520,16 +533,9 @@ function initChatNotificationListener() {
         const currentPath = window.location.pathname;
         if (currentPath === `/chat/${roomId}`) return;
 
-        // 채팅 알림 발행 — 단, 해당 방을 뮤트(알림 끄기)했으면 발행하지 않는다.
-        // (이전엔 muted 가 UI(아이콘/토스트)에만 쓰이고 실제 알림 게이트엔 빠져 있었다.)
-        if (!room.muted) {
-          pushChatMessage(
-            (row.sender_nickname as string) ?? "알 수 없음",
-            room.name,
-            roomId,
-            (row.content as string) ?? "",
-          );
-        }
+        // 채팅 메시지는 더 이상 알림창(notification panel)에 매번 쌓지 않는다 —
+        // 카카오톡처럼 하단 네비 '채팅' 탭의 안읽음 배지(useTotalUnread)로만 표기한다.
+        // (알림창엔 채팅방 개시/모임 해산 같은 '이벤트'만 남긴다.) 아래 unread 카운트가 배지 소스.
 
         // 채팅 목록 unread 카운트 +1 (뮤트여도 안 읽음 표시는 유지)
         setRooms((prev) =>
