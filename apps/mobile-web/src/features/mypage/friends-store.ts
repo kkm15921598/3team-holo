@@ -338,10 +338,12 @@ export function removeFriendById(id: string) {
   // Supabase에서도 삭제 (best-effort)
   const userPhone = getCurrentAccount();
   if (userPhone && target) {
+    // friend_id 는 insert 때 보내지 않아(서버 자동생성) 로컬 id 와 다르다 — 닉네임으로 삭제.
+    // (이전엔 .eq("friend_id", 로컬id) 라 매칭 실패 → 삭제 안 돼 새로고침/동기화 시 친구 부활)
     supabase.from("friends")
       .delete()
       .eq("user_phone", userPhone)
-      .eq("friend_id", id)
+      .eq("friend_nickname", target.nickname)
       .then(({ error }) => {
         if (error) console.warn("Supabase 친구 삭제 실패:", error.message);
       });
@@ -357,10 +359,12 @@ export function blockFriendById(id: string) {
   // Supabase friends에서 삭제 (best-effort)
   const userPhone = getCurrentAccount();
   if (userPhone) {
+    // friend_id 가 아니라 닉네임으로 삭제 — friend_id 는 서버 자동생성이라 로컬 id 와 불일치.
+    // (이전엔 삭제가 조용히 실패해 차단한 친구가 동기화 시 친구목록에 부활)
     supabase.from("friends")
       .delete()
       .eq("user_phone", userPhone)
-      .eq("friend_id", id)
+      .eq("friend_nickname", target.nickname)
       .then(({ error }) => {
         if (error) console.warn("Supabase 친구 차단 삭제 실패:", error.message);
       });
@@ -545,10 +549,11 @@ export async function syncFriendRequestsFromSupabase(): Promise<void> {
   const receivedPhones = fromReceived.map((r) => r.nickname); // nickname 필드에 전화번호가 들어있음
   let phoneToNickname: Record<string, string> = {};
   if (receivedPhones.length > 0) {
-    const { data: usersData } = await supabase
+    const { data: usersData, error: lookupErr } = await supabase
       .from("users")
       .select("phone, nickname")
       .in("phone", receivedPhones);
+    if (lookupErr) console.warn("친구 요청 닉네임 조회 실패:", lookupErr.message);
     if (usersData) {
       for (const u of usersData as { phone: string; nickname: string }[]) {
         phoneToNickname[u.phone] = u.nickname;
@@ -556,11 +561,17 @@ export async function syncFriendRequestsFromSupabase(): Promise<void> {
     }
   }
 
-  const resolvedReceived: FriendRequest[] = fromReceived.map((r) => ({
-    ...r,
-    nickname: phoneToNickname[r.nickname] ?? r.nickname,
-    avatarBg: pickAvatarBg(phoneToNickname[r.nickname] ?? r.nickname),
-  }));
+  // 닉네임이 해석된 요청만 노출한다. 해석 실패(룩업 오류/미등록) 시 그대로 두면
+  // r.nickname 에 발신자 전화번호가 남아 (1) UI 에 전화번호가 노출되고
+  // (2) 수락 시 친구 이름이 전화번호로 등록되는 문제가 있었다. 이번 동기화에선
+  // 스킵하고 다음 동기화에서 재시도한다.
+  const resolvedReceived: FriendRequest[] = fromReceived
+    .map((r) => {
+      const nick = phoneToNickname[r.nickname];
+      if (!nick) return null;
+      return { ...r, nickname: nick, avatarBg: pickAvatarBg(nick) };
+    })
+    .filter((r): r is FriendRequest => r !== null);
 
   _requests = [..._requests, ...fromSent, ...resolvedReceived];
   saveToStorage(REQUESTS_STORAGE_KEY, _requests);

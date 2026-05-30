@@ -83,6 +83,11 @@ export function resetMyroomStore(): void {
   statusState = DEFAULT_STATUS;
   persistStatus();
   emitStatus();
+  // 상태 메시지 위치도 기본값으로 — 안 하면 이전 계정이 옮겨둔 좌표가 남아
+  // 신규 가입자의 상태버블이 엉뚱한 위치에 뜬다(계정 간 누설).
+  statusPosState = DEFAULT_STATUS_POS;
+  persistStatusPos();
+  statusPosListeners.forEach((l) => l());
   // 일일 cap 리셋
   dailyCaps = { date: todayKey(), counts: {} };
   persistDailyCaps();

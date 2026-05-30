@@ -252,8 +252,13 @@ export function ChatListScreen() {
             const newId = `g-${Date.now()}`;
             const newRoom: ChatRoom = {
               id: newId,
-              // "첫친구, 외 N명" — N = 첫친구 제외한 나머지 + 나
-              name: `${friendNicks[0]}, 외 ${friendNicks.length}명`,
+              // "첫친구, 외 N명" — N = 첫친구를 뺀 나머지 초대 인원(나는 제외).
+              // rooms-store 의 그룹명 규약(나 제외, 외 = memberNames.length - 표시수)과 일치.
+              // (이전엔 friendNicks.length 라, 친구 2명 초대 시 "외 2명"으로 1명 부풀려졌다.)
+              name:
+                friendNicks.length > 1
+                  ? `${friendNicks[0]}, 외 ${friendNicks.length - 1}명`
+                  : friendNicks[0],
               subtitle: friendNicks.join(", "),
               isGroup: true,
               memberCount: friendIds.length + 1, // +1 for self

@@ -282,6 +282,8 @@ export function VerificationScreen() {
                   ).includes(next.charAt(6));
                 const g = valid7 ? genderFromIdNum(next) : null;
                 update("gender", g);
+                // 전역 verification-store 는 M/F 만 보관(null 미지원)하므로 유효한 값일 때만
+                // 갱신한다. 무효(null)로 되돌아가도 전역 성별은 가입 완료/로그인 시 최종 동기화됨.
                 if (g) setGlobalGender(g);
               }}
               inputMode="numeric"

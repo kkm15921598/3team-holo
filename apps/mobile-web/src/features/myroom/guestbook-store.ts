@@ -179,11 +179,19 @@ export function useGuestbook(owner: string | undefined) {
     let cancelled = false;
     // 1) 캐시 즉시 표시
     setEntries(getCached(owner));
-    // 2) 서버 최신본으로 덮어쓰기 (있을 때만)
+    // 2) 서버 최신본으로 갱신 (있을 때만).
+    //    단, 서버 응답이 도착하기 전에 낙관적으로 추가된 로컬 엔트리(insert 가 아직
+    //    반영 안 됨)는 서버 목록에 없을 수 있으므로, id 기준으로 병합해 보존한다.
+    //    (이전엔 통째로 덮어써서 동시 추가 시 방금 남긴 방명록이 캐시에서 유실됐다.)
     fetchFromSupabase(owner).then((rows) => {
       if (cancelled || !rows) return;
-      setCached(owner, rows);
-      setEntries(rows);
+      const serverIds = new Set(rows.map((e) => e.id));
+      const localOnly = getCached(owner).filter((e) => !serverIds.has(e.id));
+      const merged = [...localOnly, ...rows].sort(
+        (a, b) => b.createdAt - a.createdAt,
+      );
+      setCached(owner, merged);
+      setEntries(merged);
     });
     return () => {
       cancelled = true;
