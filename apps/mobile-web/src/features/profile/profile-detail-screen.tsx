@@ -568,14 +568,14 @@ export function ProfileDetailScreen() {
               <button
                 type="button"
                 onClick={() => navigate("/mypage/edit")}
-                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill bg-holo-purple-mid text-[14px] font-semibold text-white"
+                className="flex h-[44px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill bg-holo-purple-mid text-[14px] font-semibold text-white"
               >
                 프로필 편집
               </button>
               <button
                 type="button"
                 onClick={() => navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)}
-                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink-2 active:bg-holo-surface"
+                className="flex h-[44px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink-2 active:bg-holo-surface"
               >
                 <GuestbookIcon /> 내 방명록
               </button>
@@ -587,7 +587,7 @@ export function ProfileDetailScreen() {
                   <button
                     type="button"
                     onClick={handleFriendButton}
-                    className="flex h-[48px] flex-1 items-center justify-center gap-1 rounded-holo-pill bg-holo-purple-mid text-[13px] font-semibold text-white"
+                    className="flex h-[44px] flex-1 items-center justify-center gap-1 rounded-holo-pill bg-holo-purple-mid text-[13px] font-semibold text-white"
                   >
                     <UserPlusIcon /> 수락
                   </button>
@@ -595,7 +595,7 @@ export function ProfileDetailScreen() {
                     type="button"
                     onClick={handleDeclineRequest}
                     aria-label="요청 거절"
-                    className="flex h-[48px] w-[44px] items-center justify-center rounded-holo-pill border border-holo-line text-holo-ink-2"
+                    className="flex h-[44px] w-[44px] items-center justify-center rounded-holo-pill border border-holo-line text-holo-ink-2"
                   >
                     <UserMinusIcon />
                   </button>
@@ -604,7 +604,7 @@ export function ProfileDetailScreen() {
                 <button
                   type="button"
                   onClick={handleFriendButton}
-                  className={`flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill text-[13px] font-semibold text-white ${
+                  className={`flex h-[44px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill text-[13px] font-semibold text-white ${
                     buttonState === "friend"
                       ? "bg-[#E95AA4]"
                       : buttonState === "sent"
@@ -631,7 +631,7 @@ export function ProfileDetailScreen() {
                 type="button"
                 onClick={goToChat}
                 aria-label="1:1 채팅"
-                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-purple-mid text-[13px] font-semibold text-holo-purple-mid"
+                className="flex h-[44px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-purple-mid text-[13px] font-semibold text-holo-purple-mid"
               >
                 <ChatBubbleIcon /> 1:1 채팅
               </button>
@@ -640,7 +640,7 @@ export function ProfileDetailScreen() {
                 type="button"
                 onClick={() => navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)}
                 aria-label="방명록"
-                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-line text-[13px] font-semibold text-holo-ink-2 active:bg-holo-surface"
+                className="flex h-[44px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-line text-[13px] font-semibold text-holo-ink-2 active:bg-holo-surface"
               >
                 <GuestbookIcon /> 방명록
               </button>
