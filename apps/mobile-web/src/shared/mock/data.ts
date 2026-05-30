@@ -98,7 +98,14 @@ export type ChatRoom = {
   hostNickname?: string;
 };
 
-export type ChatMessageReaction = { emoji: string; count: number; mine?: boolean };
+export type ChatMessageReaction = {
+  emoji: string;
+  count: number;
+  /** 보는 사람이 이 반응을 눌렀는지 — senders 로부터 뷰어별로 계산되는 파생값(저장 X) */
+  mine?: boolean;
+  /** 이 이모지를 누른 사용자들의 전화번호. count 의 진실 소스이며 mine 계산에 사용. */
+  senders?: string[];
+};
 
 export type ChatMessage = {
   id: string;

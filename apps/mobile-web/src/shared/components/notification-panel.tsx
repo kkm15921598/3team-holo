@@ -5,7 +5,6 @@ import {
   subscribeNotificationSettings,
 } from "@/shared/stores/notification-settings-store";
 import {
-  markAllDynRead,
   markDynRead,
   useDynNotifications,
 } from "@/shared/stores/notifications-store";
@@ -60,12 +59,20 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleMarkAllRead = () => {
-    markAllDynRead();
+    // 화면에 보이는(설정 토글 ON + 30일 이내) 항목만 읽음 처리.
+    // markAllDynRead() 는 설정을 무시하고 전부 읽음으로 만들어, 꺼둔 종류의 알림을
+    // 나중에 다시 켜도 이미 읽음으로 남는 문제가 있었다.
+    items.filter((n) => !n.read).forEach((n) => markDynRead(n.id));
   };
+
+  // 헤더 배지와 동일한 30일 컷오프 — 패널에만 없으면 오래된 미읽음이 패널에 남아
+  // 배지(헤더)와 개수가 어긋나고 "모두 읽음"으로도 깔끔히 정리되지 않는다.
+  const NOTIF_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
   // 동적 알림 → 공통 Notification 형식으로 매핑 (kind → NotifType 정확히 대응)
   const items: Notification[] = nSettings.master
     ? dynNotifications
+        .filter((d) => Date.now() - d.createdAt <= NOTIF_MAX_AGE_MS)
         .map((d) => ({
           id: d.id,
           type:

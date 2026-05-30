@@ -31,16 +31,22 @@ export function ReviewScreen() {
       nickname: data.nickname,
       gender: data.gender,
     };
+    // 본인인증 상태를 가입 insert 시점에 함께 저장.
+    // (이전엔 room-screen 도달 시에만 phone_verified 를 기록해, 가입 직후 새로고침/이탈로
+    //  room-screen 에 못 가면 DB 가 phone_verified=false 로 영구히 남아 미인증이 됐다.)
+    const verifiedRow = { ...coreRow, phone_verified: data.phoneVerified };
     // 선택 컬럼:
     //  - name: 아이디/비밀번호 찾기(name+phone 본인확인)에 필요 → 가능하면 꼭 저장.
     //  - interests: 이웃찾기 매칭용(jsonb).
     // 환경에 따라 컬럼이 아직 없을 수 있어(예: "could not find the 'name' column ..."),
     // 컬럼 미존재(42703 / PGRST204) 에러면 선택 컬럼을 단계적으로 빼며 재시도해
     // 가입 자체가 막히지 않게 한다. (컬럼을 추가하면 첫 시도에서 전부 저장됨.)
+    // 맨 마지막 coreRow 는 phone_verified 컬럼조차 없는 환경의 최후 폴백.
     const attempts = [
-      { ...coreRow, name: data.name, interests: allInterests },
-      { ...coreRow, name: data.name },
-      { ...coreRow, interests: allInterests },
+      { ...verifiedRow, name: data.name, interests: allInterests },
+      { ...verifiedRow, name: data.name },
+      { ...verifiedRow, interests: allInterests },
+      verifiedRow,
       coreRow,
     ];
     let error: { code?: string; message: string } | null = null;

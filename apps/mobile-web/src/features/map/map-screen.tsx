@@ -243,9 +243,12 @@ export function MapScreen() {
    */
   const handleModalClose = () => {
     if (chatReturnPostId) {
+      // setChatReturnPostId(null) 후 같은 변수를 쓰면 향후 리팩터링/엣지에서 meetup-null
+      // 로 이동할 위험이 있어, 비우기 전에 값을 먼저 캡처해 네비게이션에 사용한다.
+      const postId = chatReturnPostId;
       // 강조 상태도 정리해서 다음에 모달을 직접 열 때 흔적이 남지 않게 한다.
       setChatReturnPostId(null);
-      navigate(`/chat/meetup-${chatReturnPostId}`);
+      navigate(`/chat/meetup-${postId}`);
       return;
     }
     setExpanded(false);

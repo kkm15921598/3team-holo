@@ -128,7 +128,37 @@ type VotePayload =
  * reply_to, reactions, forwarded_from)을 복원한다. 컬럼/값이 없으면 빈 객체라 기존
  * 텍스트·이미지 메시지에는 영향이 없다. 초기 로드와 실시간 INSERT 두 경로에서 동일하게 사용.
  */
-function chatExtrasFromRow(row: any): Partial<ChatMessage> {
+/**
+ * DB row.reactions → 뷰어별 ChatMessageReaction[] 복원.
+ * - 컬럼이 없으면(undefined) `undefined` 반환 → 호출 측에서 "건드리지 않음"으로 처리.
+ * - senders(누른 사람 전화번호 배열)에서 count 와 mine(=내 번호 포함 여부)을 계산한다.
+ *   레거시 행(senders 없음)은 mine 을 알 수 없어 false 로 두되 공유 count 는 보존.
+ */
+function reactionsFromRow(
+  row: any,
+  userPhone?: string,
+): ChatMessageReaction[] | undefined {
+  if (!Array.isArray(row.reactions)) return undefined;
+  return (row.reactions as any[])
+    .map((r) => {
+      const senders: string[] = Array.isArray(r.senders) ? r.senders : [];
+      const count =
+        senders.length > 0
+          ? senders.length
+          : typeof r.count === "number"
+            ? r.count
+            : 0;
+      return {
+        emoji: r.emoji,
+        count,
+        senders,
+        mine: !!userPhone && senders.includes(userPhone),
+      } as ChatMessageReaction;
+    })
+    .filter((r) => r.count > 0);
+}
+
+function chatExtrasFromRow(row: any, userPhone?: string): Partial<ChatMessage> {
   const extras: Partial<ChatMessage> = {};
   if (row.image_url) {
     extras.type = "image";
@@ -150,13 +180,10 @@ function chatExtrasFromRow(row: any): Partial<ChatMessage> {
   if (row.reply_to && typeof row.reply_to === "object") {
     extras.replyTo = row.reply_to as ChatMessage["replyTo"];
   }
-  if (Array.isArray(row.reactions) && row.reactions.length > 0) {
-    // mine 은 보는 사람마다 다르므로 DB 값은 무시하고 공유 카운트만 복원.
-    extras.reactions = (row.reactions as any[]).map((r) => ({
-      emoji: r.emoji,
-      count: r.count,
-    }));
-  }
+  // mine 은 senders(누른 사람 전화번호)에서 뷰어별로 계산해 복원한다.
+  // (이전엔 mine 을 버려서 재입장 시 내 반응이 강조 안 되고 토글이 어긋났다.)
+  const rx = reactionsFromRow(row, userPhone);
+  if (rx && rx.length > 0) extras.reactions = rx;
   if (row.forwarded_from) extras.forwarded = true;
   return extras;
 }
@@ -364,7 +391,7 @@ export function ChatRoomScreen() {
           readBy,
           // 이미지/파일/위치/답장/전달 부가 필드 복원 — 실시간 INSERT 핸들러와 동일 매핑.
           // (이전엔 image 만 복원해 파일·위치 메시지는 재입장 시 빈 말풍선으로 깨졌다.)
-          ...chatExtrasFromRow(row),
+          ...chatExtrasFromRow(row, userPhone ?? undefined),
         };
       });
 
@@ -438,7 +465,7 @@ export function ChatRoomScreen() {
             time: row.sent_time ?? "",
             mine: isMine,
             readBy: isMine ? Math.max(0, latestMemberCountRef.current - 1 - readByArr.length) : undefined,
-            ...chatExtrasFromRow(row),
+            ...chatExtrasFromRow(row, userPhone ?? undefined),
           };
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -472,17 +499,26 @@ export function ChatRoomScreen() {
           filter: `room_id=eq.${id}`,
         },
         (payload) => {
-          // read_by 배열이 바뀌면 해당 메시지의 readBy 숫자를 재계산
+          // read_by 배열이 바뀌면 해당 메시지의 readBy 숫자를 재계산.
+          // reactions 도 함께 UPDATE 로 들어오므로(다른 사용자가 반응 추가/제거 시)
+          // 여기서 같이 반영해야 실시간으로 반영된다. (이전엔 readBy 만 갱신해, 상대가 단
+          //  이모지 반응이 내 화면에 안 나타났다.)
           const row = payload.new as any;
           const msgId = String(row.message_id ?? row.id);
           const readByArr: string[] = Array.isArray(row.read_by) ? row.read_by : [];
           const newReadBy = Math.max(0, latestMemberCountRef.current - 1 - readByArr.length);
+          const userPhone = getCurrentAccount();
+          // 컬럼이 있을 때만(undefined 가 아닐 때만) reactions 를 덮어쓴다 — readBy 만 바뀐
+          // UPDATE 에서 reactions 컬럼이 빠진 경우 기존 반응을 지우지 않도록.
+          const nextReactions = reactionsFromRow(row, userPhone ?? undefined);
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === msgId && m.mine
-                ? { ...m, readBy: newReadBy }
-                : m,
-            ),
+            prev.map((m) => {
+              if (m.id !== msgId) return m;
+              const updated = { ...m };
+              if (m.mine) updated.readBy = newReadBy;
+              if (nextReactions !== undefined) updated.reactions = nextReactions;
+              return updated;
+            }),
           );
         },
       )
@@ -637,30 +673,42 @@ export function ChatRoomScreen() {
   };
 
   const addReaction = (messageId: string, emoji: string) => {
-    // 대상 메시지의 다음 reactions 를 현재 상태에서 한 번 계산(이중 카운트 방지).
+    // 반응은 senders(누른 사람 전화번호 배열)를 진실 소스로 토글한다.
+    // count = senders.length, mine = 내 번호 포함 여부. 이렇게 해야 여러 명이 같은
+    // 이모지를 눌러도 내 토글이 남의 반응을 지우지 않고, 재입장 후에도 정확히 복원된다.
+    const userPhone = getCurrentAccount();
+    if (!userPhone) return; // 신원 없는 상태에선 반응 불가(누가 눌렀는지 기록 불가)
+
     const target = messages.find((m) => m.id === messageId);
     const list = target?.reactions ?? [];
     const has = list.some((r) => r.emoji === emoji);
-    const next = has
-      ? list
-          .map((r) =>
-            r.emoji === emoji
-              ? { ...r, count: r.count + (r.mine ? -1 : 1), mine: !r.mine }
-              : r,
-          )
-          .filter((r) => r.count > 0)
-      : [...list, { emoji, count: 1, mine: true }];
+    const next: ChatMessageReaction[] = (
+      has
+        ? list.map((r) => {
+            if (r.emoji !== emoji) return r;
+            const cur = Array.isArray(r.senders) ? r.senders : [];
+            const mine = cur.includes(userPhone);
+            const senders = mine
+              ? cur.filter((p) => p !== userPhone) // 내 반응 취소
+              : [...cur, userPhone]; // 내 반응 추가
+            return { emoji, count: senders.length, senders, mine: !mine };
+          })
+        : [...list, { emoji, count: 1, senders: [userPhone], mine: true }]
+    ).filter((r) => r.count > 0);
 
     setMessages((prev) =>
       prev.map((m) => (m.id === messageId ? { ...m, reactions: next } : m)),
     );
     setReactionTarget(null);
 
-    // Supabase 영속화 — 안 하면 재입장/새로고침 시 이모지 반응이 사라진다(저장이 없었음).
-    // mine 은 보는 사람마다 다르므로 공유 카운트(emoji/count)만 저장. (id = room id)
-    const userPhone = getCurrentAccount();
-    if (userPhone && id) {
-      const stored = next.map((r) => ({ emoji: r.emoji, count: r.count }));
+    // Supabase 영속화 — 안 하면 재입장/새로고침 시 이모지 반응이 사라진다.
+    // emoji/count 와 함께 senders 를 저장해 뷰어별 mine 을 정확히 복원한다. (id = room id)
+    if (id) {
+      const stored = next.map((r) => ({
+        emoji: r.emoji,
+        count: r.count,
+        senders: r.senders ?? [],
+      }));
       supabase
         .from("messages")
         .update({ reactions: stored })

@@ -13,6 +13,7 @@ import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useGeolocation } from "@/shared/hooks/use-geolocation";
+import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 
 export function HomeScreen() {
@@ -38,11 +39,16 @@ export function HomeScreen() {
   const userPosRef = useRef(userPos);
   userPosRef.current = userPos;
 
-  // (A) 글 목록이 바뀔 때만 추천 카드를 새로 뽑는다. (userPos 는 deps 에서 제외 — ref 사용)
+  // 차단 목록 — 변경되면(프로필에서 차단 후 홈 복귀) 추천 카드를 다시 뽑아
+  // 차단한 사람의 모임이 즉시 사라지게 한다. (이전엔 allPosts 만 deps 라, 글이 그대로면
+  //  차단해도 useEffect 가 재실행되지 않아 차단한 모임이 카드에 남아 있었다.)
+  const blocked = useBlockedNicknames();
+
+  // (A) 글 목록/차단 목록이 바뀔 때 추천 카드를 새로 뽑는다. (userPos 는 deps 에서 제외 — ref 사용)
   // → GPS tick 이 사용자의 새로고침(handleRefresh) 선택을 매번 되돌리던 회귀 방지.
   useEffect(() => {
     setMeetups(pickMeetupsFromPosts(allPosts, 3, undefined, userPosRef.current));
-  }, [allPosts]);
+  }, [allPosts, blocked]);
 
   // (B) 내 위치 좌표가 실제로 바뀌면 '선택된 카드'는 유지하고 각 카드의 거리만 갱신.
   //     posKey(좌표 문자열)로만 트리거 — 동일 좌표의 GPS 재콜백으로는 재실행되지 않는다.
