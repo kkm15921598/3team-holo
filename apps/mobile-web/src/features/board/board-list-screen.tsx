@@ -649,7 +649,22 @@ export function BoardListScreen() {
               <span className="text-[12px]">다른 검색어로 다시 시도해 보세요.</span>
             </>
           ) : (
-            <span>게시글이 없습니다.</span>
+            // 온보딩형 빈 상태 — 첫 사용자가 바로 행동할 수 있도록 안내 + 글쓰기 CTA.
+            <div className="flex flex-col items-center gap-1.5 px-8 text-center">
+              <span className="text-[34px]">📝</span>
+              <span className="text-[15px] font-semibold text-holo-ink-2">
+                아직 게시글이 없어요
+              </span>
+              <span className="text-[12px] text-holo-ink-3">
+                우리 동네 첫 이야기를 남겨보세요
+              </span>
+              <Link
+                to="/board/write"
+                className="mt-3 rounded-holo-pill bg-holo-purple-mid px-6 py-2 text-[13px] font-semibold text-white"
+              >
+                글쓰기
+              </Link>
+            </div>
           )}
         </div>
       ) : (
