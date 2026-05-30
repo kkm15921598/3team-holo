@@ -537,10 +537,29 @@ function initChatNotificationListener() {
         // 카카오톡처럼 하단 네비 '채팅' 탭의 안읽음 배지(useTotalUnread)로만 표기한다.
         // (알림창엔 채팅방 개시/모임 해산 같은 '이벤트'만 남긴다.) 아래 unread 카운트가 배지 소스.
 
-        // 채팅 목록 unread 카운트 +1 (뮤트여도 안 읽음 표시는 유지)
+        // 채팅 목록 미리보기/시간/안읽음 갱신 — 안 하면 새 메시지가 와도 목록 아랫줄
+        // (lastMessage)이 "(대화를 시작해보세요)" 등 옛 값에 머물러 내용이 안 보인다.
+        // 이미지/파일/위치 메시지는 본문이 비어 있으므로 종류별 미리보기 텍스트로 대체.
+        const preview = (() => {
+          const c = (row.content as string | undefined)?.trim();
+          if (c) return c;
+          if (row.image_url) return "[사진]";
+          if (row.msg_type === "file" || row.file_name) return "[파일]";
+          if (row.msg_type === "location" || (row.lat != null && row.lng != null))
+            return "[위치]";
+          return "새 메시지";
+        })();
         setRooms((prev) =>
           prev.map((r) =>
-            r.id === roomId ? { ...r, unread: (r.unread ?? 0) + 1 } : r,
+            r.id === roomId
+              ? {
+                  ...r,
+                  lastMessage: preview,
+                  lastTime: "방금",
+                  unread: (r.unread ?? 0) + 1,
+                  updatedAt: Date.now(),
+                }
+              : r,
           ),
         );
       },
