@@ -24,24 +24,33 @@ export function ReviewScreen() {
   }
 
   const handleComplete = async () => {
-    const baseRow = {
+    // 항상 존재하는 핵심 컬럼.
+    const coreRow = {
       phone: data.phone,
       password: data.password,
       nickname: data.nickname,
       gender: data.gender,
-      // 본인인증에서 받은 이름 저장 — 아이디/비밀번호 찾기가 name+phone 으로 본인확인하므로
-      // 저장하지 않으면 계정 복구가 영구 실패한다. (find-id/find-password 가 .eq("name",..) 사용)
-      name: data.name,
     };
-
-    // 가입 시 고른 관심사(+직접입력) — users.interests(jsonb) 에 저장해 이웃찾기 매칭에 사용.
-    // 단, interests 컬럼이 아직 없는 환경(마이그레이션 전)에서도 가입이 막히면 안 되므로
-    // 컬럼 미존재(42703 / PGRST204) 에러면 interests 빼고 한 번 더 시도하는 폴백을 둔다.
-    let { error } = await supabase
-      .from("users")
-      .insert({ ...baseRow, interests: allInterests });
-    if (error && (error.code === "42703" || error.code === "PGRST204")) {
-      ({ error } = await supabase.from("users").insert(baseRow));
+    // 선택 컬럼:
+    //  - name: 아이디/비밀번호 찾기(name+phone 본인확인)에 필요 → 가능하면 꼭 저장.
+    //  - interests: 이웃찾기 매칭용(jsonb).
+    // 환경에 따라 컬럼이 아직 없을 수 있어(예: "could not find the 'name' column ..."),
+    // 컬럼 미존재(42703 / PGRST204) 에러면 선택 컬럼을 단계적으로 빼며 재시도해
+    // 가입 자체가 막히지 않게 한다. (컬럼을 추가하면 첫 시도에서 전부 저장됨.)
+    const attempts = [
+      { ...coreRow, name: data.name, interests: allInterests },
+      { ...coreRow, name: data.name },
+      { ...coreRow, interests: allInterests },
+      coreRow,
+    ];
+    let error: { code?: string; message: string } | null = null;
+    for (const row of attempts) {
+      const res = await supabase.from("users").insert(row);
+      error = res.error;
+      if (!error) break;
+      // 중복가입은 폴백해도 의미 없음 / 컬럼 미존재가 아닌 다른 에러도 중단.
+      if (error.code === "23505") break;
+      if (error.code !== "42703" && error.code !== "PGRST204") break;
     }
 
     if (error) {
