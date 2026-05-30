@@ -41,6 +41,7 @@ import { ChatRoomScreen } from "@/features/chat/chat-room-screen";
 import { ProfileDetailScreen } from "@/features/profile/profile-detail-screen";
 import { FriendPostsScreen } from "@/features/profile/friend-posts-screen";
 import { FriendCommentsScreen } from "@/features/profile/friend-comments-screen";
+import { GuestbookScreen } from "@/features/profile/guestbook-screen";
 
 // Mypage & Settings
 import { MypageScreen } from "@/features/mypage/mypage-screen";
@@ -152,6 +153,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/profile/:id" element={<ProfileDetailScreen />} />
           <Route path="/profile/:id/posts" element={<TabLayout showHeader={false}><FriendPostsScreen /></TabLayout>} />
           <Route path="/profile/:id/comments" element={<TabLayout showHeader={false}><FriendCommentsScreen /></TabLayout>} />
+          <Route path="/profile/:id/guestbook" element={<TabLayout showHeader={false}><GuestbookScreen /></TabLayout>} />
 
           {/* Mypage */}
           <Route path="/mypage" element={<TabLayout><MypageScreen /></TabLayout>} />

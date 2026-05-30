@@ -453,6 +453,17 @@ export function ProfileDetailScreen() {
           <CloseIcon />
         </button>
 
+        {/* 방명록 — 이웃 방에 도장+한 줄 남기기. 내 프로필에선 받은 방명록 보기. */}
+        <button
+          type="button"
+          onClick={() =>
+            navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)
+          }
+          className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-holo-pill bg-white/70 px-2.5 py-1 text-[12px] font-medium text-holo-ink-2 backdrop-blur active:opacity-70"
+        >
+          <GuestbookIcon /> 방명록
+        </button>
+
         <div className="flex h-[340px] w-full items-start justify-center pt-[10px]">
           <RoomSceneView items={roomItems} />
         </div>
@@ -662,6 +673,25 @@ function CloseIcon() {
       aria-hidden
     >
       <path d="m6 6 12 12M6 18 18 6" />
+    </svg>
+  );
+}
+
+function GuestbookIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </svg>
   );
 }
