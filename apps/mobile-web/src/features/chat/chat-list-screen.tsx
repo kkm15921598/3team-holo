@@ -154,8 +154,20 @@ export function ChatListScreen() {
         onClick={() => setActiveMenuId(null)}
       >
         {rooms.length === 0 ? (
-          <li className="flex items-center justify-center py-10 text-[13px] text-holo-ink-3">
-            검색 결과가 없어요
+          <li className="flex flex-col items-center justify-center gap-1.5 py-12 text-center">
+            {query || filter !== "all" ? (
+              <span className="text-[13px] text-holo-ink-3">조건에 맞는 채팅이 없어요</span>
+            ) : (
+              <>
+                <span className="text-[34px]">💬</span>
+                <span className="text-[14px] font-semibold text-holo-ink-2">
+                  아직 채팅이 없어요
+                </span>
+                <span className="text-[12px] text-holo-ink-3">
+                  이웃과 대화를 시작해보세요
+                </span>
+              </>
+            )}
           </li>
         ) : (
           rooms.map((room, idx) => (
