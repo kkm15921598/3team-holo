@@ -13,7 +13,8 @@ import { supabase } from "@/shared/lib/supabaseClient";
 export function FriendCommentsScreen() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const nickname = id ? decodeURIComponent(id) : "";
+  // 잘못된 % 인코딩 URL 이면 decodeURIComponent 가 throw 해 화면이 깨진다 — 실패 시 원문 사용.
+  const nickname = id ? (() => { try { return decodeURIComponent(id); } catch { return id; } })() : "";
 
   const [allPosts, setAllPosts] = useState<Post[]>(postsStore.getPosts());
   useEffect(() => {

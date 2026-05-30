@@ -424,7 +424,7 @@ function NewChatSheet({
         <ul className="flex-1 overflow-y-auto px-2 pb-3">
           {filtered.length === 0 ? (
             <li className="py-6 text-center text-[13px] text-holo-ink-3">
-              친구를 찾을 수 없어요
+              {q.trim() ? `'${q.trim()}'에 맞는 친구가 없어요` : "아직 친구가 없어요"}
             </li>
           ) : (
             filtered.map((f) => {

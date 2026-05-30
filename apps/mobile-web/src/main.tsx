@@ -190,7 +190,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/titles" element={<TabLayout showHeader={false}><MyTitlesScreen /></TabLayout>} />
           <Route path="/mypage/meetings" element={<TabLayout showHeader={false}><MyMeetingsScreen /></TabLayout>} />
 
-          <Route path="*" element={<Navigate to="/splash" replace />} />
+          {/* 잘못된/오래된 경로는 로그인 화면(splash)으로 튕기지 않고 인앱 홈으로 보낸다. */}
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
         {/* 레벨업 축하 모달 — 어디서 XP 가 적립되어 레벨이 오르든 최상단에서 한 번 노출. */}
         <LevelUpCelebration />

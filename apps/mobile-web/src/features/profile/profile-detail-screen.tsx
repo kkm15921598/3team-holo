@@ -81,7 +81,9 @@ function buildOtherUser(
 export function ProfileDetailScreen() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const nickname = id ? decodeURIComponent(id) : "샬랄라 움밤바";
+  // 잘못된 % 인코딩(예: %ZZ)이 든 URL 이면 decodeURIComponent 가 throw 해 화면이 통째로
+  // 깨진다(앱 내부 링크는 안전하나 외부 공유/직접 입력 딥링크 대비). 실패 시 원문 사용.
+  const nickname = safeDecodeParam(id, "샬랄라 움밤바");
 
   // 내 프로필 데이터 (실제 store) — isMe 분기에서 가짜 buildOtherUser 대신 사용.
   const myProfile = useProfile();

@@ -98,7 +98,10 @@ export function ensureMeetupRoom(post: Post): string | null {
   const targetOthers = Math.max(0, targetTotal - 1);
 
   const memberNames = deriveMeetupMembers(post, targetOthers);
-  const memberCount = 1 + memberNames.length; // me + others
+  // memberCount 는 표시용 닉네임(작성자 1개뿐) 개수가 아니라 게시판과 동일한 실제 총원
+  // (targetTotal=calcJoined 기반)으로 맞춘다. 참여자 닉네임 데이터가 없어 memberNames 가
+  // 항상 0~1개라 1+memberNames.length 로는 채팅방 인원이 늘 2명에 고정되던 불일치 수정.
+  const memberCount = targetTotal; // me + 실제 합류 인원 (게시판 카드와 동일)
   const subtitleHead = memberNames.slice(0, 2).join(", ");
   const subtitle =
     memberNames.length > 2

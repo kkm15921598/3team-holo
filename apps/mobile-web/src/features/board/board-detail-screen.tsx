@@ -689,6 +689,12 @@ export function BoardDetailScreen() {
   };
 
   const handleDelete = () => {
+    // 권한 재검증 — 메뉴 노출(UI)뿐 아니라 핸들러 자체에서도 작성자만 삭제 가능하게 한다.
+    // (isMine 은 전화번호 우선 + 구 게시글 닉네임 폴백까지 처리하므로 정상 작성자는 막지 않음)
+    if (!isMine) {
+      showToast("삭제 권한이 없어요");
+      return;
+    }
     postsStore.remove([post.id]);
     navigate("/board/list");
   };
