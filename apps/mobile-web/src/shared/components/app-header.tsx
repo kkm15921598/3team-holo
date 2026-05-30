@@ -93,7 +93,7 @@ export function AppHeader({
             />
             {unreadCount > 0 && (
               <span className="absolute -right-1 -top-1 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-holo-error px-[3px] text-[9px] font-bold text-white leading-none">
-                {unreadCount}
+                {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
           </button>

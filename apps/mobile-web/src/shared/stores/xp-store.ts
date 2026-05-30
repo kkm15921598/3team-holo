@@ -424,10 +424,13 @@ export function getLevelProgress(currentLevel = 1): {
   remaining: number;
   percent: number;
 } {
-  const required = xpRequiredForLevel(currentLevel);
+  // 기준 레벨을 누적 XP가 실제로 지지하는 레벨로 클램프 — stats.level 이 (과거 버그로)
+  // totalXp 가 지지하는 레벨보다 높으면 base>totalXp 가 되어 진행도가 0%로 잘못 표시됐다.
+  const effectiveLevel = Math.min(currentLevel, levelFromTotalXp(state.totalXp));
+  const required = xpRequiredForLevel(effectiveLevel);
   // 현재 레벨 구간 내 누적 XP — 해당 레벨 진입 시점의 총 XP를 빼야 정확한 진행도가 나온다.
   // (totalXp % required 는 레벨 구간과 무관한 나머지라 틀린 값이 나올 수 있음)
-  const base = cumulativeXpForLevel(currentLevel);
+  const base = cumulativeXpForLevel(effectiveLevel);
   const current = Math.max(0, state.totalXp - base);
   return {
     current,

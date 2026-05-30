@@ -146,7 +146,12 @@ export function useBumpRemaining(postId: string): number {
     if (!last) return;
     const remaining = BUMP_COOLDOWN_MS - (Date.now() - last);
     if (remaining <= 0) return;
-    const interval = setInterval(() => setNow(Date.now()), 60_000);
+    const interval = setInterval(() => {
+      setNow(Date.now());
+      // 쿨다운이 끝나면(시간 경과로 remaining<=0) last 가 안 바뀌어 effect 가 재실행되지
+      // 않으므로, 콜백 안에서 직접 검사해 타이머를 멈춘다(영구 재렌더 누수 방지).
+      if (BUMP_COOLDOWN_MS - (Date.now() - last) <= 0) clearInterval(interval);
+    }, 60_000);
     return () => clearInterval(interval);
   }, [last]);
   if (!last) return 0;

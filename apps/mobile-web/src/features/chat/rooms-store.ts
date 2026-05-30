@@ -283,6 +283,7 @@ export async function syncRoomsFromSupabase(): Promise<void> {
       let memberCount = 2;
       let mName = (row.name ?? row.room_name ?? "모임") as string;
       let hostNickname: string | undefined;
+      let meeting: ChatRoom["meeting"];
       if (post) {
         // 게시글 상세/카드와 동일한 calcJoined 단일 출처로 인원수를 맞춘다(연동).
         const { capacity, baseJoined } = calcJoined(post);
@@ -291,6 +292,13 @@ export async function syncRoomsFromSupabase(): Promise<void> {
         memberCount = 1 + memberNames.length;
         mName = post.title;
         hostNickname = post.authorNickname;
+        // ensureMeetupRoom 과 동일하게 일정도 채운다 — 안 채우면 복원된 모임방에서
+        // '모임' 배지/필터/상단 일정 배너가 모두 사라지고 일반 그룹방으로 오분류된다.
+        meeting = {
+          date: post.eventDate ?? "",
+          time: post.eventTime ?? "",
+          place: post.place ?? post.location?.placeName ?? "",
+        };
       }
       const subHead = memberNames.slice(0, 2).join(", ");
       const subtitle =
@@ -305,6 +313,7 @@ export async function syncRoomsFromSupabase(): Promise<void> {
         memberCount,
         memberNames,
         hostNickname,
+        meeting,
         lastMessage: "(대화를 시작해보세요)",
         lastTime: "",
         unread: 0,

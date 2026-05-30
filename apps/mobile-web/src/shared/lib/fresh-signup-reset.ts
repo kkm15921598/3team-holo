@@ -83,4 +83,11 @@ export function resetUserStoresForLogin(): void {
   resetNotificationSettings();
   privacyStore.reset();
   resetQuietHours();
+  // 출석 주간보너스(광고보상) 사용여부 키도 계정별 데이터 — 비우지 않으면 이전 계정의
+  // '사용완료' 상태가 새 계정에 남아 보너스를 못 받는다. (다른 reset 들과 동일 패턴)
+  try {
+    window.localStorage.removeItem("holo:attendance-bonus");
+  } catch {
+    // ignore
+  }
 }

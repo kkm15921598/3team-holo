@@ -17,6 +17,7 @@ import {
 import { leaveRoomById } from "@/features/chat/rooms-store";
 import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, leavePost, useJoinedSet } from "@/shared/stores/joined-store";
+import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
 import { addComment, useUserComments, type StoredComment } from "@/shared/stores/comments-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
@@ -1678,6 +1679,9 @@ export function BoardDetailScreen() {
         onCancel={() => setShowBlockConfirm(false)}
         onConfirm={() => {
           setShowBlockConfirm(false);
+          // 실제로 차단을 영속화 — 이전엔 토스트만 띄우고 markBlocked 를 안 불러
+          // 차단이 아무 데도 저장되지 않았다(게시판 차단 필터가 무효였음).
+          markBlocked(post.authorNickname);
           showToast(`${post.authorNickname}님을 차단했어요`);
           // 차단 후엔 더 이상 이 게시글에 머물 이유가 없으므로 목록으로 복귀.
           navigate("/board/list");

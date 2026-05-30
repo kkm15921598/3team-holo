@@ -24,6 +24,7 @@ import {
   ageRangeForFilterLabel,
 } from "@/shared/lib/author-gender";
 import { useLikedSet } from "@/shared/stores/likes-store";
+import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { useUserComments } from "@/shared/stores/comments-store";
 import {
   getTotalViews,
@@ -111,6 +112,7 @@ export function BoardListScreen() {
   );
   const [posts, setPosts] = useState<Post[]>(postsStore.getPosts());
   const likedSet = useLikedSet();
+  const blockedSet = useBlockedNicknames();
   const userComments = useUserComments();
   // 프로필(닉네임/얼굴) 변경 시 리스트의 내 글 아바타가 즉시 갱신되도록 구독
   useProfile();
@@ -242,11 +244,15 @@ export function BoardListScreen() {
       getCommentCount,
       getViews: getTotalViews,
     };
-    if (topMode === "live") return rankLive(posts, rankCtx);
-    if (topMode === "weekly") return rankWeekly(posts, rankCtx);
+    // 차단한 작성자의 글은 모든 모드에서 제외 (전체/카테고리/검색/TOP).
+    const notBlocked = (arr: Post[]) =>
+      blockedSet.size > 0 ? arr.filter((p) => !blockedSet.has(p.authorNickname)) : arr;
+    if (topMode === "live") return notBlocked(rankLive(posts, rankCtx));
+    if (topMode === "weekly") return notBlocked(rankWeekly(posts, rankCtx));
 
     // ── 기본 모드 (카테고리 / 검색) ─────────────────────────
     let list = activeCat === "all" ? posts : posts.filter((p) => p.category === activeCat);
+    list = notBlocked(list);
     if (keyword) {
       const lq = keyword.toLowerCase();
       list = list.filter(
@@ -324,6 +330,7 @@ export function BoardListScreen() {
     // 조회수는 useViewCounts() 가 위쪽에서 호출돼 컴포넌트 자체가 매번 리렌더되므로 따로 deps 에 둘 필요 없음.
     likedSet,
     getCommentCount,
+    blockedSet,
   ]);
 
   // ── 스크롤 위치 복원 ─────────────────────────────────────────

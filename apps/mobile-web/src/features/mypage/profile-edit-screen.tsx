@@ -12,6 +12,13 @@ import {
   getVerification,
   subscribeVerification,
 } from "@/shared/stores/verification-store";
+import { containsProfanity } from "@/shared/utils/profanity";
+import { supabase } from "@/shared/lib/supabaseClient";
+
+// 가입(nickname-screen)과 동일한 닉네임 규칙 — 프로필 편집에도 같은 검증을 적용한다.
+const KOREAN_ONLY = /^[가-힣\s]+$/;
+const MAX_LEN = 10;
+const RESERVED_NICKNAMES = ["관리자", "운영자", "테스트", "어드민", "admin", "holo", "홀로"];
 
 export function ProfileEditScreen() {
   const navigate = useNavigate();
@@ -46,8 +53,36 @@ export function ProfileEditScreen() {
     characterOptions.findIndex((f) => f === initialFace),
   );
   const [character, setCharacter] = useState(currentFaceIndex);
-  const handleCheck = () => {
-    setCheck(nickname === "감자는 감자" ? "fail" : "ok");
+  // 닉네임 중복확인 — 이전엔 하드코딩("감자는 감자"만 fail)이라 빈값/중복/비속어가
+  // 전부 통과했다. 가입 화면과 동일하게 형식·비속어·예약어·Supabase 중복을 실제 검증한다.
+  const handleCheck = async () => {
+    const trimmed = nickname.trim();
+    if (
+      trimmed.length === 0 ||
+      !KOREAN_ONLY.test(trimmed) ||
+      trimmed.length > MAX_LEN ||
+      containsProfanity(trimmed) ||
+      RESERVED_NICKNAMES.includes(trimmed)
+    ) {
+      setCheck("fail");
+      return;
+    }
+    // 내 현재 닉네임 그대로면 중복 조회 없이 통과.
+    if (trimmed === profile.nickname.trim()) {
+      setCheck("ok");
+      return;
+    }
+    try {
+      const { data: rows, error } = await supabase
+        .from("users")
+        .select("nickname")
+        .eq("nickname", trimmed)
+        .limit(1);
+      // 네트워크 오류 시엔 가입 화면과 동일하게 통과 처리(오프라인 편집 허용).
+      setCheck(error ? "ok" : rows && rows.length > 0 ? "fail" : "ok");
+    } catch {
+      setCheck("ok");
+    }
   };
 
   const selectedFace = characterOptions[character] ?? characterOptions[0];
@@ -61,7 +96,7 @@ export function ProfileEditScreen() {
         <button
           type="button"
           onClick={() => {
-            if (check === "ok") storeSetNickname(nickname);
+            if (check === "ok" && nickname.trim().length > 0) storeSetNickname(nickname.trim());
             // 선택한 캐릭터 얼굴도 함께 저장
             if (selectedFace) storeSetProfileFace(selectedFace);
             navigate(-1);

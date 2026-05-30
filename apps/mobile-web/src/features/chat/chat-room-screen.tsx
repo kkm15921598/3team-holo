@@ -471,18 +471,20 @@ export function ChatRoomScreen() {
     setMessages((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
-        const list = [...(m.reactions ?? [])];
-        const existing = list.find((r) => r.emoji === emoji);
-        if (existing) {
-          existing.count += existing.mine ? -1 : 1;
-          existing.mine = !existing.mine;
-          if (existing.count <= 0) {
-            return { ...m, reactions: list.filter((r) => r !== existing) };
-          }
-        } else {
-          list.push({ emoji, count: 1, mine: true });
-        }
-        return { ...m, reactions: list };
+        const list = m.reactions ?? [];
+        const has = list.some((r) => r.emoji === emoji);
+        // 이전 state/캐시와 공유되는 reaction 객체를 직접 변형하지 않고 새 객체로 대체한다.
+        // (StrictMode 의 업데이터 이중 호출 시 in-place 변형은 카운트가 ±2 로 어긋난다.)
+        const next = has
+          ? list
+              .map((r) =>
+                r.emoji === emoji
+                  ? { ...r, count: r.count + (r.mine ? -1 : 1), mine: !r.mine }
+                  : r,
+              )
+              .filter((r) => r.count > 0)
+          : [...list, { emoji, count: 1, mine: true }];
+        return { ...m, reactions: next };
       }),
     );
     setReactionTarget(null);

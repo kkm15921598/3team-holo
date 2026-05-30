@@ -52,7 +52,9 @@ export function FindPasswordScreen() {
   const baseFilled = isNameValid && isPhoneValid;
   const canSubmitVerify = codeSent ? code.length >= 6 : baseFilled;
 
-  const PW_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+\-=]{8,16}$/;
+  // 가입(account-screen)·비번변경(password-change)과 동일한 규칙 — 특수문자 화이트리스트로
+  // 제한하면 가입 때 쓴 비번(예: . ? ~ 등 포함)이 재설정에서 거부되던 불일치가 생긴다.
+  const PW_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/;
   const isPwValid = PW_PATTERN.test(newPw);
   const isPwMatch = !!confirmPw && newPw === confirmPw;
   const canSubmitReset = isPwValid && isPwMatch;
