@@ -3,6 +3,7 @@ import { getStats, setStats } from "@/shared/stores/account-stats-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { addPoints } from "@/features/myroom/myroom-store";
+import { pushRewardNotification } from "@/shared/stores/notifications-store";
 
 /**
  * 레벨업 보너스 포인트 — my-level-screen 의 LEVEL_BENEFITS 표와 동일해야 한다.
@@ -309,7 +310,16 @@ export function awardXp(action: XpAction): { gained: number; capped: boolean } {
     // 시드 보정/중복 적립을 막는다.
     for (let lv = oldLevel + 1; lv <= newLevel; lv++) {
       const bonus = LEVEL_BONUS[lv];
-      if (bonus) addPoints(bonus, { title: "레벨 업 보너스", note: `Lv.${lv}` });
+      if (bonus) {
+        addPoints(bonus, { title: "레벨 업 보너스", note: `Lv.${lv}` });
+        // 뱃지/칭호 획득과 동일하게 보상 알림도 띄운다 — 안 그러면 포인트만 조용히
+        // 들어와 사용자가 보너스를 받은 줄 모른다(알림 설정 OFF면 자동 억제됨).
+        pushRewardNotification(
+          "🎁 레벨 업 보너스",
+          `Lv.${lv} 달성! +${bonus.toLocaleString()}P를 받았어요`,
+          "/mypage/points",
+        );
+      }
     }
   }
   return { gained: cfg.xp, capped: false };
