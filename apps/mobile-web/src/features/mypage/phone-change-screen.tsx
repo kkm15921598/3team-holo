@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { setPhoneVerified } from "@/shared/stores/verification-store";
+import { setPhoneVerified, renameRegionBackup } from "@/shared/stores/verification-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { getCurrentAccount, renameAccount } from "@/shared/stores/account-choices-store";
 import { maskPhone } from "@/shared/lib/phone";
@@ -64,6 +64,8 @@ export function PhoneChangeScreen() {
 
       // 로컬 계정 포인터 + 선택(뱃지/칭호) 키도 새 번호로 이전.
       renameAccount(currentPhone, newPhone);
+      // 동네 라벨 백업도 새 번호로 이전 — 안 하면 번호 변경 후 동네가 안 뜰 수 있음.
+      renameRegionBackup(currentPhone, newPhone);
     }
 
     setPhoneVerified(true);

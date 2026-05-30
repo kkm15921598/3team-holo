@@ -970,15 +970,15 @@ export function ChatRoomScreen() {
                   navigate(`/profile/${encodeURIComponent(nickname)}`)
                 }
                 onImageTap={(target) => {
-                  // 현재 방의 모든 이미지 URL 을 시간순으로 모아서 뷰어에 넘김
-                  const all = messages
-                    .filter(
-                      (mm) => mm.type === "image" && !!mm.imageUrl,
-                    )
-                    .map((mm) => mm.imageUrl as string);
-                  const idx = all.indexOf(target.imageUrl ?? "");
+                  // 현재 방의 모든 이미지 메시지를 시간순으로 모아서 뷰어에 넘김.
+                  // 시작 인덱스는 고유 message.id 로 찾는다 — 같은 사진을 두 번 보내
+                  // imageUrl 이 중복돼도 indexOf 처럼 첫 항목으로 쏠리지 않게.
+                  const imageMsgs = messages.filter(
+                    (mm) => mm.type === "image" && !!mm.imageUrl,
+                  );
+                  const idx = imageMsgs.findIndex((mm) => mm.id === target.id);
                   setPhotoViewer({
-                    images: all,
+                    images: imageMsgs.map((mm) => mm.imageUrl as string),
                     index: idx >= 0 ? idx : 0,
                   });
                 }}

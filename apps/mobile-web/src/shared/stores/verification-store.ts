@@ -155,6 +155,21 @@ export function getVerifiedRegionForPhone(phone: string): string | null {
   return loadRegionMap()[phone] ?? null;
 }
 
+/** 휴대폰 번호 변경 시 동네 라벨 백업도 새 번호로 이전(phone 이 계정 식별자이므로). */
+export function renameRegionBackup(oldPhone: string, newPhone: string) {
+  if (typeof window === "undefined" || !oldPhone || !newPhone || oldPhone === newPhone) return;
+  try {
+    const map = loadRegionMap();
+    if (map[oldPhone] != null) {
+      map[newPhone] = map[oldPhone];
+      delete map[oldPhone];
+      window.localStorage.setItem(REGION_BY_PHONE_KEY, JSON.stringify(map));
+    }
+  } catch {
+    // ignore
+  }
+}
+
 /** 인증한 동네 라벨 저장 (인증 완료와 동시에 호출) */
 export function setVerifiedRegion(region: string | null) {
   // 계정별 로컬 백업에 먼저 기록 — sync/리셋으로 _state 가 비워져도 복원 가능.

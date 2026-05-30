@@ -257,9 +257,19 @@ export function BoardDetailScreen() {
     const parentMap = new Map<string, CommentThread>();
     const parents: CommentThread[] = [];
 
+    // Supabase 는 댓글의 지도(location/hasMap)를 저장하지 않으므로, 같은 댓글의 localStorage
+    // 사본에서 지도 정보를 가져와 서버 댓글에 보강한다. (안 하면 지도만 단 댓글이 새로고침/재진입
+    // 후 빈 댓글로 바뀐다.) 키는 nickname:content — 보강만 하고 중복 추가는 하지 않는다.
+    const myForThisPost = userComments.filter((c) => c.postId === post.id);
+    const localMapByKey = new Map<string, (typeof myForThisPost)[number]>();
+    for (const lc of myForThisPost) {
+      if (lc.location) localMapByKey.set(`${lc.nickname}:${lc.content}`, lc);
+    }
+
     // 1) Supabase 부모 댓글 먼저 추가
     for (const c of supabaseComments) {
       if (!c.parentId) {
+        const enrich = localMapByKey.get(`${c.nickname}:${c.content}`);
         const thread: CommentThread = {
           id: c.id,
           nickname: c.nickname,
@@ -267,8 +277,8 @@ export function BoardDetailScreen() {
           timeAgo: c.timeAgo,
           hasPhoto: c.hasPhoto,
           photoUrl: c.photoUrl,
-          hasMap: c.hasMap,
-          location: c.location,
+          hasMap: c.hasMap ?? enrich?.hasMap,
+          location: c.location ?? enrich?.location,
           replies: [],
         };
         parents.push(thread);
@@ -281,16 +291,17 @@ export function BoardDetailScreen() {
       if (!c.parentId) continue;
       const parent = parentMap.get(c.parentId);
       if (!parent) continue;
+      const enrich = localMapByKey.get(`${c.nickname}:${c.content}`);
       parent.replies.push({
         id: c.id,
         nickname: c.nickname,
         content: c.content,
         timeAgo: c.timeAgo,
         isAuthor: c.nickname === post.authorNickname,
-        hasMap: c.hasMap,
+        hasMap: c.hasMap ?? enrich?.hasMap,
         hasPhoto: c.hasPhoto,
         photoUrl: c.photoUrl,
-        location: c.location,
+        location: c.location ?? enrich?.location,
       });
     }
 
@@ -300,7 +311,6 @@ export function BoardDetailScreen() {
     const supabaseKeys = new Set(
       supabaseComments.map((c) => `${c.nickname}:${c.content}`)
     );
-    const myForThisPost = userComments.filter((c) => c.postId === post.id);
 
     for (const c of myForThisPost) {
       const key = `${c.nickname}:${c.content}`;
