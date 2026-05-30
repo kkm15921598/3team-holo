@@ -4,6 +4,7 @@ import { useCountdown } from "@/shared/hooks/use-countdown";
 import { useSignup, genderFromIdNum } from "@/shared/contexts/signup-context";
 import { setGender as setGlobalGender } from "@/shared/stores/verification-store";
 import { PasswordToggle } from "@/shared/components/password-toggle";
+import { supabase } from "@/shared/lib/supabaseClient";
 import { SignupLayout } from "./signup-layout";
 
 const CARRIER_GROUPS: { label: string; items: string[] }[] = [
@@ -107,11 +108,27 @@ export function VerificationScreen() {
   const baseFilled = isNameValid && isIdValid && carrier && isPhoneValid;
   const canSubmit = codeSent ? code.length === 6 : baseFilled;
 
-  const handleMain = () => {
+  const handleMain = async () => {
     setVerifyError("");
 
     if (!codeSent) {
       if (!baseFilled) return;
+      // 이미 가입된 번호인지 먼저 확인 — 중복 가입을 가입 초반에 차단.
+      // (이전엔 검사가 없어 마지막 review-screen insert 의 23505 alert 까지 가서야 막혔고,
+      //  구현돼 있던 AlreadyJoinedModal 은 호출처가 없어 절대 안 뜨는 dead UI 였다.)
+      const { data: existing, error } = await supabase
+        .from("users")
+        .select("phone")
+        .eq("phone", phone)
+        .maybeSingle();
+      if (error) {
+        setVerifyError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+        return;
+      }
+      if (existing) {
+        setShowAlreadyJoined(true);
+        return;
+      }
       // 가짜 SMS 발송: 무작위 6자리 코드 생성 + 토스트 노출
       const newCode = generateMockCode();
       setGeneratedCode(newCode);

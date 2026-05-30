@@ -112,8 +112,11 @@ export function LoginScreen() {
 
       // 2) 이전 계정/세션의 localStorage 잔여 데이터를 비운다(로컬 전용, Supabase 미반영).
       resetUserStoresForLogin();
-      setGender(dbUser.gender ?? "female");
-      setProfileFace(defaultFaceForGender(dbUser.gender ?? "female"));
+      // DB gender 는 "M"|"F"|null — store 타입("M"|"F")으로 정규화. null/예상외 값은 "F" 폴백.
+      // (이전엔 ?? "female" 로 타입에 없는 문자열을 넣어 _state.gender 를 오염시켰다.)
+      const g: "M" | "F" = dbUser.gender === "M" ? "M" : "F";
+      setGender(g);
+      setProfileFace(defaultFaceForGender(g));
       setNickname(dbUser.nickname ?? "");
       // 칭호 기본값은 빈 문자열이 아니라 입주자 칭호 — 서버 title 이 비어 있어도(과거 손상)
       // 홈/프로필에 칭호가 안 보이지 않도록. 실제 칭호가 있으면 아래 sync 가 덮어쓴다.

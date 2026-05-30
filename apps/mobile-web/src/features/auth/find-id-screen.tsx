@@ -3,12 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { supabase } from "@/shared/lib/supabaseClient";
 
+/** 가짜 SMS 6자리 인증번호 생성 (SMS 미연동 — find-password 와 동일 패턴). */
+function generateOtp(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 export function FindIdScreen() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [showSmsToast, setShowSmsToast] = useState(false);
   const [foundUser, setFoundUser] = useState<{ phone: string; nickname: string; created_at: string } | null>(null);
   const [error, setError] = useState("");
   const foundId = foundUser ? foundUser.phone : null;
@@ -26,6 +33,11 @@ export function FindIdScreen() {
 
     if (!codeSent) {
       if (!baseFilled) return;
+      // 가짜 SMS 발송 — 6자리 코드 생성 후 토스트로 노출
+      const otp = generateOtp();
+      setGeneratedCode(otp);
+      setShowSmsToast(true);
+      setTimeout(() => setShowSmsToast(false), 10000);
       setCodeSent(true);
       return;
     }
@@ -33,6 +45,11 @@ export function FindIdScreen() {
     if (code.length < 6) return;
     if (codeExpired) {
       setError("인증 시간이 만료되었습니다. 재전송해주세요.");
+      return;
+    }
+    // 발송된 인증번호와 일치하는지 검증 — 이전엔 검증 없이 아무 6자리나 통과했다.
+    if (code !== generatedCode) {
+      setError("인증번호가 올바르지 않습니다.");
       return;
     }
 
@@ -52,6 +69,11 @@ export function FindIdScreen() {
   };
 
   const handleResendCode = () => {
+    // 재전송 시 새 인증번호 발급 + 토스트
+    const otp = generateOtp();
+    setGeneratedCode(otp);
+    setShowSmsToast(true);
+    setTimeout(() => setShowSmsToast(false), 10000);
     setCode("");
     setError("");
     restartTimer();
@@ -205,7 +227,35 @@ export function FindIdScreen() {
           </button>
         </div>
       </form>
+
+      {showSmsToast && (
+        <SmsToast code={generatedCode} onClose={() => setShowSmsToast(false)} />
+      )}
     </main>
+  );
+}
+
+function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
+  return (
+    <div
+      role="alert"
+      onClick={onClose}
+      className="fixed left-1/2 top-4 z-[1100] w-[92%] max-w-[340px] -translate-x-1/2 cursor-pointer rounded-2xl border-2 border-dashed border-yellow-400 bg-yellow-50 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-[20px]">🛠️</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[12px] font-bold text-yellow-700">개발 테스트 모드</span>
+            <span className="shrink-0 text-[11px] text-yellow-600">SMS 미연동</span>
+          </div>
+          <p className="mt-0.5 text-[13px] leading-snug text-yellow-800">
+            테스트 인증번호:{" "}
+            <span className="font-bold text-yellow-900">{code}</span>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
