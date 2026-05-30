@@ -19,7 +19,8 @@ import {
   useSentRequests,
 } from "@/features/mypage/friends-store";
 import { awardXp } from "@/shared/stores/xp-store";
-import { RoomSceneView, randomRoomFurniture } from "@/features/home/home-illustrations";
+import { RoomSceneView } from "@/features/home/home-illustrations";
+import { type PlacedFurniture } from "@/features/myroom/myroom-data";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { markReported } from "@/shared/stores/reported-users-store";
 import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
@@ -163,18 +164,29 @@ export function ProfileDetailScreen() {
   // 친구 프로필 레벨 — Supabase에서 실제 값을 조회. 로딩 중엔 해시 기반 임시값 사용.
   const [otherLevel, setOtherLevel] = useState<number | undefined>(undefined);
   const [otherTitle, setOtherTitle] = useState<string | undefined>(undefined);
+  // 친구의 실제 마이룸 가구 배치 — undefined=로딩/미상, []=빈 방. 가짜 랜덤룸을 쓰지 않는다.
+  const [otherFurniture, setOtherFurniture] = useState<PlacedFurniture[] | undefined>(
+    undefined,
+  );
   useEffect(() => {
     if (isMe) return;
     setOtherLevel(undefined); // 닉네임 변경 시 초기화
     setOtherTitle(undefined);
+    setOtherFurniture(undefined);
     supabase
       .from("users")
-      .select("level, title")
+      .select("level, title, placed_furniture")
       .eq("nickname", nickname)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.level != null) setOtherLevel(data.level as number);
         if (data?.title) setOtherTitle(data.title as string);
+        // 실제 배치 가구가 있으면 그대로, 없으면 빈 방([]). 닉네임 해시 랜덤룸은 쓰지 않는다.
+        setOtherFurniture(
+          Array.isArray(data?.placed_furniture)
+            ? (data!.placed_furniture as PlacedFurniture[])
+            : [],
+        );
       });
   }, [nickname, isMe]);
 
@@ -211,12 +223,10 @@ export function ProfileDetailScreen() {
         ? "received"
         : "none";
 
-  const otherRoom = useMemo(
-    () => randomRoomFurniture(nickname, user.level),
-    [nickname, user.level],
-  );
-  // 내 프로필이면 실제 마이룸 가구 배치를 보여주고, 그 외엔 닉네임 해시 기반 랜덤룸.
-  const roomItems = isMe ? myroomItems : otherRoom;
+  // 내 프로필이면 실제 마이룸 가구, 친구면 Supabase 에서 조회한 실제 배치 가구.
+  // (이전엔 닉네임 해시 기반 랜덤룸으로 "그 사람 방"을 지어냈다 — 실제 가구가 아니었음.)
+  // 친구가 아직 방을 안 꾸몄거나 로딩 중이면 빈 방을 보여준다(가짜 가구 노출 금지).
+  const roomItems = isMe ? myroomItems : otherFurniture ?? [];
 
   const [confirm, setConfirm] = useState<{
     message: ReactNode;
