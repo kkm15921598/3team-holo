@@ -308,7 +308,8 @@ export async function syncRoomsFromSupabase(): Promise<void> {
         const { capacity, baseJoined } = calcJoined(post);
         const targetTotal = Math.min(capacity, baseJoined + 1);
         memberNames = deriveMeetupMembers(post, Math.max(0, targetTotal - 1));
-        memberCount = 1 + memberNames.length;
+        // 게시판 calcJoined 와 동일한 실제 총원으로 통일(닉네임 개수로 세면 늘 2명 고정).
+        memberCount = targetTotal;
         mName = post.title;
         hostNickname = post.authorNickname;
         // ensureMeetupRoom 과 동일하게 일정도 채운다 — 안 채우면 복원된 모임방에서

@@ -35,6 +35,16 @@ import { useUserComments } from "@/shared/stores/comments-store";
 import { useActivityState } from "@/shared/stores/activity-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 
+/** URL 파라미터 안전 디코드 — 잘못된 % 인코딩이면 throw 대신 원문/폴백을 돌려준다. */
+function safeDecodeParam(s: string | undefined, fallback: string): string {
+  if (!s) return fallback;
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 function hashString(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) {

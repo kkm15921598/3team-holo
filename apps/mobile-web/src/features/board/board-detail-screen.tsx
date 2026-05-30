@@ -120,6 +120,21 @@ function formatPostDate(timeAgo: string): string {
   return `${y}.${m}.${day}`;
 }
 
+const POST_NOT_FOUND_SENTINEL: Post = {
+  id: "__not_found__",
+  category: "free",
+  status: "모집중",
+  title: "",
+  description: "",
+  distance: "",
+  duration: "",
+  likes: 0,
+  comments: 0,
+  timeAgo: "",
+  authorNickname: "",
+  authorLevel: 0,
+};
+
 export function BoardDetailScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -128,7 +143,12 @@ export function BoardDetailScreen() {
   useEffect(() => {
     return postsStore.subscribe(() => setPosts(postsStore.getPosts()));
   }, []);
-  const post = posts.find((p) => p.id === id) ?? posts[0];
+  const found = posts.find((p) => p.id === id);
+  const notFound = !found;
+  // 잘못된/삭제된 id 딥링크 또는 첫 로드 전(빈 배열)이면 글을 못 찾는다. 예전엔 ?? posts[0]
+  // 로 엉뚱한 첫 글을 보여주거나 빈 배열에서 post.* 접근 시 크래시했다. 훅 순서 보존을 위해
+  // 못 찾을 땐 sentinel 로 채워 훅을 정상 실행하고, 모든 훅 뒤 not-found 화면으로 분기한다.
+  const post = found ?? POST_NOT_FOUND_SENTINEL;
   const profile = useProfile();
 
   // 장소 정보가 없으면 가짜 지명("미금역 사거리") 대신 중립 문구를 표시한다.
