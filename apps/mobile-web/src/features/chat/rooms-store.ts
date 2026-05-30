@@ -5,7 +5,7 @@ import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { isDmRoomId, getOtherPhoneFromDmId } from "./dm-utils";
 import { postsStore } from "@/features/board/posts-store";
-import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
+import { calcJoined, deriveMeetupMembers, isMeetupPost } from "@/features/board/meetup-utils";
 
 // 화면 간 이동·새로고침에 모두 유지되도록 localStorage 영속화.
 // 가입 직후 resetRoomsStore() 로 빈 배열을 저장하면 새로고침해도 빈 상태가 유지된다.
@@ -523,6 +523,44 @@ function initChatNotificationListener() {
                     error.message,
                   );
               });
+          }
+        }
+
+        // 모임방(meetup-<postId>)인데 아직 로컬에 없으면 — 같은 모임에 참여 중인 다른 멤버가
+        // 보낸 메시지. 내가 그 글에 참여(joined)했거나 작성자면 방을 자동 생성해 목록에 띄운다.
+        // (안 하면 모임 채팅이 와도 목록에 안 뜨고 미리보기/배지도 안 됨.)
+        if (!room && roomId.startsWith("meetup-")) {
+          const postId = roomId.slice("meetup-".length);
+          const post = postsStore.getPosts().find((p) => p.id === postId);
+          if (post && isMeetupPost(post)) {
+            const { capacity, baseJoined } = calcJoined(post);
+            const targetTotal = Math.min(capacity, baseJoined + 1);
+            const memberNames = deriveMeetupMembers(
+              post,
+              Math.max(0, targetTotal - 1),
+            );
+            const created: ChatRoom = {
+              id: roomId,
+              name: post.title,
+              subtitle: memberNames.slice(0, 2).join(", ") || "단체",
+              isGroup: true,
+              memberCount: targetTotal,
+              memberNames,
+              hostNickname: post.authorNickname,
+              lastMessage: "",
+              lastTime: "방금",
+              unread: 0,
+              online: true,
+              updatedAt: Date.now(),
+              meeting: {
+                date: post.eventDate ?? "",
+                time: post.eventTime ?? "",
+                place: post.place ?? post.location?.placeName ?? "",
+              },
+            };
+            rooms = [created, ...rooms];
+            emit();
+            room = created;
           }
         }
 
