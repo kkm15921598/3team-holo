@@ -809,6 +809,29 @@ export function BoardDetailScreen() {
         { key: "share", label: "URL 공유", Icon: ShareIcon, onClick: handleShare },
       ];
 
+  // 글을 못 찾은 경우(잘못된/삭제된 id, 첫 로드 전): 모든 훅 호출 이후라 Rules of Hooks 안전.
+  // 로드 전이면 로딩, 로드 끝났는데 없으면 '찾을 수 없음' 안내. (예전엔 엉뚱한 첫 글을 보여줬다.)
+  if (notFound) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
+        {!postsStore.isLoaded() ? (
+          <p className="text-[14px] text-holo-ink-3">불러오는 중…</p>
+        ) : (
+          <>
+            <p className="text-[15px] text-holo-ink">글을 찾을 수 없어요</p>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="rounded-holo-pill bg-holo-purple-mid px-6 py-2 text-[14px] font-semibold text-white"
+            >
+              뒤로가기
+            </button>
+          </>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className="flex flex-1 flex-col pb-6">
       {showJoinBanner && (
