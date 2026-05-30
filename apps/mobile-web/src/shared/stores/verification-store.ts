@@ -235,6 +235,10 @@ export function canEarnRegionVerifyPoints(): boolean {
  * 허용돼서, 사용자가 90일 안에도 동네를 계속 바꿔 인증할 수 있었다.
  */
 export function canReVerifyRegion(): boolean {
+  // 동네 라벨이 비어 있으면(유실/미저장 등) 90일 정책과 무관하게 재인증 허용 — 라벨 복구용.
+  // (안 그러면 regionVerified=true 인데 라벨만 비어 마이페이지에 안 뜨고, 잠김 상태라
+  //  다시 인증도 못 하는 교착에 빠진다. +10P 적립은 canEarnRegionVerifyPoints 로 별도 90일 제한.)
+  if (!_state.verifiedRegion) return true;
   // 인증됐는데 시점만 비어있는 모순 상태는 재인증 불가(90일 우회 차단).
   if (_state.regionVerified && _state.lastRegionVerifiedAt === null) return false;
   if (!_state.regionVerified || _state.lastRegionVerifiedAt === null) return true;

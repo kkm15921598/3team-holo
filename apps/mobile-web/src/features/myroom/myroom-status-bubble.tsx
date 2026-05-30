@@ -19,6 +19,10 @@ type Mode = "idle" | "selected" | "editing";
 export function StatusBubble() {
   const status = useStatusMessage();
   const pos = useStatusPosition();
+  // 화면 표시용 위치(영역 밖이면 클램프). 저장값(pos)은 사용자가 드래그할 때만 갱신한다 —
+  // 마운트 시 컨테이너 크기에 맞춰 자동 클램프한 값을 저장에 써버리면, 컨테이너 측정값이
+  // 접속/뷰포트마다 달라질 때 저장 위치가 매번 드리프트한다(=접속마다 말풍선 위치가 바뀜).
+  const [clampedPos, setClampedPos] = useState(pos);
   const [mode, setMode] = useState<Mode>("idle");
   const [draft, setDraft] = useState(status);
 
@@ -36,20 +40,24 @@ export function StatusBubble() {
   useLayoutEffect(() => {
     const el = bubbleRef.current;
     const parent = el?.parentElement;
-    if (!el || !parent) return;
+    if (!el || !parent) {
+      setClampedPos(pos);
+      return;
+    }
     const PADDING = 4;
     const maxX = Math.max(PADDING, parent.clientWidth - el.offsetWidth - PADDING);
     const maxY = Math.max(PADDING, parent.clientHeight - el.offsetHeight - PADDING);
     const clampedX = Math.max(PADDING, Math.min(maxX, pos.x));
     const clampedY = Math.max(PADDING, Math.min(maxY, pos.y));
-    if (clampedX !== pos.x || clampedY !== pos.y) {
-      setStatusPosition({ x: clampedX, y: clampedY });
-    }
+    // 저장(setStatusPosition) 하지 않고 표시용 state 만 갱신 — 저장값 드리프트 방지.
+    setClampedPos((prev) =>
+      prev.x === clampedX && prev.y === clampedY ? prev : { x: clampedX, y: clampedY },
+    );
   }, [status, pos.x, pos.y]);
 
   const handleDragStart = (e: React.PointerEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    dragStart.current = { px: e.clientX, py: e.clientY, ox: pos.x, oy: pos.y };
+    dragStart.current = { px: e.clientX, py: e.clientY, ox: clampedPos.x, oy: clampedPos.y };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const handleDragMove = (e: React.PointerEvent<HTMLButtonElement>) => {
@@ -106,14 +114,14 @@ export function StatusBubble() {
   const VISIBLE_RIGHT = 352; // 디바이스 폭(360) - 우측 여유 8px
   const VISIBLE_LEFT = 4;
   const containerLeft = isEditing
-    ? Math.max(VISIBLE_LEFT, Math.min(pos.x, VISIBLE_RIGHT - EDIT_W))
-    : pos.x;
+    ? Math.max(VISIBLE_LEFT, Math.min(clampedPos.x, VISIBLE_RIGHT - EDIT_W))
+    : clampedPos.x;
 
   return (
     <div
       ref={bubbleRef}
       className="absolute z-[60] transition-[left] duration-150"
-      style={{ left: containerLeft, top: pos.y }}
+      style={{ left: containerLeft, top: clampedPos.y }}
     >
       {isEditing ? (
         <form
