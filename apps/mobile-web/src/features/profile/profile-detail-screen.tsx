@@ -463,17 +463,6 @@ export function ProfileDetailScreen() {
           <CloseIcon />
         </button>
 
-        {/* 방명록 — 이웃 방에 도장+한 줄 남기기. 내 프로필에선 받은 방명록 보기. */}
-        <button
-          type="button"
-          onClick={() =>
-            navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)
-          }
-          className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-holo-pill bg-white/70 px-2.5 py-1 text-[12px] font-medium text-holo-ink-2 backdrop-blur active:opacity-70"
-        >
-          <GuestbookIcon /> 방명록
-        </button>
-
         <div className="flex h-[340px] w-full items-start justify-center pt-[10px]">
           <RoomSceneView items={roomItems} />
         </div>
@@ -605,6 +594,18 @@ export function ProfileDetailScreen() {
             </button>
           )}
         </div>
+
+        {/* 방명록 — 교류 액션이므로 친구/채팅 버튼 바로 아래에 그룹지어 배치(발견성↑).
+            히어로 모서리 칩보다 가독성·일관성이 좋다. 내 프로필은 받은 방명록 열람. */}
+        <button
+          type="button"
+          onClick={() =>
+            navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)
+          }
+          className="mt-2 flex h-[44px] w-full items-center justify-center gap-1.5 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink-2 active:bg-holo-surface"
+        >
+          <GuestbookIcon /> {isMe ? "내 방명록" : "방명록 남기기"}
+        </button>
 
         {/* 차단/신고 — 다른 사용자 프로필에만 표시. 내 프로필에서는 의미가 없어 숨김. */}
         {!isMe && (
