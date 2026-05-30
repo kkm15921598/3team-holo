@@ -80,6 +80,7 @@ import { MyroomScreen } from "@/features/myroom/myroom-screen";
 
 import { markActiveToday } from "@/shared/stores/activity-store";
 import { pruneNonMeetupRooms } from "@/features/board/meetup-utils";
+import { evaluateAchievements } from "@/shared/lib/achievements";
 
 import "./index.css";
 
@@ -89,6 +90,14 @@ markActiveToday();
 // 자유 / 추천 단순 게시글에 잘못 연결된 모임 채팅방(localStorage 잔존)을 정리.
 // 시드 데이터 변경 / 옛 빌드의 잔재로 남은 "meetup-<자유글>" 방을 한 번에 제거한다.
 pruneNonMeetupRooms();
+
+// 배지/칭호 자동 발급 — 데이터(글/댓글/좋아요/친구/레벨)가 로드된 뒤 한 번 평가.
+// (마이페이지/배지/칭호 화면 진입 시에도 재평가하지만, 여기서 한 번 해 알림이 뜨게 함)
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => evaluateAchievements(), 1200);
+  });
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

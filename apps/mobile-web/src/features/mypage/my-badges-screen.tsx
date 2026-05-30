@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BADGES } from "@/shared/mock/data";
+import { evaluateAchievements } from "@/shared/lib/achievements";
 import { getBadgeById } from "@/badge";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { setEquippedBadgeId as storeSetBadge } from "@/shared/stores/profile-store";
@@ -16,6 +17,10 @@ export function MyBadgesScreen() {
   const stats = useAccountStats();
   const [equippedId, setEquippedId] = useState<string>(profile.equippedBadgeId);
   const [modal, setModal] = useState<{ id: string; isAcquired: boolean } | null>(null);
+  // 진입 시 기준 충족한 배지 자동 발급(멱등).
+  useEffect(() => {
+    evaluateAchievements();
+  }, []);
 
   // 실제 획득한 뱃지 집합 — account-stats-store 의 acquiredBadgeIds 가 출처.
   // 장착 뱃지는 반드시 acquired 안에 들어 있어야 한다.

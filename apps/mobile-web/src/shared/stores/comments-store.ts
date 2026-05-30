@@ -123,3 +123,8 @@ const snapshot = () => state;
 export function useUserComments(): StoredComment[] {
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
+/** 비-React getter — 업적 평가 등에서 사용. */
+export function getUserComments(): StoredComment[] {
+  return state;
+}

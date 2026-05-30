@@ -93,6 +93,11 @@ export function isPostLiked(id: string): boolean {
   return state.has(id);
 }
 
+/** 내가 누른 좋아요 총 개수 (업적 평가용). */
+export function getLikedCount(): number {
+  return state.size;
+}
+
 export function togglePostLike(id: string): boolean {
   const next = new Set(state);
   const wasLiked = next.has(id);

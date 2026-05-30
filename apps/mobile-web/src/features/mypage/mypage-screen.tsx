@@ -6,6 +6,7 @@ import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
 import { usePoints } from "@/features/myroom/myroom-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
 import { postsStore } from "@/features/board/posts-store";
+import { evaluateAchievements } from "@/shared/lib/achievements";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useVerification } from "@/shared/stores/verification-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
@@ -20,6 +21,10 @@ export function MypageScreen() {
   // 글 목록 변화(삭제/추가)에도 모임수가 갱신되도록 postsStore 구독.
   const [, setPostsTick] = useState(0);
   useEffect(() => postsStore.subscribe(() => setPostsTick((t) => t + 1)), []);
+  // 마이페이지 진입 시 배지/칭호 기준 충족분 자동 발급(멱등).
+  useEffect(() => {
+    evaluateAchievements();
+  }, []);
   // '모임 참여' 수 — 현재 살아있는 글만 센다(my-meetings 목록과 동일 기준).
   // joinedSet 은 글 삭제 시 정리되지 않아 size 를 그대로 쓰면 삭제된 모임까지 세어 목록과 어긋난다.
   const meetupCount = postsStore.getPosts().filter((p) => joinedSet.has(p.id)).length;

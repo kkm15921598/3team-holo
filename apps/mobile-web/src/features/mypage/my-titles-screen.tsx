@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TITLES_META, type TitleMeta, type TitleTier } from "@/shared/mock/data";
+import { evaluateAchievements } from "@/shared/lib/achievements";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { setTitle as storeSetTitle } from "@/shared/stores/profile-store";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
@@ -61,6 +62,10 @@ export function MyTitlesScreen() {
   const [selected, setSelected] = useState<string>(profile.title);
   /** 현재 선택된 탭 — 일반/희귀/전설 중 하나. 기본 "일반". */
   const [activeTier, setActiveTier] = useState<VisibleTier>("common");
+  // 진입 시 기준 충족한 칭호 자동 발급(멱등).
+  useEffect(() => {
+    evaluateAchievements();
+  }, []);
 
   const unlockedTitles = useMemo(
     () => new Set(stats.acquiredTitles),

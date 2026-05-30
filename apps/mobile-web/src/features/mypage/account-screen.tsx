@@ -151,7 +151,28 @@ export function AccountScreen() {
         }
         confirmLabel="탈퇴"
         onCancel={() => setShowWithdraw(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
+          // 서버 계정/데이터를 실제로 삭제 — 안 그러면 '영구 삭제' 안내와 달리 같은 번호로
+          // 재가입이 막히고(중복검사) 재로그인도 됐다. (모두 best-effort, 실패해도 로컬 탈퇴 진행)
+          // 포인터를 비우기 전에 번호를 캡처한다.
+          const phone = getCurrentPhone();
+          if (phone) {
+            try {
+              await supabase.from("posts").update({ is_deleted: true }).eq("author_phone", phone);
+            } catch {
+              // ignore
+            }
+            try {
+              await supabase.from("friends").delete().eq("user_phone", phone);
+            } catch {
+              // ignore
+            }
+            try {
+              await supabase.from("users").delete().eq("phone", phone);
+            } catch {
+              // ignore
+            }
+          }
           // 현재 계정 포인터를 먼저 비운다 — 아래 리셋이 일으키는 setter 의 Supabase 쓰기가
           // 탈퇴하는 계정 row 를 기본값(레벨1 등)으로 덮어쓰지 않도록(웬디 QA 지적 비대칭 차단).
           clearCurrentAccount();
