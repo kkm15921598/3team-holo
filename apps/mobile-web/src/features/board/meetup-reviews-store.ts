@@ -58,6 +58,12 @@ function loadCache(): Cache {
 
 let cache: Cache = loadCache();
 
+// 캐시 변경 구독 — 후기 작성 직후 useHostRating 이 즉시 재집계되도록.
+const cacheListeners = new Set<() => void>();
+function emitReviews() {
+  cacheListeners.forEach((l) => l());
+}
+
 function persistCache() {
   if (typeof window === "undefined") return;
   try {
@@ -163,6 +169,7 @@ export async function addMeetupReview(input: {
 
   cache = { ...cache, [input.hostNickname]: [review, ...(cache[input.hostNickname] ?? [])] };
   persistCache();
+  emitReviews(); // 평점 구독자(useHostRating) 즉시 재집계
   reviewedSet = new Set(reviewedSet);
   reviewedSet.add(input.meetupPostId);
   persistReviewed();
@@ -202,14 +209,25 @@ export function useHostRating(hostNickname: string | undefined): HostRating {
     }
     let cancelled = false;
     setRating(aggregate(cache[hostNickname] ?? []));
+    // 캐시 변경 구독 — 후기 작성 직후(addMeetupReview→emitReviews) 즉시 평점 갱신.
+    const onChange = () => {
+      if (!cancelled) setRating(aggregate(cache[hostNickname] ?? []));
+    };
+    cacheListeners.add(onChange);
     fetchReviews(hostNickname).then((rows) => {
       if (cancelled || !rows) return;
-      cache = { ...cache, [hostNickname]: rows };
+      // 서버 rows 로 통째 교체하면 아직 서버 반영 전인 로컬 후기(mr-)가 사라진다 → 병합.
+      const localOnly = (cache[hostNickname] ?? []).filter(
+        (r) => r.id.startsWith("mr-") && !rows.some((s) => s.id === r.id),
+      );
+      const merged = [...localOnly, ...rows];
+      cache = { ...cache, [hostNickname]: merged };
       persistCache();
-      setRating(aggregate(rows));
+      setRating(aggregate(merged));
     });
     return () => {
       cancelled = true;
+      cacheListeners.delete(onChange);
     };
   }, [hostNickname]);
 

@@ -435,20 +435,30 @@ async function backfillRoomPreviews(): Promise<void> {
     (r) => !r.lastMessage || r.lastMessage === "(대화를 시작해보세요)",
   );
   if (targets.length === 0) return;
-  const ids = targets.map((r) => r.id);
-  const { data, error } = await supabase
-    .from("messages")
-    .select("room_id, content, image_url, file_name, msg_type, lat, lng, sent_time, created_at")
-    .in("room_id", ids)
-    .order("created_at", { ascending: false })
-    .limit(1000);
-  if (error || !Array.isArray(data) || data.length === 0) return;
-
-  // created_at 내림차순이라 각 room_id 의 첫 등장이 최신 메시지.
+  // 방마다 최신 1건씩 조회한다. 종전엔 .in() + limit(1000) 전역 정렬이라, 메시지가 많은
+  // 방이 1000건을 다 채우면 다른 방이 결과에서 빠져 미리보기가 비던 문제가 있었다.
+  // (placeholder 방은 보통 소수라 병렬 단건 쿼리로 충분. 폭주 방지로 40개까지만.)
+  const CAP = 40;
+  const ids = targets.slice(0, CAP).map((r) => r.id);
+  const rowsPerRoom = await Promise.all(
+    ids.map(async (rid) => {
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("room_id, content, image_url, file_name, msg_type, lat, lng, sent_time, created_at")
+          .eq("room_id", rid)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error || !Array.isArray(data)) return null;
+        return data[0] ?? null;
+      } catch {
+        return null;
+      }
+    }),
+  );
   const latestByRoom = new Map<string, Record<string, unknown>>();
-  for (const row of data) {
-    const rid = String((row as Record<string, unknown>).room_id);
-    if (!latestByRoom.has(rid)) latestByRoom.set(rid, row as Record<string, unknown>);
+  for (const row of rowsPerRoom) {
+    if (row) latestByRoom.set(String((row as Record<string, unknown>).room_id), row as Record<string, unknown>);
   }
   if (latestByRoom.size === 0) return;
 
@@ -555,7 +565,13 @@ function initChatNotificationListener() {
         // 1:1 방인데 아직 로컬에 없으면 — 상대가 먼저 보낸 첫 메시지.
         // 내 phone 이 room_id 에 포함돼 있으면 내가 속한 방이라 보고 자동 생성한다.
         if (!room && isDmRoomId(roomId)) {
-          const otherPhone = getOtherPhoneFromDmId(roomId, userPhone);
+          // 수신한 DM 이므로 발신자(row.sender_phone)가 곧 상대방이다. room_id 파싱이 실패하는
+          // 비결정적 폴백 id(dm-<timestamp>)여도 발신자 phone 으로 방을 만들 수 있어, 상대 메시지가
+          // 알림만 뜨고 방엔 안 붙던 유실(사막여우)을 막는다.
+          const otherPhone =
+            getOtherPhoneFromDmId(roomId, userPhone) ??
+            (row.sender_phone as string | undefined) ??
+            null;
           if (otherPhone) {
             const senderNickname =
               (row.sender_nickname as string | undefined) ?? "알 수 없음";

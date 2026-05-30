@@ -3,6 +3,7 @@ import {
   awardXp,
   getAttendanceCycleStatus,
   getAttendanceDayCount,
+  useXpState,
 } from "@/shared/stores/xp-store";
 import { addPoints } from "@/features/myroom/myroom-store";
 import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
@@ -17,6 +18,13 @@ import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
  */
 
 const SKIP_KEY = "holo:attendance-popup:skip"; // 값 = "오늘 보지 않기" 누른 날짜(YYYY-MM-DD)
+
+// 한 세션에 한 번만 자동 노출 — 닫은 뒤 홈 재진입(컴포넌트 재마운트) 때 또 뜨지 않게.
+let shownThisSession = false;
+/** 홈에서 팝업을 띄우기로 결정하면 호출 — 이후 같은 세션 자동 재노출 차단. */
+export function markAttendancePopupShown() {
+  shownThisSession = true;
+}
 
 /** 주간 일차별 보상 — attendance-screen 의 WEEKLY_REWARDS 와 동일하게 유지. */
 const WEEKLY_REWARDS: { points: number; label?: string }[] = [
@@ -37,6 +45,7 @@ function todayStr(): string {
 /** 오늘 팝업을 띄울지 — 이미 출석했거나 "오늘 보지 않기" 누른 날이면 false. */
 export function shouldShowAttendancePopup(): boolean {
   if (typeof window === "undefined") return false;
+  if (shownThisSession) return false; // 이번 세션에 이미 한 번 띄웠으면 자동 재노출 안 함
   try {
     if (window.localStorage.getItem(SKIP_KEY) === todayStr()) return false;
   } catch {
@@ -54,9 +63,10 @@ function skipToday() {
 }
 
 export function AttendancePopup({ onClose }: { onClose: () => void }) {
-  const [tick, setTick] = useState(0);
   const [skip, setSkip] = useState(false);
-  void tick;
+  // XP store 구독 — 출석 적립(awardXp) 후 store 가 emit 하면 재렌더되어 attendedToday 가
+  // 즉시 반영된다(버튼이 '완료'로 전환). 종전 setTick 수동 갱신은 store 변경을 못 읽었다.
+  useXpState();
 
   const cycle = getAttendanceCycleStatus();
   const attendedToday = cycle.attendedToday;
@@ -74,8 +84,7 @@ export function AttendancePopup({ onClose }: { onClose: () => void }) {
       addPoints(todayPoints, { title: "출석체크", note: `${cycle.todayPosition}일차` });
       if (getAttendanceDayCount() >= 365) recordBadgeAcquired("badge_26");
     }
-    setTick((t) => t + 1);
-    // 출석 완료 후 잠깐 '완료' 상태를 보여주고 닫는다(보지 않기 상태와 무관히 오늘은 더 안 뜸).
+    // useXpState 구독으로 즉시 '완료' 상태가 반영됨. 잠깐 보여주고 닫는다(오늘은 더 안 뜸).
     window.setTimeout(onClose, 900);
   };
 

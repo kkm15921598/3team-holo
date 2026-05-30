@@ -462,8 +462,11 @@ export function getLevelProgress(currentLevel = 1): {
   // 그대로 쓰면 만렙인데도 "다음 레벨까지 500 XP / 0%" 로 잘못 표시된다 → 100% 로 고정.
   if (effectiveLevel >= 30) {
     const base = cumulativeXpForLevel(30);
-    const current = Math.max(0, state.totalXp - base);
-    return { current, required: current, remaining: 0, percent: 100 };
+    // 만렙 이후에도 totalXp 는 계속 쌓이므로, 화면에 '경험치 N' 이 무한정 커지지 않도록
+    // 해당 레벨 요구치로 캡한다(진행바는 100% 고정).
+    const cap = xpRequiredForLevel(30);
+    const current = Math.min(cap, Math.max(0, state.totalXp - base));
+    return { current, required: cap, remaining: 0, percent: 100 };
   }
   const required = xpRequiredForLevel(effectiveLevel);
   // 현재 레벨 구간 내 누적 XP — 해당 레벨 진입 시점의 총 XP를 빼야 정확한 진행도가 나온다.

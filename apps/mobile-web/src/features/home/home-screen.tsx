@@ -15,7 +15,7 @@ import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useGeolocation } from "@/shared/hooks/use-geolocation";
 import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
-import { AttendancePopup, shouldShowAttendancePopup } from "@/features/event/attendance-popup";
+import { AttendancePopup, shouldShowAttendancePopup, markAttendancePopupShown } from "@/features/event/attendance-popup";
 
 export function HomeScreen() {
   const userPos = useGeolocation();
@@ -98,7 +98,10 @@ export function HomeScreen() {
   // (환영 모달이 떠 있는 동안엔 가렸다가, 닫힌 뒤 노출 — 아래 렌더에서 !welcomeBonus 로 게이트.)
   const [showAttendance, setShowAttendance] = useState(false);
   useEffect(() => {
-    if (shouldShowAttendancePopup()) setShowAttendance(true);
+    if (shouldShowAttendancePopup()) {
+      markAttendancePopupShown(); // 이번 세션 자동 재노출 차단(닫고 재진입해도 또 안 뜸)
+      setShowAttendance(true);
+    }
   }, []);
 
   // 카드 가로 드래그 스크롤 (map-screen과 동일)

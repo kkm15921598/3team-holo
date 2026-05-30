@@ -124,41 +124,44 @@ export function evaluateAchievements(): void {
     if (p.category in byCat) byCat[p.category] += 1;
   }
   const boardsActive = BOARD_CATS.filter((c) => byCat[c] > 0).length;
-  const owned = new Set(stats.acquiredTitles);
-  const commonTitlesOwned = COMMON_TITLES.filter((n) => owned.has(n)).length;
-  const hasAllCommonRare =
-    COMMON_TITLES.every((n) => owned.has(n)) && RARE_TITLES.every((n) => owned.has(n));
 
-  const m: Metrics = {
-    level: stats.level,
-    myPosts: myPosts.length,
-    comments: getUserComments().length,
-    likesGiven: getLikedCount(),
-    friends: getFriends().length,
-    byCat,
-    boardsActive,
-    commonTitlesOwned,
-    hasAllCommonRare,
+  // 보유 칭호 기반 메타 지표는 매 패스마다 최신 stats 로 다시 계산한다.
+  const buildMetrics = (): Metrics => {
+    const owned = new Set(getStats().acquiredTitles);
+    return {
+      level: stats.level,
+      myPosts: myPosts.length,
+      comments: getUserComments().length,
+      likesGiven: getLikedCount(),
+      friends: getFriends().length,
+      byCat,
+      boardsActive,
+      commonTitlesOwned: COMMON_TITLES.filter((n) => owned.has(n)).length,
+      hasAllCommonRare:
+        COMMON_TITLES.every((n) => owned.has(n)) && RARE_TITLES.every((n) => owned.has(n)),
+    };
   };
 
-  for (const r of RULES) {
-    if (!r.met(m)) continue;
-    if (r.kind === "badge") {
-      if (recordBadgeAcquired(r.id)) {
-        pushRewardNotification(
-          "🏅 새 배지 획득",
-          `'${r.label}' 배지를 획득했어요!`,
-          "/mypage/badges",
-        );
-      }
-    } else {
-      if (recordTitleAcquired(r.name)) {
-        pushRewardNotification(
-          "🎖️ 새 칭호 획득",
-          `'${r.name}' 칭호를 획득했어요!`,
-          "/mypage/titles",
-        );
+  // 메타 칭호(#자취의_신=일반 15개, #HOLO_살림의신=일반·희귀 전부)는 같은 평가에서 막 획득한
+  // 칭호에 의존한다. 한 번만 돌면 그 칭호들이 다음 평가까지 안 나오므로, 새로 발급된 게 없을
+  // 때까지(최대 3패스) 지표를 다시 계산하며 반복한다(recordXxx 는 멱등이라 안전).
+  for (let pass = 0; pass < 3; pass++) {
+    const m = buildMetrics();
+    let grantedAny = false;
+    for (const r of RULES) {
+      if (!r.met(m)) continue;
+      if (r.kind === "badge") {
+        if (recordBadgeAcquired(r.id)) {
+          grantedAny = true;
+          pushRewardNotification("🏅 새 배지 획득", `'${r.label}' 배지를 획득했어요!`, "/mypage/badges");
+        }
+      } else {
+        if (recordTitleAcquired(r.name)) {
+          grantedAny = true;
+          pushRewardNotification("🎖️ 새 칭호 획득", `'${r.name}' 칭호를 획득했어요!`, "/mypage/titles");
+        }
       }
     }
+    if (!grantedAny) break; // 더 발급할 게 없으면 종료
   }
 }
