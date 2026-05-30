@@ -5,6 +5,9 @@ import { getAvatarUrl } from "@/features/chat/avatars";
 import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
 import { distanceMeters, type GeoPosition } from "@/shared/hooks/use-geolocation";
 import { getBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
+import { getProfile } from "@/shared/stores/profile-store";
+import { ME_PERSONA } from "./home-faces";
+import { isMyPost } from "@/features/board/author-identity";
 
 /** 미터 → "350m" / "1.2km" 표시 문자열 */
 function formatDistance(meters: number): string {
@@ -26,9 +29,13 @@ export function postToMeetup(post: Post, userPos?: GeoPosition | null): Meetup {
     post.authorNickname,
     ...memberNames.filter((n) => n !== post.authorNickname),
   ];
-  const members: Persona[] = seedNames.map((n) => ({
+  // 내 글이면 작성자(첫 얼굴)는 닉네임 생성 아바타가 아니라 내가 올린 실제 프로필 사진.
+  // (이전엔 내 글인데도 홈 카드에 남(생성 아바타)의 얼굴이 떴다.)
+  const mine = isMyPost(post);
+  const myFace = getProfile().profileFace ?? ME_PERSONA.face;
+  const members: Persona[] = seedNames.map((n, i) => ({
     name: n,
-    face: getAvatarUrl(n),
+    face: mine && i === 0 && n === post.authorNickname ? myFace : getAvatarUrl(n),
   }));
 
   // 거리 — 내 위치(위치 공유 ON + 권한 허용)와 글 위치가 모두 있을 때만 실제 계산.

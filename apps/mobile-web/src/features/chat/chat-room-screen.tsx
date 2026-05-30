@@ -636,27 +636,40 @@ export function ChatRoomScreen() {
     }
   };
 
-  const addReaction = (id: string, emoji: string) => {
+  const addReaction = (messageId: string, emoji: string) => {
+    // 대상 메시지의 다음 reactions 를 현재 상태에서 한 번 계산(이중 카운트 방지).
+    const target = messages.find((m) => m.id === messageId);
+    const list = target?.reactions ?? [];
+    const has = list.some((r) => r.emoji === emoji);
+    const next = has
+      ? list
+          .map((r) =>
+            r.emoji === emoji
+              ? { ...r, count: r.count + (r.mine ? -1 : 1), mine: !r.mine }
+              : r,
+          )
+          .filter((r) => r.count > 0)
+      : [...list, { emoji, count: 1, mine: true }];
+
     setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        const list = m.reactions ?? [];
-        const has = list.some((r) => r.emoji === emoji);
-        // 이전 state/캐시와 공유되는 reaction 객체를 직접 변형하지 않고 새 객체로 대체한다.
-        // (StrictMode 의 업데이터 이중 호출 시 in-place 변형은 카운트가 ±2 로 어긋난다.)
-        const next = has
-          ? list
-              .map((r) =>
-                r.emoji === emoji
-                  ? { ...r, count: r.count + (r.mine ? -1 : 1), mine: !r.mine }
-                  : r,
-              )
-              .filter((r) => r.count > 0)
-          : [...list, { emoji, count: 1, mine: true }];
-        return { ...m, reactions: next };
-      }),
+      prev.map((m) => (m.id === messageId ? { ...m, reactions: next } : m)),
     );
     setReactionTarget(null);
+
+    // Supabase 영속화 — 안 하면 재입장/새로고침 시 이모지 반응이 사라진다(저장이 없었음).
+    // mine 은 보는 사람마다 다르므로 공유 카운트(emoji/count)만 저장. (id = room id)
+    const userPhone = getCurrentAccount();
+    if (userPhone && id) {
+      const stored = next.map((r) => ({ emoji: r.emoji, count: r.count }));
+      supabase
+        .from("messages")
+        .update({ reactions: stored })
+        .eq("message_id", messageId)
+        .eq("room_id", id)
+        .then(({ error }) => {
+          if (error) console.warn("Supabase 리액션 저장 실패:", error.message);
+        });
+    }
   };
 
   // 그룹화: 날짜 구분선 + 검색 필터
