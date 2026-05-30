@@ -4,7 +4,7 @@ import { getBadgeById } from "../../badge";
 import { ME_PERSONA } from "./home-faces";
 import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
-import { pickMeetupsFromPosts } from "./home-meetups-data";
+import { pickMeetupsFromPosts, postToMeetup } from "./home-meetups-data";
 import { postsStore } from "@/features/board/posts-store";
 import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
 import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
@@ -26,11 +26,31 @@ export function HomeScreen() {
     });
   }, []);
 
-  // 글 목록 변화 또는 내 위치(거리 계산용)가 확정되면 추천 카드를 다시 계산한다.
-  // → 비동기로 로드되는 Supabase 글과, 뒤늦게 잡히는 GPS 위치가 카드에 반영된다.
+  // 최신 userPos 를 ref 로 보관 — 카드를 새로 뽑을 때 거리 계산에만 쓰고,
+  // userPos 객체 참조 변화(GPS tick 마다 새 객체)가 카드 '선택'을 초기화하지 않게 한다.
+  const userPosRef = useRef(userPos);
+  userPosRef.current = userPos;
+
+  // (A) 글 목록이 바뀔 때만 추천 카드를 새로 뽑는다. (userPos 는 deps 에서 제외 — ref 사용)
+  // → GPS tick 이 사용자의 새로고침(handleRefresh) 선택을 매번 되돌리던 회귀 방지.
   useEffect(() => {
-    setMeetups(pickMeetupsFromPosts(allPosts, 3, undefined, userPos));
-  }, [allPosts, userPos]);
+    setMeetups(pickMeetupsFromPosts(allPosts, 3, undefined, userPosRef.current));
+  }, [allPosts]);
+
+  // (B) 내 위치 좌표가 실제로 바뀌면 '선택된 카드'는 유지하고 각 카드의 거리만 갱신.
+  //     posKey(좌표 문자열)로만 트리거 — 동일 좌표의 GPS 재콜백으로는 재실행되지 않는다.
+  const posKey = userPos ? `${userPos.lat.toFixed(4)},${userPos.lng.toFixed(4)}` : "";
+  useEffect(() => {
+    if (!userPos) return;
+    setMeetups((prev) =>
+      prev.map((m) => {
+        const post = postsStore.getPosts().find((p) => p.id === m.id);
+        return post ? postToMeetup(post, userPos) : m;
+      }),
+    );
+    // posKey 가 트리거이며 userPos 는 그와 동기된 값이라 closure 가 일관됨.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posKey]);
   const status = useStatusMessage();
   const statusPos = useStatusPosition();
   const profile = useProfile();

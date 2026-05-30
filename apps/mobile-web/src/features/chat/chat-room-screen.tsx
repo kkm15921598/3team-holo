@@ -214,7 +214,7 @@ export function ChatRoomScreen() {
       }
 
       const userPhone = getCurrentAccount();
-      const memberCount = r?.memberCount ?? 2;
+      const memberCount = latestMemberCountRef.current;
       const remote: ChatMessage[] = (rows ?? []).map((row: any) => {
         // created_at → 날짜 구분선용 date 필드 (YYYY-MM-DD)
         const createdAt = row.created_at ? new Date(row.created_at) : new Date();
@@ -285,9 +285,6 @@ export function ChatRoomScreen() {
   useEffect(() => {
     if (!id) return;
 
-    const room = getRoom(id);
-    const memberCount = room?.memberCount ?? 2;
-
     const channel = supabase
       .channel(`room-${id}`)
       .on(
@@ -309,7 +306,7 @@ export function ChatRoomScreen() {
             content: row.content ?? "",
             time: row.sent_time ?? "",
             mine: isMine,
-            readBy: isMine ? Math.max(0, memberCount - 1 - readByArr.length) : undefined,
+            readBy: isMine ? Math.max(0, latestMemberCountRef.current - 1 - readByArr.length) : undefined,
             ...(row.image_url ? { type: "image" as const, imageUrl: row.image_url } : {}),
           };
           setMessages((prev) => {
@@ -331,7 +328,7 @@ export function ChatRoomScreen() {
           const row = payload.new as any;
           const msgId = String(row.message_id ?? row.id);
           const readByArr: string[] = Array.isArray(row.read_by) ? row.read_by : [];
-          const newReadBy = Math.max(0, memberCount - 1 - readByArr.length);
+          const newReadBy = Math.max(0, latestMemberCountRef.current - 1 - readByArr.length);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === msgId && m.mine
@@ -350,6 +347,10 @@ export function ChatRoomScreen() {
 
   // 마운트 시점의 마지막 메시지 id — 단순 입장만 했을 때는 updatedAt 을 갱신하지 않기 위함.
   const initialLastIdRef = useRef<string | null>(null);
+  // 안읽음 수 계산용 멤버수 단일 출처 — 전송/로드/실시간이 모두 같은 (보정된) 멤버수를 쓰도록
+  // members.length 를 ref 로 동기화한다. (loadFromSupabase/실시간 effect 는 members 보다 먼저
+  // 정의되지만, 실제 읽기는 메시지 도착 시점 런타임이라 최신 값이 안전하게 잡힌다.)
+  const latestMemberCountRef = useRef(2);
 
   // 메시지가 바뀔 때마다 store에 저장 (안 읽음 구분선은 제외 → 재진입 시 안 보임)
   // + 채팅 리스트에 표시될 lastMessage / lastTime 도 같이 갱신
@@ -379,10 +380,11 @@ export function ChatRoomScreen() {
             ? "[위치]"
             : lastReal.content || "";
 
-    // 내가 방금 보낸 메시지면 현재 시각을 "오후 H:MM" 형식으로 갱신,
-    // 그 외 (mock 초기 데이터 등) 는 기존 lastTime 유지.
+    // 내가 보낸 메시지 또는 새로 도착한 수신 메시지면 현재 시각을 "오후 H:MM" 으로 갱신.
+    // (이전엔 mine 일 때만 갱신해, 받은 메시지로는 시간이 멈춰 리스트 정렬(최상단)과 어긋났다.)
+    // isNewActivity 게이트라 마운트 첫 호출/mock 초기 데이터는 그대로 유지된다.
     let nextLastTime: string | undefined;
-    if (lastReal.mine) {
+    if (lastReal.mine || isNewActivity) {
       const now = new Date();
       const h = now.getHours();
       const m = String(now.getMinutes()).padStart(2, "0");
@@ -611,6 +613,8 @@ export function ChatRoomScreen() {
   }, [room]);
 
   const displayMemberCount = members.length;
+  // 읽음수 계산(로드/실시간 effect)이 참조할 최신 멤버수 동기화.
+  latestMemberCountRef.current = displayMemberCount;
 
   const nowTime = () => {
     const now = new Date();
