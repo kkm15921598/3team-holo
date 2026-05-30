@@ -24,7 +24,7 @@ export function ReviewScreen() {
   }
 
   const handleComplete = async () => {
-    const { error } = await supabase.from("users").insert({
+    const baseRow = {
       phone: data.phone,
       password: data.password,
       nickname: data.nickname,
@@ -32,7 +32,17 @@ export function ReviewScreen() {
       // 본인인증에서 받은 이름 저장 — 아이디/비밀번호 찾기가 name+phone 으로 본인확인하므로
       // 저장하지 않으면 계정 복구가 영구 실패한다. (find-id/find-password 가 .eq("name",..) 사용)
       name: data.name,
-    });
+    };
+
+    // 가입 시 고른 관심사(+직접입력) — users.interests(jsonb) 에 저장해 이웃찾기 매칭에 사용.
+    // 단, interests 컬럼이 아직 없는 환경(마이그레이션 전)에서도 가입이 막히면 안 되므로
+    // 컬럼 미존재(42703 / PGRST204) 에러면 interests 빼고 한 번 더 시도하는 폴백을 둔다.
+    let { error } = await supabase
+      .from("users")
+      .insert({ ...baseRow, interests: allInterests });
+    if (error && (error.code === "42703" || error.code === "PGRST204")) {
+      ({ error } = await supabase.from("users").insert(baseRow));
+    }
 
     if (error) {
       // PostgreSQL unique 제약조건 위반 (중복 가입 시도)

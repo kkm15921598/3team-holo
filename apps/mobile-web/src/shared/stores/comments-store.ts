@@ -67,16 +67,36 @@ export function addComment(c: StoredComment): void {
   // Supabase 저장 (best-effort)
   const userPhone = getCurrentAccount();
   if (userPhone) {
-    supabase.from("comments").insert({
+    const baseRow = {
       post_id: c.postId,
       user_id: userPhone,
       content: c.content,
       nickname: c.nickname,
       parent_id: c.parentId ?? null,
       photo_url: c.photoUrl ?? null,
-    }).then(({ error }) => {
-      if (error) console.warn("Supabase 댓글 저장 실패:", error.message);
-    });
+    };
+    // 지도 첨부 좌표/장소명 — comments.lat/lng/place_name(마이그레이션 후) 에 저장해
+    // 새로고침/타기기에서도 지도가 유지되게 한다. 컬럼 미존재 환경이면 위치 빼고 재시도.
+    const withLoc = c.location
+      ? {
+          ...baseRow,
+          lat: c.location.lat,
+          lng: c.location.lng,
+          place_name: c.location.placeName ?? null,
+        }
+      : baseRow;
+    supabase
+      .from("comments")
+      .insert(withLoc)
+      .then(({ error }) => {
+        if (error && (error.code === "42703" || error.code === "PGRST204")) {
+          return supabase.from("comments").insert(baseRow);
+        }
+        return { error };
+      })
+      .then((res) => {
+        if (res && res.error) console.warn("Supabase 댓글 저장 실패:", res.error.message);
+      });
   }
 }
 

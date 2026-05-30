@@ -142,15 +142,34 @@ export function addRoom(room: ChatRoom) {
   // 재입장(다시 방 생성/합류) 시 '나간 방' 기록 해제 — 이후 동기화에서 다시 보이도록.
   if (userPhone) removeLeftRoom(userPhone, stamped.id);
   if (userPhone) {
-    supabase.from("chat_rooms").insert({
+    const baseRow = {
       room_id: stamped.id,
       name: stamped.name,
       room_name: stamped.name,
       post_id: stamped.id.startsWith("meetup-") ? stamped.id.replace("meetup-", "") : null,
       creator_phone: userPhone,
-    }).then(({ error }) => {
-      if (error) console.warn("Supabase 채팅방 저장 실패:", error.message);
-    });
+    };
+    // chat_rooms.is_group / member_phones(마이그레이션 후) 에 그룹 여부·멤버를 저장해
+    // 타기기/재동기화에서 그룹방이 1:1 로 잘못 복원되던 문제를 근본적으로 막는다.
+    // member_phones 는 jsonb — 복원에 필요한 memberNames(닉네임) 배열을 그대로 보관한다.
+    // 컬럼 미존재 환경(마이그레이션 전)이면 기본 컬럼만으로 재시도.
+    const withGroup = {
+      ...baseRow,
+      is_group: !!stamped.isGroup,
+      member_phones: stamped.memberNames ?? null,
+    };
+    supabase
+      .from("chat_rooms")
+      .insert(withGroup)
+      .then(({ error }) => {
+        if (error && (error.code === "42703" || error.code === "PGRST204")) {
+          return supabase.from("chat_rooms").insert(baseRow);
+        }
+        return { error };
+      })
+      .then((res) => {
+        if (res && res.error) console.warn("Supabase 채팅방 저장 실패:", res.error.message);
+      });
   }
 }
 
@@ -340,12 +359,32 @@ export async function syncRoomsFromSupabase(): Promise<void> {
         if (u?.nickname) name = u.nickname as string;
       }
     }
+    // chat_rooms.member_phones(마이그레이션 후) 에 저장해둔 멤버 닉네임 배열을 복원.
+    // 있으면 인원수/부제목을 실제 멤버 기준으로 정확히 채우고, 없으면 기존 기본값(그룹 3명)을 쓴다.
+    const savedMembers = Array.isArray(row.member_phones)
+      ? (row.member_phones as string[])
+      : undefined;
+    const groupSubtitle =
+      savedMembers && savedMembers.length > 0
+        ? savedMembers.length > 2
+          ? `${savedMembers.slice(0, 2).join(", ")}, 외 ${savedMembers.length - 2}명`
+          : savedMembers.join(", ")
+        : "그룹";
     toAdd.push({
       id: roomId,
       name,
-      subtitle: isDm ? "1:1" : isGroup ? "그룹" : "1:1",
+      subtitle: isDm ? "1:1" : isGroup ? groupSubtitle : "1:1",
       isGroup,
-      memberCount: isDm ? 2 : isGroup ? 3 : 2,
+      memberCount: isDm
+        ? 2
+        : isGroup
+          ? savedMembers && savedMembers.length > 0
+            ? 1 + savedMembers.length
+            : 3
+          : 2,
+      ...(isGroup && savedMembers && savedMembers.length > 0
+        ? { memberNames: savedMembers }
+        : {}),
       lastMessage: "(대화를 시작해보세요)",
       lastTime: "",
       unread: 0,

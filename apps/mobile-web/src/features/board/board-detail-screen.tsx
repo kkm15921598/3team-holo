@@ -236,6 +236,13 @@ export function BoardDetailScreen() {
         parentId: row.parent_id ?? undefined,
         hasPhoto: row.photo_url ? true : undefined,
         photoUrl: row.photo_url ?? undefined,
+        // comments.lat/lng/place_name(마이그레이션 후) 에서 지도 첨부 복원 — 서버가 단일 소스.
+        // 컬럼/값이 없으면 undefined → 아래 localStorage 보강 로직이 폴백으로 채운다.
+        hasMap: row.lat != null && row.lng != null ? true : undefined,
+        location:
+          row.lat != null && row.lng != null
+            ? { lat: row.lat, lng: row.lng, placeName: row.place_name ?? undefined }
+            : undefined,
       })),
     );
   }, [post.id]);
