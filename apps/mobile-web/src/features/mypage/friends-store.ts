@@ -71,7 +71,14 @@ function saveToStorage<T>(key: string, value: T) {
 
 let _friends: Friend[] = loadFromStorage<Friend[]>(STORAGE_KEY, []);
 let _blocked: Friend[] = loadFromStorage<Friend[]>(BLOCKED_STORAGE_KEY, []);
-let _requests: FriendRequest[] = loadFromStorage<FriendRequest[]>(REQUESTS_STORAGE_KEY, []);
+// 옛 버전(닉네임 룩업 실패 시 전화번호를 nickname 으로 폴백 저장)에서 만들어진 손상 요청을
+// 로드 시 정리한다. nickname 이 전화번호 형태(01x…)면 UI 에 번호가 뜨고 수락 시 친구
+// 이름이 전화번호로 등록되므로 걸러낸다. (현재 코드는 더 이상 이런 항목을 만들지 않음.)
+const PHONE_LIKE = /^01[0-9]{7,8}$/;
+let _requests: FriendRequest[] = loadFromStorage<FriendRequest[]>(
+  REQUESTS_STORAGE_KEY,
+  [],
+).filter((r) => !PHONE_LIKE.test(String(r.nickname ?? "")));
 
 const listeners = new Set<() => void>();
 

@@ -57,12 +57,18 @@ export function FindIdScreen() {
     }
 
     // 인증번호 확인 후 Supabase에서 이름+번호로 가입 여부 조회
-    const { data: dbUser } = await supabase
+    const { data: dbUser, error } = await supabase
       .from("users")
       .select("phone, nickname, created_at")
       .eq("name", name.trim())
       .eq("phone", phone)
       .maybeSingle();
+
+    // 네트워크/RLS 오류를 '계정 없음'과 구분 — 일시 오류를 미가입으로 오해시키지 않도록.
+    if (error) {
+      setError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
 
     if (dbUser) {
       setFoundUser(dbUser);

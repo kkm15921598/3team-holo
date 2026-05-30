@@ -66,12 +66,19 @@ export function FindPasswordScreen() {
     if (!codeSent) {
       if (!baseFilled) return;
       // Supabase에서 이름+번호 일치 여부 확인
-      const { data: dbUser } = await supabase
+      const { data: dbUser, error } = await supabase
         .from("users")
         .select("phone")
         .eq("name", name.trim())
         .eq("phone", phone)
         .maybeSingle();
+
+      // 네트워크/RLS 오류를 '계정 없음'과 구분 — 안 그러면 일시 오류인데도
+      // "계정을 찾을 수 없습니다"가 떠서 사용자가 계정이 없는 줄 오해한다.
+      if (error) {
+        setVerifyError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+        return;
+      }
 
       if (!dbUser) {
         setVerifyError("입력하신 정보와 일치하는 계정을 찾을 수 없습니다.");

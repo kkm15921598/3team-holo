@@ -1126,7 +1126,9 @@ export function ChatRoomScreen() {
     Array.from(files).forEach((file, idx) => {
       const msg: ChatMessage = {
         id: `${Date.now()}-${idx}`,
-        nickname: "",
+        // 화면에 즉시 표시되는 객체에 닉네임을 채워야 한다. (이전엔 ""라 파일 메시지의
+        // 보낸이 이름이 빈칸으로 떴고, 실시간 핸들러는 기존 id 를 갱신 안 해 계속 빈칸이었다.)
+        nickname: myNickname,
         content: "",
         time: nowTime(),
         mine: true,
@@ -1171,7 +1173,8 @@ export function ChatRoomScreen() {
     if (!locDraftPick) return;
     const msg: ChatMessage = {
       id: String(Date.now()),
-      nickname: "",
+      // 위치 메시지도 보낸이 닉네임을 즉시 채운다(파일 메시지와 동일 — 빈칸 표시 방지).
+      nickname: getProfile().nickname,
       content: "",
       time: nowTime(),
       mine: true,

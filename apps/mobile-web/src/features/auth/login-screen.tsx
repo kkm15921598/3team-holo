@@ -65,6 +65,13 @@ export function LoginScreen() {
     e.preventDefault();
     if (submitting) return;
 
+    // 직전 시도의 에러 메시지를 먼저 지운다 — 안 하면 입력을 고쳐 다시 눌러도
+    // 이전 실패 문구가 그대로 남아 어느 시도가 실패했는지 헷갈린다.
+    setPhoneError(false);
+    setPhoneErrorMessage("");
+    setPasswordError(false);
+    setPasswordErrorMessage("");
+
     if (!phone) {
       setPhoneError(true);
       setPhoneErrorMessage("휴대폰 번호를 입력해주세요.");
