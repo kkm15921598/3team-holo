@@ -593,6 +593,10 @@ export function tryDailyEarn(key: string, max: number, amount: number, reason: P
   if (cur >= max) return false;
   dailyCaps.counts[key] = cur + 1;
   persistDailyCaps();
+  // 일일 cap 진행상황을 서버에도 저장 — 안 하면 cap 소진 후 로그아웃→재로그인 시
+  // 로컬이 리셋되어 같은 날 cap 을 또 채우는 무한 적립 우회가 가능했다.
+  // daily_caps(jsonb) 컬럼이 없으면 update 가 best-effort 로 무시된다(가입/적립은 정상).
+  syncMyroomToSupabase({ daily_caps: dailyCaps });
   addPoints(amount, reason);
   return true;
 }
@@ -619,7 +623,7 @@ export async function syncMyroomFromSupabase(): Promise<void> {
 
   const { data, error } = await supabase
     .from("users")
-    .select("placed_furniture, owned_furniture, points, status_message, point_history")
+    .select("placed_furniture, owned_furniture, points, status_message, point_history, daily_caps")
     .eq("phone", userPhone)
     .maybeSingle();
 
@@ -662,6 +666,21 @@ export async function syncMyroomFromSupabase(): Promise<void> {
     historyState = data.point_history as PointEvent[];
     persistHistory();
     emitHistory();
+  }
+
+  // 일일 cap 진행상황 복원 — 단, 서버 기록이 '오늘' 날짜일 때만 카운트를 살린다.
+  // (어제 이전이면 자정 리셋 대상이므로 빈 카운트). 로그인 시 로컬이 리셋되므로 서버값으로
+  // 다시 채워야 재로그인만으로 cap 이 풀려 무한 적립되는 우회를 막는다. 컬럼 없으면 무시됨.
+  const dc = (data as { daily_caps?: unknown }).daily_caps;
+  if (
+    dc &&
+    typeof dc === "object" &&
+    typeof (dc as DailyCapRecord).date === "string" &&
+    (dc as DailyCapRecord).counts &&
+    (dc as DailyCapRecord).date === todayKey()
+  ) {
+    dailyCaps = dc as DailyCapRecord;
+    persistDailyCaps();
   }
 }
 
