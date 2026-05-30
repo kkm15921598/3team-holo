@@ -35,7 +35,7 @@ export function BoardMainScreen() {
         <div>
           <p className="text-[18px] font-bold text-holo-ink">주간 TOP</p>
           <p className="mt-1 text-[12px] text-holo-purple-mid">
-            이번 주 가장 많이 본 글
+            이번 주 가장 인기있던 글
           </p>
         </div>
         <img

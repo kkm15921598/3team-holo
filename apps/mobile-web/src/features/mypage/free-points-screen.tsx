@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getDailyCount, tryDailyEarn } from "@/features/myroom/myroom-store";
+import { addPoints, getDailyCount, tryDailyEarn } from "@/features/myroom/myroom-store";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { postsStore } from "@/features/board/posts-store";
 import { useVerification } from "@/shared/stores/verification-store";
@@ -76,6 +76,22 @@ export function FreePointsScreen() {
     setToast(msg);
     setTimeout(() => setToast(null), 1800);
   };
+
+  // 첫 글 작성 일회성 미션(+20P) — 글을 쓰면 '완료'로 바뀌지만 정작 20P 적립 코드가
+  // 없었다. 첫 글 작성을 감지하면 기기당 1회(localStorage 가드) 실제 적립한다.
+  useEffect(() => {
+    if (!hasAuthoredPost) return;
+    const KEY = "holo.onetime.first-post";
+    try {
+      if (localStorage.getItem(KEY)) return;
+      localStorage.setItem(KEY, "1");
+    } catch {
+      return;
+    }
+    addPoints(20, { title: "첫 글 작성" });
+    setRefreshTick((t) => t + 1);
+    showToast("첫 글 작성 +20P 적립");
+  }, [hasAuthoredPost]);
 
   const claimLogin = () => {
     const ok = tryDailyEarn("login", 1, 5, { title: "매일 접속" });

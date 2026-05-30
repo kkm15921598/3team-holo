@@ -623,10 +623,11 @@ export function BoardDetailScreen() {
     // 모임 참여 알림 — 알림 패널에서 그 모임으로 바로 이동할 수 있도록 한 줄 발행.
     pushMeetingJoined(post.title, post.id);
     setShowJoinBanner(true);
-    // 이번 참여로 정원이 채워지고 + 이 모임을 내가 주최한 경우 → 호스트(=현재 사용자)에게 모집 완료 알림.
-    // baseJoined + 1(이번 참여) >= capacity 이면 정원 채움.
+    // 이번 참여로 정원이 채워지면 '모집 완료' 알림.
+    // (이전엔 && isMine 조건이었는데, 호스트는 자기 모임에 참여 버튼이 없어 이 분기에 절대
+    //  도달 못 해 알림이 한 번도 안 떴다. 정원이 차는 순간 현재 기기에 1회 발행 — 멱등 처리됨.)
     const willBeFull = Math.min(capacity, baseJoined + 1) >= capacity;
-    if (willBeFull && isMine) {
+    if (willBeFull) {
       pushMeetingFull(post.title, post.id);
     }
   };

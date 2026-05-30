@@ -16,10 +16,14 @@ import {
   purchaseItem,
   setLastSeenLevel,
   setMyroomItems,
+  setStatusMessage,
+  setStatusPosition,
   spendPoints,
   useMyroomItems,
   useOwnedSet,
   usePoints,
+  useStatusMessage,
+  useStatusPosition,
 } from "./myroom-store";
 
 export function MyroomScreen() {
@@ -41,6 +45,12 @@ export function MyroomScreen() {
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   /** 화면 진입 시점의 방 상태 스냅샷 — "아니오" 시 복원용 */
   const [initialSnapshot] = useState<PlacedFurniture[]>(() => items);
+  // 상태메시지/말풍선 위치도 진입 시점을 캡처 — 취소 시 가구뿐 아니라 이것들도 되돌린다.
+  // (StatusBubble 은 편집/드래그 즉시 store+localStorage 에 저장하므로 복원 안 하면 남는다.)
+  const statusMsg = useStatusMessage();
+  const statusPos = useStatusPosition();
+  const [statusSnapshot] = useState(() => statusMsg);
+  const [statusPosSnapshot] = useState(() => statusPos);
   /** 카탈로그 드로어 펼침 상태 — 클릭/스크롤 시 100px 위로 올라옴 */
   const [catalogExpanded, setCatalogExpanded] = useState(false);
   const expandCatalog = () => setCatalogExpanded(true);
@@ -84,9 +94,11 @@ export function MyroomScreen() {
   const handleBack = () => {
     setConfirmCancelOpen(true);
   };
-  /** "네" — 수정 취소: 진입 시점 스냅샷 복원 후 뒤로 */
+  /** "네" — 수정 취소: 진입 시점 스냅샷(가구 + 상태메시지 + 말풍선 위치) 복원 후 뒤로 */
   const confirmCancel = () => {
     setMyroomItems(initialSnapshot);
+    setStatusMessage(statusSnapshot);
+    setStatusPosition(statusPosSnapshot);
     setConfirmCancelOpen(false);
     navigate(-1);
   };
