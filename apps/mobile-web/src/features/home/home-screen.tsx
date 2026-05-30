@@ -5,6 +5,8 @@ import { ME_PERSONA } from "./home-faces";
 import { RoomScene } from "./home-illustrations";
 import { MeetupCard, PlusIcon, RefreshIcon } from "./home-meetup-card";
 import { pickMeetupsFromPosts, postToMeetup } from "./home-meetups-data";
+import { OnelineTicker } from "./oneline-ticker";
+import { syncOnelineFromSupabase } from "./oneline-store";
 import { postsStore } from "@/features/board/posts-store";
 import { useStatusMessage, useStatusPosition } from "../myroom/myroom-store";
 import { ROOM_H, ROOM_W } from "../myroom/myroom-data";
@@ -24,6 +26,11 @@ export function HomeScreen() {
     return postsStore.subscribe(() => {
       setAllPosts(postsStore.getPosts());
     });
+  }, []);
+
+  // 동네 한 줄 소식 — 마운트 시 서버에서 최근 소식을 끌어와 로컬과 병합(테이블 없으면 무시).
+  useEffect(() => {
+    syncOnelineFromSupabase();
   }, []);
 
   // 최신 userPos 를 ref 로 보관 — 카드를 새로 뽑을 때 거리 계산에만 쓰고,
@@ -218,7 +225,10 @@ export function HomeScreen() {
         </div>
       </section>
 
-      <section className="mt-[68px] px-[14px]">
+      {/* 동네 한 줄 소식 — 추천 모임 위. 가벼운 휘발성 소식으로 재방문/참여 유도. */}
+      <OnelineTicker />
+
+      <section className="mt-[28px] px-[14px]">
         <p className="mb-[3px] text-[15px] text-[#8E8E8E]">어떤 모임에 들어갈지 고민되시나요?</p>
         <div className="mb-[14px] flex items-center gap-[6px] text-[18px]">
           <span className="font-bold text-holo-purple-mid">{profile.nickname}</span>
