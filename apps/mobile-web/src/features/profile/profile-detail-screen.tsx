@@ -24,7 +24,7 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { markReported } from "@/shared/stores/reported-users-store";
 import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
 import { useProfile } from "@/shared/hooks/use-profile";
-import { getEquippedBadgeSrc } from "@/shared/stores/profile-store";
+import { getEquippedBadgeSrc, isMyNickname } from "@/shared/stores/profile-store";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useMyroomItems } from "@/features/myroom/myroom-store";
 import { ME_PERSONA } from "@/features/home/home-faces";
@@ -89,8 +89,10 @@ export function ProfileDetailScreen() {
   // 접속일수 — activity-store 의 activeDates.length 를 단일 진실 소스로 사용.
   // 내 활동 화면(activity-screen) 과 항상 같은 값이 노출된다.
   const myActivity = useActivityState();
-  // URL 닉네임이 현재 로그인 계정의 닉네임과 같으면 "내 프로필 보기" 모드.
-  const isMe = nickname === myProfile.nickname;
+  // URL 닉네임이 현재 닉네임이거나 내가 과거에 쓰던 닉네임이면 "내 프로필 보기" 모드.
+  // (닉네임 변경 전 쓴 옛 댓글의 옛 닉네임을 눌러도 내 최신 프로필로 연결되도록.)
+  void myProfile.nickname; // 닉네임 변경 시 리렌더 트리거(useProfile 구독)
+  const isMe = isMyNickname(nickname);
 
   // 내 게시글/댓글 수 — 실제 활동 데이터에서 집계.
   // (페이지 진입 시점의 스냅샷 — 페이지가 짧게 노출되는 화면이라 라이브 갱신 불필요)

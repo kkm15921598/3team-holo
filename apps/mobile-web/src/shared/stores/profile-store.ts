@@ -23,6 +23,11 @@ type ProfileState = {
    * 빈 값으로 로드되면 loadInitial 에서 자동 생성·저장한다.
    */
   friendCode: string;
+  /**
+   * 이 계정이 과거에 쓰던 닉네임들. 닉네임을 바꾸면 옛 닉네임이 여기 쌓인다.
+   * 옛 댓글/글에 박힌 옛 닉네임을 눌러도 "내 프로필(최신)"로 인식하기 위함.
+   */
+  pastNicknames?: string[];
 };
 
 /**
@@ -106,10 +111,29 @@ export function getProfile() {
 }
 
 export function setNickname(nickname: string) {
-  _state = { ..._state, nickname };
+  const prev = _state.nickname;
+  // 닉네임이 실제로 바뀌면 옛 닉네임을 pastNicknames 에 누적(중복 제거, 새 닉네임은 빼고).
+  let pastNicknames = _state.pastNicknames ?? [];
+  if (prev && prev !== nickname) {
+    pastNicknames = [
+      prev,
+      ...pastNicknames.filter((n) => n !== prev && n !== nickname),
+    ].slice(0, 10);
+  }
+  _state = { ..._state, nickname, pastNicknames };
   persist();
   notify();
   syncProfileToSupabase(_state);
+}
+
+/**
+ * 주어진 닉네임이 "나"인지 — 현재 닉네임이거나 내가 과거에 쓰던 닉네임이면 true.
+ * 닉네임 변경 전에 쓴 댓글/글의 옛 닉네임을 눌러도 내 최신 프로필로 연결하기 위해 사용.
+ */
+export function isMyNickname(nick: string): boolean {
+  if (!nick) return false;
+  if (nick === _state.nickname) return true;
+  return (_state.pastNicknames ?? []).includes(nick);
 }
 
 export function setTitle(title: string) {
