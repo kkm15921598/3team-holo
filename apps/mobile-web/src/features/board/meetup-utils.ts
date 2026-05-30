@@ -122,9 +122,12 @@ export function ensureMeetupRoom(post: Post): string | null {
     unread: 0,
     online: true,
     meeting: {
-      // 앱 전체에서 yy.mm.dd 표기로 통일.
-      date: "26.04.02",
-      time: "19:00",
+      // 게시글의 실제 일정을 연결한다. (이전엔 "26.04.02"/"19:00" 을 하드코딩해
+      //  어떤 날짜로 글을 써도 채팅방엔 항상 같은 더미 일정이 떴다.)
+      // date 는 yyyy-mm-dd 원본을 그대로 저장 — 렌더 시 formatYyMmDd 가 yy.mm.dd 로 변환.
+      // 장기성 모임은 eventTime 이 없어 time 이 "" → 배너에서 구분점 없이 표시.
+      date: post.eventDate ?? "",
+      time: post.eventTime ?? "",
       place: post.place ?? post.location?.placeName ?? "",
     },
   };

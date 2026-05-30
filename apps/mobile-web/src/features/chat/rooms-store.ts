@@ -314,6 +314,11 @@ export async function syncRoomsFromSupabase(): Promise<void> {
     }
 
     const isDm = isDmRoomId(roomId);
+    // g- 접두사 = NewChatSheet 그룹/1:1→그룹 전환 방. chat_rooms 에 is_group 이 저장돼있지
+    // 않아도(컬럼 미적용) room_id 접두사로 그룹임을 판별 → 1:1 로 둔갑하던 문제 방지.
+    // (meetup-/dm- 와 동일하게 접두사 규약을 단일 출처로 사용)
+    const isGroupById = roomId.startsWith("g-");
+    const isGroup = isDm ? false : isGroupById || ((row.is_group ?? false) as boolean);
     let name = (row.name ?? row.room_name ?? "") as string;
     if (isDm) {
       const otherPhone = getOtherPhoneFromDmId(roomId, userPhone);
@@ -329,9 +334,9 @@ export async function syncRoomsFromSupabase(): Promise<void> {
     toAdd.push({
       id: roomId,
       name,
-      subtitle: isDm ? "1:1" : row.is_group ? "그룹" : "1:1",
-      isGroup: isDm ? false : ((row.is_group ?? false) as boolean),
-      memberCount: isDm ? 2 : row.is_group ? 3 : 2,
+      subtitle: isDm ? "1:1" : isGroup ? "그룹" : "1:1",
+      isGroup,
+      memberCount: isDm ? 2 : isGroup ? 3 : 2,
       lastMessage: "(대화를 시작해보세요)",
       lastTime: "",
       unread: 0,

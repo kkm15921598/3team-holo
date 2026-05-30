@@ -233,6 +233,9 @@ export function ChatRoomScreen() {
           mine: isMine,
           date,
           readBy,
+          // 이미지 메시지 복원 — 실시간 INSERT 핸들러와 동일하게 매핑해야 재입장/새로고침 시
+          // 과거 이미지가 빈 말풍선으로 깨지지 않는다. (초기 로드 경로에만 누락돼 있었음)
+          ...(row.image_url ? { type: "image" as const, imageUrl: row.image_url } : {}),
         };
       });
 
@@ -437,7 +440,7 @@ export function ChatRoomScreen() {
         replyTo: reply ?? undefined,
         read: false,
         // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
-        readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
+        readBy: Math.max(0, displayMemberCount - 1),
       },
     ]);
     setText("");
@@ -647,7 +650,7 @@ export function ChatRoomScreen() {
             type: "image" as const,
             imageUrl: resolvedUrl,
             read: false,
-            readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
+            readBy: Math.max(0, displayMemberCount - 1),
           },
         ]);
 
@@ -688,7 +691,7 @@ export function ChatRoomScreen() {
           fileSize: file.size,
           fileMime: file.type,
           read: false,
-          readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
+          readBy: Math.max(0, displayMemberCount - 1),
         },
       ]);
     });
@@ -736,7 +739,7 @@ export function ChatRoomScreen() {
         },
         read: false,
         // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
-        readBy: Math.max(0, (room?.memberCount ?? 2) - 1),
+        readBy: Math.max(0, displayMemberCount - 1),
       },
     ]);
     setShowLocationPicker(false);
@@ -899,7 +902,9 @@ export function ChatRoomScreen() {
             className="flex w-full shrink-0 items-center gap-2 overflow-hidden border-b border-holo-line bg-holo-lilac-card/30 px-4 py-2 transition-colors hover:bg-holo-lilac-card/50"
           >
             <span className="shrink-0 text-[12px] font-semibold text-holo-purple-mid">
-              {formatYyMmDd(room.meeting.date)} · {room.meeting.time}
+              {[formatYyMmDd(room.meeting.date), room.meeting.time]
+                .filter(Boolean)
+                .join(" · ") || "일정 미정"}
             </span>
             <span className="text-holo-ink-4">·</span>
             <span className="flex flex-1 items-center gap-1 truncate text-left text-[12px] text-holo-ink-2">
@@ -945,7 +950,7 @@ export function ChatRoomScreen() {
               <MessageItem
                 key={m.id}
                 message={m}
-                memberCount={room?.memberCount ?? 2}
+                memberCount={displayMemberCount}
                 onLongPress={(target) => setActionTarget(target)}
                 onReact={() => setReactionTarget(m.id)}
                 showReactionPicker={reactionTarget === m.id}
