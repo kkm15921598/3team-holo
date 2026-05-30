@@ -14,15 +14,12 @@
  *   - 나와 겹치는 관심사 칩 (없으면 "비슷한 또래" 라벨로 대체)
  *   - "친구 추가" 버튼 — friends-store 의 sendFriendRequest 호출
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { postsStore } from "@/features/board/posts-store";
 import { useProfile } from "@/shared/hooks/use-profile";
-import {
-  getAuthorAge,
-  getAuthorGender,
-} from "@/shared/lib/author-gender";
+import { supabase } from "@/shared/lib/supabaseClient";
 import {
   getFriends,
   sendFriendRequest,
@@ -33,49 +30,12 @@ import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { getBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { getReportedNicknames } from "@/shared/stores/reported-users-store";
 
-// ── 관심사 풀 ─────────────────────────────────────────────────────
-// 가입 화면(interest-screen) 의 모든 태그를 평탄화한 마스터 리스트.
-// 닉네임 해시로 이 풀에서 3~5개를 뽑아 가상 사용자의 관심사로 쓴다.
-const INTEREST_POOL = [
-  // 공유·도움
-  "공동구매", "소분", "나눔", "도움", "분실물", "무료나눔", "정보공유",
-  // 맛·먹거리
-  "맛집", "먹거리", "카페", "디저트", "술집", "배달", "홈쿠킹",
-  // 활동·취미
-  "운동", "산책", "여행", "사진", "등산", "캠핑", "러닝", "자전거",
-  // 문화·콘텐츠
-  "게임", "OTT", "영화", "드라마", "음악", "웹툰", "책", "공연", "전시",
-  // 학습
-  "공부", "스터디", "어학", "자격증", "독서", "강의",
-  // 라이프스타일
-  "반려동물", "자취", "소통", "인테리어", "패션", "뷰티", "재테크",
-];
-
-/** 같은 닉네임에 대해 항상 같은 32bit unsigned 해시 (FNV-1a) — author-gender 와 동일 정책. */
-function hashNickname(n: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < n.length; i++) {
-    h ^= n.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/**
- * 닉네임 해시로 3~5개의 관심사를 뽑는다. 같은 닉네임은 항상 동일한 관심사 셋.
- * 풀이 작을수록 겹치기 쉽지만, 그게 추천 카드에서 "공통 관심사 칩"으로 자연스럽게 노출돼서 OK.
- */
-function getNeighborInterests(nickname: string): string[] {
-  const h = hashNickname(nickname);
-  const count = 3 + (h % 3); // 3, 4, 5
-  const out: string[] = [];
-  const len = INTEREST_POOL.length;
-  for (let i = 0; i < count; i++) {
-    const idx = (h + i * 2654435761) % len;
-    const tag = INTEREST_POOL[idx];
-    if (!out.includes(tag)) out.push(tag);
-  }
-  return out;
+/** Supabase users.gender 값을 'M'|'F'|null 로 정규화 (남/여, M/F 모두 허용). */
+function normalizeGender(g: unknown): "M" | "F" | null {
+  if (typeof g !== "string") return null;
+  if (g === "F" || g.includes("여")) return "F";
+  if (g === "M" || g.includes("남")) return "M";
+  return null;
 }
 
 /**
@@ -96,31 +56,12 @@ function getMyInterests(): string[] {
   }
 }
 
-/** 나이대 라벨 — 25 → "20대", 31 → "30대", 49 → "40대" 등. */
-function ageBucketLabel(age: number): string {
-  const decade = Math.floor(age / 10) * 10;
-  return `${decade}대`;
-}
-
-/** 점수 계산 — interest overlap × 3 + age proximity 보너스. */
-function similarityScore(opts: {
-  myInterests: Set<string>;
-  myAge: number;
-  neighborInterests: string[];
-  neighborAge: number;
-}): { score: number; sharedInterests: string[] } {
-  const shared = opts.neighborInterests.filter((t) => opts.myInterests.has(t));
-  const ageDiff = Math.abs(opts.myAge - opts.neighborAge);
-  // 5살 이내면 만점(5점), 그 이후 1살당 -1, 최소 0 보장.
-  const ageProximity = Math.max(0, 5 - Math.max(0, ageDiff - 5));
-  const score = shared.length * 3 + ageProximity;
-  return { score, sharedInterests: shared };
-}
-
 type Neighbor = {
   nickname: string;
   face: string;
-  age: number;
+  /** 실제 성별(Supabase users.gender). 데이터 없으면 null → 표시 안 함. */
+  gender: "M" | "F" | null;
+  /** 실제 관심사(Supabase users.interests). 없으면 빈 배열 → 칩 표시 안 함. */
   interests: string[];
   sharedInterests: string[];
   score: number;
@@ -136,17 +77,9 @@ export function NeighborhoodFindScreen() {
   /** 친구 요청 결과 안내 모달 — 추가 직후 결과(이미 친구/이미 보냄/완료 등)에 따라 메시지 분기 */
   const [resultMsg, setResultMsg] = useState<string | null>(null);
 
-  // 내 나이 — 닉네임 기반 결정적 산출 (author-gender 정책과 동일).
-  const myAge = useMemo(
-    () => getAuthorAge(profile.nickname),
-    [profile.nickname],
-  );
-  // 내 관심사 — 가입 시 저장한 값 우선, 없으면(테스트 계정 등) 닉네임 해시로 결정적 대체.
-  const myInterestList = useMemo(() => {
-    const stored = getMyInterests();
-    if (stored.length > 0) return stored;
-    return getNeighborInterests(profile.nickname);
-  }, [profile.nickname]);
+  // 내 관심사 — 가입 시 저장한 실제 값(localStorage.holoUser). 없으면 빈 셋
+  // (예전엔 닉네임 해시로 가짜 관심사를 만들었으나, 가짜 매칭을 없애려 제거).
+  const myInterestList = useMemo(() => getMyInterests(), []);
   const myInterests = useMemo(() => new Set(myInterestList), [myInterestList]);
 
   /**
@@ -162,54 +95,66 @@ export function NeighborhoodFindScreen() {
    * 후보 풀에 sent requests 는 굳이 제외하지 않는다 — 이전에 요청 보낸 사람도 카드에
    * "친구 요청중" 으로 같이 보여주는 게 일관된다.
    */
-  const AGE_WINDOW = 5;
-  const [top3] = useState<Neighbor[]>(() => {
-    // 마운트 시점에 "이미 친구 / 차단 / 신고" 한 닉네임은 모두 노출 후보에서 제외.
-    const friendsAtMount = new Set(getFriends().map((f) => f.nickname));
-    const blockedAtMount = getBlockedNicknames();
-    const reportedAtMount = getReportedNicknames();
-
-    // 실제 게시글 작성자 닉네임 풀 (중복 제거, 본인 제외)
-    const uniqueAuthors = Array.from(
-      new Set(postsStore.getPosts().map((p) => p.authorNickname).filter(Boolean))
-    );
-
-    return uniqueAuthors
-      .filter(
+  // 추천 후보 — 실제 게시글 작성자 중 친구/차단/신고 제외. 관심사·성별은 Supabase users 의
+  // '실제' 값을 조회해 사용한다(이전엔 닉네임 해시로 관심사·나이·성별을 지어냈다). 나이 정보는
+  // 신뢰 가능한 출처가 없어 더 이상 표시/필터하지 않는다. 마운트 시 1회 계산해 고정.
+  const [top3, setTop3] = useState<Neighbor[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const friendsAtMount = new Set(getFriends().map((f) => f.nickname));
+      const blockedAtMount = getBlockedNicknames();
+      const reportedAtMount = getReportedNicknames();
+      const candidates = Array.from(
+        new Set(postsStore.getPosts().map((p) => p.authorNickname).filter(Boolean)),
+      ).filter(
         (name) =>
           name !== profile.nickname &&
           !friendsAtMount.has(name) &&
           !blockedAtMount.has(name) &&
           !reportedAtMount.has(name),
-      )
-      .map<Neighbor>((name) => {
-        const interests = getNeighborInterests(name);
-        const age = getAuthorAge(name);
-        const { score, sharedInterests } = similarityScore({
-          myInterests,
-          myAge,
-          neighborInterests: interests,
-          neighborAge: age,
+      );
+      if (candidates.length === 0) {
+        if (!cancelled) setTop3([]);
+        return;
+      }
+      // 후보들의 실제 관심사/성별을 조회.
+      const byNick = new Map<string, { interests: string[]; gender: "M" | "F" | null }>();
+      const { data } = await supabase
+        .from("users")
+        .select("nickname, interests, gender")
+        .in("nickname", candidates);
+      (data ?? []).forEach((row: any) => {
+        byNick.set(row.nickname, {
+          interests: Array.isArray(row.interests) ? row.interests : [],
+          gender: normalizeGender(row.gender),
         });
-        return {
-          nickname: name,
-          face: getAvatarUrl(name),
-          age,
-          interests,
-          sharedInterests,
-          score,
-        };
-      })
-      // 또래 윈도우(±5살) 만 추림.
-      .filter((n) => Math.abs(n.age - myAge) <= AGE_WINDOW)
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return Math.abs(a.age - myAge) - Math.abs(b.age - myAge);
-      })
-      .slice(0, 3);
-    // 의도적으로 deps 비움 — 한 번만 계산. profile.nickname / myAge / myInterests 의 mount 시점 값 사용.
+      });
+      const neighbors = candidates
+        .map<Neighbor>((name) => {
+          const real = byNick.get(name);
+          const interests = real?.interests ?? [];
+          const sharedInterests = interests.filter((t) => myInterests.has(t));
+          return {
+            nickname: name,
+            face: getAvatarUrl(name),
+            gender: real?.gender ?? null,
+            interests,
+            sharedInterests,
+            score: sharedInterests.length,
+          };
+        })
+        // 공통 관심사 많은 순 → 동점이면 닉네임 순(결정적).
+        .sort((a, b) => b.score - a.score || a.nickname.localeCompare(b.nickname))
+        .slice(0, 3);
+      if (!cancelled) setTop3(neighbors);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // 마운트 시 1회 — profile.nickname/myInterests 의 mount 시점 값 사용.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  });
+  }, []);
 
   /** 라이브 상태 — 친구/요청중 인지 닉네임 셋. 버튼 라벨 결정에 사용. */
   const friendSet = useMemo(
@@ -301,7 +246,6 @@ export function NeighborhoodFindScreen() {
             <NeighborCard
               key={n.nickname}
               neighbor={n}
-              myAge={myAge}
               buttonState={buttonStateFor(n.nickname)}
               onAdd={() => handleAdd(n)}
               onOpenProfile={() =>
@@ -325,22 +269,18 @@ export function NeighborhoodFindScreen() {
 
 function NeighborCard({
   neighbor,
-  myAge,
   buttonState,
   onAdd,
   onOpenProfile,
 }: {
   neighbor: Neighbor;
-  myAge: number;
   /** 친구 추가 버튼의 라이브 상태 — friends/sent store 변경에 즉시 반응. */
   buttonState: "add" | "requesting" | "already-friend";
   onAdd: () => void;
   onOpenProfile: () => void;
 }) {
-  const gender = getAuthorGender(neighbor.nickname);
   // 프로필 얼굴이 없는 fallback 케이스 대비 — getAvatarUrl 로 시드 기반 얼굴을 보장.
   const face = neighbor.face || getAvatarUrl(neighbor.nickname);
-  const ageDiff = Math.abs(myAge - neighbor.age);
   return (
     <article className="flex flex-col gap-3 rounded-[16px] border border-holo-line-3 bg-white p-4 shadow-[0_2px_8px_rgba(116,72,221,0.06)]">
       <div className="flex items-start gap-3">
@@ -367,20 +307,18 @@ function NeighborCard({
               {neighbor.nickname}
             </span>
           </button>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-holo-ink-3">
-            <span>{ageBucketLabel(neighbor.age)}</span>
-            <span aria-hidden>·</span>
-            <span>{gender === "F" ? "여성" : "남성"}</span>
-            {ageDiff <= 5 && (
-              <span className="rounded-full bg-holo-lilac-soft px-1.5 py-0.5 text-[10px] font-semibold text-holo-purple-mid">
-                또래
-              </span>
-            )}
-          </div>
+          {/* 성별은 실제 데이터(users.gender)가 있을 때만 표시. 나이는 신뢰 출처가 없어 미표시.
+              (이전엔 닉네임 해시로 나이/성별을 지어내 잘못된 정보를 노출했다.) */}
+          {neighbor.gender && (
+            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-holo-ink-3">
+              <span>{neighbor.gender === "F" ? "여성" : "남성"}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 겹치는 관심사 — 있으면 강조, 없으면 이웃의 대표 관심사를 옅게 노출 */}
+      {/* 관심사 칩 — 실제 데이터가 있을 때만. 겹치면 강조, 아니면 이웃의 실제 관심사.
+          둘 다 없으면(데이터 미수집) 가짜를 만들지 않고 칩 행 자체를 숨긴다. */}
       {neighbor.sharedInterests.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
           <span className="text-[11px] text-holo-ink-3">함께 좋아해요</span>
@@ -393,7 +331,7 @@ function NeighborCard({
             </span>
           ))}
         </div>
-      ) : (
+      ) : neighbor.interests.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
           <span className="text-[11px] text-holo-ink-3">관심사</span>
           {neighbor.interests.slice(0, 4).map((t) => (
@@ -405,7 +343,7 @@ function NeighborCard({
             </span>
           ))}
         </div>
-      )}
+      ) : null}
 
       <div className="flex items-center gap-2">
         <button
