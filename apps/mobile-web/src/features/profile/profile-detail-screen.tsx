@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { type ChatRoom, TITLES_META } from "@/shared/mock/data";
+import { type ChatRoom } from "@/shared/mock/data";
 import { BADGES as BADGE_LIB } from "@/badge";
 import { getAvatarUrl } from "@/features/chat/avatars";
 import { addRoom, getRooms } from "@/features/chat/rooms-store";
@@ -55,12 +55,13 @@ function buildOtherUser(
   postsCount: number,
   commentsCount: number,
   levelOverride?: number,
+  titleOverride?: string,
 ) {
   const h = hashString(nickname);
-  // starter(가입 칭호)는 모두가 가진 거라 다른 사용자 프로필에 노출하긴 어색 → 제외
-  const TITLE_POOL = TITLES_META.filter((t) => t.tier !== "starter");
-  const title = TITLE_POOL[h % TITLE_POOL.length]?.name ?? "#홀로_입주자";
-  const badge = BADGE_LIB[(h >>> 3) % BADGE_LIB.length];
+  // 칭호/뱃지는 실제 값을 우선 사용. 없으면 가짜(해시 임의 배정) 대신 기본값으로 — 이전엔
+  // 닉네임 해시로 임의 칭호/뱃지를 배정해 "내가 모르는 칭호"가 친구 프로필에 떠 혼란을 줬다.
+  const title = titleOverride || "#홀로_입주자";
+  const badge = BADGE_LIB.find((b) => b.id === "badge_24") ?? BADGE_LIB[0];
   return {
     nickname,
     level: levelOverride ?? (1 + (h % 30)),
@@ -160,22 +161,25 @@ export function ProfileDetailScreen() {
 
   // 친구 프로필 레벨 — Supabase에서 실제 값을 조회. 로딩 중엔 해시 기반 임시값 사용.
   const [otherLevel, setOtherLevel] = useState<number | undefined>(undefined);
+  const [otherTitle, setOtherTitle] = useState<string | undefined>(undefined);
   useEffect(() => {
     if (isMe) return;
     setOtherLevel(undefined); // 닉네임 변경 시 초기화
+    setOtherTitle(undefined);
     supabase
       .from("users")
-      .select("level")
+      .select("level, title")
       .eq("nickname", nickname)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.level != null) setOtherLevel(data.level as number);
+        if (data?.title) setOtherTitle(data.title as string);
       });
   }, [nickname, isMe]);
 
   const otherUser = useMemo(
-    () => buildOtherUser(nickname, otherPostsCount, otherCommentsCount, otherLevel),
-    [nickname, otherPostsCount, otherCommentsCount, otherLevel],
+    () => buildOtherUser(nickname, otherPostsCount, otherCommentsCount, otherLevel, otherTitle),
+    [nickname, otherPostsCount, otherCommentsCount, otherLevel, otherTitle],
   );
   const user = isMe ? meUser : otherUser;
 

@@ -86,10 +86,15 @@ export function HomeScreen() {
 
   const handleRefresh = () => {
     setMeetups((prev) => {
-      // 직전 카드를 제외하고 다시 뽑되, 후보가 3개 이하라 제외 후 빈 목록이 되면
-      // 제외 없이 다시 뽑아 "근처 모임 없음" 으로 잘못 표시되는 것을 막는다.
+      // 1) 근처(5km)에서 직전 카드 제외하고 다시 뽑기.
       const next = pickMeetupsFromPosts(allPosts, 3, prev, userPos);
-      return next.length > 0 ? next : pickMeetupsFromPosts(allPosts, 3, undefined, userPos);
+      if (next.length > 0) return next;
+      // 2) 근처에 더 없으면 반경을 넓혀(전체) 다른 모임을 보여준다 — 새로고침이 '안 먹는'
+      //    느낌(같은 3개 반복) 방지.
+      const broadened = pickMeetupsFromPosts(allPosts, 3, prev, userPos, Infinity);
+      if (broadened.length > 0) return broadened;
+      // 3) 그래도 없으면(후보 자체가 3개 이하) 제외 없이 전체에서 다시 뽑기.
+      return pickMeetupsFromPosts(allPosts, 3, undefined, userPos, Infinity);
     });
     // 새로고침 시 카드 캐러셀을 첫 번째 카드 위치로 되돌린다.
     const el = cardsRef.current;

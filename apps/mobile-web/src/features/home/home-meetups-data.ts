@@ -60,17 +60,18 @@ export function pickMeetupsFromPosts(
   count: number,
   exclude?: Meetup[],
   userPos?: GeoPosition | null,
+  radiusM = 5000,
 ): Meetup[] {
   const excludeIds = new Set((exclude ?? []).map((m) => m.id));
-  // 내 위치가 있으면 '근처'(5km) 모임만 — 빈상태 문구('아직 근처 모임이 없어요')·맵과 일치.
+  // 내 위치가 있으면 기본 '근처'(5km) 모임만 — 빈상태 문구('아직 근처 모임이 없어요')·맵과 일치.
   // (이전엔 거리 무시하고 앞에서 N개만 뽑아 50km 떨어진 글도 '추천 모임'에 떴다.)
-  const RADIUS_M = 5000;
+  // 새로고침으로 근처가 동나면 radiusM=Infinity 로 반경을 넓혀 다른 모임을 보여준다.
   return posts
     .filter(
       (p) =>
         p.status !== "모집완료" &&
         !excludeIds.has(p.id) &&
-        (!userPos || !p.location || distanceMeters(userPos, p.location) <= RADIUS_M),
+        (!userPos || !p.location || distanceMeters(userPos, p.location) <= radiusM),
     )
     .slice(0, count)
     .map((p) => postToMeetup(p, userPos));
