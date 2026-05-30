@@ -254,6 +254,8 @@ export function BoardDetailScreen() {
         content: row.content ?? "",
         timeAgo: computeTimeAgo(row.created_at),
         parentId: row.parent_id ?? undefined,
+        // 작성자 전화번호 — 닉네임 변경 후에도 대댓글의 '작성자' 배지를 안정적으로 판정.
+        userId: row.user_id ?? undefined,
         hasPhoto: row.photo_url ? true : undefined,
         photoUrl: row.photo_url ?? undefined,
         // comments.lat/lng/place_name(마이그레이션 후) 에서 지도 첨부 복원 — 서버가 단일 소스.
@@ -324,7 +326,11 @@ export function BoardDetailScreen() {
         nickname: c.nickname,
         content: c.content,
         timeAgo: c.timeAgo,
-        isAuthor: c.nickname === post.authorNickname,
+        // 작성자 판정은 전화번호(userId) 우선 — 닉네임은 가변이라 변경 후 옛 닉네임 대댓글의
+        // '작성자' 배지가 사라지던 문제. userId 없는 구 데이터만 닉네임으로 폴백.
+        isAuthor: c.userId
+          ? c.userId === post.authorPhone
+          : c.nickname === post.authorNickname,
         hasMap: c.hasMap ?? enrich?.hasMap,
         hasPhoto: c.hasPhoto,
         photoUrl: c.photoUrl,
@@ -371,7 +377,13 @@ export function BoardDetailScreen() {
         nickname: c.nickname,
         content: c.content,
         timeAgo: c.timeAgo,
-        isAuthor: c.nickname === post.authorNickname,
+        // 저장된 isAuthor 우선(작성 시점에 전화번호 기준으로 계산됨). 없으면 전화번호 폴백.
+        // (이전엔 닉네임 비교라, 닉네임 변경 후 내 대댓글의 '작성자' 배지가 사라졌다.)
+        isAuthor:
+          c.isAuthor ??
+          (post.authorPhone
+            ? post.authorPhone === getCurrentAccount()
+            : c.nickname === post.authorNickname),
         hasMap: c.hasMap,
         hasPhoto: c.hasPhoto,
         photoUrl: c.photoUrl,

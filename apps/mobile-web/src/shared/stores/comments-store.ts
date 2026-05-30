@@ -19,6 +19,8 @@ export type StoredComment = {
   /** 대댓글이면 부모 댓글의 id, 일반 댓글이면 undefined */
   parentId?: string;
   isAuthor?: boolean;
+  /** 작성자 전화번호(Supabase user_id) — 닉네임 변경에도 안정적인 신원 판정용 */
+  userId?: string;
   hasMap?: boolean;
   hasPhoto?: boolean;
   /** 사진 첨부 시 data URL — 카메라/갤러리에서 선택한 실제 이미지. mock 환경이라 base64 로 직접 보관. */

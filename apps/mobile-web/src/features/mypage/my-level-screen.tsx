@@ -58,7 +58,12 @@ export function MyLevelScreen() {
         <div className="mt-4">
           <div className="flex justify-between text-[12px] opacity-80">
             <span>경험치 {currentXp} XP</span>
-            <span>다음 레벨까지 {nextLevelXp - currentXp} XP</span>
+            {/* 최고 레벨에선 '다음 레벨까지 N XP' 대신 달성 문구 — 다음 레벨이 없음. */}
+            <span>
+              {stats.level >= LEVEL_MAX
+                ? "최고 레벨 달성 🎉"
+                : `다음 레벨까지 ${nextLevelXp - currentXp} XP`}
+            </span>
           </div>
           <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/30">
             <div

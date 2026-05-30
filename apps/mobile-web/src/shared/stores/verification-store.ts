@@ -134,7 +134,9 @@ function loadRegionMap(): Record<string, string> {
     const raw = window.localStorage.getItem(REGION_BY_PHONE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") return parsed as Record<string, string>;
+      // typeof []==="object" 라 배열도 통과하던 것을 차단 — 손상 데이터(배열/기타)는 무시하고 빈 맵 사용.
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed as Record<string, string>;
     }
   } catch {
     // ignore

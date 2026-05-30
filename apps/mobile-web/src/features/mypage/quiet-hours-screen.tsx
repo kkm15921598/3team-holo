@@ -22,9 +22,11 @@ export function QuietHoursScreen() {
   const [startM, setStartM] = useState(initial.startM);
   const [endH, setEndH] = useState(initial.endH);
   const [endM, setEndM] = useState(initial.endM);
-  const [days, setDays] = useState<Record<string, boolean>>({
-    mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
-  });
+  const [days, setDays] = useState<Record<string, boolean>>(
+    initial.days ?? {
+      mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
+    },
+  );
 
   const formatTime = (h: number, m: number) =>
     `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
@@ -51,7 +53,8 @@ export function QuietHoursScreen() {
         <button
           type="button"
           onClick={() => {
-            setQuietHours({ startH, startM, endH, endM });
+            // 요일 선택도 함께 저장 — 이전엔 시각만 저장돼 요일 설정이 매번 초기화됐다.
+            setQuietHours({ startH, startM, endH, endM, days });
             navigate(-1);
           }}
           className="text-[14px] font-semibold text-holo-purple-mid"

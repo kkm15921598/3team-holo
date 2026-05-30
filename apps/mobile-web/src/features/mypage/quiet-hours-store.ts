@@ -18,11 +18,22 @@ export type QuietHours = {
   startM: number;
   endH: number;
   endM: number;
+  /** 반복 요일 (mon~sun). 없으면(레거시) 매일 적용으로 간주. */
+  days?: Record<string, boolean>;
 };
 
 const STORAGE_KEY = "holo.notif.quiet-hours.v1";
 
-const DEFAULT_STATE: QuietHours = { startH: 22, startM: 0, endH: 8, endM: 0 };
+const DEFAULT_DAYS: Record<string, boolean> = {
+  mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
+};
+
+const DEFAULT_STATE: QuietHours = {
+  startH: 22, startM: 0, endH: 8, endM: 0, days: { ...DEFAULT_DAYS },
+};
+
+/** JS getDay()(0=일) → 요일 id */
+const DOW_ID = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 function load(): QuietHours {
   if (typeof window === "undefined") return { ...DEFAULT_STATE };
@@ -101,6 +112,11 @@ export async function syncQuietHoursFromSupabase(): Promise<void> {
  * 시작 시각이 종료 시각보다 늦으면 (예: 22:00 ~ 08:00) 자정을 가로지르는 범위로 본다.
  */
 export function isInQuietHoursNow(now: Date = new Date()): boolean {
+  // 반복 요일이 설정돼 있으면 오늘이 활성 요일일 때만 적용. (없으면 매일)
+  if (_state.days) {
+    const todayId = DOW_ID[now.getDay()];
+    if (!_state.days[todayId]) return false;
+  }
   const cur = now.getHours() * 60 + now.getMinutes();
   const start = _state.startH * 60 + _state.startM;
   const end = _state.endH * 60 + _state.endM;
