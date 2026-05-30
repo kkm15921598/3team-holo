@@ -149,7 +149,14 @@ export function randomRoomFurniture(seed: string, level = 1): PlacedFurniture[] 
   const rand = makeRng(fnv1a(seed));
 
   const pickVariant = (kind: FurnitureKind): string => {
-    const variants = CATALOG.filter((c) => c.kind === kind);
+    // 해당 레벨에서 실제로 해금되는 변형만 후보로 둔다. (이전엔 전체 카탈로그에서
+    //  무작위로 뽑아, 레벨 3 친구 방에 Lv.27 잠금 가구가 뜨는 "레벨에 안 맞는 가구" 문제)
+    const unlocked = CATALOG.filter(
+      (c) => c.kind === kind && (c.lockedAt ?? 1) <= level,
+    );
+    // 해금분이 없으면(아주 낮은 레벨) 항상 무료인 첫 변형으로 폴백.
+    const variants =
+      unlocked.length > 0 ? unlocked : CATALOG.filter((c) => c.kind === kind);
     return variants.length > 0
       ? variants[Math.floor(rand() * variants.length)].variant
       : "01";
