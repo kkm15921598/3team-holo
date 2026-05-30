@@ -1554,6 +1554,46 @@ export function ChatRoomScreen() {
               ? room.id.slice("meetup-".length)
               : undefined
           }
+          // 방장(게시글 작성자)만 일정 수정 가능.
+          isHost={!!hostNickname && getProfile().nickname === hostNickname}
+          onEditSchedule={(date, time) => {
+            // 1) 게시글 일정 갱신 — postsStore.update 가 Supabase 반영 + 실시간 전파.
+            //    재입장/타기기/홈카드에도 동일하게 반영된다.
+            if (postIdFromRoom) {
+              const post = postsStore.getPosts().find((p) => p.id === postIdFromRoom);
+              if (post) {
+                postsStore.update({
+                  ...post,
+                  eventDate: date || undefined,
+                  eventTime: time || undefined,
+                });
+              }
+            }
+            // 2) 현재 방의 meeting 배너 즉시 갱신.
+            if (room) {
+              setRooms((prev) =>
+                prev.map((r) =>
+                  r.id === room.id && r.meeting
+                    ? { ...r, meeting: { ...r.meeting, date, time } }
+                    : r,
+                ),
+              );
+            }
+            // 3) 채팅방에 일정 변경 시스템 공지(영속 — 모두에게 전파).
+            const userPhone = getCurrentAccount();
+            const label =
+              [date ? formatYyMmDd(date) : "", time].filter(Boolean).join(" ") || "미정";
+            const sysMsg: ChatMessage = {
+              id: `sched-${Date.now()}`,
+              nickname: "",
+              content: `📅 다음 모임 일정이 ${label} 로 정해졌어요`,
+              time: "",
+              mine: false,
+              type: "system",
+            };
+            if (userPhone && id) saveMessageRow(id, userPhone, sysMsg);
+            setShowMeeting(false);
+          }}
           onClose={() => setShowMeeting(false)}
           onGoToPost={(postId) => {
             setShowMeeting(false);
@@ -2993,23 +3033,34 @@ function MeetingInfoModal({
   meeting,
   members,
   postId,
+  isHost,
   onClose,
   onGoToPost,
   onVoteKick,
   onProfileClick,
   onShowOnMap,
+  onEditSchedule,
 }: {
   roomName: string;
   meeting: MeetingInfo;
   members: Member[];
   postId?: string;
+  /** 방장(게시글 작성자)이면 true — 일정(날짜/시간) 수정 가능. */
+  isHost?: boolean;
   onClose: () => void;
   onGoToPost?: (postId: string) => void;
   onVoteKick?: () => void;
   onProfileClick?: (nickname: string) => void;
   /** 장소 옆 핀 아이콘 클릭 시 호출 — 지도 화면에서 모임 위치를 표시. */
   onShowOnMap?: (postId: string) => void;
+  /** 방장이 일정을 저장할 때 호출 — date(yyyy-mm-dd), time(HH:MM). */
+  onEditSchedule?: (date: string, time: string) => void;
 }) {
+  // 일정 수정 인라인 에디터 상태 — 방장만 진입 가능. 장기성 모임처럼 시간이 비어 있어도
+  // 방장이 그때그때 다음 모임 날짜/시간을 정할 수 있게 한다.
+  const [editing, setEditing] = useState(false);
+  const [draftDate, setDraftDate] = useState(meeting.date ?? "");
+  const [draftTime, setDraftTime] = useState(meeting.time ?? "");
   return (
     <div
       className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
@@ -3028,14 +3079,43 @@ function MeetingInfoModal({
 
         {/* 모임 정보 카드 */}
         <div className="mt-4 flex flex-col gap-2 rounded-holo-card bg-holo-lilac-card/40 p-4">
-          <div className="flex items-center gap-2">
-            <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">날짜</span>
-            <span className="text-[13px] font-semibold text-holo-ink">{formatYyMmDd(meeting.date)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">시간</span>
-            <span className="text-[13px] font-semibold text-holo-ink">{meeting.time}</span>
-          </div>
+          {editing ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">날짜</span>
+                <input
+                  type="date"
+                  value={draftDate}
+                  onChange={(e) => setDraftDate(e.target.value)}
+                  className="flex-1 rounded-md border border-holo-line bg-white px-2 py-1 text-[13px] text-holo-ink outline-none focus:border-holo-purple-mid"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">시간</span>
+                <input
+                  type="time"
+                  value={draftTime}
+                  onChange={(e) => setDraftTime(e.target.value)}
+                  className="flex-1 rounded-md border border-holo-line bg-white px-2 py-1 text-[13px] text-holo-ink outline-none focus:border-holo-purple-mid"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">날짜</span>
+                <span className="text-[13px] font-semibold text-holo-ink">
+                  {meeting.date ? formatYyMmDd(meeting.date) : "미정"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">시간</span>
+                <span className="text-[13px] font-semibold text-holo-ink">
+                  {meeting.time || "미정"}
+                </span>
+              </div>
+            </>
+          )}
           <div className="flex items-start gap-2">
             <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">장소</span>
             <span className="flex flex-1 items-center gap-1.5 text-[13px] font-semibold text-holo-ink">
@@ -3056,6 +3136,45 @@ function MeetingInfoModal({
                 )}
             </span>
           </div>
+
+          {/* 방장 일정 수정 — 장기성 모임처럼 매번 시간이 바뀌는 경우 방장이 직접 갱신. */}
+          {isHost && onEditSchedule && (
+            <div className="mt-1 border-t border-holo-line/60 pt-2">
+              {editing ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(false);
+                      setDraftDate(meeting.date ?? "");
+                      setDraftTime(meeting.time ?? "");
+                    }}
+                    className="h-8 flex-1 rounded-holo-pill border border-holo-line text-[12px] font-semibold text-holo-ink-2"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEditSchedule(draftDate.trim(), draftTime.trim());
+                      setEditing(false);
+                    }}
+                    className="h-8 flex-1 rounded-holo-pill bg-holo-purple-mid text-[12px] font-semibold text-white"
+                  >
+                    저장
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="flex h-8 w-full items-center justify-center gap-1 rounded-holo-pill border border-holo-purple-mid text-[12px] font-semibold text-holo-purple-mid"
+                >
+                  📅 일정 수정
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 액션 버튼들 — 게시글 이동 + 퇴장 투표. 둘 다 모임방에서만 노출. */}
