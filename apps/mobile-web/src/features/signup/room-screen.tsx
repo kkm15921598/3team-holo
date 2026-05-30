@@ -29,6 +29,7 @@ import {
 } from "@/shared/stores/account-stats-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
 import { setCurrentAccount } from "@/shared/stores/account-choices-store";
+import { setPhoneVerified } from "@/shared/stores/verification-store";
 import {
   pushRewardNotification,
   pushWelcomeNotification,
@@ -259,6 +260,12 @@ export function RoomScreen() {
   // 소유 가구는 한 번에 묶어 저장 — purchaseItem 을 연달아 부르면 Supabase 쓰기 경합으로
   // 일부(예: 2개 중 1개)가 누락 저장되던 버그가 있었다. grantOwnedFurniture 로 1회 저장.
   grantOwnedFurniture([...ownedKeys]);
+
+  // 4-1) 본인인증(휴대폰) 통과 사실을 전역/DB 로 승격. reset 이후 + setCurrentAccount 이후라
+  //      verification-store 의 Supabase 동기화가 신규 계정 행에 올바르게 반영된다.
+  //      (이전엔 signup-context.phoneVerified 만 세팅하고 전역/DB 로 잇는 코드가 없어,
+  //       가입 직후 본인인증 상태가 항상 미인증으로 시작했다.)
+  if (data.phoneVerified) setPhoneVerified(true);
 
   // 5) 닉네임·프로필 얼굴을 profile-store 에 반영해 홈/마이페이지 전반에 노출.
   if (data.nickname.trim()) setNickname(data.nickname.trim());

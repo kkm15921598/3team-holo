@@ -28,6 +28,7 @@ import { resetReportedUsers } from "@/shared/stores/reported-users-store";
 import { bumpStore } from "@/shared/stores/bump-store";
 import { resetNotificationSettings } from "@/shared/stores/notification-settings-store";
 import { privacyStore } from "@/shared/stores/privacy-store";
+import { resetQuietHours } from "@/features/mypage/quiet-hours-store";
 
 /**
  * 신규 가입한 사용자가 깨끗한 시작점에서 출발하도록 모든 store 리셋.
@@ -81,4 +82,5 @@ export function resetUserStoresForLogin(): void {
   // 둘 다 sync 가 원격 누락 시 건너뛰므로, reset 이 없으면 이전 계정 값이 새 계정에 누설된다.
   resetNotificationSettings();
   privacyStore.reset();
+  resetQuietHours();
 }

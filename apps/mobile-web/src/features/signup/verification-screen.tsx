@@ -140,6 +140,12 @@ export function VerificationScreen() {
     }
 
     if (code.length < 6) return;
+    // 코드 발송 후 이름/주민번호/통신사/번호를 바꿔도 통과되던 문제 — 발송 시점이 아닌
+    // 제출 시점의 입력 유효성을 다시 확인한다(중복확인 우회·잘못된 번호 가입 방지).
+    if (!baseFilled) {
+      setVerifyError("입력 정보를 다시 확인해주세요.");
+      return;
+    }
     if (codeExpired) {
       setVerifyError("인증 시간이 만료되었습니다. 재전송해주세요.");
       return;

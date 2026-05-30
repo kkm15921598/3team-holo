@@ -24,6 +24,7 @@ import { syncBlockedFromSupabase } from "@/shared/stores/blocked-nicknames-store
 import { syncBumpsFromSupabase } from "@/shared/stores/bump-store";
 import { syncPrivacyFromSupabase } from "@/shared/stores/privacy-store";
 import { syncNotificationSettingsFromSupabase } from "@/shared/stores/notification-settings-store";
+import { syncQuietHoursFromSupabase } from "@/features/mypage/quiet-hours-store";
 import { syncMyroomFromSupabase } from "@/features/myroom/myroom-store";
 import { syncRoomsFromSupabase } from "@/features/chat/rooms-store";
 import {
@@ -50,6 +51,7 @@ export async function syncAllUserDataFromSupabase(): Promise<void> {
     syncBumpsFromSupabase(),
     syncPrivacyFromSupabase(),
     syncNotificationSettingsFromSupabase(),
+    syncQuietHoursFromSupabase(),
     syncMyroomFromSupabase(),
     syncRoomsFromSupabase(),
     syncFriendsFromSupabase(),

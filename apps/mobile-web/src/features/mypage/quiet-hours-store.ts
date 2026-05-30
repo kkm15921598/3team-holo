@@ -70,6 +70,32 @@ export function subscribeQuietHours(fn: () => void) {
   };
 }
 
+/** 계정 전환/신규가입 시 기본값으로 초기화(로컬 전용, Supabase 미반영). */
+export function resetQuietHours(): void {
+  _state = { ...DEFAULT_STATE };
+  persist();
+  notify();
+}
+
+/**
+ * 로그인 후 Supabase users.quiet_hours 를 읽어 로컬 상태 복원.
+ * (이전엔 쓰기만 있고 읽기가 없어, 계정 전환 시 이전 계정 시간대가 누설되고
+ *  타기기/재로그인 시 본인 설정이 복원되지 않았다.)
+ */
+export async function syncQuietHoursFromSupabase(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const { data, error } = await supabase
+    .from("users")
+    .select("quiet_hours")
+    .eq("phone", userPhone)
+    .maybeSingle();
+  if (error || !data?.quiet_hours || typeof data.quiet_hours !== "object") return;
+  _state = { ...DEFAULT_STATE, ...(data.quiet_hours as Partial<QuietHours>) };
+  persist();
+  notify();
+}
+
 /**
  * 현재 시각이 방해 금지 시간대 안인지 판정.
  * 시작 시각이 종료 시각보다 늦으면 (예: 22:00 ~ 08:00) 자정을 가로지르는 범위로 본다.
