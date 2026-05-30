@@ -26,6 +26,7 @@ import {
 import { useLikedSet } from "@/shared/stores/likes-store";
 import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { PostListSkeleton } from "@/shared/components/skeleton";
 import { useUserComments } from "@/shared/stores/comments-store";
 import {
   getTotalViews,
@@ -639,7 +640,10 @@ export function BoardListScreen() {
         </div>
       )}
 
-      {visible.length === 0 ? (
+      {!postsStore.isLoaded() && posts.length === 0 ? (
+        // 첫 로드 중에는 빈 화면/"게시글 없음" 대신 스켈레톤을 보여준다(로딩↔빈상태 구분).
+        <PostListSkeleton />
+      ) : visible.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-[14px] text-holo-ink-3">
           {isTopView ? (
             <span>표시할 글이 없습니다.</span>

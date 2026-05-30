@@ -67,6 +67,8 @@ function rowToPost(row: Record<string, unknown>): Post {
 
 // 초기값은 mock 데이터 (Supabase 로드 전 빠른 표시)
 let _posts: Post[] = [];
+// 첫 로드 시도 완료 여부 — 스켈레톤 로딩(로딩 중 vs 진짜 빈 목록 구분)에 사용.
+let _loaded = false;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -84,8 +86,12 @@ async function loadFromSupabase() {
     .or("is_deleted.is.null,is_deleted.eq.false")
     .order("bumped_at", { ascending: false });
 
+  // 성공/실패 무관 — 로드 시도가 끝났으면 스켈레톤을 멈춘다.
+  _loaded = true;
+
   if (error) {
     console.warn("Supabase 글 목록 로드 실패:", error.message);
+    notify();
     return;
   }
 
@@ -158,6 +164,10 @@ if (typeof window !== "undefined") {
 export const postsStore = {
   getPosts(): Post[] {
     return _posts;
+  },
+  /** 첫 Supabase 로드 시도가 끝났는지 — 스켈레톤(로딩) vs 빈 목록 구분용. */
+  isLoaded(): boolean {
+    return _loaded;
   },
   subscribe(fn: () => void): () => void {
     listeners.add(fn);
