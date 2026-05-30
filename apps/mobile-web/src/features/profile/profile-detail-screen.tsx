@@ -528,84 +528,94 @@ export function ProfileDetailScreen() {
           />
         </div>
 
-        <div className="mt-7 flex w-full gap-2">
+        {/* 친구 / 1:1채팅 / 방명록 — 교류 액션 3개를 한 줄에. 360px 폭에서 안 깨지게
+            글자 13px + 줄바꿈 허용(received 상태처럼 버튼이 많으면 자연스럽게 다음 줄로). */}
+        <div className="mt-7 flex w-full flex-wrap gap-2">
           {isMe ? (
-            // 내 프로필 모드 — 친구/채팅 버튼 자리에 "프로필 편집" 단독 버튼만 노출
-            <button
-              type="button"
-              onClick={() => navigate("/mypage/edit")}
-              className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill bg-holo-purple-mid text-[15px] font-semibold text-white"
-            >
-              프로필 편집
-            </button>
-          ) : buttonState === "received" ? (
-            <div className="flex flex-1 gap-2">
+            <>
+              {/* 내 프로필 모드 — 프로필 편집 + 내 방명록 */}
               <button
                 type="button"
-                onClick={handleFriendButton}
-                className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill bg-holo-purple-mid text-[15px] font-semibold text-white"
+                onClick={() => navigate("/mypage/edit")}
+                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill bg-holo-purple-mid text-[14px] font-semibold text-white"
               >
-                <UserPlusIcon /> 요청 수락
+                프로필 편집
               </button>
               <button
                 type="button"
-                onClick={handleDeclineRequest}
-                aria-label="요청 거절"
-                className="flex h-[50px] w-[50px] items-center justify-center rounded-holo-pill border border-holo-line text-holo-ink-2"
+                onClick={() => navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)}
+                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink-2 active:bg-holo-surface"
               >
-                <UserMinusIcon />
+                <GuestbookIcon /> 내 방명록
               </button>
-            </div>
+            </>
           ) : (
-            <button
-              type="button"
-              onClick={handleFriendButton}
-              className={`flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill text-[15px] font-semibold text-white ${
-                buttonState === "friend"
-                  ? "bg-[#E95AA4]"
-                  : buttonState === "sent"
-                    ? "bg-holo-ink-4"
-                    : "bg-holo-purple-mid"
-              }`}
-            >
-              {buttonState === "friend" ? (
-                <UserMinusIcon />
-              ) : buttonState === "sent" ? (
-                <ClockIcon />
+            <>
+              {buttonState === "received" ? (
+                <div className="flex min-w-[120px] flex-1 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleFriendButton}
+                    className="flex h-[48px] flex-1 items-center justify-center gap-1 rounded-holo-pill bg-holo-purple-mid text-[13px] font-semibold text-white"
+                  >
+                    <UserPlusIcon /> 수락
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeclineRequest}
+                    aria-label="요청 거절"
+                    className="flex h-[48px] w-[44px] items-center justify-center rounded-holo-pill border border-holo-line text-holo-ink-2"
+                  >
+                    <UserMinusIcon />
+                  </button>
+                </div>
               ) : (
-                <UserPlusIcon />
+                <button
+                  type="button"
+                  onClick={handleFriendButton}
+                  className={`flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill text-[13px] font-semibold text-white ${
+                    buttonState === "friend"
+                      ? "bg-[#E95AA4]"
+                      : buttonState === "sent"
+                        ? "bg-holo-ink-4"
+                        : "bg-holo-purple-mid"
+                  }`}
+                >
+                  {buttonState === "friend" ? (
+                    <UserMinusIcon />
+                  ) : buttonState === "sent" ? (
+                    <ClockIcon />
+                  ) : (
+                    <UserPlusIcon />
+                  )}
+                  {buttonState === "friend"
+                    ? "친구 삭제"
+                    : buttonState === "sent"
+                      ? "요청 보냄"
+                      : "친구 요청"}
+                </button>
               )}
-              {buttonState === "friend"
-                ? "친구 삭제"
-                : buttonState === "sent"
-                  ? "요청 보냄"
-                  : "친구 요청"}
-            </button>
-          )}
 
-          {!isMe && (
-            <button
-              type="button"
-              onClick={goToChat}
-              aria-label="1:1 채팅"
-              className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-holo-pill border border-holo-purple-mid text-[15px] font-semibold text-holo-purple-mid"
-            >
-              <ChatBubbleIcon /> 1:1 채팅
-            </button>
+              <button
+                type="button"
+                onClick={goToChat}
+                aria-label="1:1 채팅"
+                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-purple-mid text-[13px] font-semibold text-holo-purple-mid"
+              >
+                <ChatBubbleIcon /> 1:1 채팅
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)}
+                aria-label="방명록"
+                className="flex h-[48px] min-w-[88px] flex-1 items-center justify-center gap-1 rounded-holo-pill border border-holo-line text-[13px] font-semibold text-holo-ink-2 active:bg-holo-surface"
+              >
+                <GuestbookIcon /> 방명록
+              </button>
+            </>
           )}
         </div>
-
-        {/* 방명록 — 교류 액션이므로 친구/채팅 버튼 바로 아래에 그룹지어 배치(발견성↑).
-            히어로 모서리 칩보다 가독성·일관성이 좋다. 내 프로필은 받은 방명록 열람. */}
-        <button
-          type="button"
-          onClick={() =>
-            navigate(`/profile/${encodeURIComponent(nickname)}/guestbook`)
-          }
-          className="mt-2 flex h-[44px] w-full items-center justify-center gap-1.5 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink-2 active:bg-holo-surface"
-        >
-          <GuestbookIcon /> {isMe ? "내 방명록" : "방명록 남기기"}
-        </button>
 
         {/* 차단/신고 — 다른 사용자 프로필에만 표시. 내 프로필에서는 의미가 없어 숨김. */}
         {!isMe && (
