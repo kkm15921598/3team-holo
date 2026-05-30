@@ -98,8 +98,17 @@ export function ProfileEditScreen() {
         <button
           type="button"
           onClick={() => {
-            if (check === "ok" && nickname.trim().length > 0) storeSetNickname(nickname.trim());
-            // 선택한 캐릭터 얼굴도 함께 저장
+            const trimmed = nickname.trim();
+            const nickChanged = trimmed !== profile.nickname.trim();
+            // 닉네임을 바꿨는데 중복확인을 통과하지 않았으면 저장/이탈을 막고 확인을 유도한다.
+            // (이전엔 닉네임은 저장 안 되면서 얼굴만 저장되고 그대로 빠져나가 상태가 어긋났다.
+            //  닉네임을 안 바꾸고 얼굴만 변경하는 흐름은 그대로 통과시킨다.)
+            if (nickChanged && check !== "ok") {
+              setCheck("fail");
+              return;
+            }
+            if (check === "ok" && trimmed.length > 0) storeSetNickname(trimmed);
+            // 닉네임 저장과 함께(또는 얼굴만 변경 시) 선택한 캐릭터 얼굴 저장.
             if (selectedFace) storeSetProfileFace(selectedFace);
             navigate(-1);
           }}

@@ -10,6 +10,8 @@ import { evaluateAchievements } from "@/shared/lib/achievements";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useVerification } from "@/shared/stores/verification-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { clearCurrentAccount } from "@/shared/stores/account-choices-store";
+import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -146,8 +148,13 @@ export function MypageScreen() {
         confirmLabel="로그아웃"
         onCancel={() => setShowLogout(false)}
         onConfirm={() => {
+          // 로그아웃 시 사용자별 store 를 비우고 계정 포인터를 끊는다 — 안 하면 다음 로그인
+          // 전까지 이전 계정 데이터(프로필/친구/포인트/알림 등)가 메모리에 남아 누설된다.
+          // (탈퇴 흐름 account-screen 과 동일 패턴: 계정 포인터 먼저 비운 뒤 리셋)
+          clearCurrentAccount();
+          resetUserStoresForLogin();
           setShowLogout(false);
-          navigate("/login");
+          navigate("/login", { replace: true });
         }}
       />
     </main>

@@ -100,8 +100,15 @@ export function addOnelineNews(content: string): void {
   }
 }
 
-/** 내 소식 삭제 — 로컬 제거 + Supabase best-effort. */
+/** 내 소식 삭제 — 로컬 제거 + Supabase best-effort. 본인 글만 삭제 가능. */
 export function removeOnelineNews(id: string): void {
+  // 소유권 확인 — UI 가 본인 글에만 삭제 버튼을 노출하지만, 함수가 직접 호출돼도
+  // 남의 글이 지워지지 않도록 작성자 전화번호와 현재 계정을 대조한다.
+  const target = state.find((n) => n.id === id);
+  if (!target) return;
+  const me = getCurrentAccount();
+  if (target.authorPhone && me && target.authorPhone !== me) return;
+
   state = state.filter((n) => n.id !== id);
   persist();
   emit();
