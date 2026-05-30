@@ -160,6 +160,7 @@ export function ProfileDetailScreen() {
   const [otherCommentsCount, setOtherCommentsCount] = useState(0);
   useEffect(() => {
     if (isMe) return;
+    let cancelled = false;
     // '댓글 단 고유 글 수' — 클릭 시 여는 친구 댓글 리스트(post_id 중복 제거)와 단위 통일.
     // (이전엔 레코드 수라, 한 글에 여러 댓글 단 친구는 stat > 리스트 항목수로 어긋남)
     supabase
@@ -167,10 +168,13 @@ export function ProfileDetailScreen() {
       .select("post_id")
       .eq("nickname", nickname)
       .then(({ data }) => {
-        if (data) {
-          setOtherCommentsCount(new Set(data.map((r) => String(r.post_id))).size);
-        }
+        // 빠르게 다른 화면으로 이동하면 언마운트 후 setState 가 호출돼 경고/누수 — 가드.
+        if (cancelled || !data) return;
+        setOtherCommentsCount(new Set(data.map((r) => String(r.post_id))).size);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [nickname, isMe]);
 
   // 친구 프로필 레벨 — Supabase에서 실제 값을 조회. 로딩 중엔 해시 기반 임시값 사용.
@@ -182,6 +186,7 @@ export function ProfileDetailScreen() {
   );
   useEffect(() => {
     if (isMe) return;
+    let cancelled = false;
     setOtherLevel(undefined); // 닉네임 변경 시 초기화
     setOtherTitle(undefined);
     setOtherFurniture(undefined);
@@ -191,6 +196,8 @@ export function ProfileDetailScreen() {
       .eq("nickname", nickname)
       .maybeSingle()
       .then(({ data }) => {
+        // 언마운트/닉네임 변경 후 늦게 도착한 응답이 새 상태를 덮어쓰지 않도록 가드.
+        if (cancelled) return;
         if (data?.level != null) setOtherLevel(data.level as number);
         if (data?.title) setOtherTitle(data.title as string);
         // 실제 배치 가구가 있으면 그대로, 없으면 빈 방([]). 닉네임 해시 랜덤룸은 쓰지 않는다.
@@ -200,6 +207,9 @@ export function ProfileDetailScreen() {
             : [],
         );
       });
+    return () => {
+      cancelled = true;
+    };
   }, [nickname, isMe]);
 
   const otherUser = useMemo(

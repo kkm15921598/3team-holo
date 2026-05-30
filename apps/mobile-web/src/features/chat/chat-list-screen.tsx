@@ -248,7 +248,9 @@ export function ChatListScreen() {
             navigate(`/chat/${newId}`);
           }}
           onStartGroup={(friendIds, friendNicks) => {
-            if (friendIds.length === 0) return;
+            // friendNicks 가 비면(매핑 실패 등) 방 이름이 "undefined, 외 -1명" 으로 깨지므로
+            // 두 배열 모두 비어있지 않을 때만 진행.
+            if (friendIds.length === 0 || friendNicks.length === 0) return;
             const newId = `g-${Date.now()}`;
             const newRoom: ChatRoom = {
               id: newId,

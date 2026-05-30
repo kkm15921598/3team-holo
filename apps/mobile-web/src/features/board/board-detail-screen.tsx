@@ -1216,6 +1216,10 @@ export function BoardDetailScreen() {
                         setReplyHasMap(false);
                         setReplyPhotoUrl(null);
                         setReplyLocation(null);
+                        // 첨부 시트 상태도 초기화 — 안 하면 다른 댓글의 답글로 전환할 때
+                        // 이전 답글의 사진/지도 첨부 메뉴가 stale 하게 남아 떴다.
+                        setShowReplyAttach(false);
+                        setReplyAttachStep("root");
                       }}
                       className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-holo-ink-3 transition-colors hover:text-holo-purple-mid"
                     >

@@ -36,7 +36,7 @@ export function MyLevelScreen() {
   useXpState();
   // 현재 레벨(stats.level) 을 넘겨, 그 레벨에 맞는 요구치(LEVEL_XP_REQUIRED) 로 진행도를 계산.
   // 종전엔 모든 레벨 공통 500 XP 였는데 초반 진입 장벽이 높다는 피드백으로 레벨별 테이블로 교체됨.
-  const { current: currentXp, required: nextLevelXp, percent: progress } =
+  const { current: currentXp, percent: progress, remaining: xpRemaining } =
     getLevelProgress(stats.level);
 
   return (
@@ -62,7 +62,7 @@ export function MyLevelScreen() {
             <span>
               {stats.level >= LEVEL_MAX
                 ? "최고 레벨 달성 🎉"
-                : `다음 레벨까지 ${nextLevelXp - currentXp} XP`}
+                : `다음 레벨까지 ${xpRemaining} XP`}
             </span>
           </div>
           <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/30">
