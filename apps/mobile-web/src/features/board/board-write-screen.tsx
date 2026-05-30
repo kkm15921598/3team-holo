@@ -261,6 +261,16 @@ export function BoardWriteScreen() {
       id: incomingState?.draftId ?? `draft-${Date.now()}`,
       title,
       description: content,
+      // 모임 작성 상태도 함께 보존 — 다시 열 때 카테고리/사진/장소/인원/일정이 복원되도록.
+      category: CATEGORY_NAME_TO_ID[category],
+      meetupType,
+      eventDate: date,
+      endDate,
+      eventTime,
+      peopleCount,
+      place: postLocation?.placeName ?? incomingState?.place,
+      postLocation,
+      photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
     });
     setShowExitModal(false);
     navigate(-1);

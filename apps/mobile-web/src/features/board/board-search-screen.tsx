@@ -66,7 +66,10 @@ export function BoardSearchScreen() {
       }
     }
     const query = params.toString();
-    navigate(query ? `/board/list?${query}` : "/board/list");
+    // 모든 선택의 net-effect 가 0 인 경우(예: 성별 둘 다 선택 = 제약 없음, 키워드도 없음)는
+    // 빈 파라미터로 전체 목록에 이동시키지 않는다 — '검색했는데 그냥 전체가 떴다'는 오해 방지.
+    if (!query) return;
+    navigate(`/board/list?${query}`);
   };
 
   return (

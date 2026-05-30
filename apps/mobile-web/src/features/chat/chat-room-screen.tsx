@@ -1448,6 +1448,18 @@ export function ChatRoomScreen() {
               danger: true,
               onConfirm: () => {
                 setMessages((prev) => prev.filter((m) => m.id !== targetId));
+                // Supabase 에서도 삭제 — 안 그러면 재입장 시 loadFromSupabase 가 되살린다.
+                // (삭제 액션은 내 메시지에만 노출되므로 항상 내가 보낸 = DB 저장된 행)
+                if (id) {
+                  supabase
+                    .from("messages")
+                    .delete()
+                    .eq("message_id", targetId)
+                    .eq("room_id", id)
+                    .then(({ error }) => {
+                      if (error) console.warn("Supabase 메시지 삭제 실패:", error.message);
+                    });
+                }
                 showToast("메시지를 삭제했어요");
               },
             });
@@ -2314,11 +2326,9 @@ function ForwardSheet({
                     onClick={() => onSelect(r.id, r.name)}
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition active:bg-holo-surface-2"
                   >
-                    <img
-                      src={getAvatarUrl(r.name)}
-                      alt=""
-                      className="h-10 w-10 shrink-0 rounded-full object-cover"
-                    />
+                    <div className="h-10 w-10 shrink-0">
+                      <GroupAvatar room={r} size="md" />
+                    </div>
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="flex items-center gap-1 truncate text-[14px] font-medium text-holo-ink">
                         {r.name}

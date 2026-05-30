@@ -85,8 +85,10 @@ export function StatusBubble() {
     setDraft(status);
     setMode("editing");
   };
+  // 이모지(서로게이트 페어)를 1글자로 세도록 코드포인트 길이 사용 — String.length 는 2로 셈.
+  const draftLen = [...draft].length;
   const saveEdit = () => {
-    if (draft.length > MAX_LEN) return;
+    if (draftLen > MAX_LEN) return;
     setStatusMessage(draft);
     setMode("idle");
   };
@@ -95,7 +97,7 @@ export function StatusBubble() {
     setMode("idle");
   };
 
-  const tooLong = draft.length > MAX_LEN;
+  const tooLong = draftLen > MAX_LEN;
   const isSelected = mode === "selected";
   const isEditing = mode === "editing";
 
@@ -127,7 +129,7 @@ export function StatusBubble() {
             <input
               autoFocus
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => setDraft([...e.target.value].slice(0, MAX_LEN).join(""))}
               onKeyDown={(e) => {
                 if (e.key === "Escape") cancelEdit();
               }}
@@ -137,7 +139,7 @@ export function StatusBubble() {
               }`}
             />
             <span className={`mr-1 select-none text-[11px] tabular-nums ${tooLong ? "font-bold text-holo-error" : "text-holo-ink-3"}`}>
-              {draft.length}/{MAX_LEN}
+              {draftLen}/{MAX_LEN}
             </span>
             <button
               type="submit"

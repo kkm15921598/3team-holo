@@ -143,6 +143,7 @@ export type SendRequestResult =
   | "already-sent" // 이미 보낸 요청이 있음
   | "incoming-exists" // 상대가 먼저 보내서 받은 요청이 있음 — 수락 권유
   | "max-reached" // 내 친구 정원이 가득 참
+  | "self" // 자기 자신에게 보내려 함
   | "invalid"; // 닉네임 비어있음 등
 
 /**
@@ -151,6 +152,12 @@ export type SendRequestResult =
 export function sendFriendRequest(nickname: string): SendRequestResult {
   const trimmed = nickname.trim();
   if (!trimmed) return "invalid";
+  // 자기 자신(닉네임 또는 친구코드)에게는 보낼 수 없다 — 안 그러면 '보낸 요청'에
+  // 영원히 수락 안 되는 자기 자신이 남는다.
+  const me = getProfile();
+  if (trimmed === me.nickname.trim() || (me.friendCode && trimmed === me.friendCode.trim())) {
+    return "self";
+  }
   if (_friends.some((f) => f.nickname === trimmed)) return "already-friend";
   // 이미 정원이면 요청 자체를 막는다 — 수락돼서 친구가 되면 30명을 초과하기 때문.
   if (_friends.length >= MAX_FRIENDS) return "max-reached";

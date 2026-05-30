@@ -34,6 +34,7 @@ export function MyroomScreen() {
   const [activeCat, setActiveCat] = useState<CategoryKey>("all");
   /** 구매 확인 다이얼로그 대상 (null = 닫힘) */
   const [pendingPurchase, setPendingPurchase] = useState<CatalogItem | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   /** 수정완료 확인 다이얼로그 열림 여부 */
   const [confirmDoneOpen, setConfirmDoneOpen] = useState(false);
   /** 뒤로가기(취소) 확인 다이얼로그 열림 여부 */
@@ -60,6 +61,10 @@ export function MyroomScreen() {
     });
     if (ok) {
       purchaseItem(pendingPurchase.kind, pendingPurchase.variant);
+    } else {
+      // 포인트 부족 — 이전엔 아무 피드백 없이 모달만 닫혀 '눌렀는데 아무 일 없음' 경험이었다.
+      setToast("포인트가 부족해요");
+      window.setTimeout(() => setToast(null), 1800);
     }
     setPendingPurchase(null);
   };
@@ -353,6 +358,12 @@ export function MyroomScreen() {
         onConfirm={confirmCancel}
         onCancel={dismissCancel}
       />
+
+      {toast && (
+        <div className="pointer-events-none fixed bottom-24 left-1/2 z-[1100] -translate-x-1/2 whitespace-nowrap rounded-full bg-holo-ink/90 px-4 py-2 text-[13px] font-medium text-white">
+          {toast}
+        </div>
+      )}
     </main>
   );
 }

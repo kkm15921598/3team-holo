@@ -94,6 +94,9 @@ export function AttendanceScreen() {
         if (newlyAcquired) {
           setToast("🎉 '1년째 입주민' 뱃지를 획득했어요!");
           window.setTimeout(() => setToast(null), 2400);
+          // 조기 return 으로 아래 공통 setRefreshTick 을 건너뛰면 오늘 출석 카드/CTA 가
+          // 갱신되지 않으므로 여기서 직접 갱신한다.
+          setRefreshTick((t) => t + 1);
           return;
         }
       }

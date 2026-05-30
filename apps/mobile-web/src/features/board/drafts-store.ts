@@ -2,10 +2,24 @@
 // localStorage 에 영속화되어 새로고침/재방문에도 사용자가 저장한 임시글이 유지된다.
 // (이전엔 메모리 변수에만 있어 새로고침 시 모두 사라지고 모든 사용자가 같은 샘플 3건을 공유했음)
 
+import type { PostLocation } from "@/shared/mock/data";
+
 export type Draft = {
   id: string;
   title: string;
   description: string;
+  // 아래는 모임 글 임시저장 복원용 — 없으면 단순 글로 취급(하위호환).
+  // (이전엔 title/description 만 저장해, 모임 글을 임시저장하면 카테고리·사진·장소·
+  //  인원·일정이 모두 사라지고 자유게시판 단순글로 둔갑했다.)
+  category?: string; // 카테고리 ID
+  meetupType?: string | null;
+  eventDate?: string;
+  endDate?: string;
+  eventTime?: string;
+  peopleCount?: number | null;
+  place?: string;
+  postLocation?: PostLocation | null;
+  photoUrls?: string[];
 };
 
 const STORAGE_KEY = "holo:drafts:v1";

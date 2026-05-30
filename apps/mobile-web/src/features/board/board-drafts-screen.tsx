@@ -35,7 +35,21 @@ export function BoardDraftsScreen() {
 
   const openDraft = (d: Draft) => {
     navigate("/board/write", {
-      state: { draftId: d.id, title: d.title, content: d.description },
+      state: {
+        draftId: d.id,
+        title: d.title,
+        content: d.description,
+        // 저장해 둔 모임 작성 상태 복원 — board-write 의 수정 진입과 동일 키로 전달.
+        postCategory: d.category,
+        meetupType: d.meetupType,
+        eventDate: d.eventDate,
+        endDate: d.endDate,
+        eventTime: d.eventTime,
+        peopleCount: d.peopleCount,
+        place: d.place,
+        postLocation: d.postLocation,
+        photoUrls: d.photoUrls,
+      },
     });
   };
 

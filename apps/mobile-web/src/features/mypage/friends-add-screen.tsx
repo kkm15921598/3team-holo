@@ -174,6 +174,9 @@ export function FriendsAddScreen() {
       case "max-reached":
         showToast("친구 정원(30명)이 가득 찼어요.");
         return;
+      case "self":
+        showToast("자기 자신에게는 친구 요청을 보낼 수 없어요.");
+        return;
       default:
         showToast("QR 인식 결과로 친구 요청을 보낼 수 없어요.");
     }
@@ -208,6 +211,9 @@ export function FriendsAddScreen() {
         return;
       case "max-reached":
         showToast("친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요.");
+        return;
+      case "self":
+        showToast("자기 자신에게는 친구 요청을 보낼 수 없어요.");
         return;
       default:
         showToast("친구 요청을 보낼 수 없어요.");
