@@ -90,12 +90,12 @@ export function MyMeetingsScreen() {
                       {post.description}
                     </span>
                   </div>
-                  {/* 모임 참여 글이므로 항상 인원수 표시.
-                      "현재 참여 / 최대 정원" (예: 5/6) 으로 노출하고,
-                      현재 참여 = baseJoined + 본인(joined=true) — 다만 capacity 초과 방지를 위해 Math.min 적용. */}
+                  {/* 인원수는 게시판 상세/리스트·채팅방과 동일한 단일 출처(calcJoined)로 표시.
+                      baseJoined 는 participants 로 이미 본인을 포함하므로 +1 하면 이중 카운트가 되어
+                      게시판/채팅방 표시와 어긋난다 → baseJoined 그대로 사용. */}
                   {(() => {
                     const { capacity, baseJoined } = calcJoined(post);
-                    const joinedCount = Math.min(capacity, baseJoined + 1);
+                    const joinedCount = Math.min(capacity, baseJoined);
                     return (
                       <span
                         className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
