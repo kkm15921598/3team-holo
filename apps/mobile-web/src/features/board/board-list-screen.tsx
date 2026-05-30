@@ -354,7 +354,6 @@ export function BoardListScreen() {
     typeFilters,
     ageFilters,
     distanceFilters,
-    genderByNick,
     // 랭킹이 사용자의 실시간 좋아요·댓글에 즉각 반응하도록 deps 에 추가.
     // 조회수는 useViewCounts() 가 위쪽에서 호출돼 컴포넌트 자체가 매번 리렌더되므로 따로 deps 에 둘 필요 없음.
     likedSet,

@@ -78,8 +78,6 @@ export function InterestScreen() {
   const totalCount = interests.length + (customTrimmed ? 1 : 0);
   const canNext = totalCount > 0;
   const meetsRecommended = totalCount >= RECOMMENDED_MIN;
-  // 다음 버튼 비활성 상태에서 눌렀을 때 인라인 안내(알림창 대신).
-  const [nextHint, setNextHint] = useState<string | null>(null);
 
   const renderChip = (item: TagItem) => {
     const { tag } = item;
