@@ -382,8 +382,10 @@ export function BoardWriteScreen() {
         eventTime:
           !isSimpleCategory && !isLongTerm ? eventTime : undefined,
         peopleCount: isSimpleCategory ? null : peopleCount,
-        place: postLocation?.placeName ?? incomingState?.place,
-        location: postLocation ?? undefined,
+        // 단순 카테고리(자유/추천)는 위치를 첨부했어도 저장하지 않는다 — 안 그러면
+        // isMeetupPost 가 true 가 돼 단순 글이 모임 레이아웃/채팅방으로 둔갑한다(웬디 QA).
+        place: isSimpleCategory ? undefined : (postLocation?.placeName ?? incomingState?.place),
+        location: isSimpleCategory ? undefined : (postLocation ?? undefined),
         // 첨부 사진이 있으면 함께 저장 — Storage URL 또는 fallback base64.
         photoUrls: resolvedPhotoUrls.length > 0 ? resolvedPhotoUrls : undefined,
       };

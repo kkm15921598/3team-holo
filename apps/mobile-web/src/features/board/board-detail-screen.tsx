@@ -151,6 +151,18 @@ export function BoardDetailScreen() {
     }
     return start;
   }, [post.eventDate, post.endDate, post.eventTime, post.meetupType]);
+
+  // 모임 종료 여부 — 일정(장기성=종료일 / 단기성=시작일)이 지났으면 true.
+  // 그 날의 끝(23:59:59)까지는 유효로 본다. 일정 미정(eventDate 없음)은 종료 아님.
+  const isExpired = useMemo(() => {
+    if (!post.eventDate) return false;
+    const isLongTerm = post.meetupType === "장기성 모임";
+    const lastDateStr = isLongTerm ? (post.endDate ?? post.eventDate) : post.eventDate;
+    const last = new Date(`${lastDateStr}T23:59:59`);
+    if (Number.isNaN(last.getTime())) return false;
+    return Date.now() > last.getTime();
+  }, [post.eventDate, post.endDate, post.meetupType]);
+
   const { capacity, baseJoined } = calcJoined(post);
 
   // Interactive state — 좋아요는 likes-store 에서 영속화된 상태를 사용
@@ -373,6 +385,8 @@ export function BoardDetailScreen() {
     reader.readAsDataURL(file);
   };
   const [menuOpen, setMenuOpen] = useState(false);
+  // 사진 풀스크린 뷰어 — 댓글/대댓글/게시글 첨부 사진 탭 시 크게 보기.
+  const [fullImage, setFullImage] = useState<string | null>(null);
   const [showFullAlert, setShowFullAlert] = useState(false);
   const [showJoinBanner, setShowJoinBanner] = useState(false);
   const [showNotJoinedAlert, setShowNotJoinedAlert] = useState(false);
@@ -579,6 +593,8 @@ export function BoardDetailScreen() {
       setShowLeaveConfirm(true);
       return;
     }
+    // 날짜가 지난(종료된) 모임은 신규 참여 불가. (버튼도 '모임 종료'로 비활성화되지만 안전 가드)
+    if (isExpired) return;
     // 모집 정원이 다 찼으면 안내
     if (baseJoined >= capacity) {
       setShowFullAlert(true);
@@ -889,7 +905,8 @@ export function BoardDetailScreen() {
                     key={`${i}-${url.slice(-12)}`}
                     src={url}
                     alt={`첨부 사진 ${i + 1}`}
-                    className="h-[140px] w-[140px] shrink-0 rounded-[10px] border border-holo-line-2 object-cover"
+                    onClick={() => setFullImage(url)}
+                    className="h-[140px] w-[140px] shrink-0 cursor-pointer rounded-[10px] border border-holo-line-2 object-cover"
                   />
                 ))}
               </div>
@@ -940,6 +957,14 @@ export function BoardDetailScreen() {
                   <CheckMark color="#7448DD" />
                   내 모임
                 </span>
+              ) : isExpired && !joining ? (
+                // 날짜가 지난 모임 — '모임 종료'로 비활성화(신규 참여 불가).
+                <span
+                  className="ml-auto flex items-center gap-1 rounded-full border border-holo-line-2 bg-holo-surface-2 px-4 py-1 text-[14px] font-semibold text-holo-ink-4"
+                  aria-label="종료된 모임"
+                >
+                  모임 종료
+                </span>
               ) : (
                 <button
                   type="button"
@@ -973,7 +998,8 @@ export function BoardDetailScreen() {
                     key={`${i}-${url.slice(-12)}`}
                     src={url}
                     alt={`첨부 사진 ${i + 1}`}
-                    className="h-[140px] w-[140px] shrink-0 rounded-[10px] border border-holo-line-2 object-cover"
+                    onClick={() => setFullImage(url)}
+                    className="h-[140px] w-[140px] shrink-0 cursor-pointer rounded-[10px] border border-holo-line-2 object-cover"
                   />
                 ))}
               </div>
@@ -1048,7 +1074,8 @@ export function BoardDetailScreen() {
                           <img
                             src={c.photoUrl}
                             alt="댓글 첨부 사진"
-                            className="h-full w-full object-cover"
+                            onClick={() => setFullImage(c.photoUrl!)}
+                            className="h-full w-full cursor-pointer object-cover"
                           />
                         )}
                       </div>
@@ -1124,7 +1151,8 @@ export function BoardDetailScreen() {
                                     <img
                                       src={r.photoUrl}
                                       alt="대댓글 첨부 사진"
-                                      className="h-full w-full object-cover"
+                                      onClick={() => setFullImage(r.photoUrl!)}
+                                      className="h-full w-full cursor-pointer object-cover"
                                     />
                                   )}
                                 </div>
@@ -1694,6 +1722,30 @@ export function BoardDetailScreen() {
           <div className="rounded-full bg-black/80 px-4 py-2 text-[13px] text-white">
             {toast}
           </div>
+        </div>
+      )}
+
+      {/* 사진 풀스크린 뷰어 — 댓글/게시글 첨부 사진 탭 시 크게 보기. 아무 곳이나 탭하면 닫힘. */}
+      {fullImage && (
+        <div
+          className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setFullImage(null)}
+          role="dialog"
+          aria-label="사진 크게 보기"
+        >
+          <img
+            src={fullImage}
+            alt="첨부 사진 크게 보기"
+            className="max-h-full max-w-full object-contain"
+          />
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={() => setFullImage(null)}
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-[20px] text-white"
+          >
+            ×
+          </button>
         </div>
       )}
     </main>

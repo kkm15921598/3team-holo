@@ -122,8 +122,44 @@ export function setRegionVerified(v: boolean) {
   }
 }
 
+// ─── 동네 라벨 계정별 로컬 백업 ──────────────────────────────
+// verifiedRegion 이 (a) Supabase verified_region 컬럼 미저장/누락, (b) 로그인 시
+// resetVerification 으로 비워진 뒤 sync 가 빈 값을 받아 복원 못 함 — 두 경우에 사라져
+// "인증했는데 마이페이지에 동네가 안 뜨는" 문제가 있었다. 계정(phone)별로 라벨을 따로
+// 영속화해 두고, 동기화/로그인 후 로컬 백업에서 복원한다(계정 격리 위해 phone 키 사용).
+const REGION_BY_PHONE_KEY = "holo:verifiedRegion:byPhone";
+function loadRegionMap(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(REGION_BY_PHONE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed as Record<string, string>;
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+function saveRegionForPhone(phone: string, region: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const map = loadRegionMap();
+    map[phone] = region;
+    window.localStorage.setItem(REGION_BY_PHONE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+export function getVerifiedRegionForPhone(phone: string): string | null {
+  return loadRegionMap()[phone] ?? null;
+}
+
 /** 인증한 동네 라벨 저장 (인증 완료와 동시에 호출) */
 export function setVerifiedRegion(region: string | null) {
+  // 계정별 로컬 백업에 먼저 기록 — sync/리셋으로 _state 가 비워져도 복원 가능.
+  const phone = getCurrentAccount();
+  if (phone && region) saveRegionForPhone(phone, region);
   if (_state.verifiedRegion === region) return;
   setState({ verifiedRegion: region });
 }
@@ -222,11 +258,18 @@ export async function syncVerificationFromSupabase(): Promise<void> {
     .eq("phone", userPhone)
     .single();
   if (error || !data) return;
+  // 동네 라벨: Supabase 값이 비문자열/빈문자열이면(컬럼 미저장 등) 로컬 상태 → 계정별 백업 순으로 복원.
+  // (빈 값이 로컬 라벨을 덮어써 마이페이지에서 동네가 사라지던 문제 방지)
+  const remoteRegion =
+    typeof data.verified_region === "string" && data.verified_region
+      ? data.verified_region
+      : null;
   _state = {
     ..._state,
     phoneVerified: (data.phone_verified as boolean) ?? _state.phoneVerified,
     regionVerified: (data.region_verified as boolean) ?? _state.regionVerified,
-    verifiedRegion: (data.verified_region as string | null) ?? _state.verifiedRegion,
+    verifiedRegion:
+      remoteRegion ?? _state.verifiedRegion ?? getVerifiedRegionForPhone(userPhone),
     lastRegionVerifiedAt: (data.last_region_verified_at as number | null) ?? _state.lastRegionVerifiedAt,
   };
   // 모순 상태 보정: 인증은 됐는데 시점이 비어있는 레거시 계정(서버 컬럼 누락)은
