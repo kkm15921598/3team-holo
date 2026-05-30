@@ -8,6 +8,7 @@
  * 발급되어야 한다 (순서 중요). 그래야 보상이 리셋에 의해 지워지지 않는다.
  */
 import { resetStats } from "@/shared/stores/account-stats-store";
+import { resetProfile } from "@/shared/stores/profile-store";
 import { setLikedIds } from "@/shared/stores/likes-store";
 import { setJoinedIds } from "@/shared/stores/joined-store";
 import { setViewedIds } from "@/shared/stores/viewed-posts-store";
@@ -64,6 +65,10 @@ export function resetAllStoresForFreshSignup(): void {
  */
 export function resetUserStoresForLogin(): void {
   resetStats();
+  // 프로필(특히 pastNicknames) 초기화 — 이전 계정 닉네임이 새 계정 isMyNickname() 에
+  // 잡혀 남의 글/아바타를 '내 것'으로 오인하던 누설 차단. 로그인 직후 setNickname 으로
+  // 새 닉네임이 덮어쓰이므로 안전(sync 전, getCurrentAccount null 시점이라 서버 미반영).
+  resetProfile();
   resetXp();
   setLikedIds([]);
   setJoinedIds([]);

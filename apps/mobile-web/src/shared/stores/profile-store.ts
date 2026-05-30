@@ -136,6 +136,24 @@ export function isMyNickname(nick: string): boolean {
   return (_state.pastNicknames ?? []).includes(nick);
 }
 
+/**
+ * 로그인/계정전환 시 프로필 상태를 기본값으로 초기화.
+ * ★ pastNicknames 누설 차단 ★ — 비우지 않으면 이전 계정의 닉네임이 새 계정의
+ * isMyNickname() 에 잡혀, 이전 계정 글/댓글/지도 아바타가 '내 것'으로 오인되고
+ * 작성자 전용 수정·삭제 버튼까지 노출된다(계정 간 신원 누설).
+ *
+ * nickname 을 빈 문자열로 두는 이유: 로그인 직후 login-screen 이 setNickname(새 닉)을
+ * 호출하는데, prev 가 비어 있어야 setNickname 의 pastNicknames 누적(prev && ...)이
+ * 건너뛰어져 기본 닉네임("새로운 입주자")이 과거 닉네임으로 잘못 쌓이지 않는다.
+ * 서버에 동기화하지 않는다(이전 계정 원격 레코드 오염 방지) — 호출 시 getCurrentAccount()
+ * 가 null 이어야 안전(로그인 흐름은 clearCurrentAccount 이후 reset 함).
+ */
+export function resetProfile() {
+  _state = { ...DEFAULT_STATE, nickname: "", friendCode: "", pastNicknames: [] };
+  persist();
+  notify();
+}
+
 export function setTitle(title: string) {
   _state = { ..._state, title };
   persist();

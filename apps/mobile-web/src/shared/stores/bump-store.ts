@@ -193,7 +193,27 @@ export async function syncBumpsFromSupabase(): Promise<void> {
   const remote = data.bump_data as BumpMap;
   const merged: BumpMap = { ..._bumps };
   for (const [postId, entry] of Object.entries(remote)) {
-    if (!merged[postId]) merged[postId] = entry;
+    // 서버 손상 대비 방어적 스키마 검사.
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      typeof (entry as BumpEntry).lastAt !== "number" ||
+      typeof (entry as BumpEntry).count !== "number"
+    ) {
+      continue;
+    }
+    const local = merged[postId];
+    if (!local) {
+      merged[postId] = entry;
+    } else {
+      // local-wins(첫 항목 고정) 대신 최신 시각 + 누적 최댓값으로 병합 — 안 그러면
+      // 기기 간 끌어올리기 쿨다운/누적 cap 이 desync 되고, 다음 bump 가 서버 최신 count 를
+      // stale 로컬로 되감아 데이터가 손실됐다.
+      merged[postId] = {
+        lastAt: Math.max(local.lastAt, entry.lastAt),
+        count: Math.max(local.count, entry.count),
+      };
+    }
   }
   _bumps = merged;
   save(_bumps);
