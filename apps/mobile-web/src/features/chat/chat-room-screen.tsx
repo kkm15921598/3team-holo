@@ -106,6 +106,90 @@ function buildMembersFor(room: ChatRoom): Member[] {
   return [me, ...others];
 }
 
+/**
+ * Supabase messages 행 → ChatMessage 의 부가 필드(type/파일/위치/답장/전달) 매핑.
+ * 2026-05-30 마이그레이션으로 추가된 컬럼(msg_type, file_name/size, lat·lng, place_name,
+ * reply_to, reactions, forwarded_from)을 복원한다. 컬럼/값이 없으면 빈 객체라 기존
+ * 텍스트·이미지 메시지에는 영향이 없다. 초기 로드와 실시간 INSERT 두 경로에서 동일하게 사용.
+ */
+function chatExtrasFromRow(row: any): Partial<ChatMessage> {
+  const extras: Partial<ChatMessage> = {};
+  if (row.image_url) {
+    extras.type = "image";
+    extras.imageUrl = row.image_url;
+  } else if (row.msg_type === "file" || row.file_name) {
+    extras.type = "file";
+    if (row.file_name) extras.fileName = row.file_name;
+    if (row.file_size != null) extras.fileSize = Number(row.file_size);
+  } else if (row.msg_type === "location" || (row.lat != null && row.lng != null)) {
+    extras.type = "location";
+    extras.location = {
+      lat: Number(row.lat),
+      lng: Number(row.lng),
+      address: row.place_name ?? undefined,
+    };
+  } else if (row.msg_type) {
+    extras.type = row.msg_type as ChatMessage["type"];
+  }
+  if (row.reply_to && typeof row.reply_to === "object") {
+    extras.replyTo = row.reply_to as ChatMessage["replyTo"];
+  }
+  if (Array.isArray(row.reactions) && row.reactions.length > 0) {
+    // mine 은 보는 사람마다 다르므로 DB 값은 무시하고 공유 카운트만 복원.
+    extras.reactions = (row.reactions as any[]).map((r) => ({
+      emoji: r.emoji,
+      count: r.count,
+    }));
+  }
+  if (row.forwarded_from) extras.forwarded = true;
+  return extras;
+}
+
+/**
+ * ChatMessage 를 messages 테이블 행으로 저장(best-effort).
+ * 파일/위치/전달 메시지는 그동안 Supabase insert 가 아예 없어 재입장 시 사라졌다 —
+ * 이 헬퍼로 일원화한다. 새 컬럼 미적용 환경(42703/PGRST204)이면 기본 컬럼만으로 재시도.
+ */
+function saveMessageRow(
+  roomId: string,
+  userPhone: string,
+  m: ChatMessage,
+): void {
+  const base: Record<string, any> = {
+    message_id: m.id,
+    room_id: roomId,
+    sender_phone: userPhone,
+    sender_nickname: m.nickname || "",
+    content: m.content ?? "",
+    sent_time: m.time,
+    read_by: [],
+    ...(m.imageUrl ? { image_url: m.imageUrl } : {}),
+  };
+  const full: Record<string, any> = { ...base };
+  if (m.type) full.msg_type = m.type;
+  if (m.fileName) full.file_name = m.fileName;
+  if (m.fileSize != null) full.file_size = m.fileSize;
+  if (m.location) {
+    full.lat = m.location.lat;
+    full.lng = m.location.lng;
+    full.place_name = m.location.address ?? null;
+  }
+  if (m.replyTo) full.reply_to = m.replyTo;
+  if (m.forwarded) full.forwarded_from = "1";
+
+  supabase
+    .from("messages")
+    .insert(full)
+    .then(({ error }) => {
+      if (error && (error.code === "42703" || error.code === "PGRST204")) {
+        return supabase.from("messages").insert(base);
+      }
+      return { error };
+    })
+    .then((res: any) => {
+      if (res && res.error) console.warn("Supabase 메시지 저장 실패:", res.error.message);
+    });
+}
 
 export function ChatRoomScreen() {
   const navigate = useNavigate();
@@ -233,9 +317,9 @@ export function ChatRoomScreen() {
           mine: isMine,
           date,
           readBy,
-          // 이미지 메시지 복원 — 실시간 INSERT 핸들러와 동일하게 매핑해야 재입장/새로고침 시
-          // 과거 이미지가 빈 말풍선으로 깨지지 않는다. (초기 로드 경로에만 누락돼 있었음)
-          ...(row.image_url ? { type: "image" as const, imageUrl: row.image_url } : {}),
+          // 이미지/파일/위치/답장/전달 부가 필드 복원 — 실시간 INSERT 핸들러와 동일 매핑.
+          // (이전엔 image 만 복원해 파일·위치 메시지는 재입장 시 빈 말풍선으로 깨졌다.)
+          ...chatExtrasFromRow(row),
         };
       });
 
@@ -307,7 +391,7 @@ export function ChatRoomScreen() {
             time: row.sent_time ?? "",
             mine: isMine,
             readBy: isMine ? Math.max(0, latestMemberCountRef.current - 1 - readByArr.length) : undefined,
-            ...(row.image_url ? { type: "image" as const, imageUrl: row.image_url } : {}),
+            ...chatExtrasFromRow(row),
           };
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
@@ -468,7 +552,7 @@ export function ChatRoomScreen() {
     // Supabase에 메시지 저장 (best-effort)
     const userPhone = getCurrentAccount();
     if (userPhone && id) {
-      supabase.from("messages").insert({
+      const baseTextRow = {
         message_id: msgId,
         room_id: id,
         sender_phone: userPhone,
@@ -476,9 +560,22 @@ export function ChatRoomScreen() {
         content: v,
         sent_time: time,
         read_by: [],  // 발송 시 아무도 읽지 않은 상태
-      }).then(({ error }) => {
-        if (error) console.warn("Supabase 메시지 저장 실패:", error.message);
-      });
+      };
+      // 답장 컨텍스트(reply_to) 도 함께 저장 — 안 하면 재입장 시 "어떤 메시지에 답장인지"가
+      // 사라진다. 컬럼 미적용 환경이면 기본 컬럼만으로 재시도.
+      const textRow = reply ? { ...baseTextRow, reply_to: reply } : baseTextRow;
+      supabase
+        .from("messages")
+        .insert(textRow)
+        .then(({ error }) => {
+          if (error && (error.code === "42703" || error.code === "PGRST204")) {
+            return supabase.from("messages").insert(baseTextRow);
+          }
+          return { error };
+        })
+        .then((res: any) => {
+          if (res && res.error) console.warn("Supabase 메시지 저장 실패:", res.error.message);
+        });
     }
   };
 
@@ -703,23 +800,25 @@ export function ChatRoomScreen() {
   // 일반 파일을 메시지로 추가 (실제 업로드는 안 하고 메타데이터만)
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const userPhone = getCurrentAccount();
+    const myNickname = getProfile().nickname;
     Array.from(files).forEach((file, idx) => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-${idx}`,
-          nickname: "",
-          content: "",
-          time: nowTime(),
-          mine: true,
-          type: "file",
-          fileName: file.name,
-          fileSize: file.size,
-          fileMime: file.type,
-          read: false,
-          readBy: Math.max(0, displayMemberCount - 1),
-        },
-      ]);
+      const msg: ChatMessage = {
+        id: `${Date.now()}-${idx}`,
+        nickname: "",
+        content: "",
+        time: nowTime(),
+        mine: true,
+        type: "file",
+        fileName: file.name,
+        fileSize: file.size,
+        fileMime: file.type,
+        read: false,
+        readBy: Math.max(0, displayMemberCount - 1),
+      };
+      setMessages((prev) => [...prev, msg]);
+      // 파일 메시지 영속화 — 그동안 Supabase insert 가 없어 재입장 시 통째로 사라졌다.
+      if (userPhone && id) saveMessageRow(id, userPhone, { ...msg, nickname: myNickname });
     });
   };
 
@@ -749,25 +848,26 @@ export function ChatRoomScreen() {
 
   const sendPickedLocation = () => {
     if (!locDraftPick) return;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        nickname: "",
-        content: "",
-        time: nowTime(),
-        mine: true,
-        type: "location",
-        location: {
-          lat: locDraftPick.lat,
-          lng: locDraftPick.lng,
-          address: locDraftAddress.trim() || undefined,
-        },
-        read: false,
-        // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
-        readBy: Math.max(0, displayMemberCount - 1),
+    const msg: ChatMessage = {
+      id: String(Date.now()),
+      nickname: "",
+      content: "",
+      time: nowTime(),
+      mine: true,
+      type: "location",
+      location: {
+        lat: locDraftPick.lat,
+        lng: locDraftPick.lng,
+        address: locDraftAddress.trim() || undefined,
       },
-    ]);
+      read: false,
+      // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
+      readBy: Math.max(0, displayMemberCount - 1),
+    };
+    setMessages((prev) => [...prev, msg]);
+    // 위치 메시지 영속화 — 그동안 Supabase insert 가 없어 재입장 시 통째로 사라졌다.
+    const userPhone = getCurrentAccount();
+    if (userPhone && id) saveMessageRow(id, userPhone, { ...msg, nickname: getProfile().nickname });
     setShowLocationPicker(false);
   };
 
@@ -1544,7 +1644,15 @@ export function ChatRoomScreen() {
               appendMessageToRoom(targetRoomId, forwarded);
             }
 
-            // 3) rooms-store 에 lastMessage / lastTime / updatedAt 반영
+            // 3) Supabase 영속화 — 그동안 전달 메시지는 로컬에만 남아 재입장 시 사라지고
+            //    상대 기기엔 아예 도착하지 않았다. forwarded_from + 원본 타입/첨부를 함께 저장.
+            const fwdPhone = getCurrentAccount();
+            const fwdNick = getProfile().nickname;
+            if (fwdPhone) {
+              saveMessageRow(targetRoomId, fwdPhone, { ...forwarded, nickname: fwdNick });
+            }
+
+            // 4) rooms-store 에 lastMessage / lastTime / updatedAt 반영
             setRooms((prev) =>
               prev.map((r) =>
                 r.id === targetRoomId
