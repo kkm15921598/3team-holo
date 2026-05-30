@@ -15,6 +15,7 @@ import { useAccountStats } from "@/shared/stores/account-stats-store";
 import { useGeolocation } from "@/shared/hooks/use-geolocation";
 import { useBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { AttendancePopup, shouldShowAttendancePopup } from "@/features/event/attendance-popup";
 
 export function HomeScreen() {
   const userPos = useGeolocation();
@@ -92,6 +93,13 @@ export function HomeScreen() {
     }
     setWelcomeBonus(null);
   };
+
+  // 매일 접속 시 출석체크 팝업 — 오늘 이미 출석했거나 '오늘 하루 보지 않기'면 안 뜬다.
+  // (환영 모달이 떠 있는 동안엔 가렸다가, 닫힌 뒤 노출 — 아래 렌더에서 !welcomeBonus 로 게이트.)
+  const [showAttendance, setShowAttendance] = useState(false);
+  useEffect(() => {
+    if (shouldShowAttendancePopup()) setShowAttendance(true);
+  }, []);
 
   // 카드 가로 드래그 스크롤 (map-screen과 동일)
   const cardsRef = useRef<HTMLDivElement>(null);
@@ -181,12 +189,21 @@ export function HomeScreen() {
               <RoomScene />
               <div
                 className="absolute z-[5] max-w-[180px] whitespace-normal break-all rounded-[12px] rounded-bl-[4px] bg-white px-[14px] py-[8px] text-[15px] font-semibold text-holo-ink shadow-[0_2px_10px_rgba(116,72,221,0.15)]"
-                style={{
-                  // 긴 상태메시지가 화면 밖으로 나가지 않도록 최대 너비(180px) 안에서 줄바꿈하고,
-                  // left/top 을 룸 컨테이너(ROOM_W×ROOM_H) 안쪽으로 클램프한다.
-                  left: Math.max(8, Math.min(statusPos.x, ROOM_W - 188)),
-                  top: Math.max(8, Math.min(statusPos.y, ROOM_H - 48)),
-                }}
+                style={(() => {
+                  // 룸(ROOM_W=400)은 360px 프레임에 가운데 정렬돼 좌우로 (ROOM_W-360)/2 만큼
+                  // 화면 밖으로 넘친다. 말풍선을 ROOM_W 기준으로 클램프하면 그 '안 보이는 영역'
+                  // 으로 들어가 화면 밖으로 나가 보인다 → '보이는 360 창' 안으로 클램프한다.
+                  const FRAME = 360; // 기기 프레임 폭
+                  const BW = 180; // 말풍선 최대 폭(max-w-[180px])
+                  const PAD = 8;
+                  const ovf = Math.max(0, (ROOM_W - FRAME) / 2); // 한쪽 넘침(=20)
+                  const minX = ovf + PAD;
+                  const maxX = ovf + FRAME - BW - PAD;
+                  return {
+                    left: Math.max(minX, Math.min(statusPos.x, maxX)),
+                    top: Math.max(8, Math.min(statusPos.y, ROOM_H - 56)),
+                  };
+                })()}
               >
                 {status}
                 <span
@@ -283,6 +300,11 @@ export function HomeScreen() {
 
       {welcomeBonus !== null && (
         <WelcomeBonusModal bonus={welcomeBonus} onClose={closeWelcome} />
+      )}
+
+      {/* 출석체크 팝업 — 환영 모달이 없을 때만(겹침 방지), 하루 1회. */}
+      {showAttendance && welcomeBonus === null && (
+        <AttendancePopup onClose={() => setShowAttendance(false)} />
       )}
     </main>
   );
