@@ -728,7 +728,7 @@ function PostCard({
           </p>
           <div className="mt-1 flex items-center gap-3 text-[12px] text-holo-ink-3">
             <span className="flex items-center gap-1">
-              <HeartIcon filled={liked} /> {post.likes + (liked ? 1 : 0)}
+              <HeartIcon filled={liked} /> {post.likes}
             </span>
             <span className="flex items-center gap-1">
               <CommentIcon /> {commentCount}

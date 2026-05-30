@@ -101,7 +101,11 @@ export function ActivityScreen() {
     () => allPosts.filter((p) => p.authorNickname === profile.nickname).length,
     [allPosts, profile.nickname],
   );
-  const commentsCount = userComments.length;
+  // '댓글 단 고유 글 수' — /mypage/comments 리스트(postId 중복 제거) 및 프로필 stat 과 단위 통일.
+  const commentsCount = useMemo(
+    () => new Set(userComments.map((c) => c.postId)).size,
+    [userComments],
+  );
   const activeDays = activity.activeDates.length;
   // 최근 본 글 카운트 — 게시판에서 이미 삭제된 글은 viewed 에 남아있어도
   // recent-posts-screen 에서 노출되지 않으니, 현재 살아있는 글만 카운트.

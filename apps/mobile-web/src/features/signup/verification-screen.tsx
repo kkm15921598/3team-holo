@@ -251,10 +251,16 @@ export function VerificationScreen() {
               onChange={(v) => {
                 const next = parseIdInput(v, idNum, !showIdNum);
                 update("idNum", next);
-                // 뒷자리 첫 숫자가 입력되면 성별 자동 인식
-                const g = genderFromIdNum(next);
+                // 뒷자리 첫 숫자(7번째 자리)가 유효 범위일 때만 성별 자동 인식 + 전역 반영.
+                // (이전엔 0·9 같은 무효 값에도 genderFromIdNum 이 값을 반환해 전역 store 가 오염됐다.)
+                const valid7 =
+                  next.length >= 7 &&
+                  (nationality === "kor"
+                    ? ["1", "2", "3", "4"]
+                    : ["5", "6", "7", "8"]
+                  ).includes(next.charAt(6));
+                const g = valid7 ? genderFromIdNum(next) : null;
                 update("gender", g);
-                // 전역 인증 store 에도 반영하여 프로필 편집의 캐릭터 필터에 사용
                 if (g) setGlobalGender(g);
               }}
               inputMode="numeric"

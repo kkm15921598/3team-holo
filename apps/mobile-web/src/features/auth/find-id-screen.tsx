@@ -8,6 +8,9 @@ function generateOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+/** 휴대폰 번호 형식 — login/find-password 와 동일(01 prefix + 자릿수). 길이만 보던 검증 강화. */
+const PHONE_PATTERN = /^01(?:0\d{8}|[16789]\d{7,8})$/;
+
 export function FindIdScreen() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -23,7 +26,7 @@ export function FindIdScreen() {
     useCountdown(180, codeSent && !foundId);
 
   const isNameValid = name.trim().length > 0;
-  const isPhoneValid = phone.length >= 10;
+  const isPhoneValid = PHONE_PATTERN.test(phone);
   const baseFilled = isNameValid && isPhoneValid;
   const canSubmit = codeSent ? code.length >= 6 : baseFilled;
 

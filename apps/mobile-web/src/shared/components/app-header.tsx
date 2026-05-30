@@ -33,6 +33,9 @@ export function AppHeader({
     ? 0
     : dynNotifications.filter((d) => {
         if (d.read) return false;
+        // 알림 목록 화면과 동일한 30일 컷오프 — 안 그러면 30일 지난 미읽음이 배지에만 남아
+        // 목록에선 안 보이고 '모두 읽음'도 없어 사용자가 배지를 0으로 못 만든다.
+        if (Date.now() - d.createdAt > 30 * 24 * 60 * 60 * 1000) return false;
         let key: keyof typeof nSettings;
         if (d.kind === "friend-received" || d.kind === "friend-accepted") key = "friend";
         else if (d.kind === "comment") key = "comment";

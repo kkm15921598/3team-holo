@@ -75,13 +75,6 @@ export function MyroomScreen() {
     navigate(-1);
   };
 
-  /** "아니오" — 진입 시점 스냅샷으로 되돌림 */
-  const cancelDone = () => {
-    setMyroomItems(initialSnapshot);
-    setConfirmDoneOpen(false);
-    navigate(-1);
-  };
-
   /** 뒤로가기 클릭 → 취소 확인 모달 */
   const handleBack = () => {
     setConfirmCancelOpen(true);
@@ -341,7 +334,9 @@ export function MyroomScreen() {
         open={confirmDoneOpen}
         message={"마이룸 수정을 완료하시겠습니까?"}
         onConfirm={confirmDone}
-        onCancel={cancelDone}
+        // 배경 탭/취소는 '모달만 닫기'. cancelDone(되돌리기+이탈)으로 라우팅하면
+        // 저장하려고 연 모달에서 배경을 잘못 눌렀을 때 편집 내용이 전부 폐기된다.
+        onCancel={() => setConfirmDoneOpen(false)}
       />
 
       <ConfirmModal

@@ -280,7 +280,9 @@ export function MapView({
     const map = L.map(elRef.current, {
       center: [initial.lat, initial.lng],
       zoom,
-      minZoom: 14,
+      // 미리보기는 5km 반경이 한눈에 들어오도록 zoom=13 을 허용(모달은 14 유지).
+      // (이전엔 minZoom:14 가 공통 적용돼 미리보기의 initialZoom=13 이 14 로 클램프됐다.)
+      minZoom: preview ? 13 : 14,
       maxZoom: 18,
       // 컨트롤 UI 는 양쪽 모두 숨김 — 표준 지도 앱처럼 제스처로만 줌
       zoomControl: false,

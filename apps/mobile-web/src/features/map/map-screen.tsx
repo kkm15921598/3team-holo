@@ -388,9 +388,14 @@ export function MapScreen() {
             const { baseJoined } = calcJoined(p);
             // 아바타는 실제 멤버 닉네임을 시드로 사용해 채팅방 헤더 / board 와
             // 동일한 얼굴이 나오도록 한다.
-            const memberSeeds = deriveMeetupMembers(p, baseJoined);
+            // 홈 카드와 동일하게 작성자 얼굴을 항상 앞에 포함(작성자=나여도 표시).
+            const memberSeeds = [
+              p.authorNickname,
+              ...deriveMeetupMembers(p, baseJoined).filter((n) => n !== p.authorNickname),
+            ];
             const visibleSeeds = memberSeeds.slice(0, 3);
-            const extraCount = Math.max(0, baseJoined - 3);
+            // visible+extra 가 항상 baseJoined 와 일치하도록(고정 -3 대신 실제 표시 개수 차감) — 홈과 통일.
+            const extraCount = Math.max(0, baseJoined - visibleSeeds.length);
             return (
               <article
                 key={p.id}

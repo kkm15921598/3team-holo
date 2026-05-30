@@ -145,12 +145,16 @@ export function ProfileDetailScreen() {
   const [otherCommentsCount, setOtherCommentsCount] = useState(0);
   useEffect(() => {
     if (isMe) return;
+    // '댓글 단 고유 글 수' — 클릭 시 여는 친구 댓글 리스트(post_id 중복 제거)와 단위 통일.
+    // (이전엔 레코드 수라, 한 글에 여러 댓글 단 친구는 stat > 리스트 항목수로 어긋남)
     supabase
       .from("comments")
-      .select("id", { count: "exact", head: true })
+      .select("post_id")
       .eq("nickname", nickname)
-      .then(({ count }) => {
-        if (count != null) setOtherCommentsCount(count);
+      .then(({ data }) => {
+        if (data) {
+          setOtherCommentsCount(new Set(data.map((r) => String(r.post_id))).size);
+        }
       });
   }, [nickname, isMe]);
 

@@ -133,7 +133,9 @@ export function effectiveCountsFor(
   },
 ): EffectiveCounts {
   return {
-    likes: post.likes + (ctx.likedSet.has(post.id) ? 1 : 0),
+    // post.likes 는 patchLikes 로 본인 좋아요가 이미 반영된 값 — 추가 +1 은 이중 카운트.
+    // (상세/리스트 카드와 동일하게 단일 출처 사용)
+    likes: post.likes,
     comments: ctx.getCommentCount(post),
     views: ctx.getViews(post),
     hours: parseTimeAgoMinutes(post.timeAgo) / 60,
