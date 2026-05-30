@@ -56,6 +56,7 @@ export function postToMeetup(post: Post, userPos?: GeoPosition | null): Meetup {
     // 정원이 아니라 실제 참여 인원(baseJoined) — 맵/상세/채팅과 동일. 가짜 +N 노출 방지.
     totalCount: baseJoined,
     dim: post.status === "모집완료",
+    eventDate: post.eventDate, // D-day 배지용
   };
 }
 

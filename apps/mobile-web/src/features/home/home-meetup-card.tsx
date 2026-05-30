@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Persona } from "./home-faces";
+import { meetupDday } from "@/features/board/meetup-dday";
 
 export type Meetup = {
   id: string;
@@ -11,6 +12,8 @@ export type Meetup = {
   /** total member count — if greater than members.length, the extra is shown as "+N" */
   totalCount?: number;
   dim?: boolean;
+  /** 모임 일정(YYYY-MM-DD) — D-day 배지 표시용 */
+  eventDate?: string;
 };
 
 const MAX_VISIBLE_AVATARS = 3;
@@ -19,6 +22,9 @@ export function MeetupCard({ m }: { m: Meetup }) {
   const visible = m.members.slice(0, MAX_VISIBLE_AVATARS);
   const total = m.totalCount ?? m.members.length;
   const extra = total - visible.length;
+  // D-day 배지 — 다가오는(오늘~미래) 모임에만 표시. 지난 모임은 생략(카드 dim 으로 이미 구분).
+  const dday = meetupDday(m.eventDate);
+  const showDday = dday && !dday.isPast;
 
   return (
     <Link
@@ -29,8 +35,19 @@ export function MeetupCard({ m }: { m: Meetup }) {
       <div className="line-clamp-1 break-keep pr-[40px] text-[16px] font-bold text-holo-ink">
         {m.title}
       </div>
-      <div className="mt-[5px] text-[12px] font-medium text-holo-purple-mid opacity-80">
-        {m.distance ? `${m.distance} · ${m.duration}` : m.duration}
+      <div className="mt-[5px] flex items-center gap-1.5">
+        {showDday && (
+          <span
+            className={`shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-extrabold text-white ${
+              dday!.isToday ? "bg-holo-pink" : "bg-holo-purple-mid"
+            }`}
+          >
+            {dday!.label}
+          </span>
+        )}
+        <span className="truncate text-[12px] font-medium text-holo-purple-mid opacity-80">
+          {m.distance ? `${m.distance} · ${m.duration}` : m.duration}
+        </span>
       </div>
       <p className="mt-[10px] line-clamp-2 text-[13px] leading-[1.45] text-[#333]">
         {m.description}

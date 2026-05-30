@@ -20,6 +20,7 @@ import {
   useHasReviewed,
   useHostRating,
 } from "./meetup-reviews-store";
+import { meetupDday } from "./meetup-dday";
 import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 import { joinPost, leavePost, useJoinedSet } from "@/shared/stores/joined-store";
 import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
@@ -989,7 +990,22 @@ export function BoardDetailScreen() {
               </div>
               <div className="flex flex-col gap-[3px] text-holo-ink-2">
                 <span>{place}</span>
-                <span>{timeText}</span>
+                <span className="flex items-center gap-1.5">
+                  {timeText}
+                  {(() => {
+                    const dd = meetupDday(post.eventDate);
+                    if (!dd || dd.isPast) return null;
+                    return (
+                      <span
+                        className={`rounded-full px-1.5 py-[1px] text-[11px] font-extrabold text-white ${
+                          dd.isToday ? "bg-holo-pink" : "bg-holo-purple-mid"
+                        }`}
+                      >
+                        {dd.label}
+                      </span>
+                    );
+                  })()}
+                </span>
               </div>
             </div>
 
