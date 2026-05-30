@@ -1,8 +1,0 @@
-304: "    }"
-305: "    // 성별 필터 — 검색 화면에서 \"남자\"/\"여자\" 만 단일 선택된 경우 URL ?gender=M|F 로 전달됨"
-306: "    if (genderParam === \"M\" || genderParam === \"F\") {"
-307: "      list = list\\.filter\\(\\(p\\) => \\{\\n        const g = genderByNick\\.get\\(p\\.authorNickname\\);\\n        return g \\? g === genderParam : true;\\n      }\\);"
-308: "    }"
-309: "    // 게시판 유형 필터 (검색 화면 다중 선택) — 한 개 이상이면 카테고리 id 가 그 중 하나여야 통과"
-310: "    if (boardFilterIds.length > 0) {"
-311: "      const set = new Set(boardFilterIds);"
