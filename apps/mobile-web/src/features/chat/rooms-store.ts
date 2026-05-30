@@ -418,6 +418,67 @@ export async function syncRoomsFromSupabase(): Promise<void> {
     rooms = [...toAdd, ...rooms];
     emit();
   }
+
+  // 복원된 방(특히 모임방)은 lastMessage 가 placeholder 로만 들어와 채팅 목록에 최신 대화가
+  // 안 보인다. messages 테이블의 최신 메시지로 채워준다(과거 대화 미리보기 복원).
+  void backfillRoomPreviews();
+}
+
+/**
+ * lastMessage 가 비어있거나 placeholder 인 방들을 messages 테이블의 최신 메시지로 채운다.
+ * 새 메시지가 오기 전까지 채팅 목록에 대화 내용이 안 뜨던 문제(특히 모임방) 보정.
+ */
+async function backfillRoomPreviews(): Promise<void> {
+  const userPhone = getCurrentAccount();
+  if (!userPhone) return;
+  const targets = rooms.filter(
+    (r) => !r.lastMessage || r.lastMessage === "(대화를 시작해보세요)",
+  );
+  if (targets.length === 0) return;
+  const ids = targets.map((r) => r.id);
+  const { data, error } = await supabase
+    .from("messages")
+    .select("room_id, content, image_url, file_name, msg_type, lat, lng, sent_time, created_at")
+    .in("room_id", ids)
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (error || !Array.isArray(data) || data.length === 0) return;
+
+  // created_at 내림차순이라 각 room_id 의 첫 등장이 최신 메시지.
+  const latestByRoom = new Map<string, Record<string, unknown>>();
+  for (const row of data) {
+    const rid = String((row as Record<string, unknown>).room_id);
+    if (!latestByRoom.has(rid)) latestByRoom.set(rid, row as Record<string, unknown>);
+  }
+  if (latestByRoom.size === 0) return;
+
+  const preview = (row: Record<string, unknown>): string => {
+    const c = (row.content as string | undefined)?.trim();
+    if (c) return c;
+    if (row.image_url) return "[사진]";
+    if (row.msg_type === "file" || row.file_name) return "[파일]";
+    if (row.msg_type === "location" || (row.lat != null && row.lng != null)) return "[위치]";
+    return "새 메시지";
+  };
+
+  let changed = false;
+  const next = rooms.map((r) => {
+    const row = latestByRoom.get(r.id);
+    if (!row) return r;
+    changed = true;
+    return {
+      ...r,
+      lastMessage: preview(row),
+      lastTime: (row.sent_time as string | undefined) || r.lastTime,
+      updatedAt: row.created_at
+        ? new Date(row.created_at as string).getTime()
+        : r.updatedAt,
+    };
+  });
+  if (changed) {
+    rooms = next;
+    emit();
+  }
 }
 
 // 모임방이 게시글 로드 전에 복원되면(race) meeting=undefined 로 add 되어 일정 배너가
