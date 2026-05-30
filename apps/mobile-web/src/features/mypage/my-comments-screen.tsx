@@ -98,7 +98,20 @@ export function MyCommentsScreen() {
     latestCommentTimeById.get(p.id);
 
   const handleDelete = (ids: string[]) => {
+    // 로컬 store + 화면 상태(supabaseCommentMeta) + 원격 댓글 3곳 모두 정리.
+    // (이전엔 로컬 store 만 비워, Supabase 에 남은 내 댓글이 재진입/재계산 시 부활했다.)
     removeCommentsByPostIds(ids);
+    setSupabaseCommentMeta((prev) => prev.filter((m) => !ids.includes(m.postId)));
+    if (myProfile.nickname && ids.length > 0) {
+      supabase
+        .from("comments")
+        .delete()
+        .eq("nickname", myProfile.nickname)
+        .in("post_id", ids)
+        .then(({ error }) => {
+          if (error) console.warn("Supabase 댓글 삭제 실패:", error.message);
+        });
+    }
   };
 
   return (

@@ -117,6 +117,20 @@ export function subscribeNotificationSettings(fn: () => void) {
   };
 }
 
+/**
+ * 계정 전환/신규가입 시 알림설정·읽음목록을 기본값으로 초기화(로컬 전용, Supabase 미반영).
+ * 로그인 플로우가 sync 전에 호출 → reset(기본값) → sync(원격 있으면 덮어쓰기, 없으면 기본값 유지)
+ * 순서로 이전 계정 설정 누설을 막는다. (sync 가 빈/누락 원격값은 건너뛰므로 reset 이 없으면 누설됨)
+ * 조기 반환 없이 무조건 기본값으로 되돌려야 하며, Supabase 쓰기는 호출하지 않는다.
+ */
+export function resetNotificationSettings(): void {
+  _state = { ...DEFAULT_SETTINGS };
+  _readIds = new Set();
+  persistSettings();
+  persistReadIds();
+  notify();
+}
+
 // 읽음 상태 관련
 export function getReadIds(): Set<string> {
   return _readIds;

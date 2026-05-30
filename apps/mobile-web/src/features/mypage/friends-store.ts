@@ -368,6 +368,18 @@ export function unblockFriendById(id: string): boolean {
   _blocked = _blocked.filter((b) => b.id !== id);
   _friends = [..._friends, target];
   notify();
+  // Supabase friends 에 복원 (best-effort) — 차단 시 delete 됐던 행을 되살린다.
+  // (이전엔 로컬만 복귀하고 원격 insert 가 없어, 다른 기기/스토리지 초기화 후 친구가 영구 유실)
+  const userPhone = getCurrentAccount();
+  if (userPhone) {
+    supabase.from("friends").insert({
+      user_phone: userPhone,
+      friend_nickname: target.nickname,
+      avatar_bg: target.avatarBg,
+    }).then(({ error }) => {
+      if (error) console.warn("Supabase 차단 해제 복원 실패:", error.message);
+    });
+  }
   return true;
 }
 

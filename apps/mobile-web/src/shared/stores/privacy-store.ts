@@ -100,6 +100,16 @@ export const privacyStore = {
     notify();
     syncToSupabase(_state);
   },
+  /**
+   * 계정 전환/신규가입 시 개인정보 설정을 기본값으로 초기화(로컬 전용, Supabase 미반영).
+   * (이전엔 reset 이 없어 sync 가 원격 누락 시 이전 계정의 위치공유/친구요청허용 등이 누설)
+   * syncToSupabase 를 호출하지 않도록 _state 직접 대입.
+   */
+  reset(): void {
+    _state = { ...DEFAULTS };
+    save(_state);
+    notify();
+  },
 };
 
 /** React: 개인정보 설정 전체를 구독. 변경 시 자동 re-render. */

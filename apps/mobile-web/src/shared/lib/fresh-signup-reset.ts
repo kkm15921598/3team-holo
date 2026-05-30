@@ -26,6 +26,8 @@ import { resetActivityStore } from "@/shared/stores/activity-store";
 import { resetBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { resetReportedUsers } from "@/shared/stores/reported-users-store";
 import { bumpStore } from "@/shared/stores/bump-store";
+import { resetNotificationSettings } from "@/shared/stores/notification-settings-store";
+import { privacyStore } from "@/shared/stores/privacy-store";
 
 /**
  * 신규 가입한 사용자가 깨끗한 시작점에서 출발하도록 모든 store 리셋.
@@ -75,4 +77,8 @@ export function resetUserStoresForLogin(): void {
   resetFriendsStore();
   clearAllDynNotifications();
   resetKickedMembers();
+  // 알림설정(ON/OFF·읽음목록)·개인정보(위치공유/친구요청허용/마케팅)도 비운다 —
+  // 둘 다 sync 가 원격 누락 시 건너뛰므로, reset 이 없으면 이전 계정 값이 새 계정에 누설된다.
+  resetNotificationSettings();
+  privacyStore.reset();
 }

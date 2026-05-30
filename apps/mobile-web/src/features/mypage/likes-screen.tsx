@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { ManagedList } from "./managed-list";
-import { setPostLiked, useLikedSet } from "@/shared/stores/likes-store";
+import { togglePostLike, useLikedSet } from "@/shared/stores/likes-store";
 
 export function LikesScreen() {
   const navigate = useNavigate();
@@ -26,9 +26,13 @@ export function LikesScreen() {
     return ordered;
   }, [likedSet]);
 
-  // "관리하기" → "삭제" 시 likes-store 에서 해당 id 들을 좋아요 해제
+  // "관리하기" → "삭제" 시 좋아요 해제. setPostLiked(로컬 Set 만 변경)이 아니라
+  // togglePostLike 로 위임해야 게시글 좋아요 수 차감 + Supabase post_likes 행 삭제 +
+  // posts.likes 서버 카운트 갱신까지 처리된다(이전엔 로컬만 빠져 새로고침 시 부활).
   const handleDelete = (ids: string[]) => {
-    ids.forEach((id) => setPostLiked(id, false));
+    ids.forEach((id) => {
+      if (likedSet.has(id)) togglePostLike(id);
+    });
   };
 
   return (

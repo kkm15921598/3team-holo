@@ -8,8 +8,10 @@ import { dmRoomIdFor, lookupPhoneByNickname } from "@/features/chat/dm-utils";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   acceptFriendRequest,
+  blockFriendById,
   cancelFriendRequest,
   declineFriendRequest,
+  getFriends,
   removeFriendByNickname,
   sendFriendRequest,
   useFriends,
@@ -97,7 +99,9 @@ export function ProfileDetailScreen() {
         .filter((p) => p.authorNickname === myProfile.nickname).length,
     [myProfile.nickname],
   );
-  const myCommentsCount = userComments.length;
+  // '댓글 단 고유 글 수' — 클릭해 들어가는 '내가 쓴 댓글' 리스트(postId 중복 제거)와 단위 통일.
+  // (이전엔 userComments.length = 댓글 레코드 수라, 한 글에 3개 달면 프로필 3 / 리스트 1 로 어긋남)
+  const myCommentsCount = new Set(userComments.map((c) => c.postId)).size;
 
   // 내 프로필 표시용 user 객체 — buildOtherUser 와 동일한 shape 로 만들어 렌더 분기를 줄임.
   const meUser = useMemo(() => {
@@ -317,6 +321,11 @@ export function ProfileDetailScreen() {
       confirmLabel: "차단",
       onConfirm: () => {
         setConfirm(null);
+        // 친구였던 사람이면 친구 목록(_friends)에서 제거하고 차단 목록(_blocked)으로 이동
+        // (friends-screen 의 차단 동작과 일관되게 — 이전엔 닉네임 set 만 갱신해 차단한 친구가
+        //  '내 친구' 목록에 그대로 남고 친구 수도 안 줄었다).
+        const f = getFriends().find((x) => x.nickname === nickname);
+        if (f) blockFriendById(f.id);
         // 차단된 닉네임은 영속 set 에 남겨, 이웃 추천 등 노출 후보에서 제외되도록 한다.
         markBlocked(nickname);
         navigate(-1);
