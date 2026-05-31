@@ -123,7 +123,8 @@ export function MypageScreen() {
       <section className="mt-2">
         <p className="text-[15px] font-semibold text-holo-ink">설정</p>
         <hr className="mt-2 border-t border-holo-line-3" />
-        <ul className="mt-1 flex flex-col text-[14px] text-holo-ink-2">
+        {/* 설정 리스트 — 대기업 설정 메뉴처럼 넉넉한 터치영역(행 54px)+행 구분선+탭 피드백. */}
+        <ul className="mt-1 flex flex-col divide-y divide-holo-line-3 text-[15px] text-holo-ink">
           <SettingItem label="계정관리" to="/mypage/account" />
           <SettingItem label="개인정보" to="/mypage/privacy" />
           <SettingItem label="알림설정" to="/mypage/notifications" />
@@ -132,7 +133,7 @@ export function MypageScreen() {
             <button
               type="button"
               onClick={() => setShowLogout(true)}
-              className="flex w-full items-center justify-between py-2 text-left"
+              className="flex min-h-[54px] w-full items-center justify-between text-left -mx-1 px-1 rounded-[10px] active:bg-holo-surface-2"
             >
               <span>로그아웃</span>
               <ChevronRightIcon />
@@ -166,7 +167,7 @@ function SettingItem({ label, to }: { label: string; to: string }) {
     <li>
       <Link
         to={to}
-        className="flex w-full items-center justify-between py-2 text-left"
+        className="-mx-1 flex min-h-[54px] w-full items-center justify-between rounded-[10px] px-1 text-left active:bg-holo-surface-2"
       >
         <span>{label}</span>
         <ChevronRightIcon />
