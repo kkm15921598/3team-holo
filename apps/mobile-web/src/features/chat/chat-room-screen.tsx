@@ -778,19 +778,31 @@ export function ChatRoomScreen() {
           return inContent || inNickname || inFile;
         })
       : messages;
-    const out: Array<{ kind: "date" | "msg"; data: any }> = [];
+    const out: Array<{ kind: "date" | "msg"; data: any; firstOfGroup?: boolean; lastOfGroup?: boolean }> = [];
     // 로컬에서 갓 보낸 메시지/시스템 메시지는 date 가 비어 있다 — 오늘 날짜로 폴백해야
     // 어제 구분선 아래에 잘못 묶이지 않고 새 '오늘' 구분선이 생긴다(Supabase 재로딩 결과와 일치).
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    // 카카오톡식 그룹핑 — 같은 발신자 + 같은 분(time "HH:MM") + 같은 날짜 + 둘 다 시스템 아님.
+    // 묶음 첫 메시지에만 프로필/닉네임, 묶음 마지막에만 시간을 보인다.
+    const sameGroup = (a?: ChatMessage, b?: ChatMessage) =>
+      !!a && !!b &&
+      a.type !== "system" && b.type !== "system" &&
+      a.mine === b.mine &&
+      (a.nickname ?? "") === (b.nickname ?? "") &&
+      a.time === b.time &&
+      (a.date || todayStr) === (b.date || todayStr);
     let prev: string | undefined;
-    filtered.forEach((m) => {
+    filtered.forEach((m, idx) => {
       const d = m.date || todayStr;
       if (!q && d !== prev) {
         out.push({ kind: "date", data: d });
         prev = d;
       }
-      out.push({ kind: "msg", data: m });
+      // 검색 모드는 비연속 결과라 그룹핑하지 않고 항상 단독(아바타·시간 모두 표시).
+      const firstOfGroup = q ? true : !sameGroup(filtered[idx - 1], m);
+      const lastOfGroup = q ? true : !sameGroup(m, filtered[idx + 1]);
+      out.push({ kind: "msg", data: m, firstOfGroup, lastOfGroup });
     });
     return out;
   }, [messages, searchQuery]);
@@ -1477,6 +1489,8 @@ export function ChatRoomScreen() {
                 key={m.id}
                 message={m}
                 memberCount={displayMemberCount}
+                showAvatar={row.firstOfGroup !== false}
+                showTime={row.lastOfGroup !== false}
                 onLongPress={(target) => setActionTarget(target)}
                 onReact={() => setReactionTarget(m.id)}
                 showReactionPicker={reactionTarget === m.id}
@@ -2331,6 +2345,8 @@ function MessageItem({
   onPickEmoji,
   onProfileClick,
   onImageTap,
+  showAvatar = true,
+  showTime = true,
 }: {
   message: ChatMessage;
   /** 방의 총 인원수 — 안 읽음 카운트 계산용. 1:1 방은 2, 단톡은 그 이상. */
@@ -2341,6 +2357,10 @@ function MessageItem({
   onPickEmoji: (e: string) => void;
   onProfileClick: (nickname: string) => void;
   onImageTap?: (m: ChatMessage) => void;
+  /** 카카오톡식 그룹핑 — 묶음 첫 메시지에만 프로필/닉네임 표시. */
+  showAvatar?: boolean;
+  /** 카카오톡식 그룹핑 — 묶음 마지막 메시지에만 시간 표시. */
+  showTime?: boolean;
 }) {
   const longPressTimer = useRef<number | null>(null);
   const longPressFired = useRef(false);
@@ -2483,13 +2503,16 @@ function MessageItem({
     return (
       <li className="flex flex-col items-end">
         <div className="flex items-end gap-2">
-          <div className="flex flex-col items-end gap-0.5">
-            {/* 읽지 않은 사람 수 — "안 읽음" / "읽음" 라벨 없이 숫자만 노출. 0이거나 read=true 면 비움. */}
-            <span className="text-[10px] text-holo-ink-3">
-              {!message.read && mineUnread > 0 ? mineUnread : ""}
-            </span>
-            <span className="text-[10px] text-holo-ink-3">{message.time}</span>
-          </div>
+          {/* 시간/안읽음 — 카카오톡식으로 묶음의 마지막 메시지에만 표시. */}
+          {showTime && (
+            <div className="flex flex-col items-end gap-0.5">
+              {/* 읽지 않은 사람 수 — "안 읽음" / "읽음" 라벨 없이 숫자만 노출. 0이거나 read=true 면 비움. */}
+              <span className="text-[10px] text-holo-ink-3">
+                {!message.read && mineUnread > 0 ? mineUnread : ""}
+              </span>
+              <span className="text-[10px] text-holo-ink-3">{message.time}</span>
+            </div>
+          )}
           <div className="relative">
             {message.forwarded && <ForwardedLabel align="end" />}
             {message.replyTo && <ReplyPreview reply={message.replyTo} />}
@@ -2509,26 +2532,34 @@ function MessageItem({
   return (
     <li className="flex flex-col items-start">
       <div className="flex items-start gap-2">
-        <button
-          type="button"
-          aria-label={`${message.nickname} 프로필 보기`}
-          onClick={() => onProfileClick(message.nickname)}
-          className="shrink-0"
-        >
-          <img
-            src={memberAvatarSrc(message.nickname)}
-            alt=""
-            className="h-9 w-9 rounded-full bg-holo-yellow-room object-cover transition-transform hover:scale-105"
-          />
-        </button>
-        <div className="flex flex-col">
+        {/* 카카오톡식 — 프로필은 묶음 첫 메시지에만, 이후엔 같은 폭 빈 공간으로 들여쓰기 정렬. */}
+        {showAvatar ? (
           <button
             type="button"
+            aria-label={`${message.nickname} 프로필 보기`}
             onClick={() => onProfileClick(message.nickname)}
-            className="text-left text-[11px] text-holo-ink-3 hover:underline"
+            className="shrink-0"
           >
-            {message.nickname}
+            <img
+              src={memberAvatarSrc(message.nickname)}
+              alt=""
+              className="h-9 w-9 rounded-full bg-holo-yellow-room object-cover transition-transform hover:scale-105"
+            />
           </button>
+        ) : (
+          <span className="h-9 w-9 shrink-0" aria-hidden />
+        )}
+        <div className="flex flex-col">
+          {/* 닉네임도 묶음 첫 메시지에만(카톡과 동일). */}
+          {showAvatar && (
+            <button
+              type="button"
+              onClick={() => onProfileClick(message.nickname)}
+              className="text-left text-[11px] text-holo-ink-3 hover:underline"
+            >
+              {message.nickname}
+            </button>
+          )}
           <div className="mt-1 flex items-end gap-2">
             <div className="relative">
               {message.forwarded && <ForwardedLabel />}
@@ -2536,24 +2567,25 @@ function MessageItem({
               {renderBody(false)}
               {showReactionPicker && <ReactionPicker onPick={onPickEmoji} />}
             </div>
-            {/* 친구 말풍선 — 읽지 않은 사람 수만 숫자로. 보낸이·나 제외한 상한(max(0, memberCount-2)).
-                0 이면 라벨 자체를 숨겨 시간만 보인다. */}
-            <div className="flex flex-col items-start gap-0.5">
-              {(() => {
-                const friendOthers = Math.max(0, memberCount - 2);
-                const friendUnread =
-                  typeof message.readBy === "number"
-                    ? Math.min(message.readBy, friendOthers)
-                    : friendOthers;
-                if (friendUnread === 0) return null;
-                return (
-                  <span className="text-[10px] text-holo-ink-3">
-                    {friendUnread}
-                  </span>
-                );
-              })()}
-              <span className="text-[10px] text-holo-ink-3">{message.time}</span>
-            </div>
+            {/* 친구 말풍선 — 시간/안읽음은 카카오톡식으로 묶음의 마지막 메시지에만. */}
+            {showTime && (
+              <div className="flex flex-col items-start gap-0.5">
+                {(() => {
+                  const friendOthers = Math.max(0, memberCount - 2);
+                  const friendUnread =
+                    typeof message.readBy === "number"
+                      ? Math.min(message.readBy, friendOthers)
+                      : friendOthers;
+                  if (friendUnread === 0) return null;
+                  return (
+                    <span className="text-[10px] text-holo-ink-3">
+                      {friendUnread}
+                    </span>
+                  );
+                })()}
+                <span className="text-[10px] text-holo-ink-3">{message.time}</span>
+              </div>
+            )}
           </div>
           {reactions.length > 0 && (
             <div className="relative z-20 mt-0 ml-2">
