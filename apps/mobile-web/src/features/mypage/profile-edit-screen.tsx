@@ -14,11 +14,57 @@ import {
 } from "@/shared/stores/verification-store";
 import { containsProfanity } from "@/shared/utils/profanity";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentPhone } from "@/shared/lib/phone";
+import { TAG_GROUPS } from "@/features/signup/interest-screen";
 
 // 가입(nickname-screen)과 동일한 닉네임 규칙 — 프로필 편집에도 같은 검증을 적용한다.
 const KOREAN_ONLY = /^[가-힣\s]+$/;
 const MAX_LEN = 10;
 const RESERVED_NICKNAMES = ["관리자", "운영자", "테스트", "어드민", "admin", "holo", "홀로"];
+
+/** 관심사 최대 선택 수 — 가입(interest-screen)과 동일. */
+const INTEREST_MAX = 10;
+
+/**
+ * 내 관심사 로드 — 이웃찾기와 동일하게 localStorage.holoUser 의 interests + customInterest 를 합쳐 읽는다.
+ */
+function loadMyInterests(): string[] {
+  try {
+    const raw = window.localStorage.getItem("holoUser");
+    if (!raw) return [];
+    const p = JSON.parse(raw);
+    const list = Array.isArray(p?.interests) ? (p.interests as string[]) : [];
+    const custom = typeof p?.customInterest === "string" ? p.customInterest.trim() : "";
+    return custom ? [...list, custom] : list;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 내 관심사 저장 — localStorage(내 화면용) + Supabase users.interests(남이 매칭 시 보는 값) 둘 다 갱신.
+ * customInterest 는 interests 배열로 합쳐 비운다(단일 출처로 단순화).
+ */
+function persistMyInterests(list: string[]) {
+  try {
+    const raw = window.localStorage.getItem("holoUser");
+    const p = raw ? JSON.parse(raw) : {};
+    p.interests = list;
+    p.customInterest = "";
+    window.localStorage.setItem("holoUser", JSON.stringify(p));
+  } catch {
+    // ignore
+  }
+  const phone = getCurrentPhone();
+  if (phone) {
+    // best-effort — interests 컬럼이 없는 환경(42703)에선 조용히 무시.
+    void supabase
+      .from("users")
+      .update({ interests: list })
+      .eq("phone", phone)
+      .then(undefined, () => {});
+  }
+}
 
 export function ProfileEditScreen() {
   const navigate = useNavigate();
@@ -53,6 +99,29 @@ export function ProfileEditScreen() {
     characterOptions.findIndex((f) => f === initialFace),
   );
   const [character, setCharacter] = useState(currentFaceIndex);
+
+  // 관심사 — 진입 시 localStorage 에서 로드, 완료 시 localStorage + Supabase 에 저장.
+  const [interests, setInterests] = useState<string[]>(() => loadMyInterests());
+  const [customInput, setCustomInput] = useState("");
+  const selectedInterests = new Set(interests);
+  const toggleInterest = (tag: string) => {
+    if (selectedInterests.has(tag)) {
+      setInterests(interests.filter((t) => t !== tag));
+    } else if (interests.length < INTEREST_MAX) {
+      setInterests([...interests, tag]);
+    }
+  };
+  const removeInterest = (tag: string) =>
+    setInterests(interests.filter((t) => t !== tag));
+  const addCustomInterest = () => {
+    const t = customInput.trim().replace(/\s+/g, " ");
+    if (!t || interests.includes(t) || interests.length >= INTEREST_MAX) {
+      setCustomInput("");
+      return;
+    }
+    setInterests([...interests, t]);
+    setCustomInput("");
+  };
   // 닉네임 중복확인 — 이전엔 하드코딩("감자는 감자"만 fail)이라 빈값/중복/비속어가
   // 전부 통과했다. 가입 화면과 동일하게 형식·비속어·예약어·Supabase 중복을 실제 검증한다.
   const handleCheck = async () => {
@@ -92,9 +161,12 @@ export function ProfileEditScreen() {
   return (
     <main className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <header className="flex h-12 shrink-0 items-center justify-between px-4">
-        <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
-          <BackIcon />
-        </button>
+        <div className="flex items-center">
+          <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
+            <BackIcon />
+          </button>
+          <span className="ml-1 text-[16px] font-semibold text-holo-ink">프로필 수정</span>
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -110,6 +182,8 @@ export function ProfileEditScreen() {
             if (check === "ok" && trimmed.length > 0) storeSetNickname(trimmed);
             // 닉네임 저장과 함께(또는 얼굴만 변경 시) 선택한 캐릭터 얼굴 저장.
             if (selectedFace) storeSetProfileFace(selectedFace);
+            // 관심사 저장 — localStorage + Supabase(이웃찾기 매칭 반영).
+            persistMyInterests(interests);
             navigate(-1);
           }}
           className="text-[14px] font-semibold text-holo-ink"
@@ -197,7 +271,124 @@ export function ProfileEditScreen() {
 
       </section>
 
+      <Divider />
+
+      {/* 관심사 — 가입과 동일한 칩 목록. 이웃찾기·추천 매칭에 활용된다. */}
+      <section className="px-4">
+        <div className="flex items-baseline justify-between">
+          <p className="text-[14px] font-semibold text-holo-ink">관심사</p>
+          <span
+            className={`text-[12px] tabular-nums ${
+              interests.length > 0 ? "text-holo-purple-mid" : "text-holo-ink-4"
+            }`}
+          >
+            {interests.length}/{INTEREST_MAX}
+          </span>
+        </div>
+        <p className="mt-1 text-[12px] text-holo-ink-3">
+          이웃찾기·추천 매칭에 활용돼요. 최대 {INTEREST_MAX}개
+        </p>
+
+        {/* 선택한 관심사 요약 */}
+        {interests.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {interests.map((tag) => (
+              <SelectedChip key={tag} label={tag} onRemove={() => removeInterest(tag)} />
+            ))}
+          </div>
+        )}
+
+        {/* 그룹별 칩 선택 */}
+        <div className="mt-4 flex flex-col gap-4">
+          {TAG_GROUPS.map((group) => (
+            <div key={group.label} className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium text-holo-ink-4">
+                {group.label}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {group.items.map(({ tag }) => {
+                  const on = selectedInterests.has(tag);
+                  const reachedMax = !on && interests.length >= INTEREST_MAX;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleInterest(tag)}
+                      disabled={reachedMax}
+                      className={`inline-flex items-center gap-1 rounded-[20px] border px-3.5 py-1.5 text-[14px] transition ${
+                        on
+                          ? "border-holo-purple-mid text-holo-purple-mid"
+                          : reachedMax
+                            ? "border-holo-line text-holo-ink-4"
+                            : "border-holo-line text-holo-ink"
+                      }`}
+                    >
+                      <span className={on ? "text-holo-purple-mid" : "text-holo-ink-4"}>
+                        {on ? "✓" : "+"}
+                      </span>
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* 직접 입력 */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-medium text-holo-ink-4">직접 입력</span>
+            <div className="flex gap-2">
+              <input
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value.slice(0, 20))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomInterest();
+                  }
+                }}
+                placeholder="관심사를 입력해 추가"
+                maxLength={20}
+                className="h-[40px] min-w-0 flex-1 rounded-[20px] border border-holo-line bg-white px-4 text-[14px] text-holo-ink outline-none placeholder:text-holo-ink-4 focus:border-holo-purple-mid"
+              />
+              <button
+                type="button"
+                onClick={addCustomInterest}
+                disabled={!customInput.trim() || interests.length >= INTEREST_MAX}
+                className="shrink-0 rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-40"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
+  );
+}
+
+function SelectedChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="flex h-[28px] shrink-0 items-center gap-1 rounded-full bg-holo-purple-mid pl-3 pr-1 text-[12px] font-medium text-white">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`${label} 제거`}
+        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-white transition hover:bg-white/15"
+      >
+        <CloseIcon />
+      </button>
+    </span>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
   );
 }
 

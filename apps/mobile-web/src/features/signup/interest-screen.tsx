@@ -6,7 +6,8 @@ import { SignupLayout } from "./signup-layout";
 // "전체"는 카테고리가 아니라 모음이므로 제외.
 type TagItem = { tag: string };
 type TagGroup = { label: string; items: TagItem[] };
-const TAG_GROUPS: TagGroup[] = [
+// 프로필 편집(관심사 수정)에서도 동일한 목록을 쓰도록 export — 가입과 선택지가 어긋나지 않게.
+export const TAG_GROUPS: TagGroup[] = [
   {
     label: "자유게시판",
     items: ["소통", "일상", "반려동물", "자취", "여행", "사진", "패션", "뷰티", "인테리어"].map(
