@@ -874,7 +874,10 @@ export function ChatRoomScreen() {
     return room.name;
   }, [room]);
 
-  const displayMemberCount = members.length;
+  // 표시 인원수 — 이름을 아는 멤버(members)보다 방에 저장된 실제 인원수(room.memberCount)가
+  // 클 수 있다. 모임방은 참여자 닉네임이 저장되지 않아(익명) members 가 '나+방장'만 잡혀
+  // 실제 2명인데 1명으로 표시되던 문제 → 둘 중 큰 값을 쓴다(인원수 과소표시 방지).
+  const displayMemberCount = Math.max(members.length, room?.memberCount ?? 0);
   // 읽음수 계산(로드/실시간 effect)이 참조할 최신 멤버수 동기화.
   latestMemberCountRef.current = displayMemberCount;
   // 실시간 effect 의 stale 클로저 방지용으로 최신 멤버 리스트를 ref 에 보관.
