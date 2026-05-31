@@ -374,13 +374,10 @@ function DayCardSlot({ day }: { day: Day }) {
  * flex flow 에서 빼서 1일차/5P 같은 메인 텍스트가 카드 정중앙에 위치하도록 한다.
  */
 function DayLabelChip({ text, variant = "active" }: { text: string; variant?: "active" | "muted" }) {
-  // muted = 미완료 일차의 라벨 — 완료/오늘 일차와 시각적으로 구분되도록 흐리게.
+  // 라벨("연속보너스"/"스페셜")은 일차 상태와 무관하게 항상 또렷하게(100%) 표시.
+  void variant;
   return (
-    <span
-      className={`absolute bottom-[-6px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-holo-gradient-soft px-2 py-1 text-[9px] font-bold leading-tight text-white shadow-[0_2px_6px_rgba(255,108,184,0.35)] ${
-        variant === "muted" ? "opacity-50 saturate-50" : ""
-      }`}
-    >
+    <span className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-holo-gradient-soft px-2 py-1 text-[9px] font-bold leading-tight text-white shadow-[0_2px_6px_rgba(255,108,184,0.35)]">
       {text}
     </span>
   );
