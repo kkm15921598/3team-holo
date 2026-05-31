@@ -103,6 +103,8 @@ export function ProfileEditScreen() {
   // 관심사 — 진입 시 localStorage 에서 로드, 완료 시 localStorage + Supabase 에 저장.
   const [interests, setInterests] = useState<string[]>(() => loadMyInterests());
   const [customInput, setCustomInput] = useState("");
+  // 관심사 선택지는 길어서 바텀시트로 분리 — 편집 화면은 선택 요약만 짧게 노출.
+  const [interestSheetOpen, setInterestSheetOpen] = useState(false);
   const selectedInterests = new Set(interests);
   const toggleInterest = (tag: string) => {
     if (selectedInterests.has(tag)) {
@@ -195,7 +197,7 @@ export function ProfileEditScreen() {
       {/* Nickname — 안드로이드에서 input 의 기본 min-width 가 커서 버튼이 화면 밖으로
           밀려나는 문제가 있어, 컨테이너는 overflow-hidden, input 은 min-w-0,
           버튼은 shrink-0 로 항상 컨테이너 안에 보이도록 강제한다. */}
-      <section className="px-4">
+      <section className="px-4 py-5">
         <p className="text-[14px] font-semibold text-holo-ink">닉네임</p>
         <div className="mt-2 flex w-full items-center gap-2 overflow-hidden rounded-holo-pill border border-holo-line bg-white pl-4 pr-1">
           <input
@@ -227,7 +229,7 @@ export function ProfileEditScreen() {
       <Divider />
 
       {/* Profile image */}
-      <section className="px-4">
+      <section className="px-4 py-5">
         <p className="text-[14px] font-semibold text-holo-ink">프로필 이미지</p>
 
         {/* 미리보기 — 선택한 캐릭터를 둥근 원으로 표시 (배경 없이 프로필 사진만) */}
@@ -274,7 +276,7 @@ export function ProfileEditScreen() {
       <Divider />
 
       {/* 관심사 — 가입과 동일한 칩 목록. 이웃찾기·추천 매칭에 활용된다. */}
-      <section className="px-4">
+      <section className="px-4 py-5">
         <div className="flex items-baseline justify-between">
           <p className="text-[14px] font-semibold text-holo-ink">관심사</p>
           <span
@@ -289,82 +291,174 @@ export function ProfileEditScreen() {
           이웃찾기·추천 매칭에 활용돼요. 최대 {INTEREST_MAX}개
         </p>
 
-        {/* 선택한 관심사 요약 */}
-        {interests.length > 0 && (
+        {/* 선택한 관심사 요약 — 없으면 안내, 있으면 칩으로. 긴 선택지는 시트에서. */}
+        {interests.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-2">
             {interests.map((tag) => (
               <SelectedChip key={tag} label={tag} onRemove={() => removeInterest(tag)} />
             ))}
           </div>
+        ) : (
+          <p className="mt-3 text-[13px] text-holo-ink-4">아직 선택한 관심사가 없어요.</p>
         )}
 
-        {/* 그룹별 칩 선택 */}
-        <div className="mt-4 flex flex-col gap-4">
-          {TAG_GROUPS.map((group) => (
-            <div key={group.label} className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-medium text-holo-ink-4">
-                {group.label}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {group.items.map(({ tag }) => {
-                  const on = selectedInterests.has(tag);
-                  const reachedMax = !on && interests.length >= INTEREST_MAX;
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleInterest(tag)}
-                      disabled={reachedMax}
-                      className={`inline-flex items-center gap-1 rounded-[20px] border px-3.5 py-1.5 text-[14px] transition ${
-                        on
-                          ? "border-holo-purple-mid text-holo-purple-mid"
-                          : reachedMax
-                            ? "border-holo-line text-holo-ink-4"
-                            : "border-holo-line text-holo-ink"
-                      }`}
-                    >
-                      <span className={on ? "text-holo-purple-mid" : "text-holo-ink-4"}>
-                        {on ? "✓" : "+"}
-                      </span>
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        {/* 추가/편집 — 그룹 칩 목록은 바텀시트로 분리해 화면을 짧게 유지 */}
+        <button
+          type="button"
+          onClick={() => setInterestSheetOpen(true)}
+          className="mt-4 flex h-[44px] w-full items-center justify-center gap-1.5 rounded-holo-pill border border-dashed border-holo-purple-mid/60 text-[14px] font-semibold text-holo-purple-mid active:bg-holo-lilac-card-2/40"
+        >
+          <PlusIcon />
+          {interests.length > 0 ? "관심사 편집" : "관심사 추가"}
+        </button>
+      </section>
 
-          {/* 직접 입력 */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-medium text-holo-ink-4">직접 입력</span>
-            <div className="flex gap-2">
-              <input
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value.slice(0, 20))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addCustomInterest();
-                  }
-                }}
-                placeholder="관심사를 입력해 추가"
-                maxLength={20}
-                className="h-[40px] min-w-0 flex-1 rounded-[20px] border border-holo-line bg-white px-4 text-[14px] text-holo-ink outline-none placeholder:text-holo-ink-4 focus:border-holo-purple-mid"
-              />
-              <button
-                type="button"
-                onClick={addCustomInterest}
-                disabled={!customInput.trim() || interests.length >= INTEREST_MAX}
-                className="shrink-0 rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-40"
-              >
-                추가
-              </button>
+      {interestSheetOpen && (
+        <InterestSheet
+          interests={interests}
+          selected={selectedInterests}
+          customInput={customInput}
+          onCustomChange={setCustomInput}
+          onToggle={toggleInterest}
+          onRemove={removeInterest}
+          onAddCustom={addCustomInterest}
+          onClose={() => {
+            setCustomInput("");
+            setInterestSheetOpen(false);
+          }}
+        />
+      )}
+    </main>
+  );
+}
+
+/**
+ * 관심사 선택 바텀시트 — 가입과 동일한 그룹 칩 + 직접 입력.
+ * 선택은 부모 state 를 직접 갱신하므로 닫으면 그대로 반영된다.
+ */
+function InterestSheet({
+  interests,
+  selected,
+  customInput,
+  onCustomChange,
+  onToggle,
+  onRemove,
+  onAddCustom,
+  onClose,
+}: {
+  interests: string[];
+  selected: Set<string>;
+  customInput: string;
+  onCustomChange: (v: string) => void;
+  onToggle: (tag: string) => void;
+  onRemove: (tag: string) => void;
+  onAddCustom: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed left-1/2 top-0 z-[1100] flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40">
+      <button type="button" aria-label="닫기" className="flex-1" onClick={onClose} />
+      <div className="flex h-[80%] flex-col overflow-hidden rounded-t-2xl bg-white">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line px-4">
+          <span className="text-[15px] font-semibold text-holo-ink">관심사 선택</span>
+          <span className="text-[12px] tabular-nums text-holo-ink-3">
+            {interests.length}/{INTEREST_MAX}
+          </span>
+        </div>
+
+        {/* 선택 요약 */}
+        {interests.length > 0 && (
+          <div className="flex max-h-[92px] shrink-0 flex-wrap gap-2 overflow-y-auto border-b border-holo-line-3 px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {interests.map((tag) => (
+              <SelectedChip key={tag} label={tag} onRemove={() => onRemove(tag)} />
+            ))}
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-col gap-4">
+            {TAG_GROUPS.map((group) => (
+              <div key={group.label} className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-medium text-holo-ink-4">{group.label}</span>
+                <div className="flex flex-wrap gap-2">
+                  {group.items.map(({ tag }) => {
+                    const on = selected.has(tag);
+                    const reachedMax = !on && interests.length >= INTEREST_MAX;
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => onToggle(tag)}
+                        disabled={reachedMax}
+                        className={`inline-flex items-center gap-1 rounded-[20px] border px-3.5 py-1.5 text-[14px] transition ${
+                          on
+                            ? "border-holo-purple-mid text-holo-purple-mid"
+                            : reachedMax
+                              ? "border-holo-line text-holo-ink-4"
+                              : "border-holo-line text-holo-ink"
+                        }`}
+                      >
+                        <span className={on ? "text-holo-purple-mid" : "text-holo-ink-4"}>
+                          {on ? "✓" : "+"}
+                        </span>
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* 직접 입력 */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium text-holo-ink-4">직접 입력</span>
+              <div className="flex gap-2">
+                <input
+                  value={customInput}
+                  onChange={(e) => onCustomChange(e.target.value.slice(0, 20))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onAddCustom();
+                    }
+                  }}
+                  placeholder="관심사를 입력해 추가"
+                  maxLength={20}
+                  className="h-[40px] min-w-0 flex-1 rounded-[20px] border border-holo-line bg-white px-4 text-[14px] text-holo-ink outline-none placeholder:text-holo-ink-4 focus:border-holo-purple-mid"
+                />
+                <button
+                  type="button"
+                  onClick={onAddCustom}
+                  disabled={!customInput.trim() || interests.length >= INTEREST_MAX}
+                  className="shrink-0 rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-40"
+                >
+                  추가
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-    </main>
+        {/* 완료 — 시트 닫기(선택은 이미 반영됨) */}
+        <div className="shrink-0 border-t border-holo-line px-4 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-[48px] w-full rounded-holo-pill bg-holo-purple-mid text-[15px] font-semibold text-white active:opacity-90"
+          >
+            완료
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
   );
 }
 
@@ -393,7 +487,8 @@ function CloseIcon() {
 }
 
 function Divider() {
-  return <div className="my-4 h-[6px] w-full bg-holo-surface-2" />;
+  // 계정관리와 동일하게 여백 없이 붙는 회색 띠로 섹션을 나눈다.
+  return <div className="h-2 w-full shrink-0 bg-holo-surface-2" />;
 }
 
 function BackIcon() {
