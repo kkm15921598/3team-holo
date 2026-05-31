@@ -8,6 +8,7 @@ import {
   type MeetingInfo,
 } from "@/shared/mock/data";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { reverseGeocode } from "@/shared/hooks/use-reverse-geocode";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   sendFriendRequest,
@@ -319,6 +320,22 @@ export function ChatRoomScreen() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [locDraftPick, setLocDraftPick] = useState<{ lat: number; lng: number } | null>(null);
   const [locDraftAddress, setLocDraftAddress] = useState<string>("");
+  // 선택한 좌표의 역지오코딩 주소 — 좌표 대신 사람이 읽을 주소를 보여주고 전송한다.
+  const [resolvedAddr, setResolvedAddr] = useState<string>("");
+  useEffect(() => {
+    if (!locDraftPick) {
+      setResolvedAddr("");
+      return;
+    }
+    let cancelled = false;
+    setResolvedAddr("");
+    reverseGeocode(locDraftPick).then((addr) => {
+      if (!cancelled) setResolvedAddr(addr);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [locDraftPick?.lat, locDraftPick?.lng]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     // 1) 캐시 있으면 그대로 복원 (재진입 시 이전 대화 유지)
@@ -1234,7 +1251,8 @@ export function ChatRoomScreen() {
       location: {
         lat: locDraftPick.lat,
         lng: locDraftPick.lng,
-        address: locDraftAddress.trim() || undefined,
+        // 사용자가 장소 이름을 직접 적었으면 우선, 없으면 역지오코딩 주소(좌표 대신 사람이 읽는 주소).
+        address: locDraftAddress.trim() || resolvedAddr || undefined,
       },
       read: false,
       // 보낸 직후엔 방의 모든 다른 멤버가 아직 안 읽은 상태 — memberCount - 1 (1:1=1, 5명방=4).
@@ -1883,8 +1901,9 @@ export function ChatRoomScreen() {
                 className="mt-1 w-full border-b border-holo-line py-2 text-[14px] outline-none placeholder:text-holo-ink-3"
               />
               {locDraftPick && (
-                <p className="mt-2 text-[11px] text-holo-ink-3">
-                  선택한 좌표: {locDraftPick.lat.toFixed(5)}, {locDraftPick.lng.toFixed(5)}
+                <p className="mt-2 flex items-center gap-1 text-[12px] text-holo-ink-2">
+                  <span className="text-holo-purple-mid">📍</span>
+                  {resolvedAddr || "주소 확인 중…"}
                 </p>
               )}
             </div>

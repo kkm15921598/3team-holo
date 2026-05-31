@@ -47,7 +47,7 @@ async function fetchAt(coord: Coord, zoom: number): Promise<NominatimResponse | 
   }
 }
 
-async function reverseGeocode(coord: Coord): Promise<string> {
+export async function reverseGeocode(coord: Coord): Promise<string> {
   const key = cacheKey(coord.lat, coord.lng);
   const at = CACHE_TIMES.get(key) ?? 0;
   if (CACHE.has(key) && Date.now() - at < CACHE_TTL_MS) {
