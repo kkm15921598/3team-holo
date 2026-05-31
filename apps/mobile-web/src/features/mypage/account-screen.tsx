@@ -74,7 +74,7 @@ export function AccountScreen() {
 
       <section className="px-4 pt-4">
         <p className="px-1 text-[14px] font-semibold text-holo-ink">로그인 계정</p>
-        <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-holo-card">
+        <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
           <div className="flex min-w-0 items-center gap-3">
             <img
               src={faceSrc}
@@ -121,7 +121,7 @@ export function AccountScreen() {
 
       <section className="mt-5 px-4">
         <p className="px-1 text-[14px] font-semibold text-holo-ink">계정 보안</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
           {/* 이메일 변경 항목은 휴대폰 본인인증 기반 가입이라 의미가 없어 제거 */}
           <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
           <Row label="휴대폰 번호 변경" hint={phoneMasked} onClick={() => navigate("/mypage/account/phone")} />
@@ -130,7 +130,7 @@ export function AccountScreen() {
 
       <section className="mt-5 px-4">
         <p className="px-1 text-[14px] font-semibold text-holo-ink">기타</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
           <Row
             label="회원 탈퇴"
             danger
