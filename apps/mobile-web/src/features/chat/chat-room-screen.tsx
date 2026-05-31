@@ -1577,9 +1577,15 @@ export function ChatRoomScreen() {
 
       {game === "roulette" && (
         <RouletteModal
-          participants={Array.from(
-            new Set([getProfile().nickname, ...(room?.memberNames ?? [])]),
-          ).filter(Boolean)}
+          initialNames={Array.from(
+            new Set(
+              [
+                getProfile().nickname,
+                room?.hostNickname,
+                ...(room?.memberNames ?? []),
+              ].filter(Boolean) as string[],
+            ),
+          )}
           onResult={(t) => {
             postGameMessage(t);
             setGame(null);
@@ -2630,6 +2636,16 @@ function GameOverlay({ onClose, children }: { onClose: () => void; children: Rea
       <div className="fixed inset-0 z-[1200] bg-black/40" onClick={onClose} aria-hidden />
       <div className="fixed inset-0 z-[1201] flex items-center justify-center px-7">
         <div className="relative w-full max-w-[300px] rounded-[20px] bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={onClose}
+            className="absolute right-3 top-3 text-holo-ink-3 active:opacity-60"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <path d="m6 6 12 12M6 18 18 6" />
+            </svg>
+          </button>
           {children}
         </div>
       </div>
@@ -2637,16 +2653,21 @@ function GameOverlay({ onClose, children }: { onClose: () => void; children: Rea
   );
 }
 
-/** 룰렛 — 참여자 중 무작위 당첨자 뽑기. 결과를 채팅 메시지로 전송. */
+/**
+ * 룰렛 — 참여자 중 무작위 당첨자 뽑기. 참여자 이름은 직접 추가/삭제 가능(모임방은 실제
+ * 참여자 닉네임이 저장되지 않으므로, 알려진 멤버를 미리 채우고 사용자가 보완하게 한다).
+ */
 function RouletteModal({
-  participants,
+  initialNames,
   onResult,
   onClose,
 }: {
-  participants: string[];
+  initialNames: string[];
   onResult: (text: string) => void;
   onClose: () => void;
 }) {
+  const [names, setNames] = useState<string[]>(initialNames);
+  const [input, setInput] = useState("");
   const [idx, setIdx] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
@@ -2657,36 +2678,82 @@ function RouletteModal({
     },
     [],
   );
-  const canSpin = participants.length >= 2;
+  const canSpin = names.length >= 2 && !spinning;
+
+  const addName = () => {
+    const v = input.trim();
+    if (!v || names.includes(v) || names.length >= 12) {
+      setInput("");
+      return;
+    }
+    setNames((prev) => [...prev, v]);
+    setInput("");
+    setWinner(null);
+  };
+  const removeName = (n: string) => {
+    if (spinning) return;
+    setNames((prev) => prev.filter((x) => x !== n));
+    setWinner(null);
+  };
   const spin = () => {
-    if (!canSpin || spinning) return;
+    if (names.length < 2 || spinning) return;
     setWinner(null);
     setSpinning(true);
     let ticks = 0;
     const total = 22 + Math.floor(Math.random() * 12);
     timer.current = window.setInterval(() => {
-      setIdx((i) => (i + 1) % participants.length);
+      setIdx((i) => (i + 1) % names.length);
       ticks += 1;
       if (ticks >= total) {
         if (timer.current) window.clearInterval(timer.current);
-        const w = Math.floor(Math.random() * participants.length);
+        const w = Math.floor(Math.random() * names.length);
         setIdx(w);
-        setWinner(participants[w]);
+        setWinner(names[w]);
         setSpinning(false);
       }
     }, 80);
   };
+
   return (
     <GameOverlay onClose={onClose}>
       <p className="text-center text-[16px] font-bold text-holo-ink">룰렛 🎰</p>
       <p className="mt-1 text-center text-[12px] text-holo-ink-3">
-        {canSpin ? "누가 당첨될까요?" : "참여자가 2명 이상이어야 해요"}
+        참여자를 확인하고 돌려보세요
       </p>
-      <div className="no-scrollbar mt-3 flex max-h-[180px] flex-col gap-1.5 overflow-y-auto">
-        {participants.map((p, i) => (
+
+      {/* 참여자 입력 — 모임방은 멤버 닉네임을 모를 수 있어 직접 추가 가능 */}
+      {!spinning && !winner && (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addName();
+            }}
+            maxLength={12}
+            placeholder="참여자 이름 추가"
+            className="h-9 flex-1 rounded-holo-pill border border-holo-line bg-holo-surface px-3 text-[13px] text-holo-ink placeholder:text-holo-ink-4 focus:outline-none focus:ring-2 focus:ring-holo-purple-mid"
+          />
+          <button
+            type="button"
+            onClick={addName}
+            className="h-9 shrink-0 rounded-holo-pill bg-holo-purple-mid px-3 text-[13px] font-semibold text-white"
+          >
+            추가
+          </button>
+        </div>
+      )}
+
+      <div className="no-scrollbar mt-3 flex max-h-[170px] flex-col gap-1.5 overflow-y-auto">
+        {names.length === 0 && (
+          <p className="py-4 text-center text-[12px] text-holo-ink-4">
+            참여자를 추가해주세요
+          </p>
+        )}
+        {names.map((p, i) => (
           <div
             key={p + i}
-            className={`flex h-9 items-center justify-center rounded-holo-pill text-[14px] font-semibold transition ${
+            className={`flex h-9 items-center justify-between rounded-holo-pill px-3 text-[14px] font-semibold transition ${
               winner === p
                 ? "bg-holo-gradient-soft text-white"
                 : i === idx && spinning
@@ -2694,16 +2761,31 @@ function RouletteModal({
                   : "bg-holo-surface text-holo-ink-2"
             }`}
           >
-            {p}
-            {winner === p && " 🎉"}
+            <span className="truncate">
+              {p}
+              {winner === p && " 🎉"}
+            </span>
+            {!spinning && !winner && (
+              <button
+                type="button"
+                aria-label={`${p} 삭제`}
+                onClick={() => removeName(p)}
+                className="ml-2 shrink-0 text-holo-ink-4 active:opacity-60"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="m6 6 12 12M6 18 18 6" />
+                </svg>
+              </button>
+            )}
           </div>
         ))}
       </div>
+
       {winner ? (
         <button
           type="button"
           onClick={() =>
-            onResult(`🎰 룰렛 결과 — ${participants.length}명 중 '${winner}' 당첨! 🎉`)
+            onResult(`🎰 룰렛 결과 — ${names.length}명 중 '${winner}' 당첨! 🎉`)
           }
           className="mt-4 h-[46px] w-full rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white active:opacity-90"
         >
@@ -2713,10 +2795,10 @@ function RouletteModal({
         <button
           type="button"
           onClick={spin}
-          disabled={!canSpin || spinning}
+          disabled={!canSpin}
           className="mt-4 h-[46px] w-full rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white disabled:bg-holo-ink-4"
         >
-          {spinning ? "돌리는 중..." : "돌리기"}
+          {spinning ? "돌리는 중..." : names.length < 2 ? "2명 이상 필요해요" : "돌리기"}
         </button>
       )}
     </GameOverlay>
