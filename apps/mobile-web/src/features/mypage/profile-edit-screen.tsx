@@ -404,10 +404,29 @@ function InterestSheet({
   onAddCustom: () => void;
   onClose: () => void;
 }) {
+  // 아래에서 올라오는 슬라이드업 + 배경 페이드. 마운트 직후 shown=true 로 전환,
+  // 닫을 땐 슬라이드다운 애니메이션이 끝난 뒤(약 260ms) 언마운트한다.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const close = () => {
+    setShown(false);
+    window.setTimeout(onClose, 260);
+  };
   return (
-    <div className="fixed left-1/2 top-0 z-[1100] flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40">
-      <button type="button" aria-label="닫기" className="flex-1" onClick={onClose} />
-      <div className="flex h-[80%] flex-col overflow-hidden rounded-t-2xl bg-white">
+    <div
+      className={`fixed left-1/2 top-0 z-[1100] flex h-[100dvh] w-full max-w-[360px] -translate-x-1/2 flex-col bg-black/40 transition-opacity duration-300 ${
+        shown ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <button type="button" aria-label="닫기" className="flex-1" onClick={close} />
+      <div
+        className={`flex h-[80%] flex-col overflow-hidden rounded-t-2xl bg-white transition-transform duration-300 ease-out ${
+          shown ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line px-4">
           <span className="text-[15px] font-semibold text-holo-ink">관심사 선택</span>
           <span className="text-[12px] tabular-nums text-holo-ink-3">
@@ -492,7 +511,7 @@ function InterestSheet({
         <div className="shrink-0 border-t border-holo-line px-4 py-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="h-[48px] w-full rounded-holo-pill bg-holo-purple-mid text-[15px] font-semibold text-white active:opacity-90"
           >
             완료
