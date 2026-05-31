@@ -121,10 +121,11 @@ export function MypageScreen() {
 
       {/* Settings */}
       <section className="mt-2">
-        <p className="text-[15px] font-semibold text-holo-ink">설정</p>
+        <p className="text-[17px] font-bold text-holo-ink">설정</p>
         <hr className="mt-2 border-t border-holo-line-3" />
-        {/* 설정 리스트 — 대기업 설정 메뉴처럼 넉넉한 터치영역(행 54px)+행 구분선+탭 피드백. */}
-        <ul className="mt-1 flex flex-col divide-y divide-holo-line-3 text-[15px] text-holo-ink">
+        {/* 설정 리스트 — 넉넉한 터치영역(행 54px)+탭 피드백. 항목 사이 구분선은 빼서
+            제목 아래 선(hr)만 남긴다 — 항목마다 선을 넣으면 제목/항목 구분이 안 돼 혼란. */}
+        <ul className="mt-1 flex flex-col text-[15px] text-holo-ink">
           <SettingItem label="계정관리" to="/mypage/account" />
           <SettingItem label="개인정보" to="/mypage/privacy" />
           <SettingItem label="알림설정" to="/mypage/notifications" />
