@@ -195,9 +195,8 @@ export function MyroomScreen() {
         <button
           type="button"
           onClick={handleDone}
-          className="flex items-center gap-1 rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(116,72,221,0.25)] transition active:scale-95"
+          className="px-1 text-[16px] font-bold text-holo-purple-mid active:opacity-60"
         >
-          <CheckIcon />
           완료
         </button>
       </header>
@@ -388,14 +387,6 @@ function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }
