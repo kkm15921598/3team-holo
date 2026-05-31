@@ -251,6 +251,8 @@ export function ChatRoomScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState<string | null>(null);
   const [showAttach, setShowAttach] = useState(false);
+  // 채팅 미니게임 — 룰렛(당첨자 뽑기) / 밸런스 게임(A vs B 질문)
+  const [game, setGame] = useState<null | "roulette" | "balance">(null);
   // 친구 추가 버튼(UserPlusIcon) 으로 새로 친구가 된 멤버들의 닉네임 집합.
   // 멤버 목록에는 추가/중복 등록을 하지 않고, 기존 멤버의 isFriend 플래그만 true 로 덮어쓴다.
   const [newlyAddedFriends, setNewlyAddedFriends] = useState<Set<string>>(
@@ -668,6 +670,29 @@ export function ChatRoomScreen() {
         })
         .then((res: any) => {
           if (res && res.error) console.warn("Supabase 메시지 저장 실패:", res.error.message);
+        });
+    }
+  };
+
+  /** 미니게임 결과/질문을 채팅 메시지로 전송(text 메시지 재사용 — 모두에게 보이고 영속). */
+  const postGameMessage = (content: string) => {
+    if (disbanded || !content.trim()) return;
+    const now = new Date();
+    const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const msgId = String(Date.now());
+    const myNickname = getProfile().nickname;
+    setMessages((prev) => [
+      ...prev,
+      { id: msgId, nickname: myNickname, content, time, mine: true, read: false, readBy: Math.max(0, displayMemberCount - 1) },
+    ]);
+    setShowAttach(false);
+    const userPhone = getCurrentAccount();
+    if (userPhone && id) {
+      supabase
+        .from("messages")
+        .insert({ message_id: msgId, room_id: id, sender_phone: userPhone, sender_nickname: myNickname, content, sent_time: time, read_by: [] })
+        .then(({ error }) => {
+          if (error) console.warn("게임 메시지 저장 실패:", error.message);
         });
     }
   };
@@ -1210,6 +1235,12 @@ export function ChatRoomScreen() {
       case "location":
         handleLocationShare();
         break;
+      case "roulette":
+        setGame("roulette");
+        break;
+      case "balance":
+        setGame("balance");
+        break;
       default:
         // voice/poll/pay/event는 추후 구현
         setAlert({
@@ -1516,6 +1547,8 @@ export function ChatRoomScreen() {
             <AttachItem icon="🖼️" label="앨범" onClick={() => onAttachPick("image")} />
             <AttachItem icon="📎" label="파일" onClick={() => onAttachPick("file")} />
             <AttachItem icon="📍" label="위치" onClick={() => onAttachPick("location")} />
+            <AttachItem icon="🎰" label="룰렛" onClick={() => onAttachPick("roulette")} />
+            <AttachItem icon="⚖️" label="밸런스" onClick={() => onAttachPick("balance")} />
           </div>
         )}
 
@@ -1541,6 +1574,28 @@ export function ChatRoomScreen() {
           </div>
         )}
       </div>
+
+      {game === "roulette" && (
+        <RouletteModal
+          participants={Array.from(
+            new Set([getProfile().nickname, ...(room?.memberNames ?? [])]),
+          ).filter(Boolean)}
+          onResult={(t) => {
+            postGameMessage(t);
+            setGame(null);
+          }}
+          onClose={() => setGame(null)}
+        />
+      )}
+      {game === "balance" && (
+        <BalanceModal
+          onPick={(t) => {
+            postGameMessage(t);
+            setGame(null);
+          }}
+          onClose={() => setGame(null)}
+        />
+      )}
 
       {showInfo && room && (
         <ChatInfoModal
@@ -2565,6 +2620,161 @@ function AttachItem({
       </span>
       <span className="text-[11px] text-holo-ink-2">{label}</span>
     </button>
+  );
+}
+
+/** 채팅 미니게임 공통 오버레이 */
+function GameOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[1200] bg-black/40" onClick={onClose} aria-hidden />
+      <div className="fixed inset-0 z-[1201] flex items-center justify-center px-7">
+        <div className="relative w-full max-w-[300px] rounded-[20px] bg-white p-5 shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** 룰렛 — 참여자 중 무작위 당첨자 뽑기. 결과를 채팅 메시지로 전송. */
+function RouletteModal({
+  participants,
+  onResult,
+  onClose,
+}: {
+  participants: string[];
+  onResult: (text: string) => void;
+  onClose: () => void;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [winner, setWinner] = useState<string | null>(null);
+  const timer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearInterval(timer.current);
+    },
+    [],
+  );
+  const canSpin = participants.length >= 2;
+  const spin = () => {
+    if (!canSpin || spinning) return;
+    setWinner(null);
+    setSpinning(true);
+    let ticks = 0;
+    const total = 22 + Math.floor(Math.random() * 12);
+    timer.current = window.setInterval(() => {
+      setIdx((i) => (i + 1) % participants.length);
+      ticks += 1;
+      if (ticks >= total) {
+        if (timer.current) window.clearInterval(timer.current);
+        const w = Math.floor(Math.random() * participants.length);
+        setIdx(w);
+        setWinner(participants[w]);
+        setSpinning(false);
+      }
+    }, 80);
+  };
+  return (
+    <GameOverlay onClose={onClose}>
+      <p className="text-center text-[16px] font-bold text-holo-ink">룰렛 🎰</p>
+      <p className="mt-1 text-center text-[12px] text-holo-ink-3">
+        {canSpin ? "누가 당첨될까요?" : "참여자가 2명 이상이어야 해요"}
+      </p>
+      <div className="no-scrollbar mt-3 flex max-h-[180px] flex-col gap-1.5 overflow-y-auto">
+        {participants.map((p, i) => (
+          <div
+            key={p + i}
+            className={`flex h-9 items-center justify-center rounded-holo-pill text-[14px] font-semibold transition ${
+              winner === p
+                ? "bg-holo-gradient-soft text-white"
+                : i === idx && spinning
+                  ? "bg-holo-lilac-card-2 text-holo-purple-mid"
+                  : "bg-holo-surface text-holo-ink-2"
+            }`}
+          >
+            {p}
+            {winner === p && " 🎉"}
+          </div>
+        ))}
+      </div>
+      {winner ? (
+        <button
+          type="button"
+          onClick={() =>
+            onResult(`🎰 룰렛 결과 — ${participants.length}명 중 '${winner}' 당첨! 🎉`)
+          }
+          className="mt-4 h-[46px] w-full rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white active:opacity-90"
+        >
+          결과 채팅에 보내기
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={spin}
+          disabled={!canSpin || spinning}
+          className="mt-4 h-[46px] w-full rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white disabled:bg-holo-ink-4"
+        >
+          {spinning ? "돌리는 중..." : "돌리기"}
+        </button>
+      )}
+    </GameOverlay>
+  );
+}
+
+const BALANCE_QUESTIONS: [string, string][] = [
+  ["치킨", "피자"],
+  ["민초", "반민초"],
+  ["탕수육 부먹", "찍먹"],
+  ["산", "바다"],
+  ["아침형 인간", "저녁형 인간"],
+  ["여행은 계획파", "즉흥파"],
+  ["고양이상", "강아지상"],
+  ["겨울", "여름"],
+  ["전화", "문자"],
+  ["라면 꼬들", "라면 퍼짐"],
+];
+
+/** 밸런스 게임 — A vs B 질문을 골라 채팅에 올려 토론을 유도. */
+function BalanceModal({
+  onPick,
+  onClose,
+}: {
+  onPick: (text: string) => void;
+  onClose: () => void;
+}) {
+  const post = (a: string, b: string) =>
+    onPick(`⚖️ 밸런스 게임\n\n${a}  vs  ${b}\n\n여러분의 선택은? 💬`);
+  return (
+    <GameOverlay onClose={onClose}>
+      <p className="text-center text-[16px] font-bold text-holo-ink">밸런스 게임 ⚖️</p>
+      <p className="mt-1 text-center text-[12px] text-holo-ink-3">질문을 골라 채팅에 올려요</p>
+      <div className="no-scrollbar mt-3 flex max-h-[220px] flex-col gap-1.5 overflow-y-auto">
+        {BALANCE_QUESTIONS.map(([a, b]) => (
+          <button
+            key={a + b}
+            type="button"
+            onClick={() => post(a, b)}
+            className="flex h-10 items-center justify-center gap-2 rounded-[12px] bg-holo-surface text-[13px] font-semibold text-holo-ink active:bg-holo-lilac-card-2"
+          >
+            <span>{a}</span>
+            <span className="text-[11px] font-normal text-holo-ink-4">vs</span>
+            <span>{b}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          const q = BALANCE_QUESTIONS[Math.floor(Math.random() * BALANCE_QUESTIONS.length)];
+          post(q[0], q[1]);
+        }}
+        className="mt-4 h-[46px] w-full rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white active:opacity-90"
+      >
+        랜덤으로 올리기 🎲
+      </button>
+    </GameOverlay>
   );
 }
 
