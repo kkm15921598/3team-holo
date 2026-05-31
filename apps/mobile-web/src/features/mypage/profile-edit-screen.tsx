@@ -105,6 +105,30 @@ export function ProfileEditScreen() {
   const [customInput, setCustomInput] = useState("");
   // 관심사 선택지는 길어서 바텀시트로 분리 — 편집 화면은 선택 요약만 짧게 노출.
   const [interestSheetOpen, setInterestSheetOpen] = useState(false);
+
+  // 가입 때 고른 관심사 연동 — 이 기기 localStorage 가 비어 있으면(다른 기기 가입·재설치·구 계정)
+  // Supabase users.interests(가입 review-screen 이 저장하는 값)에서 끌어와 채운다.
+  // localStorage 에 값이 있으면 그게 마지막 편집 결과이므로 덮지 않는다.
+  useEffect(() => {
+    const phone = getCurrentPhone();
+    if (!phone) return;
+    let cancelled = false;
+    supabase
+      .from("users")
+      .select("interests")
+      .eq("phone", phone)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const remote = Array.isArray(data.interests) ? (data.interests as string[]) : [];
+        if (remote.length === 0) return;
+        // 비어 있을 때만 채움 — 진입 후 사용자가 이미 편집했으면 유지.
+        setInterests((cur) => (cur.length === 0 ? remote.slice(0, INTEREST_MAX) : cur));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const selectedInterests = new Set(interests);
   const toggleInterest = (tag: string) => {
     if (selectedInterests.has(tag)) {
