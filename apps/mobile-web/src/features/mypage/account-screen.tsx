@@ -64,16 +64,16 @@ export function AccountScreen() {
   }, []);
 
   return (
-    <main className="flex flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center px-4">
+    <main className="flex flex-1 flex-col bg-holo-surface-2 pb-6">
+      <header className="flex h-12 shrink-0 items-center bg-white px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">계정관리</span>
       </header>
 
-      <section className="px-4 pt-2">
-        <p className="text-[12px] text-holo-ink-3">로그인 계정</p>
+      <section className="px-4 pt-4">
+        <p className="px-1 text-[14px] font-semibold text-holo-ink">로그인 계정</p>
         <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-holo-card">
           <div className="flex min-w-0 items-center gap-3">
             <img
@@ -119,8 +119,8 @@ export function AccountScreen() {
         </p>
       </section>
 
-      <section className="mt-4 px-4">
-        <p className="text-[12px] text-holo-ink-3">계정 보안</p>
+      <section className="mt-5 px-4">
+        <p className="px-1 text-[14px] font-semibold text-holo-ink">계정 보안</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
           {/* 이메일 변경 항목은 휴대폰 본인인증 기반 가입이라 의미가 없어 제거 */}
           <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
@@ -128,8 +128,8 @@ export function AccountScreen() {
         </ul>
       </section>
 
-      <section className="mt-4 px-4">
-        <p className="text-[12px] text-holo-ink-3">기타</p>
+      <section className="mt-5 px-4">
+        <p className="px-1 text-[14px] font-semibold text-holo-ink">기타</p>
         <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
           <Row
             label="회원 탈퇴"
