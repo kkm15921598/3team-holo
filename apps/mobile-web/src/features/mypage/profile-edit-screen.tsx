@@ -344,7 +344,7 @@ export function ProfileEditScreen() {
         {interests.length > 0 ? (
           <div className="mt-3 flex flex-wrap gap-2">
             {interests.map((tag) => (
-              <SelectedChip key={tag} label={tag} onRemove={() => removeInterest(tag)} />
+              <SelectedChip key={tag} label={tag} />
             ))}
           </div>
         ) : (
@@ -530,19 +530,26 @@ function PlusIcon() {
   );
 }
 
-function SelectedChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+function SelectedChip({ label, onRemove }: { label: string; onRemove?: () => void }) {
   // 액션 버튼(보라 솔리드)과 구분되도록 '태그' 톤 — 연한 라일락 배경 + 보라 글자.
+  // onRemove 가 있을 때만 ✕ 노출(편집 시트 안). 메인 요약은 표시 전용이라 ✕ 없음.
   return (
-    <span className="flex h-[28px] shrink-0 items-center gap-1 rounded-full bg-holo-lilac-card-2 pl-3 pr-1 text-[12px] font-medium text-holo-purple-mid">
+    <span
+      className={`flex h-[34px] shrink-0 items-center gap-1 rounded-full bg-holo-lilac-card-2 text-[14px] font-medium text-holo-purple-mid ${
+        onRemove ? "pl-4 pr-1.5" : "px-4"
+      }`}
+    >
       {label}
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`${label} 제거`}
-        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-holo-purple-mid/70 transition hover:bg-holo-purple-mid/10"
-      >
-        <CloseIcon />
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`${label} 제거`}
+          className="flex h-[20px] w-[20px] items-center justify-center rounded-full text-holo-purple-mid/70 transition hover:bg-holo-purple-mid/10"
+        >
+          <CloseIcon />
+        </button>
+      )}
     </span>
   );
 }
