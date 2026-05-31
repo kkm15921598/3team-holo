@@ -97,7 +97,7 @@ export function VerifyRegionScreen() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center px-4">
+      <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>

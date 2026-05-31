@@ -162,7 +162,7 @@ export function ProfileEditScreen() {
 
   return (
     <main className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <header className="flex h-12 shrink-0 items-center justify-between px-4">
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-holo-line-3 px-4">
         <div className="flex items-center">
           <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
             <BackIcon />

@@ -669,6 +669,9 @@ export function BoardDetailScreen() {
     joinPost(post.id);
     ensureMeetupRoom(post);
     awardXp("join");
+    // 모임 참여 포인트(+10P) — FAQ/포인트 안내가 약속한 적립인데 그동안 XP만 주고 누락돼 있었다.
+    // 일일 cap 3회(XP join.dailyLimit 과 동일)로 나갔다 들어오기 반복 어뷰징을 막는다.
+    tryDailyEarn("join", 3, 10, { title: "모임 참여", note: post.title });
     // 모임 참여 알림 — 알림 패널에서 그 모임으로 바로 이동할 수 있도록 한 줄 발행.
     pushMeetingJoined(post.title, post.id);
     setShowJoinBanner(true);
