@@ -139,8 +139,8 @@ export function ActivityScreen() {
   }, [allPosts, viewed, userComments]);
 
   return (
-    <main className="flex flex-1 flex-col px-4 pb-4">
-      <header className="flex h-12 shrink-0 items-center">
+    <main className="flex flex-1 flex-col bg-white pb-4">
+      <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
@@ -148,7 +148,7 @@ export function ActivityScreen() {
       </header>
 
       {/* 활동 요약 — 라일락 그라데이션 카드 + 동적 카피 + 하단 stats row */}
-      <section className="relative overflow-hidden rounded-[18px] bg-gradient-to-br from-[#F4EEFF] via-[#EFE5FF] to-[#E6D7FF] p-[1px] shadow-[0_4px_16px_rgba(116,72,221,0.10)]">
+      <section className="relative mx-4 mt-4 overflow-hidden rounded-[18px] bg-gradient-to-br from-[#F4EEFF] via-[#EFE5FF] to-[#E6D7FF] p-[1px] shadow-[0_4px_16px_rgba(116,72,221,0.10)]">
         <div className="rounded-[17px] bg-white/85 p-4 backdrop-blur">
           {/* 상단 — 보라색 차트 아이콘 + "활동 요약" */}
           <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export function ActivityScreen() {
       </section>
 
       {/* 활동 목록 — 아이콘 + 라벨 + 카운트 + 화살표 */}
-      <ul className="mt-4 flex flex-col gap-2">
+      <ul className="mx-4 mt-4 flex flex-col gap-2">
         <ActivityRow
           to="/mypage/posts"
           icon={<PencilIcon />}
@@ -219,7 +219,7 @@ export function ActivityScreen() {
           양쪽 컬럼을 items-center 로 정렬해 카드 안 여백이 균등해 보이도록 함. */}
       <Link
         to="/mypage/neighborhood"
-        className="mt-3 flex items-center gap-3 overflow-hidden rounded-[18px] bg-gradient-to-br from-holo-lilac-card-2 to-[#F1E6FF] p-5 shadow-[0_4px_16px_rgba(116,72,221,0.10)] transition active:scale-[0.99]"
+        className="mx-4 mt-3 flex items-center gap-3 overflow-hidden rounded-[18px] bg-gradient-to-br from-holo-lilac-card-2 to-[#F1E6FF] p-5 shadow-[0_4px_16px_rgba(116,72,221,0.10)] transition active:scale-[0.99]"
       >
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="text-[17px] font-bold leading-snug text-holo-ink">
