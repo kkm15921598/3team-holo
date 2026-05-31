@@ -1622,9 +1622,17 @@ export function ChatRoomScreen() {
 
       {game === "roulette" && (
         <RouletteModal
-          initialNames={Array.from(
-            new Set(members.map((m) => m.nickname).filter(Boolean)),
-          )}
+          initialNames={(() => {
+            // 방안 전체 인원을 기본 참여자로. 모임방은 참여자 닉네임이 익명(인원수만 저장)이라
+            // 실제 이름이 인원수보다 적으면 '참여자 N'으로 채워 룰렛이 항상 돌아가게 한다.
+            const names = Array.from(
+              new Set(members.map((m) => m.nickname).filter(Boolean)),
+            );
+            while (names.length < displayMemberCount && names.length < 50) {
+              names.push(`참여자 ${names.length + 1}`);
+            }
+            return names;
+          })()}
           onResult={(t) => {
             postGameMessage(t);
             setGame(null);
@@ -2358,7 +2366,7 @@ function MessageItem({
   };
 
   const bubbleBase =
-    "max-w-[230px] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-[14px] shadow-sm";
+    "max-w-[230px] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-[14px]";
 
   const reactions = message.reactions ?? [];
 
@@ -2401,8 +2409,8 @@ function MessageItem({
       return (
         <a
           href="#"
-          className={`${maxW} flex items-center gap-2 rounded-2xl px-3 py-2 shadow-sm ${
-            mine ? "bg-holo-lilac-deep" : "bg-white"
+          className={`${maxW} flex items-center gap-2 rounded-2xl px-3 py-2 ${
+            mine ? "bg-holo-lilac-deep shadow-sm" : "bg-holo-surface-2"
           }`}
           {...pressProps}
           onClick={(e) => {
@@ -2429,8 +2437,8 @@ function MessageItem({
           href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={`${maxW} flex flex-col overflow-hidden rounded-2xl shadow-sm ${
-            mine ? "bg-holo-lilac-deep" : "bg-white"
+          className={`${maxW} flex flex-col overflow-hidden rounded-2xl ${
+            mine ? "bg-holo-lilac-deep shadow-sm" : "bg-holo-surface-2"
           }`}
           {...pressProps}
         >
@@ -2452,7 +2460,7 @@ function MessageItem({
     }
     return (
       <span
-        className={`${bubbleBase} ${mine ? "bg-holo-lilac-deep text-holo-ink" : "bg-white text-holo-ink"}`}
+        className={`${bubbleBase} ${mine ? "bg-holo-lilac-deep text-holo-ink shadow-sm" : "bg-holo-surface-2 text-holo-ink"}`}
         {...pressProps}
         onDoubleClick={onReact}
       >

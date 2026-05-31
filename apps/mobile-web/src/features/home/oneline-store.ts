@@ -56,11 +56,15 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-/** 만료(24h) 지난 소식 제거 + 최신순 정렬 + 개수 제한 */
+/**
+ * 만료(24h) 지난 소식 제거 + 최신순 정렬 + 개수 제한.
+ * 단, **내가 남긴 소식은 만료에서 제외**한다 — "어제 남긴 내 소식이 사라졌다"는
+ * 상실감 방지(사장님 요청). 남의 소식은 24h 휘발 유지(티커 신선도).
+ */
 function normalize(list: OnelineNews[]): OnelineNews[] {
   const now = Date.now();
   return list
-    .filter((n) => now - n.createdAt < TTL_MS)
+    .filter((n) => isMyNickname(n.nickname) || now - n.createdAt < TTL_MS)
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, MAX_KEEP);
 }
