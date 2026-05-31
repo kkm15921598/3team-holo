@@ -153,7 +153,7 @@ export function FriendsScreen() {
             className="mx-4 mt-3 flex items-center justify-between rounded-holo-card bg-holo-lilac-card-2 px-4 py-3 text-left active:opacity-80"
           >
             <span className="flex items-center gap-2">
-              <span className="text-[18px]">🤝</span>
+              <span className="text-holo-purple-mid"><HandshakeIcon /></span>
               <span className="flex flex-col">
                 <span className="text-[13px] font-semibold text-holo-ink">
                   친구 요청 확인
@@ -389,14 +389,26 @@ export function FriendsScreen() {
 
 function BackIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+function HandshakeIcon() {
+  // Material `handshake` 라인 스타일 — 친구요청 배너용.
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m11 17 2 2a1 1 0 1 0 3-3" />
+      <path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4" />
+      <path d="m21 3 1 11h-2" />
+      <path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3" />
+      <path d="M3 4h8" />
     </svg>
   );
 }
 function PlusIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
       <path d="M12 5v14M5 12h14" />
     </svg>
   );
@@ -425,11 +437,13 @@ function FlagMini() {
   );
 }
 function PeopleIcon() {
+  // Material `group` 라인 스타일.
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="#1A1A1A" aria-hidden>
-      <circle cx="9" cy="8" r="3.5" />
-      <circle cx="17" cy="9" r="2.5" />
-      <path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6" fill="none" stroke="#1A1A1A" strokeWidth="1.5" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
 }
@@ -451,7 +465,7 @@ function FlagIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m9 18 6-6-6-6" />
     </svg>
   );
