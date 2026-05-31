@@ -64,7 +64,7 @@ export function LoginHistoryScreen() {
   const [reportId, setReportId] = useState<string | null>(null);
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col bg-white">
       <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
@@ -81,7 +81,7 @@ export function LoginHistoryScreen() {
       </section>
 
       <section className="mt-4 px-4 pb-4">
-        <ul className="flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
+        <ul className="flex flex-col divide-y divide-holo-line-3">
           {HISTORY.map((rec) => (
             <li key={rec.id} className="flex flex-col gap-1 px-4 py-3">
               <div className="flex items-center justify-between">

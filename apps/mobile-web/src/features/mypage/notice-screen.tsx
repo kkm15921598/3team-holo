@@ -41,7 +41,7 @@ export function NoticeScreen() {
   }, []);
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col bg-white">
       <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
@@ -51,7 +51,7 @@ export function NoticeScreen() {
 
       {items === null ? null : items.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center pb-16 text-center">
-          <span className="text-[40px]">📭</span>
+          <span className="text-holo-ink-4"><InboxLineIcon /></span>
           <p className="mt-3 text-[14px] font-medium text-holo-ink-2">등록된 공지가 없어요</p>
           <p className="mt-1 text-[12px] text-holo-ink-3">새 소식이 생기면 여기에 올라와요</p>
         </div>
@@ -99,6 +99,15 @@ function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+function InboxLineIcon() {
+  // 빈 상태용 Material `inbox` 라인 아이콘(이모지 대체).
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+      <path d="M5.5 5h13l3.5 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z" />
     </svg>
   );
 }

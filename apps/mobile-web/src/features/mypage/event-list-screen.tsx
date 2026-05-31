@@ -36,7 +36,7 @@ export function EventListScreen() {
   }, []);
 
   return (
-    <main className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col bg-white">
       <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
@@ -49,9 +49,9 @@ export function EventListScreen() {
         <button
           type="button"
           onClick={() => navigate("/event/attendance")}
-          className="flex items-center gap-3 rounded-[14px] bg-holo-gradient-soft p-4 text-left text-white active:opacity-90"
+          className="flex items-center gap-3 rounded-holo-input bg-holo-gradient-soft p-4 text-left text-white active:opacity-90"
         >
-          <span className="text-[28px]">🗓️</span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center"><CalendarLineIcon /></span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-[15px] font-bold">매일 출석 체크</span>
             <span className="mt-0.5 text-[12px] opacity-90">
@@ -63,7 +63,7 @@ export function EventListScreen() {
 
         {/* 운영 이벤트(Supabase) */}
         {items.map((e) => (
-          <div key={e.id} className="rounded-[14px] border border-holo-line bg-white p-4">
+          <div key={e.id} className="rounded-holo-input border border-holo-line bg-white p-4">
             <p className="text-[15px] font-bold text-holo-ink">{e.title}</p>
             {e.body && (
               <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-holo-ink-2">
@@ -87,6 +87,16 @@ function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+function CalendarLineIcon() {
+  // 출석 배너용 Material `calendar` 라인 아이콘(이모지 대체). 그라데이션 위라 흰색 상속.
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9h18M8 2.5v4M16 2.5v4" />
+      <path d="m8.5 14 2 2 3.5-3.5" />
     </svg>
   );
 }

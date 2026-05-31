@@ -146,8 +146,8 @@ export function HelpScreen() {
   const [tab, setTab] = useState<TabKey>("inquiry");
 
   return (
-    <main className="flex flex-1 flex-col bg-holo-surface-2">
-      <header className="flex h-12 shrink-0 items-center bg-white px-4">
+    <main className="flex flex-1 flex-col bg-white">
+      <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
@@ -155,7 +155,7 @@ export function HelpScreen() {
       </header>
 
       {/* 탭 — 1:1 문의 / 자주 묻는 질문 */}
-      <div className="flex shrink-0 gap-2 bg-white px-4 pb-3 pt-2">
+      <div className="flex shrink-0 gap-2 border-b border-holo-line-3 px-4 pb-3 pt-3">
         <TabButton active={tab === "inquiry"} onClick={() => setTab("inquiry")}>
           1:1 문의
         </TabButton>
@@ -252,7 +252,7 @@ function InquiryTab() {
           내 문의 내역 ({inquiries.length})
         </p>
         {inquiries.length === 0 ? (
-          <div className="mt-3 rounded-holo-input bg-white py-10 text-center shadow-holo-card">
+          <div className="mt-3 rounded-holo-input bg-white py-10 text-center ring-1 ring-holo-line-3">
             <p className="text-[13px] text-holo-ink-3">
               아직 문의 내역이 없어요.
             </p>
@@ -264,7 +264,7 @@ function InquiryTab() {
               return (
                 <li
                   key={iq.id}
-                  className="overflow-hidden rounded-holo-input bg-white shadow-holo-card"
+                  className="overflow-hidden rounded-holo-input bg-white ring-1 ring-holo-line-3"
                 >
                   <button
                     type="button"
@@ -473,7 +473,7 @@ function QaTab() {
           return (
             <li
               key={q.id}
-              className="overflow-hidden rounded-holo-input bg-white shadow-holo-card"
+              className="overflow-hidden rounded-holo-input bg-white ring-1 ring-holo-line-3"
             >
               <button
                 type="button"
@@ -502,7 +502,7 @@ function QaTab() {
           );
         })}
         {filtered.length === 0 && (
-          <li className="rounded-holo-input bg-white py-10 text-center shadow-holo-card">
+          <li className="rounded-holo-input bg-white py-10 text-center ring-1 ring-holo-line-3">
             <p className="text-[13px] text-holo-ink-3">
               이 카테고리에는 질문이 없어요.
             </p>
