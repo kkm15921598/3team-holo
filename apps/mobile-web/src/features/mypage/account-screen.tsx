@@ -64,13 +64,15 @@ export function AccountScreen() {
   }, []);
 
   return (
-    <main className="flex flex-1 flex-col bg-holo-surface-2 pb-6">
-      <header className="flex h-12 shrink-0 items-center bg-white px-4">
+    <main className="flex flex-1 flex-col bg-white pb-6">
+      <header className="flex h-12 shrink-0 items-center px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">계정관리</span>
       </header>
+      {/* 헤더와 본문을 나누는 구분선 — 회색을 조금 굵게(2px). */}
+      <div className="h-[2px] w-full shrink-0 bg-holo-line" />
 
       <section className="px-4 pt-4">
         <p className="px-1 text-[14px] font-semibold text-holo-ink">로그인 계정</p>
