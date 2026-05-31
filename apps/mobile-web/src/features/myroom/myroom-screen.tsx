@@ -186,9 +186,12 @@ export function MyroomScreen() {
   return (
     <main className="flex flex-1 min-h-0 flex-col overflow-hidden px-4 pt-2">
       <header className="flex shrink-0 items-center justify-between pb-3">
-        <button type="button" aria-label="뒤로" onClick={handleBack} className="p-1">
-          <BackIcon />
-        </button>
+        <div className="flex items-center">
+          <button type="button" aria-label="뒤로" onClick={handleBack} className="p-1">
+            <BackIcon />
+          </button>
+          <span className="ml-1 text-[16px] font-semibold text-holo-ink">마이룸 수정</span>
+        </div>
         <button
           type="button"
           onClick={handleDone}
