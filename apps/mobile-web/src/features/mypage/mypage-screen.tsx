@@ -130,17 +130,17 @@ export function MypageScreen() {
           <SettingItem label="개인정보" to="/mypage/privacy" />
           <SettingItem label="알림설정" to="/mypage/notifications" />
           <SettingItem label="문의하기" to="/mypage/help" />
-          <li>
-            <button
-              type="button"
-              onClick={() => setShowLogout(true)}
-              className="flex min-h-[54px] w-full items-center justify-between text-left -mx-1 px-1 rounded-[10px] active:bg-holo-surface-2"
-            >
-              <span>로그아웃</span>
-              <ChevronRightIcon />
-            </button>
-          </li>
         </ul>
+
+        {/* 로그아웃 — 화면 이동이 아니라 '나가기' 동작이라 리스트에서 분리(대기업 스타일).
+            구분선 위, 가운데 회색 텍스트, chevron 없음. */}
+        <button
+          type="button"
+          onClick={() => setShowLogout(true)}
+          className="mt-3 flex min-h-[52px] w-full items-center justify-center border-t border-holo-line-3 text-[14px] text-holo-ink-3 active:opacity-60"
+        >
+          로그아웃
+        </button>
       </section>
 
       <ConfirmModal
