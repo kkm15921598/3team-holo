@@ -306,7 +306,7 @@ export function ProfileEditScreen() {
         <button
           type="button"
           onClick={() => setInterestSheetOpen(true)}
-          className="mt-4 flex h-[44px] w-full items-center justify-center gap-1.5 rounded-holo-pill border border-dashed border-holo-purple-mid/60 text-[14px] font-semibold text-holo-purple-mid active:bg-holo-lilac-card-2/40"
+          className="mt-4 flex h-[44px] w-full items-center justify-center gap-1.5 rounded-holo-pill border border-holo-purple-mid/60 text-[14px] font-semibold text-holo-purple-mid active:bg-holo-lilac-card-2/40"
         >
           <PlusIcon />
           {interests.length > 0 ? "관심사 편집" : "관심사 추가"}
