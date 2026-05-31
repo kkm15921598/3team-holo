@@ -4,7 +4,7 @@ import {
   removeOnelineNews,
   useOnelineNews,
 } from "./oneline-store";
-import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { isMyNickname } from "@/shared/stores/profile-store";
 
 /** "방금/N분 전/N시간 전" 짧은 경과 표기 */
 function ago(ms: number): string {
@@ -23,7 +23,6 @@ export function OnelineTicker() {
   const news = useOnelineNews();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  const myPhone = getCurrentAccount();
 
   const submit = () => {
     const v = draft.trim();
@@ -88,7 +87,7 @@ export function OnelineTicker() {
         // 가로 스크롤 카드 — 최신 소식이 왼쪽부터.
         <div className="no-scrollbar -mx-[14px] flex gap-2 overflow-x-auto px-[14px] pb-1">
           {news.map((n) => {
-            const mine = !!myPhone && n.authorPhone === myPhone;
+            const mine = isMyNickname(n.nickname);
             return (
               <div
                 key={n.id}

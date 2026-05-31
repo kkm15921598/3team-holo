@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { getCurrentAccount } from "@/shared/stores/account-choices-store";
-import { getProfile } from "@/shared/stores/profile-store";
+import { getProfile, isMyNickname } from "@/shared/stores/profile-store";
 
 /**
  * 마이룸 방명록 — 이웃 방에 놀러가 도장(스탬프)+한 줄을 남기는 기능.
@@ -21,8 +20,6 @@ export type GuestbookEntry = {
   owner: string;
   /** 방명록 남긴 사람 닉네임 */
   authorNickname: string;
-  /** 방명록 남긴 사람 전화(있으면) — 신원/삭제 권한 판정용 */
-  authorPhone?: string;
   /** 한 줄 메시지 */
   message: string;
   /** 도장 이모지 */
@@ -79,7 +76,6 @@ function rowToEntry(r: Record<string, unknown>): GuestbookEntry {
     id: String(r.id),
     owner: String(r.owner_nickname ?? ""),
     authorNickname: String(r.author_nickname ?? "이웃"),
-    authorPhone: r.author_phone ? String(r.author_phone) : undefined,
     message: String(r.message ?? ""),
     stamp: String(r.stamp ?? "👍"),
     createdAt: r.created_at ? new Date(String(r.created_at)).getTime() : Date.now(),
@@ -91,7 +87,7 @@ async function fetchFromSupabase(owner: string): Promise<GuestbookEntry[] | null
   try {
     const { data, error } = await supabase
       .from("guestbook")
-      .select("id, owner_nickname, author_nickname, author_phone, message, stamp, created_at")
+      .select("id, owner_nickname, author_nickname, message, stamp, created_at")
       .eq("owner_nickname", owner)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -115,12 +111,10 @@ export async function addGuestbookEntry(input: {
   stamp: string;
 }): Promise<GuestbookEntry> {
   const profile = getProfile();
-  const phone = getCurrentAccount() ?? undefined;
   const entry: GuestbookEntry = {
     id: `gb-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     owner: input.owner,
     authorNickname: profile.nickname || "이웃",
-    authorPhone: phone,
     message: input.message.trim().slice(0, 80),
     stamp: input.stamp,
     createdAt: Date.now(),
@@ -128,14 +122,14 @@ export async function addGuestbookEntry(input: {
 
   setCached(input.owner, [entry, ...getCached(input.owner)]);
 
-  // best-effort 서버 저장 (테이블/컬럼 없으면 조용히 무시)
+  // best-effort 서버 저장 (테이블/컬럼 없으면 조용히 무시).
+  // 전화번호(PII)는 저장하지 않는다 — 방명록은 누구나 읽으므로 평문 노출 위험.
   supabase
     .from("guestbook")
     .insert({
       id: entry.id,
       owner_nickname: entry.owner,
       author_nickname: entry.authorNickname,
-      author_phone: entry.authorPhone ?? null,
       message: entry.message,
       stamp: entry.stamp,
     })
@@ -148,6 +142,10 @@ export async function addGuestbookEntry(input: {
 
 /** 방명록 한 건 삭제 — 방 주인 또는 작성자만. 낙관적 반영 + best-effort 서버 삭제. */
 export async function removeGuestbookEntry(owner: string, id: string): Promise<void> {
+  // 소유권 검사 — 방 주인(내 방)이거나 내가 쓴 방명록만 삭제 가능(닉네임 기준).
+  // (전화번호 PII 를 더 이상 저장하지 않으므로 닉네임으로 판정. 서버 강제는 RLS=Plan B.)
+  const entry = getCached(owner).find((e) => e.id === id);
+  if (entry && !isMyNickname(owner) && !isMyNickname(entry.authorNickname)) return;
   setCached(
     owner,
     getCached(owner).filter((e) => e.id !== id),

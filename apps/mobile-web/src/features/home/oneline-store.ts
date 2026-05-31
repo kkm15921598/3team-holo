@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
-import { getProfile } from "@/shared/stores/profile-store";
+import { getProfile, isMyNickname } from "@/shared/stores/profile-store";
 
 /**
  * "동네 한 줄 소식" store — 홈 상단 티커에 흐르는 이웃들의 짧은 휘발성 소식.
@@ -17,8 +17,6 @@ import { getProfile } from "@/shared/stores/profile-store";
 export type OnelineNews = {
   id: string;
   nickname: string;
-  /** 작성자 전화번호 — 본인 소식 삭제 판별용 */
-  authorPhone?: string | null;
   content: string;
   /** 작성 시각(ms) — 24h 만료 판정 */
   createdAt: number;
@@ -75,7 +73,6 @@ export function addOnelineNews(content: string): void {
   const news: OnelineNews = {
     id: `ol-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     nickname: getProfile().nickname || "이웃",
-    authorPhone: phone ?? undefined,
     content: trimmed.slice(0, 60),
     createdAt: Date.now(),
   };
@@ -84,13 +81,13 @@ export function addOnelineNews(content: string): void {
   emit();
 
   // Supabase 저장(best-effort) — 테이블/컬럼 없으면 조용히 무시.
+  // 전화번호(PII)는 저장하지 않는다(소식은 누구나 읽음). 소유권은 닉네임으로 판정.
   if (phone) {
     supabase
       .from("oneline_news")
       .insert({
         news_id: news.id,
         nickname: news.nickname,
-        author_phone: phone,
         content: news.content,
         created_at: new Date(news.createdAt).toISOString(),
       })
@@ -103,11 +100,10 @@ export function addOnelineNews(content: string): void {
 /** 내 소식 삭제 — 로컬 제거 + Supabase best-effort. 본인 글만 삭제 가능. */
 export function removeOnelineNews(id: string): void {
   // 소유권 확인 — UI 가 본인 글에만 삭제 버튼을 노출하지만, 함수가 직접 호출돼도
-  // 남의 글이 지워지지 않도록 작성자 전화번호와 현재 계정을 대조한다.
+  // 남의 글이 안 지워지도록 작성자 닉네임으로 대조(전화번호 PII 미저장). 서버 강제는 RLS=Plan B.
   const target = state.find((n) => n.id === id);
   if (!target) return;
-  const me = getCurrentAccount();
-  if (target.authorPhone && me && target.authorPhone !== me) return;
+  if (!isMyNickname(target.nickname)) return;
 
   state = state.filter((n) => n.id !== id);
   persist();
@@ -125,14 +121,13 @@ export function removeOnelineNews(id: string): void {
 export async function syncOnelineFromSupabase(): Promise<void> {
   const { data, error } = await supabase
     .from("oneline_news")
-    .select("news_id, nickname, author_phone, content, created_at")
+    .select("news_id, nickname, content, created_at")
     .order("created_at", { ascending: false })
     .limit(MAX_KEEP);
   if (error || !data) return; // 테이블 미존재 등 — 로컬만으로 동작
   const remote: OnelineNews[] = data.map((row: any) => ({
     id: String(row.news_id),
     nickname: row.nickname ?? "이웃",
-    authorPhone: row.author_phone ?? undefined,
     content: row.content ?? "",
     createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
   }));

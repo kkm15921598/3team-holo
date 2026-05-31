@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { getProfile } from "@/shared/stores/profile-store";
 
 /**
@@ -21,12 +20,8 @@ export type MeetupReview = {
   meetupPostId: string;
   /** 방장(모임 주최자) 닉네임 */
   hostNickname: string;
-  /** 방장 전화(있으면) */
-  hostPhone?: string;
   /** 후기 작성자 닉네임 */
   reviewerNickname: string;
-  /** 후기 작성자 전화(있으면) — 중복 후기/본인 후기 판정 */
-  reviewerPhone?: string;
   /** 별점 1~5 */
   rating: number;
   /** 한 줄 후기 (최대 60자) */
@@ -108,9 +103,7 @@ function rowToReview(r: Record<string, unknown>): MeetupReview {
     id: String(r.id),
     meetupPostId: String(r.meetup_post_id ?? ""),
     hostNickname: String(r.host_nickname ?? ""),
-    hostPhone: r.host_phone ? String(r.host_phone) : undefined,
     reviewerNickname: String(r.reviewer_nickname ?? "이웃"),
-    reviewerPhone: r.reviewer_phone ? String(r.reviewer_phone) : undefined,
     rating: Number(r.rating ?? 0),
     comment: String(r.comment ?? ""),
     createdAt: r.created_at ? new Date(String(r.created_at)).getTime() : Date.now(),
@@ -122,7 +115,7 @@ async function fetchReviews(hostNickname: string): Promise<MeetupReview[] | null
   try {
     const { data, error } = await supabase
       .from("meetup_reviews")
-      .select("id, meetup_post_id, host_nickname, host_phone, reviewer_nickname, reviewer_phone, rating, comment, created_at")
+      .select("id, meetup_post_id, host_nickname, reviewer_nickname, rating, comment, created_at")
       .eq("host_nickname", hostNickname)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -148,20 +141,16 @@ function aggregate(reviews: MeetupReview[]): HostRating {
 export async function addMeetupReview(input: {
   meetupPostId: string;
   hostNickname: string;
-  hostPhone?: string;
   rating: number;
   comment: string;
 }): Promise<MeetupReview | null> {
   if (hasReviewedMeetup(input.meetupPostId)) return null;
   const profile = getProfile();
-  const reviewerPhone = getCurrentAccount() ?? undefined;
   const review: MeetupReview = {
     id: `mr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     meetupPostId: input.meetupPostId,
     hostNickname: input.hostNickname,
-    hostPhone: input.hostPhone,
     reviewerNickname: profile.nickname || "이웃",
-    reviewerPhone,
     rating: Math.max(1, Math.min(5, Math.round(input.rating))),
     comment: input.comment.trim().slice(0, 60),
     createdAt: Date.now(),
@@ -180,9 +169,7 @@ export async function addMeetupReview(input: {
       id: review.id,
       meetup_post_id: review.meetupPostId,
       host_nickname: review.hostNickname,
-      host_phone: review.hostPhone ?? null,
       reviewer_nickname: review.reviewerNickname,
-      reviewer_phone: review.reviewerPhone ?? null,
       rating: review.rating,
       comment: review.comment,
     })

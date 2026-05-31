@@ -1129,7 +1129,6 @@ export function BoardDetailScreen() {
               <MeetupReviewBox
                 meetupPostId={post.id}
                 hostNickname={post.authorNickname}
-                hostPhone={post.authorPhone ?? undefined}
               />
             )}
           </>
@@ -1927,11 +1926,9 @@ export function BoardDetailScreen() {
 function MeetupReviewBox({
   meetupPostId,
   hostNickname,
-  hostPhone,
 }: {
   meetupPostId: string;
   hostNickname: string;
-  hostPhone?: string;
 }) {
   const [reviewed, refresh] = useHasReviewed(meetupPostId);
   const rating = useHostRating(hostNickname);
@@ -1959,7 +1956,6 @@ function MeetupReviewBox({
       const ok = await addMeetupReview({
         meetupPostId,
         hostNickname,
-        hostPhone,
         rating: stars,
         comment,
       });

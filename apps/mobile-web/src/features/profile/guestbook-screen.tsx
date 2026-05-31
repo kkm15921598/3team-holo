@@ -6,7 +6,6 @@ import {
   type GuestbookEntry,
 } from "@/features/myroom/guestbook-store";
 import { isMyNickname } from "@/shared/stores/profile-store";
-import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { getAvatarUrl } from "@/features/chat/avatars";
 
 /** 잘못된 % 인코딩 URL 이면 decodeURIComponent 가 throw 해 화면이 깨진다 — 실패 시 원문 사용. */
@@ -40,7 +39,6 @@ export function GuestbookScreen() {
   const { id } = useParams<{ id: string }>();
   const owner = safeDecode(id);
   const isMyRoom = isMyNickname(owner);
-  const myPhone = getCurrentAccount();
 
   const { entries, addEntry, removeEntry } = useGuestbook(owner);
 
@@ -60,9 +58,9 @@ export function GuestbookScreen() {
     }
   };
 
-  /** 내가 지울 수 있는 방명록인지 — 방 주인이거나 내가 쓴 글 */
+  /** 내가 지울 수 있는 방명록인지 — 방 주인이거나 내가 쓴 글(닉네임 기준). */
   const canDelete = (e: GuestbookEntry) =>
-    isMyRoom || (!!myPhone && e.authorPhone === myPhone) || isMyNickname(e.authorNickname);
+    isMyRoom || isMyNickname(e.authorNickname);
 
   return (
     <main className="relative flex flex-1 flex-col bg-holo-surface">
