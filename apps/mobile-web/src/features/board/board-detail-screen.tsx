@@ -1284,7 +1284,7 @@ export function BoardDetailScreen() {
                               {r.nickname}
                             </span>
                             {r.isAuthor && (
-                              <span className="rounded-[4px] border border-holo-purple-mid px-1.5 py-0.5 text-[10px] font-medium text-holo-purple-mid">
+                              <span className="rounded-[4px] border border-holo-purple-mid px-1 py-0 text-[10px] font-medium leading-[15px] text-holo-purple-mid">
                                 작성자
                               </span>
                             )}
