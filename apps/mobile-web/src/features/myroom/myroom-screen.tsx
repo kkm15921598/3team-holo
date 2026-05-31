@@ -190,14 +190,15 @@ export function MyroomScreen() {
           <button type="button" aria-label="뒤로" onClick={handleBack} className="p-1">
             <BackIcon />
           </button>
-          <span className="ml-1 text-[16px] font-semibold text-holo-ink">마이룸 수정</span>
+          <span className="ml-1 text-[16px] font-semibold text-holo-ink">마이룸 꾸미기</span>
         </div>
         <button
           type="button"
           onClick={handleDone}
-          className="rounded-full bg-[#1A1A1A] px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm"
+          className="flex items-center gap-1 rounded-full bg-holo-purple-mid px-4 py-1.5 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(116,72,221,0.25)] transition active:scale-95"
         >
-          수정완료
+          <CheckIcon />
+          완료
         </button>
       </header>
 
@@ -387,6 +388,14 @@ function BackIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }
