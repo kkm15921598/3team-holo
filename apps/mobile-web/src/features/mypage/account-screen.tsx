@@ -65,81 +65,77 @@ export function AccountScreen() {
 
   return (
     <main className="flex flex-1 flex-col bg-white pb-6">
-      <header className="flex h-12 shrink-0 items-center px-4">
+      <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">계정관리</span>
       </header>
-      {/* 헤더와 본문을 나누는 구분선 — 회색을 조금 굵게(2px). */}
-      <div className="h-[2px] w-full shrink-0 bg-holo-line" />
 
-      <section className="px-4 pt-4">
-        <p className="px-1 text-[14px] font-semibold text-holo-ink">로그인 계정</p>
-        <div className="mt-2 flex items-center justify-between rounded-holo-input bg-white p-4 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-          <div className="flex min-w-0 items-center gap-3">
-            <img
-              src={faceSrc}
-              alt={profile.nickname}
-              className="h-9 w-9 shrink-0 rounded-full object-cover"
-              draggable={false}
-            />
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate text-[14px] font-semibold text-holo-ink">
-                {profile.nickname}
-              </span>
-              <span className="text-[12px] text-holo-ink-3">
-                ID : {profile.friendCode}
-              </span>
-            </div>
-          </div>
-          {/* 위치 인증 뱃지 — 클릭하면 동네 인증 화면으로 이동. */}
-          <button
-            type="button"
-            onClick={() => navigate("/mypage/verify-region")}
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
-              regionVerified
-                ? "bg-holo-lilac-card text-holo-purple-mid"
-                : "bg-holo-line-2/50 text-holo-ink-3 hover:bg-holo-line-2"
-            }`}
-            aria-label={
-              regionVerified
-                ? "동네 인증 완료 — 재인증하려면 클릭"
-                : "동네 인증하기"
-            }
-          >
-            {regionVerified ? "인증완료" : "미인증"}
-          </button>
-        </div>
-        {/* 가입년도 — 프로필 카드 바로 아래 작은 캡션. 카드 안에 넣으면 답답해 보여서
-            카드 외곽에 라벨 형식으로 분리. */}
-        <p className="mt-2 flex items-center gap-1.5 px-1 text-[12px] text-holo-ink-3">
-          <CalendarIcon />{" "}
-          {signupDate
-            ? `${signupDate}부터 HOLO와 함께하고 있어요`
-            : "HOLO와 함께하고 있어요"}
-        </p>
-      </section>
-
-      <section className="mt-5 px-4">
-        <p className="px-1 text-[14px] font-semibold text-holo-ink">계정 보안</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-          {/* 이메일 변경 항목은 휴대폰 본인인증 기반 가입이라 의미가 없어 제거 */}
-          <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
-          <Row label="휴대폰 번호 변경" hint={phoneMasked} onClick={() => navigate("/mypage/account/phone")} />
-        </ul>
-      </section>
-
-      <section className="mt-5 px-4">
-        <p className="px-1 text-[14px] font-semibold text-holo-ink">기타</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-          <Row
-            label="회원 탈퇴"
-            danger
-            onClick={() => setShowWithdraw(true)}
+      {/* 프로필 — 카드 없이 화면 폭 그대로(대기업 설정 첫 블록 패턴). */}
+      <section className="flex items-center justify-between px-4 py-5">
+        <div className="flex min-w-0 items-center gap-3.5">
+          <img
+            src={faceSrc}
+            alt={profile.nickname}
+            className="h-12 w-12 shrink-0 rounded-full object-cover"
+            draggable={false}
           />
-        </ul>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-[16px] font-semibold text-holo-ink">
+              {profile.nickname}
+            </span>
+            <span className="mt-0.5 text-[13px] text-holo-ink-3">
+              ID : {profile.friendCode}
+            </span>
+          </div>
+        </div>
+        {/* 위치 인증 뱃지 — 클릭하면 동네 인증 화면으로 이동. */}
+        <button
+          type="button"
+          onClick={() => navigate("/mypage/verify-region")}
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 ${
+            regionVerified
+              ? "bg-holo-lilac-card text-holo-purple-mid"
+              : "bg-holo-line-2/50 text-holo-ink-3 hover:bg-holo-line-2"
+          }`}
+          aria-label={
+            regionVerified
+              ? "동네 인증 완료 — 재인증하려면 클릭"
+              : "동네 인증하기"
+          }
+        >
+          {regionVerified ? "인증완료" : "미인증"}
+        </button>
       </section>
+      {/* 가입일 캡션 */}
+      <p className="flex items-center gap-1.5 px-4 pb-5 text-[12px] text-holo-ink-3">
+        <CalendarIcon />{" "}
+        {signupDate
+          ? `${signupDate}부터 HOLO와 함께하고 있어요`
+          : "HOLO와 함께하고 있어요"}
+      </p>
+
+      {/* 그룹 사이 연한 회색 띠 — 카드/그림자 대신 면으로 구분(토스·카카오 패턴). */}
+      <div className="h-2 shrink-0 bg-holo-surface-2" />
+
+      {/* 계정 보안 */}
+      <p className="px-4 pb-1 pt-4 text-[13px] font-medium text-holo-ink-3">
+        계정 보안
+      </p>
+      <ul className="flex flex-col divide-y divide-holo-line-3">
+        {/* 이메일 변경 항목은 휴대폰 본인인증 기반 가입이라 의미가 없어 제거 */}
+        <Row label="비밀번호 변경" onClick={() => navigate("/mypage/account/password")} />
+        <Row label="휴대폰 번호 변경" hint={phoneMasked} onClick={() => navigate("/mypage/account/phone")} />
+      </ul>
+
+      <div className="h-2 shrink-0 bg-holo-surface-2" />
+
+      {/* 기타 */}
+      <p className="px-4 pb-1 pt-4 text-[13px] font-medium text-holo-ink-3">기타</p>
+      <ul className="flex flex-col divide-y divide-holo-line-3">
+        <Row label="회원 탈퇴" danger onClick={() => setShowWithdraw(true)} />
+      </ul>
 
       <ConfirmModal
         open={showWithdraw}
@@ -205,11 +201,11 @@ function Row({
       <button
         type="button"
         onClick={onClick}
-        className={`flex w-full items-center justify-between px-4 py-3 text-left text-[14px] ${danger ? "text-holo-error" : "text-holo-ink"}`}
+        className={`flex min-h-[56px] w-full items-center justify-between px-4 text-left text-[15px] active:bg-holo-surface-2 ${danger ? "text-holo-error" : "text-holo-ink"}`}
       >
         <span>{label}</span>
         <span className="flex items-center gap-2">
-          {hint && <span className="text-[12px] text-holo-ink-3">{hint}</span>}
+          {hint && <span className="text-[13px] text-holo-ink-3">{hint}</span>}
           <ChevronRightIcon />
         </span>
       </button>
