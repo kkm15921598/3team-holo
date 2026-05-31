@@ -129,7 +129,7 @@ export function MypageScreen() {
           <SettingItem label="계정관리" to="/mypage/account" />
           <SettingItem label="개인정보" to="/mypage/privacy" />
           <SettingItem label="알림설정" to="/mypage/notifications" />
-          <SettingItem label="문의하기" to="/mypage/help" />
+          <SettingItem label="고객센터" to="/mypage/support" />
         </ul>
 
         {/* 로그아웃 — 화면 이동이 아니라 '나가기' 동작이라 리스트에서 분리(대기업 스타일).

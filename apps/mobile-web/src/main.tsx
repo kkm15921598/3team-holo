@@ -69,6 +69,9 @@ import { TermsOfServiceScreen } from "@/features/mypage/terms-of-service-screen"
 import { DataDownloadScreen } from "@/features/mypage/data-download-screen";
 import { NotificationsScreen } from "@/features/mypage/notifications-screen";
 import { HelpScreen } from "@/features/mypage/help-screen";
+import { SupportScreen } from "@/features/mypage/support-screen";
+import { NoticeScreen } from "@/features/mypage/notice-screen";
+import { EventListScreen } from "@/features/mypage/event-list-screen";
 import { QuietHoursScreen } from "@/features/mypage/quiet-hours-screen";
 import { ModeScreen } from "@/features/mypage/mode-screen";
 import { FreePointsScreen } from "@/features/mypage/free-points-screen";
@@ -186,6 +189,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/notifications" element={<TabLayout showHeader={false}><NotificationsScreen /></TabLayout>} />
           <Route path="/mypage/notifications/quiet" element={<TabLayout showHeader={false}><QuietHoursScreen /></TabLayout>} />
           <Route path="/mypage/help" element={<TabLayout showHeader={false}><HelpScreen /></TabLayout>} />
+          <Route path="/mypage/support" element={<TabLayout showHeader={false}><SupportScreen /></TabLayout>} />
+          <Route path="/mypage/notices" element={<TabLayout showHeader={false}><NoticeScreen /></TabLayout>} />
+          <Route path="/mypage/events" element={<TabLayout showHeader={false}><EventListScreen /></TabLayout>} />
           <Route path="/mypage/mode" element={<TabLayout showHeader={false}><ModeScreen /></TabLayout>} />
           <Route path="/mypage/level" element={<TabLayout showHeader={false}><MyLevelScreen /></TabLayout>} />
           <Route path="/mypage/badges" element={<TabLayout showHeader={false}><MyBadgesScreen /></TabLayout>} />
