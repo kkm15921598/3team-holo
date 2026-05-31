@@ -8,7 +8,7 @@ import { useJoinedSet } from "@/shared/stores/joined-store";
 import { postsStore } from "@/features/board/posts-store";
 import { evaluateAchievements } from "@/shared/lib/achievements";
 import { useAccountStats } from "@/shared/stores/account-stats-store";
-import { useVerification } from "@/shared/stores/verification-store";
+import { useVerification, syncVerificationFromSupabase } from "@/shared/stores/verification-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { clearCurrentAccount } from "@/shared/stores/account-choices-store";
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
@@ -27,14 +27,23 @@ export function MypageScreen() {
   useEffect(() => {
     evaluateAchievements();
   }, []);
+  // 마이페이지 진입 시 인증 상태 복원 재시도 — SPA 로그인/탭 전환으로 load-event sync 를
+  // 놓쳤거나 동네 라벨이 비어 "동네를 인증해주세요" 로 잘못 떠 있던 경우, 백업/서버에서 되살린다.
+  useEffect(() => {
+    void syncVerificationFromSupabase();
+  }, []);
   // '모임 참여' 수 — 현재 살아있는 글만 센다(my-meetings 목록과 동일 기준).
   // joinedSet 은 글 삭제 시 정리되지 않아 size 를 그대로 쓰면 삭제된 모임까지 세어 목록과 어긋난다.
   const meetupCount = postsStore.getPosts().filter((p) => joinedSet.has(p.id)).length;
   const stats = useAccountStats();
   // 동네 인증 화면에서 저장한 동(洞) 이 있으면 그걸 표시, 없으면 인증 유도 문구.
   const verification = useVerification();
-  const isRegionUnset = !verification.verifiedRegion;
-  const regionLabel = verification.verifiedRegion ?? "동네를 인증해주세요";
+  // regionVerified 가 true 면 라벨이 비어도(서버 컬럼 미존재 등으로 동 이름 유실) 인증 안내를
+  // 띄우지 않는다 — "이미 인증했는데 또 하라고 뜨는" 오인 차단.
+  const isRegionUnset = !verification.verifiedRegion && !verification.regionVerified;
+  const regionLabel =
+    verification.verifiedRegion ??
+    (verification.regionVerified ? "동네 인증 완료" : "동네를 인증해주세요");
   return (
     <main className="flex flex-1 flex-col gap-4 px-4 pt-2 pb-4">
       {/* Profile card + Points (connected, full-width edge-to-edge) */}
