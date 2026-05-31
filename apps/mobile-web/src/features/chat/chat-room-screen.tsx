@@ -8,7 +8,7 @@ import {
   type MeetingInfo,
 } from "@/shared/mock/data";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { reverseGeocode } from "@/shared/hooks/use-reverse-geocode";
+import { reverseGeocodeDetailed } from "@/shared/hooks/use-reverse-geocode";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   sendFriendRequest,
@@ -329,7 +329,7 @@ export function ChatRoomScreen() {
     }
     let cancelled = false;
     setResolvedAddr("");
-    reverseGeocode(locDraftPick).then((addr) => {
+    reverseGeocodeDetailed(locDraftPick).then((addr) => {
       if (!cancelled) setResolvedAddr(addr);
     });
     return () => {
@@ -1623,13 +1623,7 @@ export function ChatRoomScreen() {
       {game === "roulette" && (
         <RouletteModal
           initialNames={Array.from(
-            new Set(
-              [
-                getProfile().nickname,
-                room?.hostNickname,
-                ...(room?.memberNames ?? []),
-              ].filter(Boolean) as string[],
-            ),
+            new Set(members.map((m) => m.nickname).filter(Boolean)),
           )}
           onResult={(t) => {
             postGameMessage(t);

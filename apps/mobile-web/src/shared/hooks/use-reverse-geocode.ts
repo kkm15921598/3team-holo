@@ -131,6 +131,52 @@ export async function reverseGeocode(coord: Coord): Promise<string> {
   }
 }
 
+const DETAIL_CACHE = new Map<string, string>();
+const DETAIL_TIMES = new Map<string, number>();
+
+/**
+ * 위경도 → 상세 주소 (시/구/동 + 도로명/건물/번지까지).
+ *
+ * reverseGeocode 는 "시 구 동" 행정 단위만 반환하지만, 위치 공유에서는
+ * 사용자가 어디인지 바로 알 수 있게 도로명/건물명까지 보여주는 편이 좋다.
+ * zoom=18 응답의 road/house_number/building 을 행정 라벨 뒤에 붙인다.
+ */
+export async function reverseGeocodeDetailed(coord: Coord): Promise<string> {
+  const key = cacheKey(coord.lat, coord.lng);
+  const at = DETAIL_TIMES.get(key) ?? 0;
+  if (DETAIL_CACHE.has(key) && Date.now() - at < CACHE_TTL_MS) {
+    return DETAIL_CACHE.get(key) ?? "";
+  }
+  try {
+    // 행정 라벨(시/구/동)은 기존 함수 재사용 — 동까지 안정적으로 채워진다.
+    const [region, d18] = await Promise.all([
+      reverseGeocode(coord),
+      fetchAt(coord, 18),
+    ]);
+    const a: Record<string, string> = d18?.address ?? {};
+    // 도로명 + 번지(있으면) + 건물명 — 중복 없이 이어붙임.
+    const road = a.road ?? a.pedestrian ?? a.footway ?? "";
+    const houseNo = a.house_number ?? "";
+    const building =
+      a.building ?? a.amenity ?? a.shop ?? a.office ?? a.tourism ?? "";
+    const detailParts: string[] = [];
+    if (road) detailParts.push(houseNo ? `${road} ${houseNo}` : road);
+    if (building && building !== road) detailParts.push(building);
+    const detail = detailParts.join(" ");
+    // 행정 라벨 + 상세. 행정 라벨이 비면 display_name 으로 폴백.
+    const label =
+      [region, detail].filter(Boolean).join(" ") ||
+      (d18?.display_name ?? "").split(",").slice(0, 3).join(" ").trim();
+    if (label) {
+      DETAIL_CACHE.set(key, label);
+      DETAIL_TIMES.set(key, Date.now());
+    }
+    return label;
+  } catch {
+    return "";
+  }
+}
+
 /**
  * 좌표가 바뀔 때마다 reverse geocode 호출 → 한글 주소 라벨을 반환.
  *

@@ -126,10 +126,10 @@ export function MypageScreen() {
         {/* 설정 리스트 — 넉넉한 터치영역(행 54px)+탭 피드백. 항목 사이 구분선은 빼서
             제목 아래 선(hr)만 남긴다 — 항목마다 선을 넣으면 제목/항목 구분이 안 돼 혼란. */}
         <ul className="mt-1 flex flex-col text-[15px] text-holo-ink">
-          <SettingItem label="계정관리" to="/mypage/account" />
-          <SettingItem label="개인정보" to="/mypage/privacy" />
-          <SettingItem label="알림설정" to="/mypage/notifications" />
-          <SettingItem label="고객센터" to="/mypage/support" />
+          <SettingItem icon="👤" label="계정관리" desc="로그인·비밀번호·전화번호" to="/mypage/account" />
+          <SettingItem icon="🔒" label="개인정보" desc="위치공유·친구요청·약관" to="/mypage/privacy" />
+          <SettingItem icon="🔔" label="알림설정" desc="푸시·방해금지 시간" to="/mypage/notifications" />
+          <SettingItem icon="💬" label="고객센터" desc="공지·이벤트·문의" to="/mypage/support" />
         </ul>
 
         {/* 로그아웃 — 화면 이동이 아니라 '나가기' 동작이라 리스트에서 분리(대기업 스타일).
@@ -163,14 +163,31 @@ export function MypageScreen() {
   );
 }
 
-function SettingItem({ label, to }: { label: string; to: string }) {
+function SettingItem({
+  icon,
+  label,
+  desc,
+  to,
+}: {
+  icon: string;
+  label: string;
+  desc: string;
+  to: string;
+}) {
+  // 고객센터 허브와 동일한 스타일로 통일 — 아이콘 원 + 라벨 + 설명 + 화살표.
   return (
     <li>
       <Link
         to={to}
-        className="-mx-1 flex min-h-[54px] w-full items-center justify-between rounded-[10px] px-1 text-left active:bg-holo-surface-2"
+        className="-mx-1 flex min-h-[60px] w-full items-center gap-3 rounded-[12px] px-1 text-left active:bg-holo-surface-2"
       >
-        <span>{label}</span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-holo-lilac-card-2 text-[18px]">
+          {icon}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="font-semibold text-holo-ink">{label}</span>
+          <span className="text-[12px] text-holo-ink-3">{desc}</span>
+        </span>
         <ChevronRightIcon />
       </Link>
     </li>
