@@ -66,6 +66,26 @@ function persistMyInterests(list: string[]) {
   }
 }
 
+/**
+ * Supabase fallback 으로 받아온 가입 관심사를 localStorage.holoUser 에 캐싱.
+ * 단, 로컬에 이미 값이 있으면(마지막 편집 결과) 건드리지 않는다.
+ * 다음 진입부터 서버 대기 없이 즉시 표시되도록 하는 용도.
+ */
+function cacheSignupInterestsIfEmpty(list: string[]) {
+  try {
+    const raw = window.localStorage.getItem("holoUser");
+    const p = raw ? JSON.parse(raw) : {};
+    const cur = Array.isArray(p?.interests) ? (p.interests as string[]) : [];
+    const custom = typeof p?.customInterest === "string" ? p.customInterest.trim() : "";
+    if (cur.length > 0 || custom) return; // 로컬에 이미 있으면 보존
+    p.interests = list;
+    p.customInterest = "";
+    window.localStorage.setItem("holoUser", JSON.stringify(p));
+  } catch {
+    // ignore
+  }
+}
+
 export function ProfileEditScreen() {
   const navigate = useNavigate();
   const profile = useProfile();
@@ -120,10 +140,15 @@ export function ProfileEditScreen() {
       .single()
       .then(({ data, error }) => {
         if (cancelled || error || !data) return;
-        const remote = Array.isArray(data.interests) ? (data.interests as string[]) : [];
+        const remote = Array.isArray(data.interests)
+          ? (data.interests as string[]).slice(0, INTEREST_MAX)
+          : [];
         if (remote.length === 0) return;
         // 비어 있을 때만 채움 — 진입 후 사용자가 이미 편집했으면 유지.
-        setInterests((cur) => (cur.length === 0 ? remote.slice(0, INTEREST_MAX) : cur));
+        setInterests((cur) => (cur.length === 0 ? remote : cur));
+        // 로컬 캐시에도 써둬서 다음 진입부터는 서버 대기 없이 즉시 표시(깜빡임 제거).
+        // 로컬이 이미 있으면 건드리지 않음 — 이웃찾기와 동일 출처라 함께 이득.
+        cacheSignupInterestsIfEmpty(remote);
       });
     return () => {
       cancelled = true;
@@ -487,14 +512,15 @@ function PlusIcon() {
 }
 
 function SelectedChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  // 액션 버튼(보라 솔리드)과 구분되도록 '태그' 톤 — 연한 라일락 배경 + 보라 글자.
   return (
-    <span className="flex h-[28px] shrink-0 items-center gap-1 rounded-full bg-holo-purple-mid pl-3 pr-1 text-[12px] font-medium text-white">
+    <span className="flex h-[28px] shrink-0 items-center gap-1 rounded-full bg-holo-lilac-card-2 pl-3 pr-1 text-[12px] font-medium text-holo-purple-mid">
       {label}
       <button
         type="button"
         onClick={onRemove}
         aria-label={`${label} 제거`}
-        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-white transition hover:bg-white/15"
+        className="flex h-[18px] w-[18px] items-center justify-center rounded-full text-holo-purple-mid/70 transition hover:bg-holo-purple-mid/10"
       >
         <CloseIcon />
       </button>
