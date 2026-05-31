@@ -69,7 +69,7 @@ export function PointsScreen() {
       </section>
 
       {/* History */}
-      <section>
+      <section className="mt-[10px]">
         <div className="flex items-center justify-between border-b border-holo-surface-2 pb-2">
           <p className="text-[16px] font-semibold text-holo-ink">포인트 이용 내역</p>
           {/* 년도/월 셀렉트 — 내역을 기간별로 추려서 본다. */}
