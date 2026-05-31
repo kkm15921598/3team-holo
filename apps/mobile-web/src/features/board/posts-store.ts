@@ -288,16 +288,24 @@ export const postsStore = {
     _posts = next;
     notify();
   },
-  /** 참여자 추가/제거 — 로컬 즉시 반영 + Supabase 업데이트 */
-  patchParticipants(postId: string, avatarBg: string, action: "join" | "leave"): void {
+  /** 참여자 추가/제거 — 로컬 즉시 반영 + Supabase 업데이트.
+   *  phone(안정 식별자)을 받으면 leave 시 색(avatarBg)이 아니라 phone 으로 정확히 본인 항목만
+   *  제거한다 — 6색 풀이라 다른 참여자와 색이 겹치면 남의 표식이 지워지던 버그 방지. */
+  patchParticipants(postId: string, avatarBg: string, action: "join" | "leave", phone?: string): void {
     const idx = _posts.findIndex((p) => p.id === postId);
     if (idx < 0) return;
     const post = _posts[idx];
     let participants = [...(post.participants ?? [])];
     if (action === "join") {
-      participants = [...participants, { avatarBg }];
+      // 같은 phone 이 이미 있으면 중복 추가 방지(재참여/동기화 중복 가드).
+      if (!(phone && participants.some((p) => p.phone === phone))) {
+        participants = [...participants, phone ? { avatarBg, phone } : { avatarBg }];
+      }
     } else {
-      const removeIdx = participants.findIndex((p) => p.avatarBg === avatarBg);
+      // 1순위: phone 일치 항목. 없으면(구 데이터) 색으로 폴백.
+      let removeIdx = phone ? participants.findIndex((p) => p.phone === phone) : -1;
+      if (removeIdx < 0) removeIdx = participants.findIndex((p) => p.avatarBg === avatarBg && !p.phone);
+      if (removeIdx < 0) removeIdx = participants.findIndex((p) => p.avatarBg === avatarBg);
       if (removeIdx >= 0) participants.splice(removeIdx, 1);
     }
     const next = [..._posts];

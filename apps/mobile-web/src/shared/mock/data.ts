@@ -36,6 +36,8 @@ export type PostLocation = {
 
 export type ParticipantAvatar = {
   avatarBg: string;
+  /** 안정 식별자(참여자 phone) — leave 시 색 충돌 없이 본인 항목만 제거. 구 데이터엔 없음(옵셔널). */
+  phone?: string;
 };
 
 export type Post = {

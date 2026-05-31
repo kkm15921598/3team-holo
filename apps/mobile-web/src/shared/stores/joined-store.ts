@@ -72,7 +72,7 @@ export function joinPost(id: string): void {
   persist();
   emit();
   syncToSupabase(state);
-  postsStore.patchParticipants(id, userAvatarBg(), "join");
+  postsStore.patchParticipants(id, userAvatarBg(), "join", getCurrentAccount() ?? undefined);
 }
 
 export function leavePost(id: string): void {
@@ -83,7 +83,7 @@ export function leavePost(id: string): void {
   persist();
   emit();
   syncToSupabase(state);
-  postsStore.patchParticipants(id, userAvatarBg(), "leave");
+  postsStore.patchParticipants(id, userAvatarBg(), "leave", getCurrentAccount() ?? undefined);
 }
 
 export function getJoinedIds(): string[] {
