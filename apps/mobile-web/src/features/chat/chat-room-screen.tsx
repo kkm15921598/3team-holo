@@ -460,12 +460,16 @@ export function ChatRoomScreen() {
           const userPhone = getCurrentAccount();
           const isMine = row.sender_phone === userPhone;
           const readByArr: string[] = Array.isArray(row.read_by) ? row.read_by : [];
+          // 날짜 구분선용 date — loadFromSupabase 와 동일하게 created_at 에서 추출.
+          // (이전엔 누락돼 undefined → 자정 넘겨 앱을 켜두면 날짜 구분선이 중복 생성됐다.)
+          const ca = row.created_at ? new Date(row.created_at) : new Date();
           const newMsg: ChatMessage = {
             id: String(row.message_id ?? row.id),
             nickname: row.sender_nickname ?? "",
             content: row.content ?? "",
             time: row.sent_time ?? "",
             mine: isMine,
+            date: `${ca.getFullYear()}-${String(ca.getMonth() + 1).padStart(2, "0")}-${String(ca.getDate()).padStart(2, "0")}`,
             readBy: isMine ? Math.max(0, latestMemberCountRef.current - 1 - readByArr.length) : undefined,
             ...chatExtrasFromRow(row, userPhone ?? undefined),
           };
@@ -847,6 +851,26 @@ export function ChatRoomScreen() {
       }
     }
 
+    // 채팅에서 발언한 사람을 멤버로 보강 — 모임 참여자는 닉네임이 저장되지 않아(익명 인원수만)
+    // 멤버 목록에 안 떴다. 메시지를 보낸 적 있는 사람은 실제 참여자이므로 추가한다(사막여우 등).
+    {
+      const myNick2 = getProfile().nickname;
+      const known = new Set(baseMembers.map((m) => m.nickname));
+      const friendNicks2 = new Set(getFriends().map((f) => f.nickname));
+      for (const msg of messages) {
+        const nk = (msg.nickname ?? "").trim();
+        if (!nk || msg.type === "system" || msg.mine || nk === myNick2 || known.has(nk)) continue;
+        known.add(nk);
+        baseMembers.push({
+          id: `m-${room.id}-s-${nk}`,
+          nickname: nk,
+          isMe: false,
+          isHost: !!room.hostNickname && room.hostNickname === nk,
+          isFriend: friendNicks2.has(nk),
+        });
+      }
+    }
+
     // 강퇴된 멤버는 멤버 리스트에서 제외
     if (kickedSet.size > 0) {
       baseMembers = baseMembers.filter((m) => !kickedSet.has(m.nickname));
@@ -856,7 +880,7 @@ export function ChatRoomScreen() {
     return baseMembers.map((m) =>
       newlyAddedFriends.has(m.nickname) ? { ...m, isFriend: true } : m,
     );
-  }, [room, newlyAddedFriends, kickedSet, postIdFromRoom, postsTick]);
+  }, [room, newlyAddedFriends, kickedSet, postIdFromRoom, postsTick, messages]);
 
   const displayRoomName = useMemo(() => {
     if (!room) return "채팅방";
@@ -3437,28 +3461,42 @@ function MeetingInfoModal({
         </header>
 
         {/* 모임 정보 카드 */}
-        <div className="mt-4 flex flex-col gap-2 rounded-holo-card bg-holo-lilac-card/40 p-4">
+        <div className="relative mt-4 flex flex-col gap-2 rounded-holo-card bg-holo-lilac-card/40 p-4">
+          {/* 방장 일정 수정 진입 — 작은 '수정' 링크를 카드 우측 상단에. */}
+          {isHost && onEditSchedule && !editing && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="absolute right-3 top-3 flex items-center gap-0.5 text-[12px] font-semibold text-holo-purple-mid active:opacity-60"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 2l3 3-7 7H2v-3z" />
+                <path d="M11 4l3 3" />
+              </svg>
+              수정
+            </button>
+          )}
           {editing ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">날짜</span>
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-holo-ink-3">날짜</span>
                 <input
                   type="date"
                   value={draftDate}
                   onChange={(e) => setDraftDate(e.target.value)}
-                  className="flex-1 rounded-md border border-holo-line bg-white px-2 py-1 text-[13px] text-holo-ink outline-none focus:border-holo-purple-mid"
+                  className="h-11 w-full rounded-holo-input border border-holo-line bg-white px-3.5 text-[14px] text-holo-ink outline-none focus:border-holo-purple-mid focus:ring-2 focus:ring-holo-purple-mid/30"
                 />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-12 shrink-0 text-[12px] text-holo-ink-3">시간</span>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-holo-ink-3">시간</span>
                 <input
                   type="time"
                   value={draftTime}
                   onChange={(e) => setDraftTime(e.target.value)}
-                  className="flex-1 rounded-md border border-holo-line bg-white px-2 py-1 text-[13px] text-holo-ink outline-none focus:border-holo-purple-mid"
+                  className="h-11 w-full rounded-holo-input border border-holo-line bg-white px-3.5 text-[14px] text-holo-ink outline-none focus:border-holo-purple-mid focus:ring-2 focus:ring-holo-purple-mid/30"
                 />
-              </div>
-            </>
+              </label>
+            </div>
           ) : (
             <>
               <div className="flex items-center gap-2">
@@ -3496,42 +3534,30 @@ function MeetingInfoModal({
             </span>
           </div>
 
-          {/* 방장 일정 수정 — 장기성 모임처럼 매번 시간이 바뀌는 경우 방장이 직접 갱신. */}
-          {isHost && onEditSchedule && (
-            <div className="mt-1 border-t border-holo-line/60 pt-2">
-              {editing ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(false);
-                      setDraftDate(meeting.date ?? "");
-                      setDraftTime(meeting.time ?? "");
-                    }}
-                    className="h-8 flex-1 rounded-holo-pill border border-holo-line text-[12px] font-semibold text-holo-ink-2"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onEditSchedule(draftDate.trim(), draftTime.trim());
-                      setEditing(false);
-                    }}
-                    className="h-8 flex-1 rounded-holo-pill bg-holo-purple-mid text-[12px] font-semibold text-white"
-                  >
-                    저장
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="flex h-8 w-full items-center justify-center gap-1 rounded-holo-pill border border-holo-purple-mid text-[12px] font-semibold text-holo-purple-mid"
-                >
-                  📅 일정 수정
-                </button>
-              )}
+          {/* 방장 일정 수정 — 편집 중일 때만 취소/저장 노출(진입은 카드 우측 상단 '수정'). */}
+          {isHost && onEditSchedule && editing && (
+            <div className="mt-1 flex gap-2 border-t border-holo-line/60 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setDraftDate(meeting.date ?? "");
+                  setDraftTime(meeting.time ?? "");
+                }}
+                className="h-11 flex-1 rounded-holo-pill border border-holo-line text-[14px] font-semibold text-holo-ink-2 active:bg-holo-surface"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onEditSchedule(draftDate.trim(), draftTime.trim());
+                  setEditing(false);
+                }}
+                className="h-11 flex-[1.4] rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white active:opacity-90"
+              >
+                저장
+              </button>
             </div>
           )}
         </div>
