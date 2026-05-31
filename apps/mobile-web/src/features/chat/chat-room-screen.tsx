@@ -2916,7 +2916,7 @@ function BalanceModal({
   onClose: () => void;
 }) {
   const post = (a: string, b: string) =>
-    onPick(`⚖️ 밸런스 게임\n\n${a}  vs  ${b}\n\n여러분의 선택은? 💬`);
+    onPick(`⚖️ 밸런스 게임 — ${a} vs ${b}? 여러분의 선택은? 💬`);
   return (
     <GameOverlay onClose={onClose}>
       <p className="text-center text-[16px] font-bold text-holo-ink">밸런스 게임 ⚖️</p>
@@ -3506,6 +3506,8 @@ function MeetingInfoModal({
   const [editing, setEditing] = useState(false);
   const [draftDate, setDraftDate] = useState(meeting.date ?? "");
   const [draftTime, setDraftTime] = useState(meeting.time ?? "");
+  // 저장 누르면 바로 적용하지 않고 확인 단계 — "변경하시겠습니까? + 멤버 알림 안내".
+  const [confirming, setConfirming] = useState(false);
   return (
     <div
       className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
@@ -3535,7 +3537,7 @@ function MeetingInfoModal({
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
               </svg>
-              수정
+              일정변경
             </button>
           )}
           {editing ? (
@@ -3612,10 +3614,7 @@ function MeetingInfoModal({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  onEditSchedule(draftDate.trim(), draftTime.trim());
-                  setEditing(false);
-                }}
+                onClick={() => setConfirming(true)}
                 className="h-11 flex-[1.4] rounded-holo-pill bg-holo-purple-mid text-[14px] font-bold text-white active:opacity-90"
               >
                 저장
@@ -3623,6 +3622,40 @@ function MeetingInfoModal({
             </div>
           )}
         </div>
+
+        {/* 일정 변경 확인 — 저장 누르면 적용 전 한 번 더 확인 + 멤버 알림 안내. */}
+        {confirming && (
+          <div className="mt-3 rounded-holo-card border border-holo-line bg-white p-4">
+            <p className="text-center text-[14px] font-semibold text-holo-ink">
+              입력하신 일정으로 (
+              {draftDate ? formatYyMmDd(draftDate) : "미정"}
+              {draftTime ? ` ${draftTime}` : ""}) 변경하시겠습니까?
+            </p>
+            <p className="mt-1.5 text-center text-[11px] leading-relaxed text-holo-ink-3">
+              일정을 변경하시면 참여 멤버들에게 알림이 갑니다
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className="h-10 flex-1 rounded-holo-pill border border-holo-line text-[13px] font-semibold text-holo-ink-2 active:bg-holo-surface"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onEditSchedule?.(draftDate.trim(), draftTime.trim());
+                  setConfirming(false);
+                  setEditing(false);
+                }}
+                className="h-10 flex-1 rounded-holo-pill bg-holo-purple-mid text-[13px] font-bold text-white active:opacity-90"
+              >
+                변경
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 액션 버튼들 — 게시글 이동 + 퇴장 투표. 둘 다 모임방에서만 노출. */}
         {postId && (onGoToPost || onVoteKick) && (
