@@ -887,7 +887,7 @@ export function BoardWriteScreen() {
                     <button
                       type="button"
                       aria-label="인원 추가"
-                      onClick={() => setPeopleCount((n) => (n ?? 0) + 1)}
+                      onClick={() => setPeopleCount((n) => (n ?? 1) + 1)}
                       className="flex h-7 w-7 items-center justify-center rounded-full border border-holo-lilac-soft text-[16px] leading-none text-holo-purple-mid"
                     >
                       +

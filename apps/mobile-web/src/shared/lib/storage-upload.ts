@@ -24,7 +24,7 @@ export async function uploadPhotoToStorage(
   for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
   const blob = new Blob([arr], { type: mime });
 
-  const filePath = `${folder}/${Date.now()}.${ext}`;
+  const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage
     .from("post-photos")
     .upload(filePath, blob, { contentType: mime, upsert: false });

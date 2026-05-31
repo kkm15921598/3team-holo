@@ -99,6 +99,10 @@ export function NeighborhoodFindScreen() {
   // '실제' 값을 조회해 사용한다(이전엔 닉네임 해시로 관심사·나이·성별을 지어냈다). 나이 정보는
   // 신뢰 가능한 출처가 없어 더 이상 표시/필터하지 않는다. 마운트 시 1회 계산해 고정.
   const [top3, setTop3] = useState<Neighbor[]>([]);
+  // 게시글 로드(비동기 Supabase)가 끝나기 전에 진입하면 후보가 0이라 추천이 영구히 비던 문제 →
+  // postsStore 변화를 구독해 글이 채워지면 추천을 다시 계산한다.
+  const [postsTick, setPostsTick] = useState(0);
+  useEffect(() => postsStore.subscribe(() => setPostsTick((t) => t + 1)), []);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -152,9 +156,9 @@ export function NeighborhoodFindScreen() {
     return () => {
       cancelled = true;
     };
-    // 마운트 시 1회 — profile.nickname/myInterests 의 mount 시점 값 사용.
+    // posts 로드/변경 시 재계산(postsTick). profile.nickname/myInterests 는 그 시점 값 사용.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [postsTick]);
 
   /** 라이브 상태 — 친구/요청중 인지 닉네임 셋. 버튼 라벨 결정에 사용. */
   const friendSet = useMemo(
