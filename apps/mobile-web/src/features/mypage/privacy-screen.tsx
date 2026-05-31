@@ -7,51 +7,51 @@ export function PrivacyScreen() {
   const { shareLocation, allowFriendRequest, marketing } = usePrivacy();
 
   return (
-    <main className="flex flex-1 flex-col">
-      <header className="flex h-12 shrink-0 items-center px-4">
+    <main className="flex flex-1 flex-col bg-white pb-6">
+      <header className="flex h-12 shrink-0 items-center border-b border-holo-line-3 px-4">
         <button type="button" aria-label="뒤로" onClick={() => navigate(-1)}>
           <BackIcon />
         </button>
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">개인정보</span>
       </header>
 
-      <section className="px-4 pt-2">
-        <p className="text-[12px] text-holo-ink-3">공개 설정</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <ToggleRow
-            label="위치 정보 공유"
-            hint="동네 인증·지도에서 활용돼요"
-            value={shareLocation}
-            onChange={(v) => privacyStore.set("shareLocation", v)}
-          />
-          <ToggleRow
-            label="친구 요청 허용"
-            value={allowFriendRequest}
-            onChange={(v) => privacyStore.set("allowFriendRequest", v)}
-          />
-        </ul>
-      </section>
+      {/* 공개 설정 */}
+      <p className="px-4 pb-1 pt-4 text-[13px] font-medium text-holo-ink-3">공개 설정</p>
+      <ul className="flex flex-col divide-y divide-holo-line-3">
+        <ToggleRow
+          label="위치 정보 공유"
+          hint="동네 인증·지도에서 활용돼요"
+          value={shareLocation}
+          onChange={(v) => privacyStore.set("shareLocation", v)}
+        />
+        <ToggleRow
+          label="친구 요청 허용"
+          value={allowFriendRequest}
+          onChange={(v) => privacyStore.set("allowFriendRequest", v)}
+        />
+      </ul>
 
-      <section className="mt-4 px-4">
-        <p className="text-[12px] text-holo-ink-3">광고 / 마케팅</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <ToggleRow
-            label="맞춤 광고 수신"
-            hint="관심사 기반의 추천을 받아요"
-            value={marketing}
-            onChange={(v) => privacyStore.set("marketing", v)}
-          />
-        </ul>
-      </section>
+      <div className="h-2 shrink-0 bg-holo-surface-2" />
 
-      <section className="mt-4 px-4">
-        <p className="text-[12px] text-holo-ink-3">정책 및 데이터</p>
-        <ul className="mt-2 flex flex-col divide-y divide-holo-line-3 rounded-holo-input bg-white shadow-holo-card">
-          <LinkRow label="개인정보 처리방침" onClick={() => navigate("/mypage/privacy/policy")} />
-          <LinkRow label="서비스 이용약관" onClick={() => navigate("/mypage/privacy/terms")} />
-        </ul>
-      </section>
+      {/* 광고 / 마케팅 */}
+      <p className="px-4 pb-1 pt-4 text-[13px] font-medium text-holo-ink-3">광고 / 마케팅</p>
+      <ul className="flex flex-col divide-y divide-holo-line-3">
+        <ToggleRow
+          label="맞춤 광고 수신"
+          hint="관심사 기반의 추천을 받아요"
+          value={marketing}
+          onChange={(v) => privacyStore.set("marketing", v)}
+        />
+      </ul>
 
+      <div className="h-2 shrink-0 bg-holo-surface-2" />
+
+      {/* 정책 및 데이터 */}
+      <p className="px-4 pb-1 pt-4 text-[13px] font-medium text-holo-ink-3">정책 및 데이터</p>
+      <ul className="flex flex-col divide-y divide-holo-line-3">
+        <LinkRow label="개인정보 처리방침" onClick={() => navigate("/mypage/privacy/policy")} />
+        <LinkRow label="서비스 이용약관" onClick={() => navigate("/mypage/privacy/terms")} />
+      </ul>
     </main>
   );
 }
@@ -68,10 +68,10 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <li className="flex items-center justify-between px-4 py-3">
+    <li className="flex min-h-[56px] items-center justify-between px-4 py-2">
       <div className="flex flex-col">
-        <span className="text-[14px] text-holo-ink">{label}</span>
-        {hint && <span className="text-[12px] text-holo-ink-3">{hint}</span>}
+        <span className="text-[15px] text-holo-ink">{label}</span>
+        {hint && <span className="mt-0.5 text-[12px] text-holo-ink-3">{hint}</span>}
       </div>
       <Toggle value={value} onChange={onChange} />
     </li>
@@ -84,7 +84,7 @@ function LinkRow({ label, onClick }: { label: string; onClick: () => void }) {
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-center justify-between px-4 py-3 text-left text-[14px] text-holo-ink"
+        className="flex min-h-[56px] w-full items-center justify-between px-4 text-left text-[15px] text-holo-ink active:bg-holo-surface-2"
       >
         <span>{label}</span>
         <ChevronRightIcon />
