@@ -279,6 +279,21 @@ export async function syncVerificationFromSupabase(): Promise<void> {
   // "백업 라벨 존재 = 과거에 인증함" 으로 본다.
   const backupRegion = getVerifiedRegionForPhone(userPhone);
 
+  // ★ 서버 응답을 기다리지 않고 '먼저' 동기 복원한다. 로그인 시 resetVerification 으로
+  // 비워진 직후 이 sync 가 호출되는데, 비동기 서버 읽기(또는 region 컬럼 미존재로 실패)에
+  // 의존하면 그 사이 마이페이지가 "동네를 인증해주세요" 로 잠깐(또는 계속) 떴다.
+  // 백업이 있으면 즉시 인증 상태를 되살려 다시 인증하라고 뜨지 않게 한다.
+  if (backupRegion && (!_state.verifiedRegion || !_state.regionVerified)) {
+    _state = {
+      ..._state,
+      verifiedRegion: _state.verifiedRegion ?? backupRegion,
+      regionVerified: true,
+      lastRegionVerifiedAt: _state.lastRegionVerifiedAt ?? Date.now(),
+    };
+    persist();
+    notify();
+  }
+
   const { data, error } = await supabase
     .from("users")
     .select("phone_verified, region_verified, verified_region, last_region_verified_at")
