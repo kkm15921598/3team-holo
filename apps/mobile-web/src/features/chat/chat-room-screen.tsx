@@ -2648,7 +2648,7 @@ function AttachItem({
       onClick={onClick}
       className="flex flex-col items-center gap-1"
     >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-holo-ink shadow-sm">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-holo-purple shadow-sm">
         {icon}
       </span>
       <span className="text-[11px] text-holo-ink-2">{label}</span>
