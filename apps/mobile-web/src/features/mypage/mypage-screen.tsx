@@ -126,10 +126,10 @@ export function MypageScreen() {
         {/* 설정 리스트 — 넉넉한 터치영역(행 54px)+탭 피드백. 항목 사이 구분선은 빼서
             제목 아래 선(hr)만 남긴다 — 항목마다 선을 넣으면 제목/항목 구분이 안 돼 혼란. */}
         <ul className="mt-1 flex flex-col text-[15px] text-holo-ink">
-          <SettingItem icon="👤" label="계정관리" desc="로그인·비밀번호·전화번호" to="/mypage/account" />
-          <SettingItem icon="🔒" label="개인정보" desc="위치공유·친구요청·약관" to="/mypage/privacy" />
-          <SettingItem icon="🔔" label="알림설정" desc="푸시·방해금지 시간" to="/mypage/notifications" />
-          <SettingItem icon="💬" label="고객센터" desc="공지·이벤트·문의" to="/mypage/support" />
+          <SettingItem icon={<AccountIcon />} label="계정관리" desc="로그인·비밀번호·전화번호" to="/mypage/account" />
+          <SettingItem icon={<PrivacyIcon />} label="개인정보" desc="위치공유·친구요청·약관" to="/mypage/privacy" />
+          <SettingItem icon={<BellIcon />} label="알림설정" desc="푸시·방해금지 시간" to="/mypage/notifications" />
+          <SettingItem icon={<SupportIcon />} label="고객센터" desc="공지·이벤트·문의" to="/mypage/support" />
         </ul>
 
         {/* 로그아웃 — 화면 이동이 아니라 '나가기' 동작이라 리스트에서 분리(대기업 스타일).
@@ -169,19 +169,20 @@ function SettingItem({
   desc,
   to,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   desc: string;
   to: string;
 }) {
   // 고객센터 허브와 동일한 스타일로 통일 — 아이콘 원 + 라벨 + 설명 + 화살표.
+  // 아이콘은 구글(Material) 라인 스타일 SVG, 라일락 원 위에 보라색 선.
   return (
     <li>
       <Link
         to={to}
         className="-mx-1 flex min-h-[60px] w-full items-center gap-3 rounded-[12px] px-1 text-left active:bg-holo-surface-2"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-holo-lilac-card-2 text-[18px]">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-holo-lilac-card-2 text-holo-purple-mid">
           {icon}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -197,6 +198,47 @@ function ChevronRightIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+// ── 설정 항목 아이콘 — 구글(Material) 라인 스타일. stroke=currentColor 로 부모(보라)색 상속.
+function AccountIcon() {
+  // person — 계정관리
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.314 3.582-6 8-6s8 2.686 8 6" />
+    </svg>
+  );
+}
+function PrivacyIcon() {
+  // lock — 개인정보
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="4" y="10" width="16" height="11" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      <circle cx="12" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function BellIcon() {
+  // notifications — 알림설정
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+function SupportIcon() {
+  // support_agent (headset) — 고객센터
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 13v-1a8 8 0 0 1 16 0v1" />
+      <rect x="2.5" y="13" width="4" height="6" rx="1.5" />
+      <rect x="17.5" y="13" width="4" height="6" rx="1.5" />
+      <path d="M20 19a4 4 0 0 1-4 3h-2" />
     </svg>
   );
 }
