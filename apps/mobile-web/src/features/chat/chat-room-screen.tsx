@@ -1570,12 +1570,12 @@ export function ChatRoomScreen() {
         {/* 첨부 패널 */}
         {showAttach && (
           <div className="grid grid-cols-4 gap-3 border-t border-holo-line-3 bg-holo-surface-2 px-4 py-3">
-            <AttachItem icon="📷" label="카메라" onClick={() => onAttachPick("camera")} />
-            <AttachItem icon="🖼️" label="앨범" onClick={() => onAttachPick("image")} />
-            <AttachItem icon="📎" label="파일" onClick={() => onAttachPick("file")} />
-            <AttachItem icon="📍" label="위치" onClick={() => onAttachPick("location")} />
-            <AttachItem icon="🎰" label="룰렛" onClick={() => onAttachPick("roulette")} />
-            <AttachItem icon="⚖️" label="밸런스" onClick={() => onAttachPick("balance")} />
+            <AttachItem icon={<AttachIcon kind="camera" />} label="카메라" onClick={() => onAttachPick("camera")} />
+            <AttachItem icon={<AttachIcon kind="album" />} label="앨범" onClick={() => onAttachPick("image")} />
+            <AttachItem icon={<AttachIcon kind="file" />} label="파일" onClick={() => onAttachPick("file")} />
+            <AttachItem icon={<AttachIcon kind="location" />} label="위치" onClick={() => onAttachPick("location")} />
+            <AttachItem icon={<AttachIcon kind="roulette" />} label="룰렛" onClick={() => onAttachPick("roulette")} />
+            <AttachItem icon={<AttachIcon kind="balance" />} label="밸런스" onClick={() => onAttachPick("balance")} />
           </div>
         )}
 
@@ -2638,7 +2638,7 @@ function AttachItem({
   label,
   onClick,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   onClick: () => void;
 }) {
@@ -2648,12 +2648,74 @@ function AttachItem({
       onClick={onClick}
       className="flex flex-col items-center gap-1"
     >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[22px] shadow-sm">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-holo-ink shadow-sm">
         {icon}
       </span>
       <span className="text-[11px] text-holo-ink-2">{label}</span>
     </button>
   );
+}
+
+/** 채팅 첨부 메뉴 — 구글 머티리얼 라인 아이콘 스타일(24px, 외곽선). */
+function AttachIcon({ kind }: { kind: "camera" | "album" | "file" | "location" | "roulette" | "balance" }) {
+  const common = {
+    width: 24,
+    height: 24,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  switch (kind) {
+    case "camera":
+      return (
+        <svg {...common}>
+          <path d="M9 4.5l-1.2 2H4.5A1.5 1.5 0 0 0 3 8v10.5A1.5 1.5 0 0 0 4.5 20h15a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5h-3.3L15 4.5z" />
+          <circle cx="12" cy="13" r="3.4" />
+        </svg>
+      );
+    case "album":
+      return (
+        <svg {...common}>
+          <rect x="3" y="3" width="18" height="18" rx="2.4" />
+          <circle cx="8.5" cy="8.5" r="1.6" />
+          <path d="M21 14.5l-4.5-4.5L5 21.5" />
+        </svg>
+      );
+    case "file":
+      return (
+        <svg {...common}>
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <path d="M14 3v5h5" />
+        </svg>
+      );
+    case "location":
+      return (
+        <svg {...common}>
+          <path d="M12 21s-6.5-5.1-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.9 12 21 12 21z" />
+          <circle cx="12" cy="10.5" r="2.4" />
+        </svg>
+      );
+    case "roulette":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="1.6" />
+          <path d="M12 3.5v3.2M12 17.3v3.2M3.5 12h3.2M17.3 12h3.2M6 6l2.3 2.3M15.7 15.7L18 18M18 6l-2.3 2.3M8.3 15.7L6 18" />
+        </svg>
+      );
+    case "balance":
+      return (
+        <svg {...common}>
+          <path d="M12 3.5v17M5 7h14M8 21h8" />
+          <path d="M5 7l-2.6 5.2a2.6 2.6 0 0 0 5.2 0z" />
+          <path d="M19 7l2.6 5.2a2.6 2.6 0 0 1-5.2 0z" />
+        </svg>
+      );
+  }
 }
 
 /** 채팅 미니게임 공통 오버레이 */
