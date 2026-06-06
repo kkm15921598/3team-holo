@@ -4,7 +4,7 @@ import { type Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { MapView } from "./post-map";
 import { getAvatarUrl } from "@/features/chat/avatars";
-import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
+import { calcJoined, deriveMeetupMembers, isMeetupEnded } from "@/features/board/meetup-utils";
 import { useProfile } from "@/shared/hooks/use-profile";
 import { isMyNickname } from "@/shared/stores/profile-store";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
@@ -94,6 +94,9 @@ function filterPosts(
   blocked: Set<string>,
 ): Post[] {
   let list = allPosts.filter((p) => !!p.location);
+  // 일정이 지난(종료된) 모임은 지도 핀/카드에서 제외 — 지도는 '지금 참여 가능한 모임'을
+  // 찾는 발견 화면이라, 종료된 모임이 활성 핀처럼 떠 있으면 안 된다(카드엔 상태 표시도 없음).
+  list = list.filter((p) => !isMeetupEnded(p));
   // 차단한 작성자의 모임은 핀/카드에서 제외 — 게시판 목록과 동일 기준.
   if (blocked.size > 0) list = list.filter((p) => !blocked.has(p.authorNickname));
   // GPS 있을 때만 거리 필터링 — 아직 fix 가 없으면 전체 표시
