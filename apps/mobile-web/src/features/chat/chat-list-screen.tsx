@@ -15,12 +15,40 @@ import { getAvatarUrl } from "./avatars";
 import { GroupAvatar } from "./group-avatar";
 import { dmRoomIdFor, lookupPhoneByNickname } from "./dm-utils";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
+import { postsStore } from "@/features/board/posts-store";
+import { calcJoined } from "@/features/board/meetup-utils";
 
 type Filter = "all" | "unread" | "groups" | "meetings";
+
+/**
+ * 그룹/모임 방 리스트에 표시할 인원수.
+ * 리스트는 그동안 방 생성 시점에 굳은 room.memberCount 만 보여줘서, 이후 참여자가 들어와도
+ * '혼자(1)'로 남는 문제가 있었다(방 화면은 게시글 기준으로 다시 계산해 정상 표시).
+ * 가능한 모든 신호의 최댓값으로 과소표시를 막는다 — 방 화면(buildMembersFor)과 같은 기준:
+ *  - room.memberCount (저장값)
+ *  - (room.memberNames 길이 + 1[나]) — 채팅방이 아는 실제 멤버(타기기 동기화 반영)
+ *  - 모임방이면 게시글 calcJoined(참여자 명단) — 정원으로 클램프
+ */
+function roomDisplayCount(room: ChatRoom): number {
+  let count = Math.max(room.memberCount ?? 0, (room.memberNames?.length ?? 0) + 1);
+  if (room.id.startsWith("meetup-")) {
+    const post = postsStore
+      .getPosts()
+      .find((p) => p.id === room.id.slice("meetup-".length));
+    if (post) {
+      const { capacity, baseJoined } = calcJoined(post);
+      count = Math.min(capacity, Math.max(count, Math.min(capacity, baseJoined)));
+    }
+  }
+  return count;
+}
 
 export function ChatListScreen() {
   const navigate = useNavigate();
   const allRooms = useRooms();
+  // 게시글 참여자(participants)가 바뀌면 모임방 인원수 표시도 갱신되도록 재렌더 트리거.
+  const [, bumpPosts] = useState(0);
+  useEffect(() => postsStore.subscribe(() => bumpPosts((v) => v + 1)), []);
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   // 필터 상태를 URL 의 ?tab= 으로 동기화 — 채팅방 들어갔다 뒤로가도 마지막 탭 복원
@@ -647,7 +675,7 @@ function RoomRow({
             </span>
             {room.isGroup && (
               <span className="shrink-0 text-[12px] text-holo-ink-3">
-                {room.memberCount}
+                {roomDisplayCount(room)}
               </span>
             )}
             {room.muted && <MuteIcon />}
