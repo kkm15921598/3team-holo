@@ -12,6 +12,7 @@ import { useVerification, syncVerificationFromSupabase } from "@/shared/stores/v
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { clearCurrentAccount } from "@/shared/stores/account-choices-store";
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
+import { logoutAuth } from "@/shared/lib/auth";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -162,6 +163,7 @@ export function MypageScreen() {
           // 로그아웃 시 사용자별 store 를 비우고 계정 포인터를 끊는다 — 안 하면 다음 로그인
           // 전까지 이전 계정 데이터(프로필/친구/포인트/알림 등)가 메모리에 남아 누설된다.
           // (탈퇴 흐름 account-screen 과 동일 패턴: 계정 포인터 먼저 비운 뒤 리셋)
+          void logoutAuth(); // Supabase Auth 세션 종료 — 안 하면 RLS 권한이 남는다
           clearCurrentAccount();
           resetUserStoresForLogin();
           setShowLogout(false);

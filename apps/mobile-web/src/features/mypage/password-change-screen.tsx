@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { phoneToEmail } from "@/shared/lib/auth";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/;
 
@@ -34,30 +35,22 @@ export function PasswordChangeScreen() {
     setSubmitting(true);
     setError("");
 
-    // 1) 현재 비밀번호가 실제 DB 값과 일치하는지 확인.
-    //    (이전엔 입력만 받고 검증·저장을 전혀 안 해서 비밀번호 변경이 동작하지 않았음)
-    const { data: user, error: fetchError } = await supabase
-      .from("users")
-      .select("password")
-      .eq("phone", phone)
-      .single();
+    // 1) 현재 비밀번호 확인 — Auth 재로그인으로 검증 (평문 비교 제거).
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: phoneToEmail(phone),
+      password: current,
+    });
 
-    if (fetchError || !user) {
-      setSubmitting(false);
-      setError("계정 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
-      return;
-    }
-    if (user.password !== current) {
+    if (verifyError) {
       setSubmitting(false);
       setError("현재 비밀번호가 올바르지 않아요.");
       return;
     }
 
-    // 2) 새 비밀번호를 Supabase 에 저장.
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ password: next })
-      .eq("phone", phone);
+    // 2) 새 비밀번호로 변경 — Auth 가 해시로 안전하게 저장.
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: next,
+    });
 
     if (updateError) {
       setSubmitting(false);

@@ -17,6 +17,7 @@ import { setCurrentAccount, clearCurrentAccount } from "@/shared/stores/account-
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { loginWithPhone } from "@/shared/lib/auth";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
 const formatPhone = (raw: string) => {
@@ -92,23 +93,39 @@ export function LoginScreen() {
 
     setSubmitting(true);
     try {
-    // 1) Supabase DB에서 실제 가입 계정 확인.
-    //    maybeSingle: 0건이면 data=null(정상), 실제 오류(네트워크/RLS/중복행)는 error 로 구분.
-    //    (이전엔 .single() + error 무시라 모든 실패가 '미가입'으로 잘못 안내됐음)
+    // 1) Supabase Auth 로그인 (휴대폰 번호 → 가상 이메일).
+    //    구(자체 users 테이블 평문 비교) 계정은 loginWithPhone 안에서 첫 로그인 때
+    //    자동으로 Auth 계정으로 이전·연결된다. 이후 RLS 가 이 세션을 기준으로 동작.
+    const result = await loginWithPhone(phone, password);
+
+    if (!result.ok) {
+      if (result.reason === "no_account") {
+        setPhoneError(true);
+        setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
+      } else if (result.reason === "wrong_password") {
+        setPasswordError(true);
+        setPasswordErrorMessage("비밀번호가 올바르지 않습니다.");
+      } else {
+        setPhoneError(true);
+        setPhoneErrorMessage("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      }
+      return;
+    }
+
+    // 2) 로그인된 세션(RLS 통과)으로 내 프로필 row 조회.
     const { data: dbUser, error: loginError } = await supabase
       .from("users")
       .select("*")
       .eq("phone", phone)
-      .eq("password", password)
       .maybeSingle();
 
-    if (loginError) {
+    if (loginError || !dbUser) {
       setPhoneError(true);
       setPhoneErrorMessage("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
       return;
     }
 
-    if (dbUser) {
+    {
       // Supabase 계정으로 로그인 성공
       // 1) 현재 계정 포인터를 먼저 비운다. ★중요★
       //    각 store 의 setter/reset 은 getCurrentAccount() 가 있으면 그 phone 의 Supabase
@@ -150,10 +167,6 @@ export function LoginScreen() {
       navigate("/home", { replace: true });
       return;
     }
-
-    // Supabase에 없으면 미가입 번호
-    setPhoneError(true);
-    setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
     } catch {
       setPhoneError(true);
       setPhoneErrorMessage("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");

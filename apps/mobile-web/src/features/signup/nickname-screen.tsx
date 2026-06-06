@@ -288,21 +288,20 @@ export function NicknameScreen() {
       return;
     }
 
-    // 2) Supabase에서 실제 중복 여부 조회
+    // 2) Supabase에서 실제 중복 여부 조회 (RLS 적용 후 anon 은 직접 조회 불가 → RPC)
     setChecking(true);
     try {
-      const { data: rows, error } = await supabase
-        .from("users")
-        .select("nickname")
-        .eq("nickname", trimmed)
-        .limit(1);
+      const { data: exists, error } = await supabase.rpc(
+        "check_nickname_exists",
+        { p_nickname: trimmed },
+      );
 
       if (error) {
         // 네트워크 오류 등 — 일단 통과시키고 가입 단계에서 재확인
         console.warn("닉네임 중복 확인 실패:", error.message);
         setTaken(false);
         setChecked(true);
-      } else if (rows && rows.length > 0) {
+      } else if (exists) {
         setTaken(true);
         setChecked(false);
       } else {

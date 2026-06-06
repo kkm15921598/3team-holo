@@ -128,11 +128,11 @@ export function VerificationScreen() {
       // 이미 가입된 번호인지 먼저 확인 — 중복 가입을 가입 초반에 차단.
       // (이전엔 검사가 없어 마지막 review-screen insert 의 23505 alert 까지 가서야 막혔고,
       //  구현돼 있던 AlreadyJoinedModal 은 호출처가 없어 절대 안 뜨는 dead UI 였다.)
-      const { data: existing, error } = await supabase
-        .from("users")
-        .select("phone")
-        .eq("phone", phone)
-        .maybeSingle();
+      // RLS 적용 후 anon 은 users 직접 조회 불가 → 전용 RPC 로 확인.
+      const { data: existing, error } = await supabase.rpc(
+        "check_phone_exists",
+        { p_phone: phone },
+      );
       if (error) {
         setVerifyError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
         return;

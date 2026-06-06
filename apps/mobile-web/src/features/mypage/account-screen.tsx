@@ -156,17 +156,14 @@ export function AccountScreen() {
           const phone = getCurrentPhone();
           if (phone) {
             try {
-              await supabase.from("posts").update({ is_deleted: true }).eq("author_phone", phone);
+              // 서버 RPC 가 본인 글 soft-delete + 친구/계정 row + Auth 계정까지 일괄 삭제.
+              // (RLS 적용 후 클라이언트에서 직접 지우는 것보다 안전·완전)
+              await supabase.rpc("delete_my_account");
             } catch {
-              // ignore
+              // ignore — best-effort
             }
             try {
-              await supabase.from("friends").delete().eq("user_phone", phone);
-            } catch {
-              // ignore
-            }
-            try {
-              await supabase.from("users").delete().eq("phone", phone);
+              await supabase.auth.signOut();
             } catch {
               // ignore
             }

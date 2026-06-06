@@ -65,13 +65,11 @@ export function FindPasswordScreen() {
 
     if (!codeSent) {
       if (!baseFilled) return;
-      // Supabase에서 이름+번호 일치 여부 확인
-      const { data: dbUser, error } = await supabase
-        .from("users")
-        .select("phone")
-        .eq("name", name.trim())
-        .eq("phone", phone)
-        .maybeSingle();
+      // 이름+번호 일치 여부 확인 (RLS 적용 후 anon 직접 조회 불가 → RPC)
+      const { data: dbUser, error } = await supabase.rpc("verify_identity", {
+        p_name: name.trim(),
+        p_phone: phone,
+      });
 
       // 네트워크/RLS 오류를 '계정 없음'과 구분 — 안 그러면 일시 오류인데도
       // "계정을 찾을 수 없습니다"가 떠서 사용자가 계정이 없는 줄 오해한다.
@@ -130,21 +128,18 @@ export function FindPasswordScreen() {
       return;
     }
 
-    // Supabase users 테이블 비밀번호 실제 업데이트.
-    // .select() 로 실제 갱신된 행을 돌려받아 검증 — 이전엔 error/행수 확인 없이
-    // 무조건 'done' 으로 넘어가 실패해도 성공 화면이 떴다.
-    const { data: updated, error } = await supabase
-      .from("users")
-      .update({ password: newPw })
-      .eq("name", name.trim())
-      .eq("phone", phone)
-      .select("phone");
+    // 비밀번호 재설정 — 서버 RPC 가 본인확인(이름+번호) 후 Auth 비밀번호(해시)를 갱신.
+    // 아직 Auth 미이전(구) 계정이면 users.password 를 갱신해 다음 로그인 때 자동 이전.
+    const { data: updated, error } = await supabase.rpc(
+      "reset_password_by_identity",
+      { p_name: name.trim(), p_phone: phone, p_new_password: newPw },
+    );
 
     if (error) {
       setPwError("비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
       return;
     }
-    if (!updated || updated.length === 0) {
+    if (!updated) {
       setPwError("일치하는 계정을 찾지 못했어요. 이름과 휴대폰 번호를 확인해주세요.");
       return;
     }
