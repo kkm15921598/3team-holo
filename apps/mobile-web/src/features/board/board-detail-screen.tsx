@@ -11,6 +11,7 @@ import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import {
   calcJoined,
   ensureMeetupRoom,
+  isMeetupEnded,
   isMeetupPost,
   meetupRoomId,
 } from "./meetup-utils";
@@ -179,15 +180,11 @@ export function BoardDetailScreen() {
   }, [post.eventDate, post.endDate, post.eventTime, post.meetupType]);
 
   // 모임 종료 여부 — 일정(장기성=종료일 / 단기성=시작일)이 지났으면 true.
-  // 그 날의 끝(23:59:59)까지는 유효로 본다. 일정 미정(eventDate 없음)은 종료 아님.
-  const isExpired = useMemo(() => {
-    if (!post.eventDate) return false;
-    const isLongTerm = post.meetupType === "장기성 모임";
-    const lastDateStr = isLongTerm ? (post.endDate ?? post.eventDate) : post.eventDate;
-    const last = new Date(`${lastDateStr}T23:59:59`);
-    if (Number.isNaN(last.getTime())) return false;
-    return Date.now() > last.getTime();
-  }, [post.eventDate, post.endDate, post.meetupType]);
+  // 홈 추천·내 모임 화면과 동일한 단일 출처(isMeetupEnded)로 판정한다.
+  const isExpired = useMemo(
+    () => isMeetupEnded(post),
+    [post.eventDate, post.endDate, post.meetupType],
+  );
 
   const { capacity, baseJoined } = calcJoined(post);
 

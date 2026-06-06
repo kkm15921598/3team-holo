@@ -3,26 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { Post } from "@/shared/mock/data";
 import { postsStore } from "@/features/board/posts-store";
 import { useJoinedSet } from "@/shared/stores/joined-store";
-import { calcJoined } from "@/features/board/meetup-utils";
-
-/**
- * 모임이 이미 끝났는지 판정.
- * - eventDate("YYYY-MM-DD") 가 있고 오늘보다 과거이면 끝남.
- * - eventDate 가 없거나(상시), 오늘이거나 미래면 진행중.
- *
- * 비교는 시·분 노이즈를 없애려고 양쪽 모두 자정(local) 으로 정규화한 뒤 비교한다.
- * 잘못된 포맷이면 안전하게 "진행중" 으로 폴백 (사용자가 끝난 모임으로 오인하지 않게).
- */
-function isMeetingEnded(eventDate: string | undefined): boolean {
-  if (!eventDate) return false;
-  const m = eventDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return false;
-  const event = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  if (Number.isNaN(event.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return event.getTime() < today.getTime();
-}
+import { calcJoined, isMeetupEnded } from "@/features/board/meetup-utils";
 
 export function MyMeetingsScreen() {
   const navigate = useNavigate();
@@ -38,8 +19,8 @@ export function MyMeetingsScreen() {
   const myMeetings = useMemo(() => {
     const list = allPosts.filter((p) => joinedSet.has(p.id));
     return list.sort((a, b) => {
-      const aEnded = isMeetingEnded(a.eventDate);
-      const bEnded = isMeetingEnded(b.eventDate);
+      const aEnded = isMeetupEnded(a);
+      const bEnded = isMeetupEnded(b);
       if (aEnded === bEnded) return 0;
       return aEnded ? 1 : -1;
     });
@@ -64,7 +45,7 @@ export function MyMeetingsScreen() {
           </div>
         ) : (
           myMeetings.map((post) => {
-            const ended = isMeetingEnded(post.eventDate);
+            const ended = isMeetupEnded(post);
             return (
               <Link
                 key={post.id}

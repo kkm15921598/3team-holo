@@ -2,7 +2,7 @@ import type { Meetup } from "./home-meetup-card";
 import type { Persona } from "./home-faces";
 import type { Post } from "@/shared/mock/data";
 import { getAvatarUrl } from "@/features/chat/avatars";
-import { calcJoined, deriveMeetupMembers } from "@/features/board/meetup-utils";
+import { calcJoined, deriveMeetupMembers, isMeetupEnded } from "@/features/board/meetup-utils";
 import { distanceMeters, type GeoPosition } from "@/shared/hooks/use-geolocation";
 import { getBlockedNicknames } from "@/shared/stores/blocked-nicknames-store";
 import { getProfile } from "@/shared/stores/profile-store";
@@ -82,6 +82,9 @@ export function pickMeetupsFromPosts(
     .filter(
       (p) =>
         p.status !== "모집완료" &&
+        // 일정이 지난(종료된) 모임은 추천에서 제외 — '근처 추천 모임'은 다가오는 모임만.
+        // (이전엔 종료 필터가 없어 날짜가 지난 모임도 활성처럼 홈 카드로 떴다.)
+        !isMeetupEnded(p) &&
         !excludeIds.has(p.id) &&
         !blocked.has(p.authorNickname) &&
         (!userPos || !p.location || distanceMeters(userPos, p.location) <= radiusM),

@@ -38,6 +38,27 @@ export function isMeetupPost(post: Post): boolean {
 }
 
 /**
+ * 모임이 이미 끝났는지 판정 — 홈 추천 / 게시글 상세 / 내 모임 화면이 모두
+ * 동일한 규칙을 쓰도록 단일 출처로 모았다.
+ *
+ * 규칙:
+ *  - 단기성 모임: eventDate(시작일)가 마지막 날.
+ *  - 장기성 모임: endDate 가 있으면 그 날이 마지막 날(없으면 eventDate).
+ *    → 한 달짜리 모임이 '시작 다음날' 종료로 잘못 표시되던 문제 방지.
+ *  - 그 날의 끝(23:59:59 local)까지는 유효(진행중)로 본다.
+ *  - 일정 미정(eventDate 없음)·형식 오류면 안전하게 "진행중"(false) 으로 폴백
+ *    — 사용자가 멀쩡한 모임을 끝난 것으로 오인하지 않게.
+ */
+export function isMeetupEnded(post: Post): boolean {
+  if (!post.eventDate) return false;
+  const isLongTerm = post.meetupType === "장기성 모임";
+  const lastDateStr = isLongTerm ? (post.endDate ?? post.eventDate) : post.eventDate;
+  const last = new Date(`${lastDateStr}T23:59:59`);
+  if (Number.isNaN(last.getTime())) return false;
+  return Date.now() > last.getTime();
+}
+
+/**
  * 게시글의 정원/현재 참여 인원 계산 — 홈 카드 / 맵 카드 / 게시글 UI / 채팅방이
  * 동일한 인원수를 쓰도록 단일 출처로 사용된다.
  * - capacity: post.peopleCount, 없으면 5.
