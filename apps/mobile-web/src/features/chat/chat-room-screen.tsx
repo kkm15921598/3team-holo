@@ -927,10 +927,25 @@ export function ChatRoomScreen() {
     return room.name;
   }, [room]);
 
-  // 표시 인원수 — 이름을 아는 멤버(members)보다 방에 저장된 실제 인원수(room.memberCount)가
-  // 클 수 있다. 모임방은 참여자 닉네임이 저장되지 않아(익명) members 가 '나+방장'만 잡혀
-  // 실제 2명인데 1명으로 표시되던 문제 → 둘 중 큰 값을 쓴다(인원수 과소표시 방지).
-  const displayMemberCount = Math.max(members.length, room?.memberCount ?? 0);
+  // 모임방 인원수는 게시글(calcJoined)이 단일 출처 — 저장된 room.memberCount 는 옛 +1 버그로
+  // 부풀려졌을 수 있어(혼자인데 2명), 게시글이 있으면 항상 거기서 다시 계산해 게시판/홈/내모임과
+  // 일치시킨다. (이미 저장돼버린 방도 진입 시 자동으로 올바른 값으로 표시되어 자가치유)
+  const meetupMemberCount = useMemo(() => {
+    const rid = room?.id;
+    if (!rid || !rid.startsWith("meetup-")) return null;
+    const post = postsStore
+      .getPosts()
+      .find((p) => p.id === rid.slice("meetup-".length));
+    if (!post) return null;
+    const { capacity, baseJoined } = calcJoined(post);
+    return Math.min(capacity, baseJoined);
+  }, [room?.id]);
+  // 표시 인원수 — 이름을 아는 멤버(members)보다 적게 나오지 않도록 max 로 과소표시를 막되,
+  // 모임방은 게시글 기준(meetupMemberCount)을 우선해 +1 부풀림을 제거한다.
+  const displayMemberCount =
+    meetupMemberCount != null
+      ? Math.max(members.length, meetupMemberCount)
+      : Math.max(members.length, room?.memberCount ?? 0);
   // 읽음수 계산(로드/실시간 effect)이 참조할 최신 멤버수 동기화.
   latestMemberCountRef.current = displayMemberCount;
   // 실시간 effect 의 stale 클로저 방지용으로 최신 멤버 리스트를 ref 에 보관.

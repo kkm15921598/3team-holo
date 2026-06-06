@@ -327,7 +327,8 @@ export async function syncRoomsFromSupabase(): Promise<void> {
       if (post) {
         // 게시글 상세/카드와 동일한 calcJoined 단일 출처로 인원수를 맞춘다(연동).
         const { capacity, baseJoined } = calcJoined(post);
-        const targetTotal = Math.min(capacity, baseJoined + 1);
+        // baseJoined(calcJoined)는 이미 나/방장을 포함한 실제 인원 — +1 하면 이중 계산(혼자인데 2명).
+        const targetTotal = Math.min(capacity, baseJoined);
         memberNames = deriveMeetupMembers(post, Math.max(0, targetTotal - 1));
         // 게시판 calcJoined 와 동일한 실제 총원으로 통일(닉네임 개수로 세면 늘 2명 고정).
         memberCount = targetTotal;
@@ -499,27 +500,34 @@ function reconcileMeetupRoomsFromPosts() {
   if (posts.length === 0) return;
   let changed = false;
   const next = rooms.map((r) => {
-    if (!r.id.startsWith("meetup-") || r.meeting !== undefined) return r;
+    if (!r.id.startsWith("meetup-")) return r;
     const post = posts.find((p) => p.id === r.id.slice("meetup-".length));
     if (!post) return r;
     const { capacity, baseJoined } = calcJoined(post);
-    const targetTotal = Math.min(capacity, baseJoined + 1);
-    const memberNames = deriveMeetupMembers(post, Math.max(0, targetTotal - 1));
+    // baseJoined(calcJoined)는 이미 나/방장을 포함한 실제 인원 — +1 하면 이중 계산(혼자인데 2명).
+    const targetTotal = Math.min(capacity, baseJoined);
+    const needMeeting = r.meeting === undefined;
+    // 옛 +1 버그로 저장된 memberCount(부풀림)도 게시글 기준으로 자가치유한다.
+    const needCount = r.memberCount !== targetTotal;
+    if (!needMeeting && !needCount) return r; // 바뀔 게 없으면 그대로(불필요한 churn 방지)
     changed = true;
-    return {
-      ...r,
-      name: post.title,
-      hostNickname: post.authorNickname,
-      memberNames,
-      // 게시판/ensureMeetupRoom 과 동일하게 실제 총원(targetTotal)으로 — memberNames 는
-      // 작성자 1개뿐이라 1+length 로는 인원이 과소 표시됐다.
-      memberCount: targetTotal,
-      meeting: {
-        date: post.eventDate ?? "",
-        time: post.eventTime ?? "",
-        place: post.place ?? post.location?.placeName ?? "",
-      },
-    };
+    if (needMeeting) {
+      // 게시글 로드 전에 복원돼 일정/이름/방장/인원이 비거나 어긋난 방 — 전부 게시글 기준 보정.
+      return {
+        ...r,
+        name: post.title,
+        hostNickname: post.authorNickname,
+        memberNames: deriveMeetupMembers(post, Math.max(0, targetTotal - 1)),
+        memberCount: targetTotal,
+        meeting: {
+          date: post.eventDate ?? "",
+          time: post.eventTime ?? "",
+          place: post.place ?? post.location?.placeName ?? "",
+        },
+      };
+    }
+    // 일정은 이미 있고 인원수만 옛 +1 버그로 부풀려진 방 — 인원수만 자가치유.
+    return { ...r, memberCount: targetTotal };
   });
   if (changed) {
     rooms = next;
@@ -622,7 +630,8 @@ function initChatNotificationListener() {
           const post = postsStore.getPosts().find((p) => p.id === postId);
           if (post && isMeetupPost(post)) {
             const { capacity, baseJoined } = calcJoined(post);
-            const targetTotal = Math.min(capacity, baseJoined + 1);
+            // baseJoined(calcJoined)는 이미 나/방장을 포함한 실제 인원 — +1 하면 이중 계산(혼자인데 2명).
+            const targetTotal = Math.min(capacity, baseJoined);
             const memberNames = deriveMeetupMembers(
               post,
               Math.max(0, targetTotal - 1),
