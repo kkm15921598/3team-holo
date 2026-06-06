@@ -19,7 +19,6 @@ import {
   addMembersToRoom,
   getRoom,
   getRooms,
-  healRoomMemberCount,
   leaveRoomById,
   markRoomRead,
   setRooms,
@@ -953,11 +952,27 @@ export function ChatRoomScreen() {
   membersRef.current = members;
   // '본 순간' 동기화 — 방 화면이 계산한 정확한 인원수를 방에 저장해, 채팅 리스트
   // (room.memberCount 표시)가 방 안과 같은 숫자를 보이게 한다('2명인데 리스트 1명' 해소).
+  // 인원수(memberCount)뿐 아니라 메시지 발신자로 발견한 멤버 닉네임(memberNames)도 함께
+  // 영구 저장해야, 새로고침 후 메시지를 다시 안 불러온 리스트에서도 인원이 유지된다.
   useEffect(() => {
-    if (room?.isGroup && displayMemberCount > 0) {
-      healRoomMemberCount(room.id, displayMemberCount);
-    }
-  }, [room?.id, room?.isGroup, displayMemberCount]);
+    if (!room || !room.isGroup) return;
+    const others = Array.from(
+      new Set(members.filter((m) => !m.isMe && m.nickname).map((m) => m.nickname)),
+    );
+    const existingNames = room.memberNames ?? [];
+    const mergedNames = Array.from(new Set([...existingNames, ...others]));
+    const namesChanged = mergedNames.length !== existingNames.length;
+    const count = Math.max(displayMemberCount, mergedNames.length + 1);
+    const countChanged = count > 0 && room.memberCount !== count;
+    if (!namesChanged && !countChanged) return;
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.id === room.id
+          ? { ...r, memberNames: mergedNames, memberCount: Math.max(r.memberCount ?? 0, count) }
+          : r,
+      ),
+    );
+  }, [room?.id, room?.isGroup, members, displayMemberCount, room?.memberCount, room?.memberNames]);
 
   // ── 실시간 만장일치 퇴장 투표 ──────────────────────────────
   // 방장(=게시글 작성자) 닉네임. 대상이 방장이면 가결 시 "해산"으로 처리한다.
