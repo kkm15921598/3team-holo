@@ -4,7 +4,6 @@ import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { phoneToEmail } from "@/shared/lib/auth";
 
 /**
  * 가입 직전 요약 화면.
@@ -25,29 +24,10 @@ export function ReviewScreen() {
   }
 
   const handleComplete = async () => {
-    // 0) Supabase Auth 계정 먼저 생성 (휴대폰 번호 → 가상 이메일).
-    //    비밀번호는 Auth 가 해시로 안전하게 보관 — users 테이블에는 더 이상
-    //    평문 비밀번호를 저장하지 않는다. (Confirm email OFF 라 세션 즉시 발급)
-    const { data: signUpData, error: authError } = await supabase.auth.signUp({
-      email: phoneToEmail(data.phone),
-      password: data.password,
-    });
-    if (authError || !signUpData.user) {
-      if (authError?.message?.toLowerCase().includes("already registered")) {
-        alert("이미 가입된 번호예요. 다른 번호로 시도해주세요.");
-      } else {
-        alert(
-          "회원가입 중 오류가 발생했어요: " +
-            (authError?.message ?? "인증 계정 생성 실패"),
-        );
-      }
-      return;
-    }
-
-    // 항상 존재하는 핵심 컬럼. auth_id 로 Auth 계정과 연결(RLS 기준값).
+    // 항상 존재하는 핵심 컬럼.
     const coreRow = {
       phone: data.phone,
-      auth_id: signUpData.user.id,
+      password: data.password,
       nickname: data.nickname,
       gender: data.gender,
     };
@@ -80,8 +60,6 @@ export function ReviewScreen() {
     }
 
     if (error) {
-      // 프로필 행 생성 실패 — 어중간한 Auth 세션/계정을 남기지 않도록 로그아웃.
-      await supabase.auth.signOut().catch(() => {});
       // PostgreSQL unique 제약조건 위반 (중복 가입 시도)
       if (error.code === "23505") {
         alert("이미 가입된 번호예요. 다른 번호로 시도해주세요.");

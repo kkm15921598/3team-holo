@@ -56,13 +56,13 @@ export function FindIdScreen() {
       return;
     }
 
-    // 인증번호 확인 후 이름+번호로 가입 여부 조회.
-    // (RLS 적용 후 anon 은 users 직접 조회 불가 → 본인확인 전용 RPC 사용)
-    const { data: rows, error } = await supabase.rpc(
-      "find_account_by_identity",
-      { p_name: name.trim(), p_phone: phone },
-    );
-    const dbUser = rows && rows.length > 0 ? rows[0] : null;
+    // 인증번호 확인 후 Supabase에서 이름+번호로 가입 여부 조회
+    const { data: dbUser, error } = await supabase
+      .from("users")
+      .select("phone, nickname, created_at")
+      .eq("name", name.trim())
+      .eq("phone", phone)
+      .maybeSingle();
 
     // 네트워크/RLS 오류를 '계정 없음'과 구분 — 일시 오류를 미가입으로 오해시키지 않도록.
     if (error) {
