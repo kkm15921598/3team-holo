@@ -974,7 +974,7 @@ export function BoardDetailScreen() {
 
         {/* Title row */}
         <div className="mt-2 flex items-center gap-2">
-          {!isSimple && <StatusBadge status={displayStatus} />}
+          {!isSimple && <StatusBadge status={isExpired ? "종료" : displayStatus} />}
           <span className="text-[16px] font-semibold text-holo-ink">
             {post.title}
           </span>

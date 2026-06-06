@@ -29,7 +29,7 @@ import {
   useViewCounts,
 } from "@/shared/stores/view-count-store";
 import { useGeolocation, distanceMeters } from "@/shared/hooks/use-geolocation";
-import { calcJoined } from "./meetup-utils";
+import { calcJoined, isMeetupEnded } from "./meetup-utils";
 import { rankLive, rankWeekly } from "./top-ranking";
 import { useBumpCount } from "@/shared/stores/bump-store";
 
@@ -768,8 +768,13 @@ function PostCard({
   // 상태 배지(색/라벨) — 정원이 차면 빨강 '모집완료'. 정원 기반을 1차 출처로 쓰되
   // (옛 stale post.status 로 '5/5'인데 '모집중' 어긋남 방지), 방장이 수동 마감한
   // post.status="모집완료" 도 함께 반영해 상세화면과 일치시킨다.
-  const displayStatus: "모집중" | "모집완료" =
-    joinedCount >= capacity || post.status === "모집완료" ? "모집완료" : "모집중";
+  // 일정이 지난 모임은 모집 상태와 무관하게 회색 '종료' — 목록에서 지난 모임이
+  // '모집중'(초록)으로 떠 아직 참여 가능한 것처럼 보이던 문제 방지.
+  const displayStatus: "모집중" | "모집완료" | "종료" = isMeetupEnded(post)
+    ? "종료"
+    : joinedCount >= capacity || post.status === "모집완료"
+      ? "모집완료"
+      : "모집중";
   const shortLabel = CATEGORY_SHORT[post.category] ?? "";
 
   return (
@@ -924,12 +929,14 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-/** 모집중/모집완료 pill — 모집중 = 연한 초록, 모집완료 = 연한 빨강 */
-export function StatusBadge({ status }: { status: "모집중" | "모집완료" }) {
+/** 모집중/모집완료/종료 pill — 모집중 = 연한 초록, 모집완료 = 연한 빨강, 종료 = 회색 */
+export function StatusBadge({ status }: { status: "모집중" | "모집완료" | "종료" }) {
   const styles =
-    status === "모집중"
-      ? "bg-holo-success text-[#3F7E25]"
-      : "bg-holo-full text-[#C53030]";
+    status === "종료"
+      ? "bg-holo-line-3 text-holo-ink-3"
+      : status === "모집중"
+        ? "bg-holo-success text-[#3F7E25]"
+        : "bg-holo-full text-[#C53030]";
   return (
     <span
       className={`inline-block rounded-[5px] px-[9px] pt-[5px] pb-[4px] text-[11px] font-semibold leading-none ${styles}`}
@@ -939,9 +946,14 @@ export function StatusBadge({ status }: { status: "모집중" | "모집완료" }
   );
 }
 
-function StatusText({ status }: { status: "모집중" | "모집완료" }) {
+function StatusText({ status }: { status: "모집중" | "모집완료" | "종료" }) {
+  // 종료된 모임은 글자도 회색 톤으로 — '비활성' 시각화.
   return (
-    <span className="block text-[11px] font-medium leading-none text-[#000000]">
+    <span
+      className={`block text-[11px] font-medium leading-none ${
+        status === "종료" ? "text-holo-ink-3" : "text-[#000000]"
+      }`}
+    >
       {status}
     </span>
   );
@@ -960,13 +972,15 @@ function FractionPill({
   status,
   text,
 }: {
-  status: "모집중" | "모집완료";
+  status: "모집중" | "모집완료" | "종료";
   text: string;
 }) {
   const styles =
-    status === "모집중"
-      ? "bg-holo-success text-[#3F7E25]"
-      : "bg-holo-full text-[#C53030]";
+    status === "종료"
+      ? "bg-holo-line-3 text-holo-ink-3"
+      : status === "모집중"
+        ? "bg-holo-success text-[#3F7E25]"
+        : "bg-holo-full text-[#C53030]";
   return (
     <span className={`block rounded-full px-2 py-[3px] text-[10px] font-semibold leading-none ${styles}`}>
       {text}

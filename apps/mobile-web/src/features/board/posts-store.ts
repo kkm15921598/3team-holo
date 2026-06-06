@@ -7,10 +7,15 @@ import type { Post } from "@/shared/mock/data";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
-/** created_at timestamp → "방금 전 / N분 전 / N시간 전 / N일 전 / N주 전" */
+/** created_at timestamp → "방금 전 / N분 전 / N시간 전 / N일 전 / N주 전 / N개월 전 / N년 전" */
 export function computeTimeAgo(createdAt: string | null): string {
   if (!createdAt) return "방금 전";
-  const diffMs = Date.now() - new Date(createdAt).getTime();
+  // 잘못된 타임스탬프(파싱 실패)는 "NaN주 전" 같은 깨진 라벨 대신 안전 폴백.
+  const t = new Date(createdAt).getTime();
+  if (Number.isNaN(t)) return "방금 전";
+  const diffMs = Date.now() - t;
+  // 미래 타임스탬프(기기 시계 오차/서버 시차)는 음수가 되어 "NaN" 으로 새지 않게 방어.
+  if (diffMs < 0) return "방금 전";
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 1) return "방금 전";
   if (diffMin < 60) return `${diffMin}분 전`;
@@ -18,7 +23,10 @@ export function computeTimeAgo(createdAt: string | null): string {
   if (diffH < 24) return `${diffH}시간 전`;
   const diffD = Math.floor(diffH / 24);
   if (diffD < 7) return `${diffD}일 전`;
-  return `${Math.floor(diffD / 7)}주 전`;
+  // 오래된 글: 7주 넘게 "60주 전" 처럼 끝없이 커지지 않도록 개월/년으로 환산.
+  if (diffD < 30) return `${Math.floor(diffD / 7)}주 전`;
+  if (diffD < 365) return `${Math.floor(diffD / 30)}개월 전`;
+  return `${Math.floor(diffD / 365)}년 전`;
 }
 
 /** Supabase row → Post 타입으로 변환 (실제 테이블 컬럼명 기준) */
