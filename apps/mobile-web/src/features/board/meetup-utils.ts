@@ -178,10 +178,16 @@ export function ensureMeetupRoom(post: Post): string | null {
 export function pruneNonMeetupRooms(): void {
   const posts = postsStore.getPosts();
   const byId = new Map(posts.map((p) => [p.id, p] as const));
+  // ★중요★ 앱 시작 직후엔 게시글이 아직 로드되기 전이라 posts 가 비어 있다. 이 상태에서
+  // (A) 판정을 돌리면 "게시글 없음"으로 오판해 멀쩡한 모임방까지 전부 삭제되고, 그때
+  // 함께 저장돼 있던 인원수/멤버 닉네임(채팅에서 발견한 참여자)까지 통째로 날아간다
+  // (= 새로고침하면 인원이 1로 돌아가던 근본 원인). 게시글이 하나도 없으면 (A)는 건너뛴다.
+  const postsLoaded = posts.length > 0;
   const toRemove: string[] = [];
   for (const r of getRooms()) {
     if (r.id.startsWith("meetup-")) {
-      // (A) meetup-* 인데 게시글이 없거나 자유/추천 단순 글이면 제거
+      // (A) meetup-* 인데 게시글이 없거나 자유/추천 단순 글이면 제거 — 게시글 로드 후에만 판정.
+      if (!postsLoaded) continue;
       const postId = r.id.slice("meetup-".length);
       const post = byId.get(postId);
       if (!post || !isMeetupPost(post)) {
@@ -189,7 +195,7 @@ export function pruneNonMeetupRooms(): void {
       }
       continue;
     }
-    // (B) meetup-* 가 아닌데 meeting 만 박혀 있는 옛 방 — 게시글 역추적 불가능
+    // (B) meetup-* 가 아닌데 meeting 만 박혀 있는 옛 방 — 게시글과 무관하게 제거 가능.
     if (r.meeting) {
       toRemove.push(r.id);
     }
