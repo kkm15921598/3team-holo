@@ -19,6 +19,7 @@ import {
   addMembersToRoom,
   getRoom,
   getRooms,
+  healRoomMemberCount,
   leaveRoomById,
   markRoomRead,
   setRooms,
@@ -950,6 +951,13 @@ export function ChatRoomScreen() {
   latestMemberCountRef.current = displayMemberCount;
   // 실시간 effect 의 stale 클로저 방지용으로 최신 멤버 리스트를 ref 에 보관.
   membersRef.current = members;
+  // '본 순간' 동기화 — 방 화면이 계산한 정확한 인원수를 방에 저장해, 채팅 리스트
+  // (room.memberCount 표시)가 방 안과 같은 숫자를 보이게 한다('2명인데 리스트 1명' 해소).
+  useEffect(() => {
+    if (room?.isGroup && displayMemberCount > 0) {
+      healRoomMemberCount(room.id, displayMemberCount);
+    }
+  }, [room?.id, room?.isGroup, displayMemberCount]);
 
   // ── 실시간 만장일치 퇴장 투표 ──────────────────────────────
   // 방장(=게시글 작성자) 닉네임. 대상이 방장이면 가결 시 "해산"으로 처리한다.

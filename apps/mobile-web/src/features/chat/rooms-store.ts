@@ -104,6 +104,17 @@ export function getRoom(id: string | undefined): ChatRoom | undefined {
   return rooms.find((r) => r.id === id);
 }
 
+/**
+ * 방 화면이 정확히 계산한 인원수를 방에 저장 — 채팅 리스트(room.memberCount 표시)가
+ * 방 안과 같은 숫자를 보여주도록 '본 순간' 동기화한다. 값이 실제로 다를 때만 갱신.
+ */
+export function healRoomMemberCount(id: string, count: number): void {
+  if (!Number.isFinite(count) || count <= 0) return;
+  const r = rooms.find((x) => x.id === id);
+  if (!r || r.memberCount === count) return;
+  setRooms((prev) => prev.map((x) => (x.id === id ? { ...x, memberCount: count } : x)));
+}
+
 export function markRoomRead(id: string) {
   setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, unread: 0 } : r)));
 }
@@ -500,34 +511,28 @@ function reconcileMeetupRoomsFromPosts() {
   if (posts.length === 0) return;
   let changed = false;
   const next = rooms.map((r) => {
-    if (!r.id.startsWith("meetup-")) return r;
+    // meeting 이 비어있는(게시글 로드 전 복원된) 모임방만 보정한다.
+    // memberCount 를 여기서 강제로 덮어쓰면, 타기기에서 참여한 인원이 이 기기 participants 에
+    // 아직 동기화되기 전이라 도리어 '2명인데 1명'으로 깎였다. 인원수 표시는 roomDisplayCount/
+    // 방 화면(displayMemberCount)이 여러 신호의 최댓값으로 처리하므로 여기선 건드리지 않는다.
+    if (!r.id.startsWith("meetup-") || r.meeting !== undefined) return r;
     const post = posts.find((p) => p.id === r.id.slice("meetup-".length));
     if (!post) return r;
     const { capacity, baseJoined } = calcJoined(post);
-    // baseJoined(calcJoined)는 이미 나/방장을 포함한 실제 인원 — +1 하면 이중 계산(혼자인데 2명).
     const targetTotal = Math.min(capacity, baseJoined);
-    const needMeeting = r.meeting === undefined;
-    // 옛 +1 버그로 저장된 memberCount(부풀림)도 게시글 기준으로 자가치유한다.
-    const needCount = r.memberCount !== targetTotal;
-    if (!needMeeting && !needCount) return r; // 바뀔 게 없으면 그대로(불필요한 churn 방지)
     changed = true;
-    if (needMeeting) {
-      // 게시글 로드 전에 복원돼 일정/이름/방장/인원이 비거나 어긋난 방 — 전부 게시글 기준 보정.
-      return {
-        ...r,
-        name: post.title,
-        hostNickname: post.authorNickname,
-        memberNames: deriveMeetupMembers(post, Math.max(0, targetTotal - 1)),
-        memberCount: targetTotal,
-        meeting: {
-          date: post.eventDate ?? "",
-          time: post.eventTime ?? "",
-          place: post.place ?? post.location?.placeName ?? "",
-        },
-      };
-    }
-    // 일정은 이미 있고 인원수만 옛 +1 버그로 부풀려진 방 — 인원수만 자가치유.
-    return { ...r, memberCount: targetTotal };
+    return {
+      ...r,
+      name: post.title,
+      hostNickname: post.authorNickname,
+      memberNames: deriveMeetupMembers(post, Math.max(0, targetTotal - 1)),
+      memberCount: targetTotal,
+      meeting: {
+        date: post.eventDate ?? "",
+        time: post.eventTime ?? "",
+        place: post.place ?? post.location?.placeName ?? "",
+      },
+    };
   });
   if (changed) {
     rooms = next;
