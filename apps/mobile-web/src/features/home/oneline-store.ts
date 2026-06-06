@@ -23,8 +23,39 @@ export type OnelineNews = {
 };
 
 const STORAGE_KEY = "holo:oneline:v1";
+// 내가 작성한 소식의 id 모음 — 닉네임을 바꾸거나 계정을 전환해도(이때 pastNicknames 가
+// 비워져 isMyNickname 이 더 이상 내 옛 닉네임을 못 알아본다) "내 소식"이 24h 만료로
+// 사라지지 않도록, 작성 시점에 그 기기에 표식을 남겨 영구 보존 판정에 쓴다.
+const MINE_KEY = "holo:oneline:mine:v1";
 const MAX_KEEP = 50; // 로컬 보관 최대 개수
 const TTL_MS = 24 * 60 * 60 * 1000; // 24시간 휘발
+
+function loadMineIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(MINE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set(parsed as string[]);
+    }
+  } catch {
+    // ignore
+  }
+  return new Set();
+}
+
+let myAuthoredIds: Set<string> = loadMineIds();
+
+/** 내가 작성한 소식 id 를 기기에 영구 기록(닉네임/계정 변경에도 내 글 보존). */
+function rememberMine(id: string): void {
+  myAuthoredIds.add(id);
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(MINE_KEY, JSON.stringify([...myAuthoredIds]));
+  } catch {
+    // ignore
+  }
+}
 
 function loadInitial(): OnelineNews[] {
   if (typeof window === "undefined") return [];
@@ -60,11 +91,21 @@ function emit() {
  * 만료(24h) 지난 소식 제거 + 최신순 정렬 + 개수 제한.
  * 단, **내가 남긴 소식은 만료에서 제외**한다 — "어제 남긴 내 소식이 사라졌다"는
  * 상실감 방지(사장님 요청). 남의 소식은 24h 휘발 유지(티커 신선도).
+ *
+ * "내 소식" 판정은 두 가지로 한다 (둘 중 하나면 보존):
+ *  - isMyNickname: 현재/과거 닉네임 일치
+ *  - myAuthoredIds: 이 기기에서 내가 작성한 id (닉네임 변경·계정 전환으로
+ *    isMyNickname 이 깨져도 내 글이 사라지지 않게 하는 안전망)
  */
 function normalize(list: OnelineNews[]): OnelineNews[] {
   const now = Date.now();
   return list
-    .filter((n) => isMyNickname(n.nickname) || now - n.createdAt < TTL_MS)
+    .filter(
+      (n) =>
+        isMyNickname(n.nickname) ||
+        myAuthoredIds.has(n.id) ||
+        now - n.createdAt < TTL_MS,
+    )
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, MAX_KEEP);
 }
@@ -80,6 +121,8 @@ export function addOnelineNews(content: string): void {
     content: trimmed.slice(0, 60),
     createdAt: Date.now(),
   };
+  // 이 기기에서 내가 쓴 글로 기록 → 이후 닉네임/계정이 바뀌어도 만료 제외(보존).
+  rememberMine(news.id);
   state = normalize([news, ...state]);
   persist();
   emit();
