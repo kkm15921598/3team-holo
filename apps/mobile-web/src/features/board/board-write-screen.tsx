@@ -785,11 +785,15 @@ export function BoardWriteScreen() {
                       const inRange =
                         isLongTerm && date < ymd && ymd < endDate;
                       const isToday = ymd === formatYMD(new Date());
+                      // 지난 날짜는 선택 불가 — 시작하자마자 '종료'된 모임이 만들어지는 것을 방지.
+                      const isPast = ymd < formatYMD(new Date());
                       return (
                         <button
                           key={ymd}
                           type="button"
+                          disabled={isPast}
                           onClick={() => {
+                            if (isPast) return;
                             if (isLongTerm) {
                               if (rangeMode === "start") {
                                 setDate(ymd);
@@ -814,15 +818,17 @@ export function BoardWriteScreen() {
                             );
                           }}
                           className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-[13px] ${
-                            isSelected
-                              ? "bg-holo-purple-mid font-bold text-white"
-                              : inRange
-                                ? "bg-holo-lilac-soft text-holo-purple-mid"
-                                : isCurrentMonth
-                                  ? "text-holo-ink"
-                                  : "text-holo-ink-3"
+                            isPast
+                              ? "cursor-not-allowed text-holo-ink-4 line-through opacity-40"
+                              : isSelected
+                                ? "bg-holo-purple-mid font-bold text-white"
+                                : inRange
+                                  ? "bg-holo-lilac-soft text-holo-purple-mid"
+                                  : isCurrentMonth
+                                    ? "text-holo-ink"
+                                    : "text-holo-ink-3"
                           } ${
-                            !isSelected && !inRange && isToday
+                            !isSelected && !inRange && !isPast && isToday
                               ? "border border-holo-purple-mid"
                               : ""
                           }`}
