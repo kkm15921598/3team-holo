@@ -44,12 +44,12 @@ export function EventListScreen() {
         <span className="ml-2 text-[16px] font-semibold text-holo-ink">이벤트</span>
       </header>
 
-      <div className="flex flex-col gap-3 px-4 pt-1 pb-6">
+      <div className="flex flex-col gap-3 px-4 pt-6 pb-8">
         {/* 기본 제공 — 출석 체크 이벤트(상시) */}
         <button
           type="button"
           onClick={() => navigate("/event/attendance")}
-          className="flex items-center gap-3 rounded-holo-input bg-holo-gradient-soft p-4 text-left text-white active:opacity-90"
+          className="flex items-center gap-3 rounded-[16px] bg-holo-gradient-soft px-4 py-5 text-left text-white active:opacity-90"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center"><CalendarLineIcon /></span>
           <span className="flex min-w-0 flex-1 flex-col">
