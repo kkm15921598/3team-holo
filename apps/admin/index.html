@@ -1463,7 +1463,7 @@ function openInquiryReply(i){
       ${q.내용?`<div style="font-size:13px;color:#4A3F5C;line-height:1.6;background:#EEE6FA;border-radius:10px;padding:10px 14px;margin-top:4px">${esc(q.내용)}</div>`:''}
     </div>
     ${isEditable?`<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#6B5F82;margin-bottom:6px;display:block">답변 내용</label>
-    <textarea id="replyText" class="field" rows="4" style="resize:vertical" placeholder="유저에게 전달할 답변을 입력하세요..."></textarea></div>`:'<div style="text-align:center;padding:20px;color:#6B5F82;font-size:13px">✅ 이미 답변 완료된 문의예요.</div>'}
+    <textarea id="replyText" class="field" rows="4" style="resize:vertical" placeholder="유저에게 전달할 답변을 입력하세요..."></textarea></div>`:`<div style="background:#EAFBF3;border-radius:12px;padding:14px 16px"><div style="font-size:12px;font-weight:700;color:#119464;margin-bottom:6px">✅ 전송한 답변</div><div style="font-size:13px;color:#2D2540;line-height:1.6;white-space:pre-wrap">${esc(q.답변||'(내용 없음)')}</div></div>`}
     <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--line)">
       ${revertBtn}
       <button class="btn btn-soft" onclick="closeModal()">닫기</button>
