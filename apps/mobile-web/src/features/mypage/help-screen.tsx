@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/shared/lib/supabaseClient";
+import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 
 /**
  * 고객지원(문의하기) 페이지.
@@ -7,7 +9,8 @@ import { useNavigate } from "react-router-dom";
  *  - 1:1 문의: 새 문의 작성 폼 + 내 문의 내역(상태: 답변 대기 / 답변 완료)
  *  - 자주 묻는 질문: 카테고리 필터 + 펼침/접힘 아코디언 형식
  *
- * mock 환경 — 문의 전송은 토스트로만 시뮬레이션, 실 서버 연동은 향후 추가.
+ * 1:1 문의는 Supabase `inquiries` 테이블에 저장(휴대폰 기준)되어, 관리자 페이지에서
+ * 읽고 답변할 수 있다. 답변/상태는 다시 이 화면에 반영된다(테이블 없으면 조용히 로컬만).
  */
 
 type TabKey = "inquiry" | "qa";
@@ -32,6 +35,13 @@ type Inquiry = {
   createdAt: string; // YYYY.MM.DD
   reply?: string;
 };
+
+/** Supabase created_at → "YY.MM.DD" 표시 */
+function fmtInquiryDate(v: unknown): string {
+  const d = v ? new Date(String(v)) : new Date();
+  if (Number.isNaN(d.getTime())) return "";
+  return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
 
 // FAQ 데이터 — 카테고리별로 묶음.
 type QaItem = {
@@ -223,20 +233,68 @@ function InquiryTab() {
     window.setTimeout(() => setToast(null), 1800);
   };
 
+  // 내 문의 내역을 Supabase 에서 불러온다(휴대폰 기준). 관리자 답변/상태도 함께 반영.
+  useEffect(() => {
+    const phone = getCurrentAccount();
+    if (!phone) return;
+    let cancelled = false;
+    supabase
+      .from("inquiries")
+      .select("id, category, title, content, status, reply, created_at")
+      .eq("phone", phone)
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (cancelled || error || !Array.isArray(data)) return;
+        setInquiries(
+          data.map((r: Record<string, unknown>) => ({
+            id: String(r.id),
+            category: (r.category as InquiryCategory) ?? "기타",
+            title: String(r.title ?? ""),
+            content: String(r.content ?? ""),
+            status: r.status === "답변 완료" ? "답변 완료" : "답변 대기",
+            reply: r.reply ? String(r.reply) : undefined,
+            createdAt: fmtInquiryDate(r.created_at),
+          })),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleSubmit = (data: Omit<Inquiry, "id" | "status" | "createdAt">) => {
     const now = new Date();
     const yy = String(now.getFullYear()).slice(2);
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     const dd = String(now.getDate()).padStart(2, "0");
+    const id = `iq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const newItem: Inquiry = {
       ...data,
-      id: `iq-${Date.now()}`,
+      id,
       status: "답변 대기",
       createdAt: `${yy}.${mm}.${dd}`,
     };
     setInquiries((prev) => [newItem, ...prev]);
     setShowForm(false);
     showToast("문의가 접수되었어요. 영업일 기준 1~3일 이내 답변드릴게요.");
+    // Supabase 저장(best-effort) → 관리자 페이지에서 보임. 테이블 없으면 조용히 로컬만.
+    const phone = getCurrentAccount();
+    if (phone) {
+      supabase
+        .from("inquiries")
+        .insert({
+          id,
+          phone,
+          category: data.category,
+          title: data.title,
+          content: data.content,
+          status: "답변 대기",
+        })
+        .then(({ error }) => {
+          if (error) console.warn("문의 저장 실패(무시):", error.message);
+        });
+    }
   };
 
   return (

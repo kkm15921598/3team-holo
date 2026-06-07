@@ -1426,6 +1426,7 @@ function refreshInquiryTop(){
 function revertInquiry(i){
   state.inquiries[i].상태='대기';
   state.inquiries[i].담당자='';
+  syncInquiryToSupabase(state.inquiries[i]);
   addLog(`1:1 문의 대기로 되돌림 — ${state.inquiries[i].제목}`,'inquiries');
   save();closeModal();
   renderSupportTable('inquiries');refreshInquiryTop();
@@ -1473,10 +1474,18 @@ function openInquiryReply(i){
 function submitInquiryReply(i){
   const text=document.getElementById('replyText')?.value?.trim();
   if(!text){toast('답변 내용을 입력해주세요');return;}
+  state.inquiries[i].답변=text;
   state.inquiries[i].상태='답변완료';
+  syncInquiryToSupabase(state.inquiries[i]); // 앱(고객센터 1:1 문의)에 답변·상태 반영
   addLog(`1:1 문의 답변 처리 — ${state.inquiries[i].제목}`,'inquiries');
   save();closeModal();toast('답변이 전송됐어요 ✓');
   renderSupportTable('inquiries');refreshInquiryTop();
+}
+// 1:1 문의 답변/상태를 Supabase inquiries 테이블에 반영 → 앱 사용자 화면에 노출.
+function syncInquiryToSupabase(q){
+  if(!q||!q._id)return;
+  const status=q.상태==='답변완료'?'답변 완료':'답변 대기';
+  _supabase.from('inquiries').update({reply:q.답변||'',status}).eq('id',q._id).then(({error})=>{if(error)console.warn('문의 동기화 실패',error.message);});
 }
 function exportCSV(key){const data=state[key]||[];if(!data.length){toast('내보낼 데이터가 없습니다');return;}const cols=Object.keys(data[0]);const csv=[cols.join(','),...data.map(r=>cols.map(c=>`"${String(r[c]??'').replace(/"/g,'""')}"`).join(','))].join('\n');const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`holo_${key}.csv`;a.click();toast('CSV 파일을 내보냈습니다');}
 modalBg.addEventListener('click',e=>{if(e.target===modalBg)closeModal()});
@@ -1565,6 +1574,17 @@ async function loadSupabaseData() {
     if (Array.isArray(eventRows)) state.events = eventRows.map(n => ({
       _id: n.id, 제목: n.title || '', 내용: n.body || '',
       등록일: n.created_at ? String(n.created_at).slice(0, 10) : '', 상태: '진행중',
+    }));
+
+    // 1:1 문의 — 앱 사용자가 보낸 문의를 읽어 관리자에서 답변(양방향).
+    const { data: inqRows } = await _supabase
+      .from('inquiries').select('id, phone, category, title, content, status, reply, created_at')
+      .order('created_at', { ascending: false }).limit(100);
+    if (Array.isArray(inqRows)) state.inquiries = inqRows.map(q => ({
+      _id: q.id, 유형: q.category || '기타', 제목: q.title || '', 작성자: q.phone || '',
+      접수일: q.created_at ? String(q.created_at).slice(0, 10) : '',
+      상태: q.status === '답변 완료' ? '답변완료' : '대기', 담당자: '',
+      내용: q.content || '', 답변: q.reply || '',
     }));
 
     if (userCount != null) state._kpi = state._kpi || {};
