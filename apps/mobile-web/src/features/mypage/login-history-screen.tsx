@@ -12,52 +12,11 @@ type LoginRecord = {
   suspicious?: boolean;
 };
 
-const HISTORY: LoginRecord[] = [
-  {
-    id: "1",
-    device: "iPhone 15 Pro",
-    os: "iOS 18.2",
-    location: "성남시 분당구",
-    date: "2026.05.09 21:24",
-    current: true,
-  },
-  {
-    id: "2",
-    device: "MacBook Pro · Chrome",
-    os: "macOS 15",
-    location: "서울시 강남구",
-    date: "2026.05.08 14:02",
-  },
-  {
-    id: "3",
-    device: "iPhone 15 Pro",
-    os: "iOS 18.2",
-    location: "성남시 분당구",
-    date: "2026.05.07 09:11",
-  },
-  {
-    id: "4",
-    device: "Galaxy S24 · 카카오톡",
-    os: "Android 14",
-    location: "부산시 해운대구",
-    date: "2026.05.05 23:48",
-    suspicious: true,
-  },
-  {
-    id: "5",
-    device: "iPad Air · Safari",
-    os: "iPadOS 18.1",
-    location: "성남시 분당구",
-    date: "2026.05.03 19:30",
-  },
-  {
-    id: "6",
-    device: "iPhone 15 Pro",
-    os: "iOS 18.1",
-    location: "성남시 분당구",
-    date: "2026.05.01 08:15",
-  },
-];
+// 실제 로그인 세션/감사 로그 백엔드가 아직 없으므로 가짜 기록을 보여주지 않는다.
+// (예전엔 지어낸 기기·위치·"의심 접속" 6건이 하드코딩돼, 데이터를 비워도 항상 떠
+//  "로그인 모니터링이 되는 것"처럼 오해를 줬다 — 보안 기능을 가짜로 흉내내는 건 위험.)
+// 실제 세션 기록 테이블이 생기면 그 데이터로 채운다.
+const HISTORY: LoginRecord[] = [];
 
 export function LoginHistoryScreen() {
   const navigate = useNavigate();
@@ -76,10 +35,18 @@ export function LoginHistoryScreen() {
 
       <section className="px-4 pt-2">
         <p className="text-[12px] text-holo-ink-3">
-          최근 30일간의 로그인 기록이에요. 본인이 아닌 접속이 보이면 즉시 신고해주세요.
+          최근 로그인 기록이에요. 본인이 아닌 접속이 보이면 즉시 신고해주세요.
         </p>
       </section>
 
+      {HISTORY.length === 0 ? (
+        <section className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+          <p className="text-[14px] text-holo-ink-3">아직 로그인 기록이 없어요.</p>
+          <p className="text-[12px] text-holo-ink-4">
+            로그인 기록 표시는 준비 중이에요.
+          </p>
+        </section>
+      ) : (
       <section className="mt-4 px-4 pb-4">
         <ul className="flex flex-col divide-y divide-holo-line-3">
           {HISTORY.map((rec) => (
@@ -128,6 +95,7 @@ export function LoginHistoryScreen() {
           <br />· 의심 접속 신고 시 모든 다른 기기에서 자동 로그아웃됩니다.
         </p>
       </section>
+      )}
 
       <ConfirmModal
         open={reportId !== null}
