@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { hashPassword, verifyPassword } from "@/shared/lib/password";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/;
 
@@ -47,16 +48,19 @@ export function PasswordChangeScreen() {
       setError("계정 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
       return;
     }
-    if (user.password !== current) {
+    // 현재 비밀번호 검증 — 해시 비교(기존 평문 계정도 허용).
+    const { ok } = await verifyPassword(phone, current, user.password as string | null);
+    if (!ok) {
       setSubmitting(false);
       setError("현재 비밀번호가 올바르지 않아요.");
       return;
     }
 
-    // 2) 새 비밀번호를 Supabase 에 저장.
+    // 2) 새 비밀번호를 해시로 저장.
+    const nextHashed = await hashPassword(phone, next);
     const { error: updateError } = await supabase
       .from("users")
-      .update({ password: next })
+      .update({ password: nextHashed })
       .eq("phone", phone);
 
     if (updateError) {

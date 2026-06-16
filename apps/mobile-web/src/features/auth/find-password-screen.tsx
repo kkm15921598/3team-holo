@@ -6,6 +6,7 @@ import { PasswordStrength } from "@/shared/components/password-strength";
 import { CapsLockBadge } from "@/shared/components/caps-lock-badge";
 import { useCapsLock } from "@/shared/hooks/use-caps-lock";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { hashPassword } from "@/shared/lib/password";
 
 // 데모용: 실제 SMS 발송 없이 가짜 6자리 인증번호를 생성.
 // 실제 SMS API 연동 전까지 사용. 코드 생성 시 토스트로 보여줌.
@@ -133,9 +134,11 @@ export function FindPasswordScreen() {
     // Supabase users 테이블 비밀번호 실제 업데이트.
     // .select() 로 실제 갱신된 행을 돌려받아 검증 — 이전엔 error/행수 확인 없이
     // 무조건 'done' 으로 넘어가 실패해도 성공 화면이 떴다.
+    // 새 비밀번호는 해시로 저장(전화번호를 salt 로).
+    const newPwHashed = await hashPassword(phone, newPw);
     const { data: updated, error } = await supabase
       .from("users")
-      .update({ password: newPw })
+      .update({ password: newPwHashed })
       .eq("name", name.trim())
       .eq("phone", phone)
       .select("phone");

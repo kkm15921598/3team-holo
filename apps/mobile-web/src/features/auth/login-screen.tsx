@@ -17,6 +17,7 @@ import { setCurrentAccount, clearCurrentAccount } from "@/shared/stores/account-
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { hashPassword, verifyPassword } from "@/shared/lib/password";
 import { enterGuestMode, exitGuestMode } from "@/shared/stores/guest-store";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
@@ -96,11 +97,12 @@ export function LoginScreen() {
     // 1) Supabase DB에서 실제 가입 계정 확인.
     //    maybeSingle: 0건이면 data=null(정상), 실제 오류(네트워크/RLS/중복행)는 error 로 구분.
     //    (이전엔 .single() + error 무시라 모든 실패가 '미가입'으로 잘못 안내됐음)
+    // 비밀번호 비교는 더 이상 쿼리(.eq("password", ...))로 하지 않는다.
+    // 전화번호로 계정만 조회한 뒤, 비밀번호는 해시로 검증한다.
     const { data: dbUser, error: loginError } = await supabase
       .from("users")
       .select("*")
       .eq("phone", phone)
-      .eq("password", password)
       .maybeSingle();
 
     if (loginError) {
@@ -109,7 +111,17 @@ export function LoginScreen() {
       return;
     }
 
-    if (dbUser) {
+    // 저장값(해시 또는 기존 평문)과 입력 비밀번호를 비교.
+    const pwCheck = dbUser
+      ? await verifyPassword(phone, password, dbUser.password as string | null)
+      : { ok: false, legacyPlaintext: false };
+
+    if (dbUser && pwCheck.ok) {
+      // 기존 평문 계정이면 이번 로그인 때 해시로 자동 업그레이드(베스트에포트, 실패해도 무시).
+      if (pwCheck.legacyPlaintext) {
+        const upgraded = await hashPassword(phone, password);
+        void supabase.from("users").update({ password: upgraded }).eq("phone", phone);
+      }
       // Supabase 계정으로 로그인 성공
       // 1) 현재 계정 포인터를 먼저 비운다. ★중요★
       //    각 store 의 setter/reset 은 getCurrentAccount() 가 있으면 그 phone 의 Supabase
@@ -155,9 +167,15 @@ export function LoginScreen() {
       return;
     }
 
-    // Supabase에 없으면 미가입 번호
-    setPhoneError(true);
-    setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
+    // 계정이 없거나(미가입) 비밀번호가 틀린 경우.
+    // 어느 쪽이 틀렸는지 알려주지 않아(번호 노출 방지) 동일 메시지로 안내.
+    if (!dbUser) {
+      setPhoneError(true);
+      setPhoneErrorMessage("등록되지 않은 휴대폰 번호입니다.");
+    } else {
+      setPasswordError(true);
+      setPasswordErrorMessage("비밀번호가 올바르지 않습니다.");
+    }
     } catch {
       setPhoneError(true);
       setPhoneErrorMessage("일시적인 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
