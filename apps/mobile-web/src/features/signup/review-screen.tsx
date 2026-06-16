@@ -4,7 +4,6 @@ import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { hashPassword } from "@/shared/lib/password";
 
 /**
  * 가입 직전 요약 화면.
@@ -25,8 +24,14 @@ export function ReviewScreen() {
   }
 
   const handleComplete = async () => {
-    // 비밀번호는 평문이 아니라 해시로 저장한다(전화번호를 salt 로).
-    const hashedPassword = await hashPassword(data.phone, data.password);
+    // 비밀번호는 서버에서 bcrypt 해시로 변환해 저장한다(평문/약한 해시 저장 방지).
+    const { data: hashedPassword, error: hashErr } = await supabase.rpc("hash_password", {
+      p_password: data.password,
+    });
+    if (hashErr || !hashedPassword) {
+      alert("회원가입 처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
     // 항상 존재하는 핵심 컬럼.
     const coreRow = {
       phone: data.phone,

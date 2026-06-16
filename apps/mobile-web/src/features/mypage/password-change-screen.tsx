@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { getCurrentAccount } from "@/shared/stores/account-choices-store";
 import { supabase } from "@/shared/lib/supabaseClient";
-import { hashPassword, verifyPassword } from "@/shared/lib/password";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{8,16}$/;
 
@@ -35,29 +34,31 @@ export function PasswordChangeScreen() {
     setSubmitting(true);
     setError("");
 
-    // 1) 현재 비밀번호가 실제 DB 값과 일치하는지 확인.
-    //    (이전엔 입력만 받고 검증·저장을 전혀 안 해서 비밀번호 변경이 동작하지 않았음)
-    const { data: user, error: fetchError } = await supabase
-      .from("users")
-      .select("password")
-      .eq("phone", phone)
-      .single();
-
-    if (fetchError || !user) {
+    // 1) 현재 비밀번호를 서버 함수로 검증(해시를 클라이언트로 가져오지 않음).
+    const { data: rows, error: verifyError } = await supabase.rpc("verify_login", {
+      p_phone: phone,
+      p_password: current,
+    });
+    if (verifyError) {
       setSubmitting(false);
-      setError("계정 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
+      setError("계정 정보를 확인하지 못했어요. 잠시 후 다시 시도해주세요.");
       return;
     }
-    // 현재 비밀번호 검증 — 해시 비교(기존 평문 계정도 허용).
-    const { ok } = await verifyPassword(phone, current, user.password as string | null);
-    if (!ok) {
+    if (!Array.isArray(rows) || rows.length === 0) {
       setSubmitting(false);
       setError("현재 비밀번호가 올바르지 않아요.");
       return;
     }
 
-    // 2) 새 비밀번호를 해시로 저장.
-    const nextHashed = await hashPassword(phone, next);
+    // 2) 새 비밀번호를 서버에서 bcrypt 해시로 변환해 저장.
+    const { data: nextHashed, error: hashError } = await supabase.rpc("hash_password", {
+      p_password: next,
+    });
+    if (hashError || !nextHashed) {
+      setSubmitting(false);
+      setError("비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
     const { error: updateError } = await supabase
       .from("users")
       .update({ password: nextHashed })
