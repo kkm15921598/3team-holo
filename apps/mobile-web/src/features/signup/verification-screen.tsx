@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useCountdown } from "@/shared/hooks/use-countdown";
 import { useSignup, genderFromIdNum } from "@/shared/contexts/signup-context";
 import { setGender as setGlobalGender } from "@/shared/stores/verification-store";
-import { PasswordToggle } from "@/shared/components/password-toggle";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { SignupLayout } from "./signup-layout";
 
@@ -30,7 +29,6 @@ export function VerificationScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [verifyError, setVerifyError] = useState("");
   const [showAlreadyJoined, setShowAlreadyJoined] = useState(false);
-  const [showIdNum, setShowIdNum] = useState(false);
 
   // 데모용 가짜 SMS 인증: 발송 시 무작위 코드 생성 → 토스트로 보여줌
   const [generatedCode, setGeneratedCode] = useState("");
@@ -77,10 +75,11 @@ export function VerificationScreen() {
     const daysInMonth = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     return dd >= 1 && dd <= daysInMonth[mm - 1];
   })();
-  const isIdValid = idNum.length === 13 && isIdSeventhValid && isIdDateValid;
-  // 인라인 에러 메시지: 13자리 채운 뒤에만 표시
+  // 이제 앞 6자리 + 뒷자리 첫 1자리 = 총 7자리만 입력받는다(뒤 6자리는 미수집·****** 고정).
+  const isIdValid = idNum.length === 7 && isIdSeventhValid && isIdDateValid;
+  // 인라인 에러 메시지: 7자리 채운 뒤에만 표시
   const idMismatchKind: "none" | "seventh" | "date" =
-    idNum.length === 13
+    idNum.length === 7
       ? !isIdSeventhValid
         ? "seventh"
         : !isIdDateValid
@@ -268,9 +267,9 @@ export function VerificationScreen() {
                   ? "주민등록번호 입력"
                   : "외국인등록번호 입력"
               }
-              value={showIdNum ? formatIdRaw(idNum) : formatId(idNum)}
+              value={formatId(idNum)}
               onChange={(v) => {
-                const next = parseIdInput(v, idNum, !showIdNum);
+                const next = parseIdInput(v, idNum);
                 update("idNum", next);
                 // 뒷자리 첫 숫자(7번째 자리)가 유효 범위일 때만 성별 자동 인식 + 전역 반영.
                 // (이전엔 0·9 같은 무효 값에도 genderFromIdNum 이 값을 반환해 전역 store 가 오염됐다.)
@@ -289,11 +288,7 @@ export function VerificationScreen() {
               inputMode="numeric"
               valid={isIdValid}
               error={idMismatchKind !== "none"}
-              paddingRight
-            />
-            <PasswordToggle
-              visible={showIdNum}
-              onClick={() => setShowIdNum((s) => !s)}
+              maxLength={16}
             />
           </div>
           {idMismatchKind === "seventh" && (
@@ -620,53 +615,29 @@ function AlreadyJoinedModal({ onLogin, onFindPassword, onClose }: any) {
 function ChevronDownIcon() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>; }
 function CheckIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7448DD" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m4 12 6 6 10-14" /></svg>; }
 
-// 마스킹 표시: "123456 - 1***" — 7번째 자리만 보이고 나머지는 실제 입력된 만큼만 *
+// 마스킹 표시: "123456 - 1******" — 앞 6자리 + 뒷자리 첫 1자리만 보이고,
+// 나머지 6자리는 항상 ****** 로 고정 표기한다(대기업 표준 방식).
+// ★ 뒤 6자리는 실제로 입력받지도/저장하지도 않는다 — 개인정보 최소수집.
 function formatId(v: string) {
   if (!v) return "";
   if (v.length <= 6) return v;
   const seven = v.slice(6, 7);
-  const hiddenCount = Math.max(0, v.length - 7);
-  return `${v.slice(0, 6)} - ${seven}${"*".repeat(hiddenCount)}`;
+  return `${v.slice(0, 6)} - ${seven}******`;
 }
 
-// 미마스킹 표시: 전체 13자리 모두 노출
-function formatIdRaw(v: string) {
-  if (!v) return "";
-  if (v.length <= 6) return v;
-  return `${v.slice(0, 6)} - ${v.slice(6)}`;
-}
-
-// 입력 파서 — 마스킹 모드에서도 추가/삭제가 정상 동작하도록 prev와 diff 비교
-function parseIdInput(displayValue: string, prevIdNum: string, masked: boolean) {
-  if (!masked) {
-    // 노출 모드: 그냥 숫자만 추출
-    return displayValue.replace(/\D/g, "").slice(0, 13);
-  }
-
-  // 마스킹 모드
-  const prevDisplay = formatId(prevIdNum);
+// 입력 파서 — 뒷자리는 첫 1자리(7번째)까지만 수집한다(총 7자리). 나머지 ****** 는 표시 전용.
+function parseIdInput(displayValue: string, prevIdNum: string) {
   const newDigits = displayValue.replace(/\D/g, "");
-  const prevDigits = prevDisplay.replace(/\D/g, "");
-  const lenDiff = displayValue.length - prevDisplay.length;
-
-  // 사용자가 문자(숫자)를 추가했음 → 가시 영역 뒤에 새 숫자가 추가된 것으로 간주하여 idNum에 append
-  if (lenDiff > 0) {
-    const addedDigits = newDigits.length - prevDigits.length;
-    if (addedDigits > 0) {
-      const additions = newDigits.slice(prevDigits.length);
-      return (prevIdNum + additions).slice(0, 13);
-    }
-    return prevIdNum;
+  // 완성(7자리) 상태에서 뒤 마스킹(*) 을 backspace 로 지운 경우:
+  // 숫자 개수는 그대로(7)인데 표시 길이만 짧아짐 → 7번째 숫자를 실제로 제거한다.
+  if (
+    prevIdNum.length === 7 &&
+    newDigits.length >= 7 &&
+    displayValue.length < formatId(prevIdNum).length
+  ) {
+    return prevIdNum.slice(0, 6);
   }
-
-  // 사용자가 문자(숫자 또는 *)를 삭제했음 → idNum 끝에서 그만큼 제거
-  if (lenDiff < 0) {
-    const removed = -lenDiff;
-    return prevIdNum.slice(0, Math.max(0, prevIdNum.length - removed));
-  }
-
-  // 길이 동일 — 가시 영역의 숫자가 교체된 경우. 새 숫자 + 기존 숨김 결합
-  return (newDigits + prevIdNum.slice(newDigits.length)).slice(0, 13);
+  return newDigits.slice(0, 7);
 }
 
 function formatPhone(v: string) {
