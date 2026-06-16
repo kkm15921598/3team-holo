@@ -91,19 +91,25 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
-/** 프로필 데이터를 Supabase users 테이블에 동기화 (best-effort) */
-function syncProfileToSupabase(s: ProfileState) {
+/**
+ * 프로필 컬럼을 Supabase users 테이블에 "부분 업데이트"(best-effort).
+ *
+ * ★ 변경된 컬럼만 쓴다 ★
+ *   예전엔 setter 마다 프로필 전체(nickname/title/badge/face/friend)를 한꺼번에 덮어썼다.
+ *   그래서 동시 호출(특히 가입 직후 store reset 직후)이 경합하면, 비어 있는 스냅샷의 쓰기가
+ *   먼저 저장된 좋은 값을 나중에 덮어써 닉네임/프로필이 사라지거나 기본값으로 되돌아갔다.
+ *   이제 각 setter 는 자기 컬럼만 써서 다른 필드를 절대 건드리지 않는다(경합 원천 차단).
+ */
+function pushProfileColumns(patch: Record<string, unknown>) {
   const userPhone = getCurrentAccount();
   if (!userPhone) return;
-  supabase.from("users").update({
-    nickname: s.nickname,
-    title: s.title,
-    equipped_badge_id: s.equippedBadgeId,
-    profile_face: s.profileFace,
-    friend_code: s.friendCode,
-  }).eq("phone", userPhone).then(({ error }) => {
-    if (error) console.warn("Supabase 프로필 저장 실패:", error.message);
-  });
+  supabase
+    .from("users")
+    .update(patch)
+    .eq("phone", userPhone)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase 프로필 저장 실패:", error.message);
+    });
 }
 
 export function getProfile() {
@@ -123,7 +129,7 @@ export function setNickname(nickname: string) {
   _state = { ..._state, nickname, pastNicknames };
   persist();
   notify();
-  syncProfileToSupabase(_state);
+  pushProfileColumns({ nickname });
 }
 
 /**
@@ -158,21 +164,21 @@ export function setTitle(title: string) {
   _state = { ..._state, title };
   persist();
   notify();
-  syncProfileToSupabase(_state);
+  pushProfileColumns({ title });
 }
 
 export function setEquippedBadgeId(id: string) {
   _state = { ..._state, equippedBadgeId: id };
   persist();
   notify();
-  syncProfileToSupabase(_state);
+  pushProfileColumns({ equipped_badge_id: id });
 }
 
 export function setProfileFace(face: string | null) {
   _state = { ..._state, profileFace: face };
   persist();
   notify();
-  syncProfileToSupabase(_state);
+  pushProfileColumns({ profile_face: face });
 }
 
 /**
@@ -184,7 +190,7 @@ export function setFriendCode(code: string) {
   _state = { ..._state, friendCode: next };
   persist();
   notify();
-  syncProfileToSupabase(_state);
+  pushProfileColumns({ friend_code: next });
 }
 
 export function subscribeProfile(fn: () => void) {
