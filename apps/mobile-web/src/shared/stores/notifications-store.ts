@@ -73,6 +73,9 @@ export type DynNotification = {
 // 기존 v1 데이터는 더 이상 읽지 않으며 새 앱 로드 시 깨끗하게 시작된다.
 const STORAGE_KEY = "holo.notifications.dynamic.v2";
 
+/** 알림 목록 최대 보관 개수 — 이보다 많아지면 오래된 것부터 버린다(무한정 쌓임 방지). */
+const MAX_NOTIF = 50;
+
 function load(): DynNotification[] {
   if (typeof window === "undefined") return [];
   try {
@@ -105,7 +108,13 @@ function notify() {
 
 /** 알림을 _list에 추가하고 Supabase에도 저장 (best-effort) */
 function _addNotif(item: DynNotification): void {
-  _list = [item, ..._list];
+  // 카톡식 합치기: 같은 종류(kind) + 같은 대상(link)의 기존 알림이 있으면,
+  // 새로 쌓지 않고 그 자리를 최신 내용으로 교체한 뒤 맨 위로 올린다.
+  // (예: 같은 글에 좋아요/댓글이 여러 번 → 알림 1개가 갱신되며 위로)
+  const rest = _list.filter((n) => !(n.kind === item.kind && n.link === item.link));
+  _list = [item, ...rest];
+  // 너무 길게 쌓이지 않도록 최신 MAX_NOTIF개만 유지.
+  if (_list.length > MAX_NOTIF) _list = _list.slice(0, MAX_NOTIF);
   notify();
   const userPhone = getCurrentAccount();
   if (userPhone) {
