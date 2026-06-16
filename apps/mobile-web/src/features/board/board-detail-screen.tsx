@@ -28,6 +28,7 @@ import { markBlocked } from "@/shared/stores/blocked-nicknames-store";
 import { addComment, useUserComments, type StoredComment } from "@/shared/stores/comments-store";
 import { supabase } from "@/shared/lib/supabaseClient";
 import { uploadPhotoToStorage } from "@/shared/lib/storage-upload";
+import { requireAuth } from "@/shared/lib/guest-gate";
 import { markPostViewed, hasViewedPost } from "@/shared/stores/viewed-posts-store";
 import {
   getTotalViews,
@@ -521,6 +522,8 @@ export function BoardDetailScreen() {
     : post.authorNickname === profile.nickname;
 
   const handleSendComment = async () => {
+    // 게스트(둘러보기)는 댓글 작성 불가 — 가입 안내 모달.
+    if (!requireAuth()) return;
     // 사진/지도만 첨부하고 텍스트가 없어도 전송 가능 — 답글 입력과 동일한 정책.
     if (!hasCommentText && !commentHasPhoto && !commentLocation) return;
     // 사진이 base64라면 Storage에 업로드 후 공개 URL 사용 (fallback: base64 그대로)
@@ -557,6 +560,7 @@ export function BoardDetailScreen() {
   const [showReplyAttach, setShowReplyAttach] = useState(false);
 
   const handleSendReply = async (parentId: string) => {
+    if (!requireAuth()) return;
     if (!hasReplyText && !replyHasPhoto && !replyHasMap) return;
     // 사진이 base64라면 Storage에 업로드 후 공개 URL 사용 (fallback: base64 그대로)
     const resolvedReplyPhotoUrl =
@@ -644,6 +648,8 @@ export function BoardDetailScreen() {
   };
 
   const handleJoinClick = () => {
+    // 게스트(둘러보기)는 모임 참여 불가 — 가입 안내 모달.
+    if (!requireAuth()) return;
     // 이미 참여 중이면 한 번 더 눌렀을 때 취소 확인 다이얼로그 — 채팅방까지 같이 퇴장됨을 빨간 글씨로 안내.
     if (joining) {
       setShowLeaveConfirm(true);
@@ -1049,7 +1055,7 @@ export function BoardDetailScreen() {
                 type="button"
                 aria-label={liked ? "좋아요 취소" : "좋아요"}
                 aria-pressed={liked}
-                onClick={() => togglePostLike(post.id)}
+                onClick={() => { if (!requireAuth()) return; togglePostLike(post.id); }}
                 className="flex items-center gap-1"
               >
                 <HeartIcon filled={liked} />
@@ -1158,7 +1164,7 @@ export function BoardDetailScreen() {
                 type="button"
                 aria-label={liked ? "좋아요 취소" : "좋아요"}
                 aria-pressed={liked}
-                onClick={() => togglePostLike(post.id)}
+                onClick={() => { if (!requireAuth()) return; togglePostLike(post.id); }}
                 className="flex items-center gap-1"
               >
                 <HeartIcon filled={liked} />

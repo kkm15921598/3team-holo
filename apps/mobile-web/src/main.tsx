@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { DeviceFrame } from "@/shared/components/device-frame";
 import { LevelUpCelebration } from "@/shared/components/level-up-celebration";
+import { GuestGateModal } from "@/shared/components/guest-gate-modal";
+import { RequireAuthRoute } from "@/shared/components/require-auth-route";
 import { TabLayout } from "@/shared/components/tab-layout";
 import { SignupProvider } from "@/shared/contexts/signup-context";
 import { ErrorBoundary } from "@/shared/components/error-boundary";
@@ -146,13 +148,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/board" element={<TabLayout><BoardMainScreen /></TabLayout>} />
           <Route path="/board/list" element={<TabLayout><BoardListScreen /></TabLayout>} />
           <Route path="/board/search" element={<TabLayout><BoardSearchScreen /></TabLayout>} />
-          <Route path="/board/write" element={<TabLayout showHeader={false}><BoardWriteScreen /></TabLayout>} />
+          <Route path="/board/write" element={<TabLayout showHeader={false}><RequireAuthRoute><BoardWriteScreen /></RequireAuthRoute></TabLayout>} />
           <Route path="/board/drafts" element={<BoardDraftsScreen />} />
           <Route path="/board/:id" element={<TabLayout><BoardDetailScreen /></TabLayout>} />
 
           {/* Chat & Profile */}
           <Route path="/chat" element={<TabLayout><ChatListScreen /></TabLayout>} />
-          <Route path="/chat/:id" element={<TabLayout showHeader={false}><ChatRoomScreen /></TabLayout>} />
+          <Route path="/chat/:id" element={<TabLayout showHeader={false}><RequireAuthRoute><ChatRoomScreen /></RequireAuthRoute></TabLayout>} />
           <Route path="/profile/:id" element={<ProfileDetailScreen />} />
           <Route path="/profile/:id/posts" element={<TabLayout showHeader={false}><FriendPostsScreen /></TabLayout>} />
           <Route path="/profile/:id/comments" element={<TabLayout showHeader={false}><FriendCommentsScreen /></TabLayout>} />
@@ -160,7 +162,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
           {/* Mypage */}
           <Route path="/mypage" element={<TabLayout><MypageScreen /></TabLayout>} />
-          <Route path="/mypage/edit" element={<ProfileEditScreen />} />
+          <Route path="/mypage/edit" element={<RequireAuthRoute><ProfileEditScreen /></RequireAuthRoute>} />
           <Route path="/mypage/points" element={<TabLayout showHeader={false}><PointsScreen /></TabLayout>} />
           <Route path="/mypage/points/free" element={<TabLayout showHeader={false}><FreePointsScreen /></TabLayout>} />
           <Route path="/mypage/verify-region" element={<TabLayout showHeader={false}><VerifyRegionScreen /></TabLayout>} />
@@ -170,7 +172,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/mypage/comments" element={<TabLayout showHeader={false}><MyCommentsScreen /></TabLayout>} />
           <Route path="/mypage/recent" element={<TabLayout showHeader={false}><RecentPostsScreen /></TabLayout>} />
           <Route path="/mypage/friends" element={<TabLayout showHeader={false}><FriendsScreen /></TabLayout>} />
-          <Route path="/mypage/friends/add" element={<TabLayout showHeader={false}><FriendsAddScreen /></TabLayout>} />
+          <Route path="/mypage/friends/add" element={<TabLayout showHeader={false}><RequireAuthRoute><FriendsAddScreen /></RequireAuthRoute></TabLayout>} />
           <Route path="/mypage/friends/requests" element={<TabLayout showHeader={false}><FriendRequestsScreen /></TabLayout>} />
           <Route path="/mypage/neighborhood" element={<TabLayout showHeader={false}><NeighborhoodFindScreen /></TabLayout>} />
           <Route path="/notifications" element={<TabLayout showHeader={false}><NotificationsListScreen /></TabLayout>} />
@@ -203,6 +205,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </Routes>
         {/* 레벨업 축하 모달 — 어디서 XP 가 적립되어 레벨이 오르든 최상단에서 한 번 노출. */}
         <LevelUpCelebration />
+        {/* 가입 안내 모달 — 게스트가 쓰기/상호작용을 시도하면 최상단에서 한 번 노출. */}
+        <GuestGateModal />
       </DeviceFrame>
     </BrowserRouter>
     </ErrorBoundary>

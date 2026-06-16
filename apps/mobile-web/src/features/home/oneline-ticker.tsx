@@ -5,6 +5,7 @@ import {
   useOnelineNews,
 } from "./oneline-store";
 import { isMyNickname } from "@/shared/stores/profile-store";
+import { requireAuth } from "@/shared/lib/guest-gate";
 
 /** "방금/N분 전/N시간 전" 짧은 경과 표기 */
 function ago(ms: number): string {
@@ -25,6 +26,7 @@ export function OnelineTicker() {
   const [draft, setDraft] = useState("");
 
   const submit = () => {
+    if (!requireAuth()) return;
     const v = draft.trim();
     if (!v) return;
     addOnelineNews(v);

@@ -29,6 +29,7 @@ import {
 } from "@/shared/stores/account-stats-store";
 import { resetAllStoresForFreshSignup } from "@/shared/lib/fresh-signup-reset";
 import { setCurrentAccount } from "@/shared/stores/account-choices-store";
+import { exitGuestMode } from "@/shared/stores/guest-store";
 import { setPhoneVerified } from "@/shared/stores/verification-store";
 import {
   pushRewardNotification,
@@ -234,6 +235,9 @@ export function RoomScreen() {
     setShowError(true);
     return;
   }
+
+  // 0) 둘러보기(게스트)로 진입했다가 가입을 마쳤다면 게스트 모드를 해제한다.
+  exitGuestMode();
 
   // 1) 현재 계정을 신규 가입 phone 으로 먼저 확정한다.
   //    이전 테스트 계정으로 로그인한 상태였다면 currentAccount 가 테스트 번호로

@@ -7,6 +7,7 @@ import {
 } from "@/features/myroom/guestbook-store";
 import { isMyNickname } from "@/shared/stores/profile-store";
 import { getAvatarUrl } from "@/features/chat/avatars";
+import { requireAuth } from "@/shared/lib/guest-gate";
 
 /** 잘못된 % 인코딩 URL 이면 decodeURIComponent 가 throw 해 화면이 깨진다 — 실패 시 원문 사용. */
 function safeDecode(id: string | undefined): string {
@@ -47,6 +48,7 @@ export function GuestbookScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
+    if (!requireAuth()) return;
     const text = message.trim();
     if (!text || submitting) return;
     setSubmitting(true);

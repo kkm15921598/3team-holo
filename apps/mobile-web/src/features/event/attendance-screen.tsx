@@ -8,6 +8,7 @@ import {
 import { addPoints } from "@/features/myroom/myroom-store";
 import { recordBadgeAcquired } from "@/shared/stores/account-stats-store";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
+import { requireAuth } from "@/shared/lib/guest-gate";
 
 /**
  * "이번 사이클(=현재 ISO 주) 식별 키" — 보너스 출석을 사이클당 1회로 제한할 때 사용.
@@ -83,6 +84,7 @@ export function AttendanceScreen() {
   const alreadyCheckedToday = todayDay?.checked ?? false;
 
   const handleAttendance = () => {
+    if (!requireAuth()) return;
     const result = awardXp("attendance");
     if (result.capped) {
       setToast("오늘은 이미 출석했어요");

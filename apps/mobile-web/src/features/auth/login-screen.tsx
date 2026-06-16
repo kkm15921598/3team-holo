@@ -17,6 +17,7 @@ import { setCurrentAccount, clearCurrentAccount } from "@/shared/stores/account-
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { enterGuestMode, exitGuestMode } from "@/shared/stores/guest-store";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
 const formatPhone = (raw: string) => {
@@ -147,6 +148,9 @@ export function LoginScreen() {
       // 빈 문자열을 넘기면 generateFriendCode 가 동작하고 Supabase 에도 1회 저장된다.
       if (!getProfile().friendCode) setFriendCode("");
 
+      // 실제 로그인 성공 — 둘러보기(게스트) 모드였다면 해제한다.
+      exitGuestMode();
+
       navigate("/home", { replace: true });
       return;
     }
@@ -242,6 +246,18 @@ export function LoginScreen() {
           className="h-[60px] rounded-holo-pill bg-holo-gradient text-[16px] font-semibold text-white shadow-md transition active:scale-[0.99] disabled:opacity-60"
         >
           {submitting ? "로그인 중…" : "로그인"}
+        </button>
+
+        {/* 둘러보기 — 로그인 없이 게스트로 앱을 구경. 쓰기 동작 시 가입 안내가 뜬다. */}
+        <button
+          type="button"
+          onClick={() => {
+            enterGuestMode();
+            navigate("/home", { replace: true });
+          }}
+          className="h-[58px] rounded-holo-pill border border-holo-purple-mid text-[15px] font-semibold text-holo-purple-mid transition active:scale-[0.99]"
+        >
+          로그인 없이 둘러보기
         </button>
       </form>
 

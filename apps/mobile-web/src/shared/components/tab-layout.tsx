@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { AppHeader } from "./app-header";
 import { BottomTabBar } from "./bottom-tab-bar";
+import { GuestBanner } from "./guest-banner";
 
 type TabLayoutProps = {
   children: ReactNode;
@@ -35,6 +36,7 @@ export function TabLayout({ children, showHeader = true }: TabLayoutProps) {
       >
         {children}
       </div>
+      <GuestBanner />
       <BottomTabBar />
     </>
   );
