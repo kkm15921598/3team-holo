@@ -17,6 +17,7 @@ import { setCurrentAccount, clearCurrentAccount } from "@/shared/stores/account-
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
 import { syncAllUserDataFromSupabase } from "@/shared/lib/sync-all-user-data";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { phoneToAuthEmail } from "@/shared/lib/auth-email";
 import { enterGuestMode, exitGuestMode } from "@/shared/stores/guest-store";
 
 const PHONE_PATTERN = /^01[0-9]{8,9}$/;
@@ -110,6 +111,17 @@ export function LoginScreen() {
     const dbUser = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 
     if (dbUser) {
+      // ── [Auth 전환 2단계] verify_login 검증 성공 후, Supabase Auth 세션도 만든다. ──────
+      // 이래야 DB 가 요청자를 식별(auth.uid())해 추후 행 단위 보안(RLS)이 동작한다.
+      // Auth 계정이 아직 없는 옛 계정은 실패해도 무시한다(기존 로그인은 이미 성공).
+      const { error: authErr } = await supabase.auth.signInWithPassword({
+        email: phoneToAuthEmail(phone),
+        password,
+      });
+      if (authErr) {
+        console.warn("[auth] 세션 생성 실패(Auth 계정 없는 옛 계정일 수 있음, 무시):", authErr.message);
+      }
+
       // Supabase 계정으로 로그인 성공
       // 1) 현재 계정 포인터를 먼저 비운다. ★중요★
       //    각 store 의 setter/reset 은 getCurrentAccount() 가 있으면 그 phone 의 Supabase
