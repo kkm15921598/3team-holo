@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import React, { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { AppHeader } from "./app-header";
 import { BottomTabBar } from "./bottom-tab-bar";
@@ -9,10 +9,20 @@ type TabLayoutProps = {
   showHeader?: boolean;
 };
 
+// 당겨서 새로고침 파라미터
+const PULL_MAX = 90; // 최대 당김 거리(px)
+const PULL_TRIGGER = 64; // 이 이상 당기고 놓으면 새로고침
+
 export function TabLayout({ children, showHeader = true }: TabLayoutProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigationType = useNavigationType();
+
+  // ── 당겨서 새로고침 상태 ──────────────────────────────────────────
+  const [pull, setPull] = useState(0); // 현재 당김 거리
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = useRef<number | null>(null); // 스크롤 최상단에서 터치 시작한 Y
+  const settling = useRef(false); // 손을 떼고 원위치로 돌아가는 중(애니메이션)
 
   // ── 페이지 이동 시 스크롤 위치 처리 ────────────────────────────────
   // PUSH (탭 클릭 등 새 페이지 진입) → 상단으로 리셋. "스크롤 내린 상태로 다른 탭
@@ -27,13 +37,75 @@ export function TabLayout({ children, showHeader = true }: TabLayoutProps) {
     // 마운트 직후 한 번만 시도해도 충분.
   }, [location.pathname, location.search, navigationType]);
 
+  // ── 당겨서 새로고침 제스처 ────────────────────────────────────────
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    // 스크롤이 최상단일 때만 당김 시작(중간에서 위로 스크롤하는 건 무시)
+    startY.current = el && el.scrollTop <= 0 ? e.touches[0].clientY : null;
+    settling.current = false;
+  };
+
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (startY.current === null || refreshing) return;
+    const el = scrollRef.current;
+    if (!el || el.scrollTop > 0) {
+      startY.current = null;
+      setPull(0);
+      return;
+    }
+    const dy = e.touches[0].clientY - startY.current;
+    // 아래로 당긴 만큼만, 점점 둔해지게(감쇠) 표시
+    setPull(dy > 0 ? Math.min(dy * 0.5, PULL_MAX) : 0);
+  };
+
+  const onTouchEnd = () => {
+    if (startY.current === null) return;
+    startY.current = null;
+    if (pull >= PULL_TRIGGER) {
+      // 충분히 당겼으면 새로고침 — 현재 화면을 다시 불러온다(데이터 전체 갱신)
+      setRefreshing(true);
+      window.location.reload();
+    } else {
+      // 부족하면 원위치로 스르륵
+      settling.current = true;
+      setPull(0);
+    }
+  };
+
+  const indicatorH = refreshing ? 44 : pull;
+
   return (
     <>
       {showHeader && <AppHeader />}
       <div
         ref={scrollRef}
-        className="no-scrollbar flex flex-1 flex-col overflow-y-auto overflow-x-hidden"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className="no-scrollbar relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        style={{
+          paddingTop: indicatorH ? indicatorH : undefined,
+          transition:
+            settling.current || refreshing ? "padding-top 0.2s ease-out" : undefined,
+        }}
       >
+        {(pull > 0 || refreshing) && (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-50 flex items-center justify-center text-holo-purple-mid"
+            style={{
+              height: indicatorH,
+              opacity: refreshing ? 1 : Math.min(pull / PULL_TRIGGER, 1),
+            }}
+          >
+            <span className="text-[12px] font-semibold">
+              {refreshing
+                ? "새로고침 중…"
+                : pull >= PULL_TRIGGER
+                  ? "놓으면 새로고침"
+                  : "당겨서 새로고침"}
+            </span>
+          </div>
+        )}
         {children}
       </div>
       <GuestBanner />
