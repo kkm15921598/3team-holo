@@ -88,10 +88,15 @@ import { markActiveToday } from "@/shared/stores/activity-store";
 import { pruneNonMeetupRooms } from "@/features/board/meetup-utils";
 import { evaluateAchievements } from "@/shared/lib/achievements";
 
+import { primeAllFaces } from "@/shared/stores/user-faces-store";
 import "./index.css";
 
 // 앱 진입 시 오늘 날짜를 접속일 set 에 기록 — 가입일 이후 실제 사용한 고유 일 수 카운트용
 markActiveToday();
+
+// 다른 사용자들의 실제 프로필 사진(users.profile_face)을 미리 받아 캐시에 채운다.
+// 이렇게 해두면 getAvatar() 가 닉네임 기반 임시 얼굴 대신 실제 사진을 돌려준다.
+void primeAllFaces();
 
 // 자유 / 추천 단순 게시글에 잘못 연결된 모임 채팅방(localStorage 잔존)을 정리.
 // 시드 데이터 변경 / 옛 빌드의 잔재로 남은 "meetup-<자유글>" 방을 한 번에 제거한다.

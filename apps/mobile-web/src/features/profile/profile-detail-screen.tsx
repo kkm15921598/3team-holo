@@ -90,7 +90,11 @@ function buildOtherUser(
   };
 }
 
+import { useUserFacesReady } from "@/shared/stores/user-faces-store";
+
 export function ProfileDetailScreen() {
+  // 상대의 실제 프로필 사진이 로드되면 화면을 갱신.
+  useUserFacesReady();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   // 잘못된 % 인코딩(예: %ZZ)이 든 URL 이면 decodeURIComponent 가 throw 해 화면이 통째로

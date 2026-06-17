@@ -31,6 +31,7 @@ import {
   syncFriendsFromSupabase,
   syncFriendRequestsFromSupabase,
 } from "@/features/mypage/friends-store";
+import { primeAllFaces } from "@/shared/stores/user-faces-store";
 
 /**
  * 모든 사용자 store 를 Supabase 에서 복원. 일부가 실패해도 나머지는 계속 진행.
@@ -56,6 +57,7 @@ export async function syncAllUserDataFromSupabase(): Promise<void> {
     syncRoomsFromSupabase(),
     syncFriendsFromSupabase(),
     syncFriendRequestsFromSupabase(),
+    primeAllFaces(),
   ]);
 
   // 모든 값이 복원된 뒤 레벨을 누적 XP 기준으로 재보정 — 과거 버그로 stats.level 이

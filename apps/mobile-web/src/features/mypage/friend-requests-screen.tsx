@@ -12,7 +12,11 @@ import { awardXp } from "@/shared/stores/xp-store";
 
 type Tab = "received" | "sent";
 
+import { useUserFacesReady } from "@/shared/stores/user-faces-store";
+
 export function FriendRequestsScreen() {
+  // 상대의 실제 프로필 사진이 로드되면 목록을 갱신.
+  useUserFacesReady();
   const navigate = useNavigate();
   const received = useReceivedRequests();
   const sent = useSentRequests();

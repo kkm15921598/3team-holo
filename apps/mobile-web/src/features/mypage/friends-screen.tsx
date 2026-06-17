@@ -20,7 +20,11 @@ import { markBlocked, unmarkBlocked } from "@/shared/stores/blocked-nicknames-st
 
 type Mode = "view" | "block" | "report" | "delete";
 
+import { useUserFacesReady } from "@/shared/stores/user-faces-store";
+
 export function FriendsScreen() {
+  // 친구들의 실제 프로필 사진이 로드되면 목록을 갱신.
+  useUserFacesReady();
   const navigate = useNavigate();
   const profile = useProfile();
   const friends = useFriends();

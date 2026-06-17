@@ -10,6 +10,7 @@
 //   2) 그 외엔 getAuthorGender 로 성별을 먼저 결정하고, 해당 성별 풀에서만 해시로 선택
 import { personaByName } from "@/features/home/home-faces";
 import { getAuthorGender } from "@/shared/lib/author-gender";
+import { getCachedFace } from "@/shared/stores/user-faces-store";
 
 const BASE = "/illustrations/icons_face";
 
@@ -130,6 +131,10 @@ function hashString(s: string): number {
  */
 export function getAvatar(nickname: string | undefined | null): string {
   if (!nickname) return DEFAULT_FACE;
+  // 0) 사용자가 직접 고른 실제 프로필 사진(users.profile_face)이 캐시에 있으면 최우선 사용.
+  //    (없으면 아래의 닉네임 기반 자동 얼굴로 폴백 — 기존 동작 유지)
+  const real = getCachedFace(nickname);
+  if (real) return real;
   // 1) PERSONAS 에 고정 얼굴이 있으면 그대로 사용 (얼굴 경로의 /man/ 또는 /woman/
   //    이 곧 그 닉네임의 성별이므로 자동으로 일치).
   const persona = personaByName(nickname);
