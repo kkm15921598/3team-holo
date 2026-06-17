@@ -427,10 +427,10 @@ function SmsToast({ code, onClose }: { code: string; onClose: () => void }) {
   // HOLO 디자인 톤(보라/라일락, 둥근 카드, 부드러운 그림자)에 맞춘 인증번호 안내 말풍선.
   // 상단 중앙에서 살짝 내려온 카드 + 아래쪽 꼬리로 "메시지 도착" 느낌을 준다.
   return (
-    {/* 위치 고정은 바깥 래퍼가 맡고(가운데 정렬은 flex), 등장 애니메이션은 안쪽 카드에 둔다.
-        (예전엔 animate-holo-logo-in 의 transform 이 -translate-x-1/2 중앙정렬 transform 을
-         덮어써서 토스트가 오른쪽으로 치우쳤다.) */}
     <div className="pointer-events-none fixed inset-x-0 top-5 z-[1100] flex justify-center px-4">
+      {/* 위치 고정은 바깥 래퍼가 맡고(가운데 정렬은 flex), 등장 애니메이션은 안쪽 카드에 둔다.
+          (예전엔 animate-holo-logo-in 의 transform 이 -translate-x-1/2 중앙정렬 transform 을
+           덮어써서 토스트가 오른쪽으로 치우쳤다.) */}
       <div
         role="alert"
         onClick={onClose}
