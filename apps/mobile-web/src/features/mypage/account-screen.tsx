@@ -171,6 +171,14 @@ export function AccountScreen() {
               // ignore
             }
           }
+          // [Auth 전환 3단계] 탈퇴 시 로그인으로 만든 Supabase Auth 세션도 정리한다.
+          // 안 하면 세션이 브라우저에 남아 JWT 만료 후 만료 토큰을 계속 보내 401 이 난다.
+          // best-effort: 실패해도(이미 만료/네트워크 오류) 로컬 세션은 제거되며 탈퇴는 진행한다.
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // ignore
+          }
           // 현재 계정 포인터를 먼저 비운다 — 아래 리셋이 일으키는 setter 의 Supabase 쓰기가
           // 탈퇴하는 계정 row 를 기본값(레벨1 등)으로 덮어쓰지 않도록(웬디 QA 지적 비대칭 차단).
           clearCurrentAccount();

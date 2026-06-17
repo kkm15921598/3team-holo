@@ -12,6 +12,7 @@ import { useVerification, syncVerificationFromSupabase } from "@/shared/stores/v
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { clearCurrentAccount } from "@/shared/stores/account-choices-store";
 import { resetUserStoresForLogin } from "@/shared/lib/fresh-signup-reset";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 export function MypageScreen() {
   const navigate = useNavigate();
@@ -158,7 +159,17 @@ export function MypageScreen() {
         description="다시 로그인해야 서비스를 이용할 수 있어요."
         confirmLabel="로그아웃"
         onCancel={() => setShowLogout(false)}
-        onConfirm={() => {
+        onConfirm={async () => {
+          // [Auth 전환 3단계] 로그인 시 만든 Supabase Auth 세션을 먼저 정리한다.
+          // 안 하면 이 세션이 브라우저에 남아, JWT 가 만료된 뒤에도 클라이언트가 만료 토큰을
+          // 계속 보내 모든 요청이 401(Unauthorized) 로 깨진다(홈 oneline_news 등에서 관측됨).
+          // best-effort: 이미 만료됐거나 네트워크 오류여도 로컬 세션(sb- 키)은 제거되며,
+          // 로그아웃 흐름은 그대로 진행한다.
+          try {
+            await supabase.auth.signOut();
+          } catch {
+            // ignore
+          }
           // 로그아웃 시 사용자별 store 를 비우고 계정 포인터를 끊는다 — 안 하면 다음 로그인
           // 전까지 이전 계정 데이터(프로필/친구/포인트/알림 등)가 메모리에 남아 누설된다.
           // (탈퇴 흐름 account-screen 과 동일 패턴: 계정 포인터 먼저 비운 뒤 리셋)
