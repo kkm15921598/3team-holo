@@ -4,6 +4,7 @@ import { useSignup } from "@/shared/contexts/signup-context";
 import { SignupLayout } from "./signup-layout";
 import { ConfirmModal } from "@/shared/components/confirm-modal";
 import { supabase } from "@/shared/lib/supabaseClient";
+import { phoneToAuthEmail } from "@/shared/lib/auth-email";
 
 /**
  * 가입 직전 요약 화면.
@@ -78,6 +79,11 @@ export function ReviewScreen() {
     }
 
     setShowWelcome(true);
+
+    // ── [Auth 전환 1단계] 가입과 함께 Supabase Auth 계정도 만들어 둔다. ──────
+    // 앱은 아직 기존(anon) 방식으로 동작하므로, 이 작업은 백그라운드 best-effort 이며
+    // 실패해도 가입 흐름엔 영향이 없다. 이후 단계에서 로그인을 Auth 로 전환할 때 쓴다.
+    void linkAuthAccount(data.phone, data.password);
   };
 
   const handleStart = () => navigate("/signup/room");
@@ -124,6 +130,41 @@ export function ReviewScreen() {
       )}
     </SignupLayout>
   );
+}
+
+/**
+ * [Auth 전환 1단계] 가입 직후 Supabase Auth 계정을 만들고 users.auth_id 로 연결한다.
+ * - 전화번호 → 합성 이메일로 signUp
+ * - 생성된 auth user id 를 users.auth_id 에 기록
+ * - 앱은 아직 anon 으로 동작하므로 방금 생긴 세션은 signOut 으로 정리
+ * 모든 실패는 콘솔 경고만 남기고 무시한다(가입은 이미 완료된 상태).
+ */
+async function linkAuthAccount(phone: string, password: string): Promise<void> {
+  try {
+    const email = phoneToAuthEmail(phone);
+    const { data: signUpData, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) {
+      console.warn("[auth] signUp 실패(무시):", error.message);
+    } else if (signUpData.user?.id) {
+      const { error: linkErr } = await supabase
+        .from("users")
+        .update({ auth_id: signUpData.user.id })
+        .eq("phone", phone);
+      if (linkErr) console.warn("[auth] auth_id 연결 실패(무시):", linkErr.message);
+    }
+  } catch (e) {
+    console.warn("[auth] Auth 계정 생성 예외(무시):", e);
+  } finally {
+    // 앱은 아직 anon 기반 → 방금 생긴 Auth 세션은 정리한다.
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* noop */
+    }
+  }
 }
 
 function ReviewItem({
