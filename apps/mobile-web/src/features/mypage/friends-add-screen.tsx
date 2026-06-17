@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
-import { sendFriendRequest } from "./friends-store";
+import { sendFriendRequest, type SendRequestResult } from "./friends-store";
 import { useProfile } from "@/shared/hooks/use-profile";
+import { supabase } from "@/shared/lib/supabaseClient";
 
 type TabKey = "id" | "qr" | "scan";
 
 export function FriendsAddScreen() {
   const navigate = useNavigate();
   const [input, setInput] = useState("");
+  const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   /** 현재 선택된 탭 — id 입력 / 내 QR 보기 / QR 촬영 */
   const [tab, setTab] = useState<TabKey>("id");
@@ -23,6 +25,64 @@ export function FriendsAddScreen() {
   const showToast = (msg: string) => {
     setToast(msg);
     window.setTimeout(() => setToast(null), 1600);
+  };
+
+  /**
+   * 입력한 ID(친구코드) 또는 닉네임으로 실제 users 계정을 조회한다.
+   * 존재하면 그 계정의 "진짜 닉네임"을, 없으면 null 을 반환한다.
+   * (예전엔 조회 없이 입력값을 그대로 닉네임으로 써서, 없는 계정에 유령 요청이 생겼다.)
+   */
+  const lookupAccount = async (query: string): Promise<string | null> => {
+    const q = query.trim();
+    if (!q) return null;
+    // 1) 친구코드(ID) 정확 일치 우선
+    let { data } = await supabase
+      .from("users")
+      .select("nickname")
+      .eq("friend_code", q)
+      .limit(1);
+    // 2) 없으면 닉네임 정확 일치
+    if (!data || data.length === 0) {
+      ({ data } = await supabase
+        .from("users")
+        .select("nickname")
+        .eq("nickname", q)
+        .limit(1));
+    }
+    const nick = data?.[0]?.nickname as string | undefined;
+    return nick ?? null;
+  };
+
+  /** sendFriendRequest 결과를 토스트로 안내(텍스트 입력 / QR 공통). */
+  const handleSendResult = (result: SendRequestResult, label: string) => {
+    switch (result) {
+      case "sent":
+        showToast(`${label}님에게 친구 요청을 보냈어요.`);
+        setInput("");
+        window.setTimeout(
+          () => navigate("/mypage/friends/requests", { replace: true }),
+          700,
+        );
+        return;
+      case "already-friend":
+        showToast(`${label}님은 이미 친구 목록에 있어요.`);
+        return;
+      case "already-sent":
+        showToast(`${label}님에게 이미 친구 요청을 보냈어요.`);
+        return;
+      case "incoming-exists":
+        showToast(`${label}님이 먼저 요청을 보냈어요. 받은 요청에서 수락해 주세요.`);
+        return;
+      case "max-reached":
+        showToast("친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요.");
+        return;
+      case "self":
+        showToast("자기 자신에게는 친구 요청을 보낼 수 없어요.");
+        return;
+      default:
+        showToast("친구 요청을 보낼 수 없어요.");
+        return;
+    }
   };
 
   /** QR 스캐너 모달을 열면 카메라 스트림 시작 + BarcodeDetector 로 주기적 QR 디코딩. */
@@ -123,7 +183,7 @@ export function FriendsAddScreen() {
   }, [scannerOpen]);
 
   /** QR 디코딩 성공 — 페이로드에서 friendCode + nickname 모두 추출 후 친구 요청. */
-  const handleQrDecoded = (value: string) => {
+  const handleQrDecoded = async (value: string) => {
     // 지원 포맷:
     //  1) `holo:friend:{code}:{encodedNickname}`  ← 앱이 생성하는 표준 형식
     //  2) `holo:friend:{code}`                    ← 닉네임 없는 구버전
@@ -149,75 +209,44 @@ export function FriendsAddScreen() {
     }
     if (!code) return;
     setScannerOpen(false);
-    // 친구 요청 시 식별자는 닉네임이 있으면 닉네임, 없으면 코드를 사용.
-    // (friends-store 는 nickname 기준으로 동작)
-    const identifier = nickname || code;
-    const label = nickname ? `${nickname}(${code})` : code;
-    const result = sendFriendRequest(identifier);
-    switch (result) {
-      case "sent":
-        showToast(`${label}님에게 친구 요청을 보냈어요.`);
-        window.setTimeout(
-          () => navigate("/mypage/friends/requests", { replace: true }),
-          700,
-        );
+    // 친구 요청 대상 닉네임 결정:
+    //  - QR 에 닉네임이 들어 있으면 그대로 신뢰(앱이 만든 표준 QR).
+    //  - 코드만 있으면 ID 로 실제 계정을 조회해 진짜 닉네임을 얻는다.
+    let target = nickname;
+    if (!target) {
+      const found = await lookupAccount(code);
+      if (!found) {
+        showToast("존재하지 않는 계정이에요. QR을 다시 확인해 주세요.");
         return;
-      case "already-friend":
-        showToast(`${label}님은 이미 친구 목록에 있어요.`);
-        return;
-      case "already-sent":
-        showToast(`${label}님에게 이미 친구 요청을 보냈어요.`);
-        return;
-      case "incoming-exists":
-        showToast(`${label}님이 먼저 요청을 보냈어요.`);
-        return;
-      case "max-reached":
-        showToast("친구 정원(30명)이 가득 찼어요.");
-        return;
-      case "self":
-        showToast("자기 자신에게는 친구 요청을 보낼 수 없어요.");
-        return;
-      default:
-        showToast("QR 인식 결과로 친구 요청을 보낼 수 없어요.");
+      }
+      target = found;
     }
+    const label = nickname ? `${nickname}(${code})` : target;
+    const result = sendFriendRequest(target);
+    handleSendResult(result, label);
   };
 
-  const handleAdd = () => {
-    const nick = input.trim();
-    if (!nick) {
+  const handleAdd = async () => {
+    const query = input.trim();
+    if (!query) {
       showToast("닉네임 또는 ID를 입력해 주세요.");
       return;
     }
-    const result = sendFriendRequest(nick);
-    switch (result) {
-      case "sent":
-        showToast(`${nick}님에게 친구 요청을 보냈어요.`);
-        setInput("");
-        window.setTimeout(
-          () => navigate("/mypage/friends/requests", { replace: true }),
-          700,
-        );
+    if (adding) return;
+    setAdding(true);
+    try {
+      // 입력값(ID 또는 닉네임)으로 실제 계정을 먼저 조회한다.
+      const realNickname = await lookupAccount(query);
+      if (!realNickname) {
+        showToast("존재하지 않는 ID 또는 닉네임이에요. 다시 확인해 주세요.");
         return;
-      case "already-friend":
-        showToast("이미 친구 목록에 있어요.");
-        return;
-      case "already-sent":
-        showToast("이미 친구 요청을 보냈어요.");
-        return;
-      case "incoming-exists":
-        showToast(
-          `${nick}님이 먼저 요청을 보냈어요. 받은 요청에서 수락해 주세요.`,
-        );
-        return;
-      case "max-reached":
-        showToast("친구 정원(30명)이 가득 찼어요. 기존 친구를 정리해 주세요.");
-        return;
-      case "self":
-        showToast("자기 자신에게는 친구 요청을 보낼 수 없어요.");
-        return;
-      default:
-        showToast("친구 요청을 보낼 수 없어요.");
-        return;
+      }
+      const result = sendFriendRequest(realNickname);
+      handleSendResult(result, realNickname);
+    } catch {
+      showToast("친구를 찾는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -263,9 +292,10 @@ export function FriendsAddScreen() {
             <button
               type="button"
               onClick={handleAdd}
-              className="mt-3 h-[44px] w-full rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white active:opacity-90"
+              disabled={adding}
+              className="mt-3 h-[44px] w-full rounded-full bg-holo-purple-mid text-[14px] font-semibold text-white active:opacity-90 disabled:opacity-60"
             >
-              친구 요청 보내기
+              {adding ? "확인 중..." : "친구 요청 보내기"}
             </button>
           </section>
         )}
