@@ -65,21 +65,32 @@ DB에 적용 완료:
 - `apps/mobile-web/src/features/auth/login-screen.tsx`: `verify_login` 성공(`if (dbUser)`) 직후 `supabase.auth.signInWithPassword({email: 합성이메일, password})`로 Auth 세션 생성. Auth 계정 없는 옛 계정은 실패해도 무시.
 - SQL 적용: `grant select, insert, update, delete on all tables in schema public to authenticated;` + `grant usage, select on all sequences ... to authenticated;` (로그인 시 authenticated 역할로 동작해도 앱이 안 깨지게) / 공지·이벤트·문의 쓰기 정책을 `auth.jwt()->>'email' = 'admin@holo.app'`로 제한.
 
-### ⚠️ 알려진 문제 (3단계에서 반드시 해결)
-- **로그아웃 처리 없음** → 로그인으로 만든 Auth 세션이 브라우저에 계속 남음. 이 세션의 JWT가 **만료되면 모든 요청이 401(Unauthorized)** 로 깨짐 (홈의 `oneline_news` 등에서 401 관측됨).
-- 임시 복구법: 브라우저 DevTools→Application→Storage→"Clear site data"→새로고침 (또는 `sb-`로 시작하는 localStorage 키 삭제).
+### ✅ 3단계 — 세션·식별 정리 (3-1·3-2 완료·검증, 3-3 보류)
+- **3-1 로그아웃/탈퇴 signOut (완료·배포·검증 2026-06-17)**
+  - `mypage-screen.tsx` 로그아웃 onConfirm + `account-screen.tsx`(마이페이지) 회원탈퇴 onConfirm 에 `supabase.auth.signOut()` (best-effort, try/catch) 추가.
+  - `clearCurrentAccount()` 엔 넣지 않음(로그인 직후 signInWithPassword 레이스 방지) — 로그아웃/탈퇴 지점에만.
+  - **검증됨**: 로그인 시 `sb-` 키 생성(user.id = Auth Users UID 일치) → 로그아웃 시 `sb-` 키 제거 → 401 없음.
+- **3-2 만료 세션 자동 정리 (완료·배포 대기 중, 검증 필요)**
+  - 신규 `src/shared/lib/auth-session-guard.ts` 의 `healAuthSession()` — 앱 시작 시 죽은(만료+refresh 실패) Auth 세션을 `signOut({scope:'local'})` 로 정리해 anon 복귀. 살아있는 세션은 안 건드림.
+  - `main.tsx` 시작부에서 `void healAuthSession()` 호출(import 포함).
+  - 앱 로그인 상태(localStorage 전화번호=getCurrentAccount)는 안 건드림 — Supabase Auth 토큰만 정리.
+- **3-3 (보류·선택)**: `getCurrentAccount`(39곳)를 Auth 세션 기반으로. 영향 범위 커서 별도 진행.
+
+### (해결됨) 이전 알려진 문제
+- ~~로그아웃 처리 없음 → 만료 시 401~~ → **3-1·3-2 로 해결.**
+- 임시 복구법(참고): DevTools→Application→Storage→"Clear site data"→새로고침 (또는 `sb-` localStorage 키 삭제).
 
 ---
 
 ## 4. 다음 할 일
 
-### ▶ 3단계 — 세션·식별 정리 (여기서 시작)
-1. **로그아웃 시 `supabase.auth.signOut()` 호출** 추가. 로그아웃 지점:
-   - `src/features/mypage/mypage-screen.tsx` (로그아웃 버튼, ~line 144)
-   - `src/features/mypage/account-screen.tsx` (회원 탈퇴, ~line 176)
-   - ⚠️ `clearCurrentAccount()` 자체에 signOut을 넣지 말 것 — 로그인(`login-screen.tsx` ~line 119)에서도 호출하므로, 그 직후의 `signInWithPassword`와 **레이스**가 난다. 로그아웃/탈퇴 지점에만 추가.
-2. 세션 만료/갱신 안정화(autoRefresh 확인). 만료 시 깔끔히 로그아웃되게.
-3. (선택) `getCurrentAccount`를 점진적으로 Auth 세션 기반으로.
+### ▶ 3단계 — 세션·식별 정리 (3-1·3-2 완료, 3-3 보류)
+1. ~~로그아웃 시 `signOut()` 호출~~ → **3-1 완료·검증** (위 "3. 진행 상황" 참고).
+2. ~~세션 만료/갱신 안정화~~ → **3-2 완료**(배포·검증 대기). `autoRefreshToken` 은 기본 ON(supabaseClient 가 옵션 미지정), 추가로 시작 시 죽은 세션 자동 정리(`healAuthSession`).
+3. (보류·선택) `getCurrentAccount`(39곳)를 Auth 세션 기반으로 — 영향 범위 커서 별도 진행.
+
+### ▶ 다음: 3-2 배포·검증 → 그 뒤 4단계(RLS)
+- 3-2 검증법: 로그인 후 DevTools→Application→Local storage 의 `sb-...` 값에서 `expires_at` 을 과거 값으로 수정(만료 흉내) → 새로고침 → 콘솔 401 없이 `sb-` 키가 자동 제거되면 OK.
 
 ### ▶ 4단계 — RLS 정책 (진짜 행 단위 권한)
 - `users.auth_id` ↔ `auth.uid()` 매핑으로 "본인 행만 수정/삭제" 정책을 한 테이블씩.

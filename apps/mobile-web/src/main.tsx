@@ -89,7 +89,11 @@ import { pruneNonMeetupRooms } from "@/features/board/meetup-utils";
 import { evaluateAchievements } from "@/shared/lib/achievements";
 
 import { primeAllFaces } from "@/shared/stores/user-faces-store";
+import { healAuthSession } from "@/shared/lib/auth-session-guard";
 import "./index.css";
+
+// [Auth 전환 3-2] 시작 시 죽은 Auth 세션 정리 — 만료 세션이 남아 공개 읽기까지 401 나는 것 방지.
+void healAuthSession();
 
 // 앱 진입 시 오늘 날짜를 접속일 set 에 기록 — 가입일 이후 실제 사용한 고유 일 수 카운트용
 markActiveToday();
